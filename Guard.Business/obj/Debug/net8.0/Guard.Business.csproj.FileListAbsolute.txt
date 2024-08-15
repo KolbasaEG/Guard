@@ -1,0 +1,6 @@
+C:\Users\Admin\Desktop\Guard\Guard.Business\obj\Debug\net8.0\Guard.Business.csproj.AssemblyReference.cache
+C:\Users\Admin\Desktop\Guard\Guard.Business\obj\Debug\net8.0\Guard.Business.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Admin\Desktop\Guard\Guard.Business\obj\Debug\net8.0\Guard.Business.AssemblyInfoInputs.cache
+C:\Users\Admin\Desktop\Guard\Guard.Business\obj\Debug\net8.0\Guard.Business.AssemblyInfo.cs
+C:\Users\Admin\Desktop\Guard\Guard.Business\obj\Debug\net8.0\Guard.Business.csproj.CoreCompileInputs.cache
+C:\Users\Admin\Desktop\Guard\Guard.Business\obj\Debug\net8.0\Guard.Business.sourcelink.json

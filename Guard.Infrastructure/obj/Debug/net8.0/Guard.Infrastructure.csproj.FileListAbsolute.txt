@@ -1,0 +1,6 @@
+C:\Users\Admin\Desktop\Guard\Guard.Infrastructure\obj\Debug\net8.0\Guard.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\Admin\Desktop\Guard\Guard.Infrastructure\obj\Debug\net8.0\Guard.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Admin\Desktop\Guard\Guard.Infrastructure\obj\Debug\net8.0\Guard.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\Admin\Desktop\Guard\Guard.Infrastructure\obj\Debug\net8.0\Guard.Infrastructure.AssemblyInfo.cs
+C:\Users\Admin\Desktop\Guard\Guard.Infrastructure\obj\Debug\net8.0\Guard.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\Admin\Desktop\Guard\Guard.Infrastructure\obj\Debug\net8.0\Guard.Infrastructure.sourcelink.json

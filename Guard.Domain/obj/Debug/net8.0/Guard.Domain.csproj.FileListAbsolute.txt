@@ -1,0 +1,12 @@
+C:\Users\Admin\Desktop\Guard\Guard.Domain\bin\Debug\net8.0\Guard.Domain.deps.json
+C:\Users\Admin\Desktop\Guard\Guard.Domain\bin\Debug\net8.0\Guard.Domain.dll
+C:\Users\Admin\Desktop\Guard\Guard.Domain\bin\Debug\net8.0\Guard.Domain.pdb
+C:\Users\Admin\Desktop\Guard\Guard.Domain\obj\Debug\net8.0\Guard.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Admin\Desktop\Guard\Guard.Domain\obj\Debug\net8.0\Guard.Domain.AssemblyInfoInputs.cache
+C:\Users\Admin\Desktop\Guard\Guard.Domain\obj\Debug\net8.0\Guard.Domain.AssemblyInfo.cs
+C:\Users\Admin\Desktop\Guard\Guard.Domain\obj\Debug\net8.0\Guard.Domain.csproj.CoreCompileInputs.cache
+C:\Users\Admin\Desktop\Guard\Guard.Domain\obj\Debug\net8.0\Guard.Domain.dll
+C:\Users\Admin\Desktop\Guard\Guard.Domain\obj\Debug\net8.0\refint\Guard.Domain.dll
+C:\Users\Admin\Desktop\Guard\Guard.Domain\obj\Debug\net8.0\Guard.Domain.pdb
+C:\Users\Admin\Desktop\Guard\Guard.Domain\obj\Debug\net8.0\ref\Guard.Domain.dll
+C:\Users\Admin\Desktop\Guard\Guard.Domain\obj\Debug\net8.0\Guard.Domain.csproj.AssemblyReference.cache
