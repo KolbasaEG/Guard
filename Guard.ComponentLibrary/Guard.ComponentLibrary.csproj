@@ -17,9 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Update="Gallery\Attachments.razor">
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-    </Content>
     <Content Update="Wrappers\ChangePassword.razor">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
