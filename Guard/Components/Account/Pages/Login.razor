@@ -1,0 +1,169 @@
+﻿@page "/Account/Login"
+
+@using System.ComponentModel.DataAnnotations
+@using Guard.Core.Entities;
+@using Guard.Core.Enums
+@using Guard.Core.Services
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ILogger<Login> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+@inject IAuditService AuditService
+@layout AccountLayout
+
+<PageTitle>Вход в систему — АИС «Охрана»</PageTitle>
+<RadzenCard Style="max-width: 600px; margin: 1rem; padding: 2.5rem; text-align: center; box-shadow: var(--rz-card-shadow);">
+  <RadzenStack AlignItems="AlignItems.Center" Gap="1.75rem">
+    <RadzenIcon Icon="login" Style="font-size: 4.5rem;" class="rz-text-subtitle1" />
+
+    <RadzenText Text="Вход в систему" TextStyle="Radzen.Blazor.TextStyle.H4" class="rz-m-0" />
+    <StatusMessage Message="@errorMessage" />
+    <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
+      <DataAnnotationsValidator />
+      <RadzenText Text="Для входа в систему используйте локальную учетную запись." TextStyle="Radzen.Blazor.TextStyle.Subtitle1" />
+      <hr />
+      <ValidationSummary class="text-danger" role="alert" />
+      <div class="form-floating mb-3">
+        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username webauthn" aria-required="true" placeholder="name@example.com" />
+        <label for="Input.Email" class="form-label">Email</label>
+        <ValidationMessage For="() => Input.Email" class="text-danger" />
+      </div>
+      <div class="form-floating mb-3">
+        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Пароль" />
+        <label for="Input.Password" class="form-label">Пароль</label>
+        <ValidationMessage For="() => Input.Password" class="text-danger" />
+      </div>
+
+      <div class="checkbox mb-3">
+        <label class="form-label rz-text-subtitle1">
+          <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
+          Запомнить меня
+        </label>
+      </div>
+      <div>
+        <RadzenButton ButtonType="ButtonType.Submit" Text="Войти" ButtonStyle="ButtonStyle.Primary" class="w-100" Size="ButtonSize.Large" />
+      </div>
+      <hr />
+    </EditForm>
+
+  </RadzenStack>
+</RadzenCard>
+
+
+@code {
+  private string? errorMessage;
+  private EditContext editContext = default!;
+  [CascadingParameter]
+  private HttpContext HttpContext { get; set; } = default!;
+
+  [SupplyParameterFromForm]
+  private InputModel Input { get; set; } = default!;
+
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
+
+  protected override async Task OnInitializedAsync()
+  {
+    Input ??= new();
+
+    editContext = new EditContext(Input);
+
+    if (HttpMethods.IsGet(HttpContext.Request.Method))
+    {
+      // Clear the existing external cookie to ensure a clean login process
+      await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+    }
+  }
+
+  public async Task LoginUser()
+  {
+    if (!string.IsNullOrEmpty(Input.Passkey?.Error))
+    {
+      errorMessage = $"Error: {Input.Passkey.Error}";
+      return;
+    }
+
+    SignInResult result;
+    if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
+    {
+      // When performing passkey sign-in, don't perform form validation.
+      result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+    }
+    else
+    {
+      // If doing a password sign-in, validate the form.
+      if (!editContext.Validate())
+      {
+        return;
+      }
+
+      // This doesn't count login failures towards account lockout
+      // To enable password failures to trigger account lockout, set lockoutOnFailure: true
+      result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+    }
+
+    var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+    if (result.Succeeded)
+    {
+      AuditService.LogIdentityEvent(
+                AuditEventType.LoginSuccess,
+                Input.Email,
+                ipAddress,
+                !string.IsNullOrEmpty(Input.Passkey?.CredentialJson)
+                    ? "Successful login with Passkey"
+                    : "Successful login with password");
+
+      RedirectManager.RedirectTo(ReturnUrl);
+    }
+    else if (result.RequiresTwoFactor)
+    {
+      RedirectManager.RedirectTo(
+          "Account/LoginWith2fa",
+          new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+    }
+    else if (result.IsLockedOut)
+    {
+      AuditService.LogIdentityEvent(
+                AuditEventType.LoginFailed,
+                Input.Email,
+                ipAddress,
+                "Account is locked out");
+
+      RedirectManager.RedirectTo("Account/Lockout");
+    }
+    else
+    {
+      AuditService.LogIdentityEvent(
+                AuditEventType.LoginFailed,
+                Input.Email,
+                ipAddress,
+                !string.IsNullOrEmpty(Input.Passkey?.CredentialJson)
+                    ? "Passkey login failed"
+                    : "Invalid email or password");
+
+      errorMessage = "Error: Неверный email или пароль.";
+    }
+  }
+
+  private sealed class InputModel
+  {
+    [Required(ErrorMessage = "Поле «Email» обязательно для заполнения.")]
+    [EmailAddress(ErrorMessage = "Введите корректный адрес электронной почты.")]
+    public string Email { get; set; } = "";
+
+    [Required(ErrorMessage = "Поле «Пароль» обязательно для заполнения.")]
+    [DataType(DataType.Password)]
+    public string Password { get; set; } = "";
+
+    [Display(Name = "Remember me?")]
+    public bool RememberMe { get; set; }
+
+    public PasskeyInputModel? Passkey { get; set; }
+  }
+}

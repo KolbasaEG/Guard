@@ -1,0 +1,11 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+<RadzenCard Variant="Variant.Flat" Style="width:100%;height:100%; padding:5px; border-radius:0px;pa">
+  <RadzenCard Variant="Variant.Outlined" Style="width:100%;height:100%; padding:5px; background-color:var(--rz-grid-background-color);">
+    @Content
+  </RadzenCard>
+</RadzenCard>
+
+@code {
+  [Parameter] public RenderFragment Content { get; set; }
+}

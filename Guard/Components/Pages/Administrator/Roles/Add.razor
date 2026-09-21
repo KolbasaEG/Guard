@@ -1,0 +1,17 @@
+@using Guard.Core.Entities
+@attribute [Authorize]
+
+<CreateEntity TItem="ApplicationRole" Data="@item">
+  <Body>
+    <RadzenStack Gap="0px" Orientation="Orientation.Vertical">
+      <RadzenFormField Text="Наименование" Variant="Variant.Text" Style="width:100%">
+        <ChildContent>
+          <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Name" Name="Name" />
+        </ChildContent>
+        <Helper>
+          <RadzenRequiredValidator Component="Name" Text="Обязательно для заполнения!" />
+        </Helper>
+      </RadzenFormField>
+    </RadzenStack>
+  </Body>
+</CreateEntity>

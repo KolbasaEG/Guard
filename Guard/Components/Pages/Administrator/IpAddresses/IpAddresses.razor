@@ -1,0 +1,76 @@
+@using Guard.Core.Entities
+@using Guard.Core.Enums
+@attribute [Authorize]
+<PageTitle>АИС "Охрана"</PageTitle>
+<LoadingIndicator @ref=(loading) />
+<TableWrapperWithFilterAndAnalytics >
+  <Table>
+    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="IpAddress" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"
+                    AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
+                    DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
+                    LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NotEqualsText="Не равно" OrOperatorText="Или"
+                    PageAriaLabelFormat="К странице {0}" PageSizeText="записей на странице" PrevPageTitle="Предидущая страница" ShowMultiColumnSortingIndex="true"
+                    EmptyText="Записи не найдены" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" StartsWithText="Начинается c" LessThanText="Меньше" LessThanOrEqualsText="Меньше или равно"
+                    PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" ShowPagingSummary="true" PagingSummaryFormat="@pagingSummaryFormat"
+                    Style="height:100%;">
+      <HeaderTemplate>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
+            <RadzenMenu>
+              <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
+                <RadzenMenuItem Text="Экспорт" Icon="get_app" Click="@OnExportClick" Style="font-weight:500;" />
+              </RadzenMenuItem>
+            </RadzenMenu>
+          </RadzenStack>
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
+            <RadzenSelectBar TValue="Status" Size="ButtonSize.Medium" @bind-Value="@status" Change="() => ChangeSetClick()" Style="background-color: var(--rz-menu-top-item-background-color); border-radius: 0px;">
+              <Items>
+                <RadzenSelectBarItem Value="@(Status.Archived)" Text="Архив" Style="border-radius:0px; width:105px; text-align:center;" />
+                <RadzenSelectBarItem Value="@(Status.Inserted)" Text="Активные" Style="border-radius:0px; width:105px; text-align:center;" />
+                <RadzenSelectBarItem Value="@(Status.Deleted)" Text="Удаленные" Style="border-radius:0px; width:105px; text-align:center;" />
+              </Items>
+            </RadzenSelectBar>
+          </RadzenStack>
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
+            <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+            <RadzenButton Icon="add_circle_outline" Visible="@(isEditor)" Click="@AddClick" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+          </RadzenStack>
+        </RadzenStack>
+      </HeaderTemplate>
+      <Columns>
+        <RadzenDataGridColumn TItem="IpAddress" Property="Id" Title="Id" Frozen="true" Width="300px" />
+        <RadzenDataGridColumn TItem="IpAddress" Property="Address" Title="IP-адрес" Width="100%" />
+        <RadzenDataGridColumn TItem="IpAddress" Filterable="false" Sortable="false" Width="60px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
+          <Template Context="item">
+            <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
+              @if (item.Status < Status.Blocked)
+              {
+                <RadzenButton Icon="archive" Size="Radzen.ButtonSize.ExtraSmall"
+                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                              Click=@(args => GridArchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="Radzen.ButtonSize.ExtraSmall"
+                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                              Click=@(args => GridDeleteButtonClick(args, item)) @onclick:stopPropagation="true" />
+              }
+              @if (item.Status == Status.Archived)
+              {
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="unarchive" Size="Radzen.ButtonSize.ExtraSmall"
+                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                              Click=@(args => GridUnarchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
+              }
+            </RadzenStack>
+          </Template>
+        </RadzenDataGridColumn>
+      </Columns>
+    </RadzenDataGrid>
+
+  </Table>
+  <Filter>
+  </Filter>
+  <FilterButtons>
+    <RadzenButton Text="Применить" Click="@ApplyFilter" Size="ButtonSize.Small" />
+  </FilterButtons>
+  <Analitycs>
+    
+  </Analitycs>
+</TableWrapperWithFilterAndAnalytics>

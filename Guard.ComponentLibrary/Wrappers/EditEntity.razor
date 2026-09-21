@@ -1,0 +1,56 @@
+﻿@using Guard.ComponentLibrary.Loading
+@typeparam TItem
+@inject DialogService DialogService;
+
+<RadzenStack Style="width:100%;height:100%;" Gap="0px">
+  <RadzenTemplateForm Submit="FormSubmit" TItem="TItem" Data="@Data" Visible="@(Data != null)" Style="width:100%;height:100%; padding:0px; margin:0px;">
+    <RadzenStack Style="width:100%;height:100%;" Gap="0px">
+      <Guard.ComponentLibrary.Wrappers.Elements.CardHeader Icon="@Icon" Name="@Name" ShowSaveButton="ShowSaveButton" OnInfoClick="InfoButtonClick" ShowInfoButton="ShowInfoButton" />
+
+      <RadzenStack Orientation="Orientation.Horizontal" Gap="5px;" Style="flex: 1; min-height: 0; width:100%; margin-top:5px;">
+        <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;min-height:0;">
+          <LoadingContainer IsLoading="IsLoading">
+            <RadzenCard Variant="Variant.Outlined" Style="padding:5px; border-radius:0px;height:100%;display:flex; flex-direction:column;">
+              <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;">
+                @ChildContent
+              </RadzenStack>
+            </RadzenCard>
+          </LoadingContainer>
+        </RadzenStack>
+      </RadzenStack>
+    </RadzenStack>
+  </RadzenTemplateForm>
+</RadzenStack>
+
+
+@code {
+  [Parameter] public bool ShowSaveButton { get; set; } = true;
+  [Parameter] public bool ShowInfoButton { get; set; } = false;
+
+  [Parameter] public TItem? Data { get; set; }
+  [Parameter] public string Name { get; set; } = "РЕДАКТИРОВАНИЕ";
+  [Parameter] public string Icon { get; set; } = "edit_square";
+  [Parameter] public bool IsLoading { get; set; }
+
+  [Parameter] public RenderFragment? ChildContent { get; set; }
+  [Parameter] public EventCallback Submit { get; set; }
+  [Parameter] public EventCallback OnInfoClick { get; set; }
+
+  private async Task InfoButtonClick()
+  {
+    if (OnInfoClick.HasDelegate)
+    {
+      await OnInfoClick.InvokeAsync();
+    }
+  }
+
+  protected async Task FormSubmit()
+  {
+    await Submit.InvokeAsync();
+  }
+
+  protected async Task CancelButtonClick(MouseEventArgs args)
+  {
+    DialogService.Close(null);
+  }
+}

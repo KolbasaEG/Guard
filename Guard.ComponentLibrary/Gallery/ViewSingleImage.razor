@@ -1,0 +1,43 @@
+@using Guard.ComponentLibrary.Wrappers
+@inject DialogService DialogService;
+@attribute [Authorize]
+
+<div class="image-viewer">
+  <div class="image-container">
+    <img Id="zoomableImage" src="@ImageFolder"
+         style="max-width: 100%; max-height: 80vh; object-fit: contain;" />
+  </div>
+  <div class="controls">
+    <RadzenButton Text="Закрыть" Click="@CancelButtonClick" />
+  </div>
+</div>
+
+<style>
+  .image-viewer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    overflow: hidden; /* Скрывает прокрутку */
+  }
+
+  .image-container {
+    max-width: 90%;
+    max-height: 80%;
+    overflow: auto; /* Позволяет прокрутку, если изображение слишком велико */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .controls {
+    margin-top: 20px;
+  }
+</style>

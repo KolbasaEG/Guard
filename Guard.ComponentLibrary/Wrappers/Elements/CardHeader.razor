@@ -1,0 +1,40 @@
+﻿@inject DialogService DialogService;
+
+
+<RadzenCard Style="width:100%; height:46px; border-radius:0px; border:none; padding:5px; background-color:var(--rz-primary-darker);flex-shrink:0;">
+  <RadzenStack Gap="10px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="0px" Style="width:100%;">
+      <RadzenIcon Icon="@Icon" Style="margin:8px; color:var(--rz-on-primary-darker); margin-right:15px;margin-left:12px;" />
+      <RadzenText TextStyle="TextStyle.Body1" Style="margin-right:15px; color:var(--rz-on-primary-darker);"><strong>@Name</strong></RadzenText>
+    </RadzenStack>
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="height:100%;">
+      <RadzenButton Icon="info" Click="InfoButtonClick" Visible="ShowInfoButton" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+      <RadzenButton Icon="save" ButtonType="ButtonType.Submit" Visible="ShowSaveButton" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+      <RadzenButton Icon="close" Click="CancelButtonClick" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+    </RadzenStack>
+  </RadzenStack>
+</RadzenCard>
+
+@code {
+  [Parameter] public bool ShowSaveButton { get; set; } = true;
+  [Parameter] public bool ShowInfoButton { get; set; } = false;
+
+
+  [Parameter] public string Name { get; set; } = "Просмотр";
+  [Parameter] public string Icon { get; set; } = "event_note";
+
+  [Parameter] public EventCallback OnInfoClick { get; set; }
+
+  private async Task InfoButtonClick()
+  {
+    if (OnInfoClick.HasDelegate)
+    {
+      await OnInfoClick.InvokeAsync();
+    }
+  }
+
+  protected async Task CancelButtonClick(MouseEventArgs args)
+  {
+    DialogService.Close(null);
+  }
+}

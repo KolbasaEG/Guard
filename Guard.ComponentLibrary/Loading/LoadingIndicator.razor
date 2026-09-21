@@ -1,0 +1,28 @@
+﻿<div class="loading-overlay" style="@(IsLoading ? "display: flex;" : "display: none;")">
+  <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Info" Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" />
+</div>
+@code {
+  public bool IsLoading { get; set; } = false;
+  public void SetLoadingState(bool state = false)
+  {
+    IsLoading = state;
+    StateHasChanged();
+  }
+
+}
+<style>
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 1000;
+  }
+</style>

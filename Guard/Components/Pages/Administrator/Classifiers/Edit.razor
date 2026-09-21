@@ -1,0 +1,41 @@
+@using Guard.Core.Entities
+@using Guard.Core.Enums
+@attribute [Authorize]
+
+<LoadingIndicator @ref=(loading) />
+<EditEntity TItem="Classifier" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="true" OnInfoClick="InfoButtonClick">
+  <RadzenStack Gap="0px" Orientation="Orientation.Vertical">
+    <RadzenFormField Text="Тип справочника" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenDropDown Data="@(Enum.GetValues(typeof(ClassifierType)).Cast<Enum>())" style="display: block; width: 100%" @bind-Value="@(item.Type)" Name="Type" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Type" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+    <RadzenFormField Text="Код значения внутри справочника (1, 2, 3...)" Style="width:100%" Variant="Variant.Text">
+      <ChildContent>
+        <RadzenNumeric Step="1" style="display: block; width: 100%" @bind-Value="@item.Code" Name="Code"/>
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Code" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+    <RadzenFormField Text="Наименование справочника" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.ClassifierName" Name="ClassifierName" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="ClassifierName" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+    <RadzenFormField Text="Отображаемое значение" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Value" Name="Value" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Value" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+  </RadzenStack>
+</EditEntity>

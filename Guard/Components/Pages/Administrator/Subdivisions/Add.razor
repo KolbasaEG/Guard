@@ -1,0 +1,70 @@
+@using Guard.Core.Entities
+@attribute [Authorize]
+
+<CreateEntity TItem="Subdivision" Data="@item" Submit="@FormSubmit" Cancel="HandleCancelButtonClick" IsLoading="isLoading">
+  <RadzenStack Gap="0px" Orientation="Orientation.Vertical">
+    <RadzenStack Orientation="Orientation.Horizontal" Style="width:100%;" Gap="0px">
+      <RadzenFormField Text="Вышестоящее подразделение" Variant="Variant.Text" Style="width:100%;">
+        <ChildContent>
+          <RadzenDropDown Data="@subdivisions" TextProperty="Name" ValueProperty="Id" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
+                          style="display: block; width: 100%" @bind-Value="@item.ParentId" Name="SubdivisionId" />
+        </ChildContent>
+      </RadzenFormField>
+    </RadzenStack>
+
+    <RadzenFormField Text="Наименование подразделения" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Name" Name="Name" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Name" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+
+    <RadzenFormField Text="Наименование, используемое при формировании должности" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.PositionFormationName" Name="PositionFormationName" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="PositionFormationName" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+
+    <RadzenFormField Text="Почтовый индекс" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.PostalCode" Name="PostalCode" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="PostalCode" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+
+    <RadzenFormField Text="Город / полный адрес" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Address" Name="Address" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Address" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+
+    <RadzenFormField Text="Телефон" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Phone" Name="Phone" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Phone" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+
+    <RadzenFormField Text="Fax" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Fax" Name="Fax" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Fax" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+
+  </RadzenStack>
+</CreateEntity>

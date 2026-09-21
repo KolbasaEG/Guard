@@ -1,0 +1,21 @@
+﻿@* LoadingContainer.razor *@
+<div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;">
+
+  @if (IsLoading)
+  {
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.1); display: flex; justify-content: center; align-items: center; z-index: 100; border-radius: inherit;">
+      <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Info"
+                                 Value="100"
+                                 ShowValue="false"
+                                 Mode="ProgressBarMode.Indeterminate"
+                                 Size="ProgressBarCircularSize.Large" />
+    </div>
+  }
+
+  @ChildContent
+</div>
+
+@code {
+  [Parameter] public bool IsLoading { get; set; }
+  [Parameter] public RenderFragment? ChildContent { get; set; }
+}

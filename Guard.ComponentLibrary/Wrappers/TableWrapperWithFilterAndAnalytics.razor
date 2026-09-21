@@ -1,0 +1,65 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+<RadzenSplitter Orientation="Orientation.Vertical" style="height: 100%; background-color: var(--rz-tabs-background-color);">
+  <RadzenSplitterPane Size="260px">
+    <RadzenSplitter>
+      <RadzenSplitterPane Min="30%" Max="70%">
+        
+        <AnalitycsWrapper>
+          @Analitycs
+        </AnalitycsWrapper>
+      </RadzenSplitterPane>
+      <RadzenSplitterPane>
+
+        <RadzenCard Variant="Variant.Outlined" Style="height:100%;width:100%;box-sizing: border-box; padding:5px;border-radius:0px;">
+          <RadzenCard Variant="Variant.Outlined" Style="height:100%; padding:5px;border-radius:0px;">
+
+            <div style="height:100%;width:100%;overflow:auto;">
+              <div style="position:sticky;top:0px; background-color: var(--rz-tabs-background-color); z-index:5; margin-bottom:5px;">
+                <RadzenCard Style="width:100%; height:36px; border-radius:0px; border:none; padding:0px; background-color:var(--rz-primary-darker);flex-shrink:0;">
+                  <RadzenStack Gap="10px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="0px" Style="width:100%;">
+                      <RadzenIcon Icon="feature_search" Style="margin:8px; color:var(--rz-on-primary-darker); margin-right:15px;margin-left:12px;" />
+                      <RadzenText TextStyle="TextStyle.Body1" Style="margin-right:15px; color:var(--rz-on-primary-darker);"><strong>Фильтрация данных</strong></RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="height:100%;">
+                      @FilterButtons
+                    </RadzenStack>
+                  </RadzenStack>
+                </RadzenCard>
+              </div>
+              @Filter
+            </div>
+          </RadzenCard>
+        </RadzenCard>
+      </RadzenSplitterPane>
+    </RadzenSplitter>
+  </RadzenSplitterPane>
+  <RadzenSplitterPane>
+    <RadzenCard Variant="Variant.Outlined" Style="height:100%; padding:5px;">
+      @Table
+    </RadzenCard>
+  </RadzenSplitterPane>
+</RadzenSplitter>
+
+
+<style>
+  .rz-tabview-panels{
+    height:100%; 
+  }
+
+  .rz-tabview-panel{
+    height: 100%;
+    padding: 0px;
+  }
+
+  .rz-custom-header {
+    width: 100%;
+  }
+</style>
+@code {
+  [Parameter] public RenderFragment Table { get; set; }
+  [Parameter] public RenderFragment Filter { get; set; }
+  [Parameter] public RenderFragment FilterButtons { get; set; }
+  [Parameter] public RenderFragment Analitycs { get; set; }  
+}

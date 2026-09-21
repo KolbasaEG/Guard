@@ -1,0 +1,44 @@
+﻿@inject NavigationManager NavigationManager
+
+@code {
+  /// <summary>
+  /// ReturnUrl из query string (например, /assets?id=123).
+  /// Если не указан — редирект на главную после успешного логина.
+  /// </summary>
+  [SupplyParameterFromQuery]
+  private string? ReturnUrl { get; set; }
+
+  protected override void OnInitialized()
+  {
+    // Если ReturnUrl не передан — используем текущий путь как intended destination
+    // (на случай, если пользователь напрямую открыл защищённую страницу).
+    var targetReturnUrl = ReturnUrl;
+
+    if (string.IsNullOrWhiteSpace(targetReturnUrl))
+    {
+      // Берём относительный путь текущего URL (без домена)
+      targetReturnUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+
+      // Если это сам login или корень — отправляем на "/" после логина
+      if (string.IsNullOrWhiteSpace(targetReturnUrl) ||
+          targetReturnUrl.StartsWith("Account/Login", StringComparison.OrdinalIgnoreCase))
+      {
+        targetReturnUrl = "/";
+      }
+    }
+
+    // Дополнительная защита: убеждаемся, что ReturnUrl — относительный URI (не абсолютный внешний)
+    // Это предотвращает Open Redirect атаку. Полная проверка также есть в IdentityRedirectManager.RedirectTo
+    if (!Uri.IsWellFormedUriString(targetReturnUrl, UriKind.Relative))
+    {
+      targetReturnUrl = "/";
+    }
+
+    // Выполняем навигацию на страницу входа с сохранением ReturnUrl.
+    // forceLoad: true — критично для перехода из InteractiveServer (защищённая страница)
+    // в Static SSR (/Account/*). Без forceLoad возможны проблемы с hydration и cookie.
+    NavigationManager.NavigateTo(
+        $"/Account/Login?ReturnUrl={Uri.EscapeDataString(targetReturnUrl)}",
+        forceLoad: true);
+  }
+}

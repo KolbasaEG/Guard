@@ -1,0 +1,53 @@
+@using Guard.ComponentLibrary.Wrappers
+@using Microsoft.AspNetCore.Authorization
+@using Radzen.Blazor
+@attribute [Authorize]
+
+<EntityInfo >
+  <RadzenTable Style="width:100%;">
+    <RadzenTableBody>
+      <RadzenTableRow>
+        <RadzenTableCell>
+          Id
+        </RadzenTableCell>
+        <RadzenTableCell>
+          @(BaseEntity?.Id.ToString() ?? "")
+        </RadzenTableCell>
+      </RadzenTableRow>
+      <RadzenTableRow>
+        <RadzenTableCell>
+          Дата создания
+        </RadzenTableCell>
+        <RadzenTableCell>
+          @(DateTime.SpecifyKind(BaseEntity.InsertedDate, DateTimeKind.Utc).ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss"))
+         </RadzenTableCell>
+      </RadzenTableRow>
+      <RadzenTableRow>
+        <RadzenTableCell>
+          Создал
+        </RadzenTableCell>
+        <RadzenTableCell>
+          @creator
+        </RadzenTableCell>
+      </RadzenTableRow>
+      <RadzenTableRow>
+        <RadzenTableCell>
+          Дата последнего редактирования
+        </RadzenTableCell>
+        <RadzenTableCell>
+          @(BaseEntity?.LastModifiedDate.HasValue == true
+            ? DateTime.SpecifyKind(BaseEntity.LastModifiedDate.Value, DateTimeKind.Utc).ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")
+            : "—")
+        </RadzenTableCell>
+      </RadzenTableRow>
+      <RadzenTableRow>
+        <RadzenTableCell>
+          Редактировал
+        </RadzenTableCell>
+        <RadzenTableCell>
+          @editor
+        </RadzenTableCell>
+      </RadzenTableRow>
+    </RadzenTableBody>
+  </RadzenTable>
+</EntityInfo>

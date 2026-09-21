@@ -1,0 +1,62 @@
+﻿@using Microsoft.Extensions.Options
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="/" />
+    
+  <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+  <link rel="stylesheet" href="@Assets["app.css"]" />
+  <link rel="stylesheet" href="@Assets["Guard.styles.css"]" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+    
+  <!-- HeadOutlet и RadzenTheme используют conditional render mode -->
+  <HeadOutlet @rendermode="@RenderModeForPage" />
+  <RadzenTheme Theme="software" @rendermode="@InteractiveServer" />
+</head>
+<body>
+  <Routes @rendermode="@RenderModeForPage" />
+  <ReconnectModal />
+    
+  <!-- КРИТИЧНО: для чистого Blazor Server нужен именно blazor.server.js -->
+  <script src="_framework/blazor.server.js"></script>
+  <script src="@Assets["Components/Account/Shared/PasskeySubmit.razor.js"]" type="module"></script>
+  <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
+</body>
+</html>
+
+@code {
+  [CascadingParameter]
+  private HttpContext? HttpContext { get; set; }
+
+  /// <summary>
+  /// Самое важное изменение:
+  /// Страницы Identity (/account/login, /account/register и т.д.) должны рендериться как Static SSR (null),
+  /// иначе SignInManager/SignOutAsync не смогут установить куки.
+  /// Всё остальное — InteractiveServer.
+  /// </summary>
+  private IComponentRenderMode? RenderModeForPage =>
+      HttpContext?.Request.Path.StartsWithSegments("/account", StringComparison.OrdinalIgnoreCase) == true
+          ? null
+          : InteractiveServer;
+
+  [Inject]
+  private ThemeService ThemeService { get; set; }
+    
+  protected override void OnInitialized()
+  {
+    base.OnInitialized();
+
+    if (HttpContext != null)
+    {
+      var theme = HttpContext.Request.Cookies["ApplicationTheme"];
+
+      if (!string.IsNullOrEmpty(theme))
+      {
+        ThemeService.SetTheme(theme, false);
+      }
+    }
+  }
+
+}

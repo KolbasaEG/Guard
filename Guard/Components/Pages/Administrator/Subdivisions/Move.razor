@@ -1,0 +1,33 @@
+@using Guard.Core.Entities
+@using Guard.Core.Enums
+@attribute [Authorize]
+
+<EditEntity TItem="Subdivision" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="true" OnInfoClick="InfoButtonClick" IsLoading="isLoading">
+  <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" Style="width: 100%;">
+
+    <!-- Выбор нового родительского подразделения -->
+    <RadzenFormField Text="Новое родительское подразделение" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenDropDownDataGrid Style="display: block; width: 100%"
+                                Data="@availableParents"
+                                @bind-Value="@selectedParentId"
+                                TextProperty="Name"
+                                ValueProperty="Id"
+                                Name="ParentId"
+                                AllowClear="true"
+                                Placeholder="-- Корневой узел (Без родителя) --">
+          <Columns>
+            <RadzenDropDownDataGridColumn Property="Name" Title="Наименование" />
+            <RadzenDropDownDataGridColumn Property="Path" Title="Путь" />
+          </Columns>
+        </RadzenDropDownDataGrid>
+      </ChildContent>
+      <Helper>
+        <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary">
+          Очистите поле для перевода подразделения на верхний уровень (в корневой узел).
+        </RadzenText>
+      </Helper>
+    </RadzenFormField>
+
+  </RadzenStack>
+</EditEntity>

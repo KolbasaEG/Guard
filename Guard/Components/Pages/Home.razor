@@ -1,0 +1,20 @@
+﻿@page "/"
+@attribute [Authorize]
+
+@rendermode InteractiveServer
+@inject NotificationService NotificationService;
+<PageTitle>Home</PageTitle>
+
+<RadzenButton Click="@ButtonClicked" Text="Hi"></RadzenButton>
+@code {
+  
+  void ButtonClicked()
+  {
+    NotificationService.Notify(new NotificationMessage
+    {
+      Severity = NotificationSeverity.Error,
+      Summary = $"Номер шлейфа занят",
+      Detail = "result"
+    });
+  }
+}

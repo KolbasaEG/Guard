@@ -1,0 +1,159 @@
+﻿@using Guard.Core.Entities
+@using System.Text.Json
+@using System.Text.RegularExpressions
+@inject DialogService DialogService
+<ViewEntity TItem="LogEntry" Data="Log">
+  <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;height:100%;">
+    <InfoBlock Title="Основные метаданные контекста">
+      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="10px">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px">
+          <RadzenBadge BadgeStyle="@GetBadgeStyle(Log.Level)" Text="@Log.Level" IsPill="true"  />
+          <RadzenBadge BadgeStyle="@GetLayerBadgeStyle(Log.Layer)" Text="@(Log.Layer ?? "System")" IsPill="true" />
+        </RadzenStack>
+
+        <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color); font-size: 0.85rem;">
+          <RadzenIcon Icon="schedule" Style="vertical-align: middle; font-size: 1.1rem;" />
+          @Log.Timestamp.ToString("dd.MM.yyyy HH:mm:ss.fff")
+        </RadzenText>
+      </RadzenStack>
+      <RadzenStack Orientation="Orientation.Horizontal" Gap="5px;" style="width:100%; margin-top:10px;">
+        <RadzenFormField Text="Пользователь (UserId)" Variant="Variant.Text" style="width:50%;">
+          <RadzenTextBox Value="@(string.IsNullOrEmpty(Log.UserId) ? "Не указан" : Log.UserId)" ReadOnly="true" />
+        </RadzenFormField>
+        <RadzenFormField Text="IP-адрес клиента" Variant="Variant.Text" style="width:50%;">
+          <RadzenTextBox Value="@(string.IsNullOrEmpty(Log.ClientIp) ? "N/A" : Log.ClientIp)" ReadOnly="true" />
+        </RadzenFormField>
+      </RadzenStack>
+    </InfoBlock>
+    <InfoBlock Title="Детальная информация">
+      <RadzenTabs RenderMode="TabRenderMode.Client">
+        <Tabs>
+          <RadzenTabsItem Text="Сообщение" Icon="chat" >
+            <RadzenCard Variant="Variant.Outlined" Style="padding:5px;margin:5px;border-radius:0px;">
+              <RadzenStack Gap="5px" Style="margin-top: 10px;">
+                <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-left:12px;">Исходное сообщение:</RadzenText>
+                <div style="background: var(--rz-content-background-color); border: 1px solid var(--rz-border-color); border-radius: 6px; padding: 12px; font-family: monospace; white-space: pre-wrap; word-break: break-word;">
+                  @Log.Message
+                </div>
+
+                @if (parsedJsonMessage != null)
+                {
+                  <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-top: 10px;">Распарсенный JSON из сообщения:</RadzenText>
+                  <div style="background: #1e1e1e; color: #d4d4d4; border-radius: 6px; padding: 12px; font-family: 'Consolas', monospace; font-size: 0.85rem; max-height: 250px; overflow-y: auto;">
+                    <pre style="margin: 0;">@parsedJsonMessage</pre>
+                  </div>
+                }
+              </RadzenStack>
+            </RadzenCard>
+          </RadzenTabsItem>
+
+          <!-- Анализ и парсинг Исключения (Exception) -->
+          @if (!string.IsNullOrEmpty(Log.Exception))
+          {
+            <RadzenTabsItem Text="Исключение (Exception)" Icon="bug_report">
+              <RadzenCard Variant="Variant.Outlined" Style="padding:5px;margin:5px;border-radius:0px;">
+                <RadzenStack Gap="5px" >
+                  <div style="background: var(--rz-danger-lighter); color: var(--rz-danger-darker); border-left: 4px solid var(--rz-danger); padding: 10px 14px; font-weight: 600; border-radius: 0px;">
+                    @exceptionHeader
+                  </div>
+                  <div style="background: #1e1e1e; color: #ce9178; border-radius: 0px; padding: 12px; font-family: 'Consolas', monospace; font-size: 0.82rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">
+                    @foreach (var line in stackTraceLines)
+                    {
+                      <div style="display: block; margin-bottom: 4px; word-break: break-word; line-height: 1.4;">
+                        @if (line.StartsWith("at "))
+                        {
+                          <span style="color: #569cd6; font-weight: bold;">at&nbsp;</span>
+                          <span style="color: #ce9178;">@line.Substring(3)</span>
+                        }
+                        else if (line.StartsWith("в "))
+                        {
+                          <span style="color: #569cd6; font-weight: bold;">в&nbsp;</span>
+                          <span style="color: #ce9178;">@line.Substring(2)</span>
+                        }
+                        else
+                        {
+                          <span style="color: #dcdcaa;">@line</span>
+                        }
+                      </div>
+                    }
+                  </div>
+                </RadzenStack>
+              </RadzenCard>
+            </RadzenTabsItem>
+          }
+        </Tabs>
+      </RadzenTabs>
+
+    </InfoBlock>
+  </RadzenStack>
+</ViewEntity>
+
+
+@code {
+  [Parameter] public LogEntry Log { get; set; } = default!;
+
+  private string? parsedJsonMessage;
+  private string exceptionHeader = string.Empty;
+  private List<string> stackTraceLines = new();
+
+  protected override void OnInitialized()
+  {
+    ParseMessageJson();
+    ParseExceptionData();
+  }
+
+  private void ParseMessageJson()
+  {
+    if (string.IsNullOrWhiteSpace(Log.Message)) return;
+
+    // Попытка найти JSON блок внутри сообщения
+    var jsonMatch = Regex.Match(Log.Message, @"\{.*\}|\[.*\]", RegexOptions.Singleline);
+    if (jsonMatch.Success)
+    {
+      try
+      {
+        using var doc = JsonDocument.Parse(jsonMatch.Value);
+        parsedJsonMessage = JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = true });
+      }
+      catch
+      {
+        // Если не валидный JSON - пропускаем
+      }
+    }
+  }
+
+  private void ParseExceptionData()
+  {
+    if (string.IsNullOrWhiteSpace(Log.Exception)) return;
+
+    // Разбиваем строку по переносам \r\n, \n, \r и автоматически удаляем внешние пробелы
+    var lines = Log.Exception
+        .Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    if (lines.Length > 0)
+    {
+      // Первая строка — тип и заголовок исключения
+      exceptionHeader = lines[0];
+
+      // Остальные строки — фреймы стека вызовов
+      stackTraceLines = lines.Skip(1).ToList();
+    }
+  }
+
+  private BadgeStyle GetBadgeStyle(string? level) => level switch
+  {
+    "Error" or "Fatal" => BadgeStyle.Danger,
+    "Warning" => BadgeStyle.Warning,
+    "Information" => BadgeStyle.Info,
+    "Debug" => BadgeStyle.Secondary,
+    _ => BadgeStyle.Light
+  };
+
+  private BadgeStyle GetLayerBadgeStyle(string? layer) => layer switch
+  {
+    "Components" => BadgeStyle.Secondary,
+    "Service" => BadgeStyle.Success,
+    "Database" => BadgeStyle.Warning,
+    _ => BadgeStyle.Light
+  };
+}

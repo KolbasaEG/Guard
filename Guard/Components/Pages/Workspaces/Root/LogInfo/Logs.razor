@@ -1,0 +1,5 @@
+@page "/Logs"
+@attribute [Authorize]
+@attribute [Authorize(Roles = "Root")]
+
+<Guard.Components.Pages.Root.LogInfo.Index/>

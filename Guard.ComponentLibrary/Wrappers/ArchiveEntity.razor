@@ -1,0 +1,20 @@
+﻿@inject DialogService DialogService;
+<Guard.ComponentLibrary.Wrappers.Elements.CardHeader Icon="@Icon" Name="@Name">
+  <Menue>
+    @Menue
+  </Menue>
+</Guard.ComponentLibrary.Wrappers.Elements.CardHeader>
+<RadzenCard Variant="Variant.Outlined">
+  @Body
+</RadzenCard>
+@code {
+  [Parameter] public RenderFragment? Body { get; set; }
+  [Parameter] public RenderFragment? Menue { get; set; }
+
+  [Parameter]
+  public string Name { get; set; } = "Помещение в архив";
+  [Parameter]
+  public string Icon { get; set; } = "inventory_2";
+
+  protected async Task CancelButtonClick(MouseEventArgs args) => DialogService.Close(null);
+}

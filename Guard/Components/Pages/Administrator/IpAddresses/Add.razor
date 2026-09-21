@@ -1,0 +1,28 @@
+@using Guard.Core.Entities
+@attribute [Authorize]
+
+<CreateEntity TItem="IpAddress" Data="@item" Submit="@FormSubmit">
+  <RadzenStack Gap="0px" Orientation="Orientation.Vertical">
+    <RadzenFormField Text="Наименование" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Address" Name="Address" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Address" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+    <RadzenFormField Text="Человекочитаемое название" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Name" Name="Name" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Name" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+    <RadzenFormField Text="Дополнительное описание" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Description" Name="Description" />
+      </ChildContent>
+    </RadzenFormField>
+  </RadzenStack>
+</CreateEntity>

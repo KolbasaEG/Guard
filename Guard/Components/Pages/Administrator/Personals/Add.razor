@@ -1,0 +1,94 @@
+@using Guard.Core.Entities
+@attribute [Authorize]
+
+<CreateEntity TItem="Personal" Data="@item" Submit="@FormSubmit" Cancel="HandleCancelButtonClick" IsLoading="isLoading">
+  <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width: 100%;">
+    <RadzenStack Orientation="Orientation.Horizontal" Style="width:100%;" Gap="0px">
+      <RadzenFormField Text="Подразделение" Variant="Variant.Text" Style="width:100%;">
+        <ChildContent>
+          <RadzenDropDown Data="@subdivisions" TextProperty="Name" ValueProperty="Id" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
+                          style="display: block; width: 100%" @bind-Value="@item.SubdivisionId" Name="SubdivisionId" />
+        </ChildContent>
+      </RadzenFormField>
+    </RadzenStack>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="5px" Style="width: 100%;">
+      <!-- Фамилия -->
+      <RadzenFormField Text="Фамилия *" Variant="Variant.Text" Style="width: 33%;">
+        <ChildContent>
+          <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@item.LastName" Name="LastName" />
+        </ChildContent>
+        <Helper>
+          <RadzenRequiredValidator Component="LastName" Text="Обязательно для заполнения!" />
+        </Helper>
+      </RadzenFormField>
+
+      <!-- Имя -->
+      <RadzenFormField Text="Имя *" Variant="Variant.Text" Style="width: 33%;">
+        <ChildContent>
+          <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@item.FirstName" Name="FirstName" />
+        </ChildContent>
+        <Helper>
+          <RadzenRequiredValidator Component="FirstName" Text="Обязательно для заполнения!" />
+        </Helper>
+      </RadzenFormField>
+
+      <!-- Отчество -->
+      <RadzenFormField Text="Отчество *" Variant="Variant.Text" Style="width: 33%;">
+        <ChildContent>
+          <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@item.MiddleName" Name="MiddleName" />
+        </ChildContent>
+      </RadzenFormField>
+    </RadzenStack>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="5px" Style="width: 100%;">
+      <!-- Фамилия (род. падеж) -->
+      <RadzenFormField Text="Фамилия (род. падеж)" Variant="Variant.Text" Style="width: 33%;">
+        <ChildContent>
+          <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@item.LastNameGen" Name="LastNameGen" />
+        </ChildContent>
+      </RadzenFormField>
+
+      <!-- Имя (род. падеж) -->
+      <RadzenFormField Text="Имя (род. падеж)" Variant="Variant.Text" Style="width: 33%;">
+        <ChildContent>
+          <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@item.FirstNameGen" Name="FirstNameGen" />
+        </ChildContent>
+      </RadzenFormField>
+
+      <!-- Отчество (род. падеж) -->
+      <RadzenFormField Text="Отчество (род. падеж)" Variant="Variant.Text" Style="width: 33%;">
+        <ChildContent>
+          <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@item.MiddleNameGen" Name="MiddleNameGen" />
+        </ChildContent>
+      </RadzenFormField>
+    </RadzenStack>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="5px" Style="width: 100%;">
+      <!-- Фамилия и инициалы -->
+      <RadzenFormField Text="Фамилия и инициалы (ФИО)" Variant="Variant.Text" Style="flex: 2; min-width: 280px;">
+        <ChildContent>
+          <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@item.FullName" Name="FullName" />
+        </ChildContent>
+      </RadzenFormField>
+
+      <!-- Личный номер -->
+      <RadzenFormField Text="Личный номер" Variant="Variant.Text" Style="flex: 1; min-width: 180px;">
+        <ChildContent>
+          <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@item.PersonalNumber" Name="PersonalNumber" />
+        </ChildContent>
+      </RadzenFormField>
+
+      <!-- Год принятия на службу -->
+      <RadzenFormField Text="Год принятия на службу" Variant="Variant.Text" Style="flex: 1; min-width: 180px;">
+        <ChildContent>
+          <RadzenNumeric Style="display: block; width: 100%"
+                         @bind-Value="@item.EnlistmentYear"
+                         Name="EnlistmentYear"
+                         TValue="int?"
+                         Min="1900"
+                         Max="2100"
+                         Format="0000"
+                         ShowUpDown="false" />
+        </ChildContent>
+      </RadzenFormField>
+    </RadzenStack>
+  </RadzenStack>
+</CreateEntity>
