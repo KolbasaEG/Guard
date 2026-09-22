@@ -17,5 +17,16 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
     builder.HasMany(u => u.IpAddresses)
            .WithMany(i => i.Users)
            .UsingEntity<UserIpAddress>();
+
+    // Настройка связи 1-к-1 с Personal
+    builder.HasOne(u => u.Personal)
+           .WithOne(p => p.User)
+           .HasForeignKey<ApplicationUser>(u => u.PersonalId)
+           .OnDelete(DeleteBehavior.SetNull); // При удалении сотрудника отвязываем пользователя (PersonalId = null)
+
+    // Уникальный индекс, гарантирующий связь именно 1 к 1
+    builder.HasIndex(u => u.PersonalId)
+           .IsUnique()
+           .HasFilter("\"PersonalId\" IS NOT NULL");
   }
 }

@@ -5,6 +5,11 @@ namespace Guard.Core.Entities;
 
 public class ApplicationUser : IdentityUser
 {
+  /// <summary>
+  /// Идентификатор пользователя.
+  /// </summary>
+  public Guid? PersonalId { get; set; }
+  public Personal? Personal { get; set; }
 
   /// <summary>
   /// Прямая навигация к назначенным IP-адресам.

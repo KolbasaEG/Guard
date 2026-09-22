@@ -97,4 +97,11 @@ public class Personal : BaseEntity, IHasSubdivision
   /// Дата последнего обновления информации.
   /// </summary>
   public DateTime? UpdatedAt { get; set; }
+
+
+
+  /// <summary>
+  /// Связанная учетная запись пользователя.
+  /// </summary>
+  public ApplicationUser? User { get; set; }
 }

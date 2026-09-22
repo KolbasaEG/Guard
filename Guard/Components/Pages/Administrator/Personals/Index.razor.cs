@@ -36,7 +36,7 @@ namespace Guard.Components.Pages.Administrator.Personals
     int count;
     protected bool isEditor = true;
     protected bool isLoading = false;
-    protected string subdivisionPath = "/4/";
+    protected string subdivisionPath = "";
     protected DataViewMode currentMode = DataViewMode.Active;
     protected SubdivisionHierarchyMode hierarchyMode = SubdivisionHierarchyMode.CurrentOnly;
 
