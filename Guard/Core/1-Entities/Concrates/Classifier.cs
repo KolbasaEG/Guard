@@ -1,4 +1,5 @@
-﻿using Guard.Core.Enums;
+﻿using Guard.Components.Pages.Workspaces.Administrator;
+using Guard.Core.Enums;
 
 namespace Guard.Core.Entities;
 
@@ -12,9 +13,9 @@ namespace Guard.Core.Entities;
 
 public class Classifier
 {
-  public long Id { get; set; }
+  public int Id { get; set; }
   // Тип справочника
-  public ClassifierType Type { get; set; }
+  public int Type { get; set; }
 
   // Код значения внутри справочника (1, 2, 3...)
   public int Code { get; set; }
@@ -29,4 +30,6 @@ public class Classifier
   public bool IsActive { get; set; } = true;
 
   public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+  public ICollection<Subdivision> Subdivisions { get; private set; } = new List<Subdivision>();
 }

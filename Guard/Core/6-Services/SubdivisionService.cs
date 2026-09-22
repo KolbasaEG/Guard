@@ -7,15 +7,21 @@ namespace Guard.Core.Services;
 public class SubdivisionService : ISubdivisionService
 {
   private readonly IReadRepository<Subdivision> _readSubdivisionRepository;
+  private readonly IReadRepository<OrganType> _readOrganTypeRepository;
+  private readonly IReadRepository<Classifier> _readClassifierRepository;
   private readonly IUnitOfWork _uow;
   private readonly ILogger<SubdivisionService> _logger;
 
   public SubdivisionService(
-      IReadRepository<Subdivision> readRepository,
+      IReadRepository<Subdivision> readSubdivisionRepository,
+      IReadRepository<OrganType> readOrganTypeRepository,
+      IReadRepository<Classifier> readClassifierRepository,
       IUnitOfWork unitOfWork,
       ILogger<SubdivisionService> logger)
   {
-    _readSubdivisionRepository = readRepository;
+    _readSubdivisionRepository = readSubdivisionRepository;
+    _readOrganTypeRepository = readOrganTypeRepository;
+    _readClassifierRepository = readClassifierRepository;
     _uow = unitOfWork;
     _logger = logger;
   }
@@ -75,11 +81,39 @@ public class SubdivisionService : ISubdivisionService
         parentPath = parent.Path;
       }
 
-      // 2. Добавление записи для получения сгенерированного СУБД SubdivisionId
+      // 2. Если ID НЕ передан (автогенерация) — выравниваем счетчик ДО сохранения, 
+      // чтобы защититься от старых рассинхронов
+      if (!subdivision.SubdivisionId.HasValue)
+      {
+        await _uow.ExecuteSqlRawAsync(
+            """
+          SELECT setval(
+              pg_get_serial_sequence('"Subdivisions"', 'SubdivisionId'), 
+              COALESCE((SELECT MAX("SubdivisionId") FROM "Subdivisions"), 0)
+          );
+          """,
+            ct);
+      }
+
+      // 3. Добавление записи (при null PostgreSQL возьмет следующий корректный значение из sequence)
       await _uow.Repository<Subdivision>().AddAsync(subdivision, ct);
       await _uow.SaveChangesAsync(ct);
 
-      // 3. Формирование Path на основе полученного SubdivisionId (например: "/1/4/12/")
+      // 4. Если ID БЫЛ передан вручную — выравниваем счетчик ПОСЛЕ сохранения, 
+      // чтобы sequence перешагнул через вставленное вручную значение
+      if (subdivision.SubdivisionId.HasValue)
+      {
+        await _uow.ExecuteSqlRawAsync(
+            """
+          SELECT setval(
+              pg_get_serial_sequence('"Subdivisions"', 'SubdivisionId'), 
+              COALESCE((SELECT MAX("SubdivisionId") FROM "Subdivisions"), 0)
+          );
+          """,
+            ct);
+      }
+
+      // 5. Формирование Path на основе полученного SubdivisionId
       subdivision.Path = $"{parentPath}{subdivision.SubdivisionId}/";
       await _uow.Repository<Subdivision>().UpdateAsync(subdivision, ct);
       await _uow.SaveChangesAsync(ct);
@@ -90,7 +124,6 @@ public class SubdivisionService : ISubdivisionService
       return subdivision.Id;
     }, ct);
   }
-
   public async Task UpdateAsync(Subdivision subdivision, CancellationToken ct = default)
   {
     ArgumentNullException.ThrowIfNull(subdivision);
@@ -232,5 +265,110 @@ public class SubdivisionService : ISubdivisionService
     }
 
     return subdivision;
+  }
+
+  public async Task RebuildHierarchyAndPathsAsync(CancellationToken ct = default)
+  {
+    await _uow.ExecuteInTransactionAsync(async () =>
+    {
+      var repo = _uow.Repository<Subdivision>();
+
+      // 1. Загружаем все подразделения из базы данных
+      var allSubdivisions = await repo.Query().ToListAsync(ct);
+
+      if (allSubdivisions.Count == 0)
+      {
+        _logger.LogInformation("Список подразделений пуст. Пересчет иерархии пропущен.");
+        return;
+      }
+
+      // 2. Создаем быстрый словарь по long-идентификатору SubdivisionId
+      var dictionary = allSubdivisions
+          .Where(s => s.SubdivisionId > 0)
+          .ToDictionary(s => s.SubdivisionId);
+
+      // Группировка детей по Guid родителя для быстрой рекурсии в памяти
+      var childrenLookup = new Dictionary<Guid, List<Subdivision>>();
+      var rootNodes = new List<Subdivision>();
+
+      // 3. Связываем ParentId (Guid) на основе ParentSubdivisionId (long)
+      foreach (var item in allSubdivisions)
+      {
+        if (item.ParentSubdivisionId > 0
+            && item.ParentSubdivisionId != item.SubdivisionId
+            && dictionary.TryGetValue(item.ParentSubdivisionId, out var parent))
+        {
+          item.ParentId = parent.Id;
+
+          if (!childrenLookup.ContainsKey(parent.Id))
+          {
+            childrenLookup[parent.Id] = new List<Subdivision>();
+          }
+
+          childrenLookup[parent.Id].Add(item);
+        }
+        else
+        {
+          item.ParentId = null;
+          rootNodes.Add(item);
+        }
+      }
+
+      // 4. Локальная функция для рекурсивного расчета Path (например, /1/4/12/)
+      void BuildPathRecursive(Subdivision node, string parentPath)
+      {
+        node.Path = string.IsNullOrEmpty(parentPath)
+            ? $"/{node.SubdivisionId}/"
+            : $"{parentPath}{node.SubdivisionId}/";
+
+        if (childrenLookup.TryGetValue(node.Id, out var children))
+        {
+          foreach (var child in children)
+          {
+            BuildPathRecursive(child, node.Path);
+          }
+        }
+      }
+
+      // 5. Запускаем обход дерева с корневых узлов
+      foreach (var root in rootNodes)
+      {
+        BuildPathRecursive(root, string.Empty);
+      }
+
+      // 6. Помечаем сущности для обновления и сохраняем изменения
+      foreach (var item in allSubdivisions)
+      {
+        await repo.UpdateAsync(item, ct);
+      }
+
+      await _uow.SaveChangesAsync(ct);
+
+      _logger.LogInformation("Успешно перестроена иерархия и Path для {Count} подразделений.", allSubdivisions.Count);
+    }, ct);
+  }
+
+  // ==================== Справочники (Read) ====================
+
+  public async Task<IReadOnlyList<OrganType>> GetOrganTypesAsync(CancellationToken ct = default)
+  {
+    _logger.LogDebug("Запрос справочника типов органов");
+
+    return await _readOrganTypeRepository.QueryAsync(query =>
+        query.OrderBy(o => o.Name)
+             .ToListAsync(ct),
+        ct);
+  }
+
+  public async Task<IReadOnlyList<Classifier>> GetClassifiersByTypeAsync(ClassifierType type, CancellationToken ct = default)
+  {
+    int typeId = (int)type;
+    _logger.LogDebug("Запрос классификаторов по типу: {ClassifierType} ({TypeId})", type, typeId);
+
+    return await _readClassifierRepository.QueryAsync(query =>
+        query.Where(c => c.Type == typeId)
+             .OrderBy(c => c.Value)
+             .ToListAsync(ct),
+        ct);
   }
 }

@@ -1,4 +1,5 @@
 ﻿using Guard.Core.Entities;
+using Guard.Core.Enums;
 
 namespace Guard.Core.Services;
 
@@ -97,4 +98,24 @@ public interface ISubdivisionService
   /// <param name="id">Идентификатор подразделения</param>
   /// <param name="ct">Токен отмены операции</param>
   Task RestoreAsync(Guid id, CancellationToken ct = default);
+
+  /// <summary>
+  /// Перестраивает связи иерархии (ParentId) и пересчитывает иерархический путь (Path)
+  /// для всех подразделений на основе полей SubdivisionId и ParentSubdivisionId.
+  /// </summary>
+  /// <param name="ct">Токен отмены операции</param>
+  Task RebuildHierarchyAndPathsAsync(CancellationToken ct = default);
+
+  /// <summary>
+  /// Получение типов органа.
+  /// </summary>
+  /// <param name="ct">Токен отмены операции</param>
+  Task<IReadOnlyList<OrganType>> GetOrganTypesAsync(CancellationToken ct = default);
+
+  /// <summary>
+  /// Получение классификаторов по определенному типу.
+  /// </summary>
+  /// <param name="ct">Токен отмены операции</param>
+  /// <param name="type">Тип классификатора</param>
+  Task<IReadOnlyList<Classifier>> GetClassifiersByTypeAsync(ClassifierType type, CancellationToken ct = default);
 }

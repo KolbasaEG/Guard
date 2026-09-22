@@ -67,6 +67,18 @@ public class UnitOfWork : IUnitOfWork
       throw;
     }
   }
+
+  // Выполнение сырых SQL-команд / скриптов
+  public async Task<int> ExecuteSqlRawAsync(string sql, CancellationToken ct = default)
+  {
+    return await _context.Database.ExecuteSqlRawAsync(sql, ct);
+  }
+
+  public async Task<int> ExecuteSqlRawAsync(string sql, IEnumerable<object> parameters, CancellationToken ct = default)
+  {
+    return await _context.Database.ExecuteSqlRawAsync(sql, parameters, ct);
+  }
+
   // ==================== Async Transactions ====================
   public async Task BeginTransactionAsync(CancellationToken ct = default)
   {

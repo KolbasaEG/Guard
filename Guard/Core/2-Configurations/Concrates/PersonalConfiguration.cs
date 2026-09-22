@@ -5,13 +5,12 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Guard.Core.Configurations;
 
 /// <summary>
-/// Конфигурация EF Core для сущности <see cref="Personnel"/>.
+/// Конфигурация EF Core для сущности <see cref="Personal"/>.
 /// </summary>
-public class PersonnelConfiguration : BaseEntityConfiguration<Personal>
+public class PersonalConfiguration : BaseEntityConfiguration<Personal>
 {
   public override void Configure(EntityTypeBuilder<Personal> builder)
   {
-    // Вызов базовой конфигурации (Primary Key Guid UUIDv7, Status enum, Audit fields)
     base.Configure(builder);
 
     builder.ToTable("Personals", t =>
@@ -62,69 +61,72 @@ public class PersonnelConfiguration : BaseEntityConfiguration<Personal>
     builder.Property(p => p.UpdatedAt)
         .HasComment("Дата последнего обновления информации");
 
+    builder.Property(p => p.PersonalId)
+        .ValueGeneratedOnAdd()
+        .UseIdentityByDefaultColumn()
+        .HasComment("Идентификатор сотрудника АИС Личное дело");
+
+    builder.Property(x => x.PersonalSubdivisionId)
+        .ValueGeneratedOnAdd()
+        .UseIdentityByDefaultColumn()
+        .HasComment("Уникальный автоинкрементный идентификатор подразделения сотрудника в АИС Личное дело");
+
+    builder.HasIndex(x => x.PersonalSubdivisionId)
+        .IsUnique()
+        .HasDatabaseName("UX_Subdivisions_PersonalSubdivisionId");
+
     // ============================================================
     //                    СВЯЗИ И ВНЕШНИЕ КЛЮЧИ
     // ============================================================
 
     // Связь с подразделением
     builder.HasOne(p => p.Subdivision)
-        .WithMany()
+        .WithMany(p => p.Personals)
         .HasForeignKey(p => p.SubdivisionId)
         .OnDelete(DeleteBehavior.Restrict);
 
-    // Классификаторы категории персонала
-    builder.HasOne(p => p.PersonnelCategoryType)
+    // Классификатор категории персонала: (PersonnelCategoryType, PersonnelCategoryCode) -> (Type, Code)
+    builder.HasOne(p => p.PersonnelCategory)
         .WithMany()
-        .HasForeignKey(p => p.PersonnelCategoryTypeId)
+        .HasForeignKey(p => new { p.PersonnelCategoryType, p.PersonnelCategoryCode })
+        .HasPrincipalKey(c => new { c.Type, c.Code })
+        .IsRequired(false)
         .OnDelete(DeleteBehavior.Restrict);
 
-    builder.HasOne(p => p.PersonnelCategoryCode)
+    // Классификатор специального звания: (SpecialRankType, SpecialRankCode) -> (Type, Code)
+    builder.HasOne(p => p.SpecialRank)
         .WithMany()
-        .HasForeignKey(p => p.PersonnelCategoryCodeId)
+        .HasForeignKey(p => new { p.SpecialRankType, p.SpecialRankCode })
+        .HasPrincipalKey(c => new { c.Type, c.Code })
+        .IsRequired(false)
         .OnDelete(DeleteBehavior.Restrict);
 
-    // Классификаторы специального звания
-    builder.HasOne(p => p.SpecialRankType)
+    // Классификатор должности: (PositionType, PositionCode) -> (Type, Code)
+    builder.HasOne(p => p.Position)
         .WithMany()
-        .HasForeignKey(p => p.SpecialRankTypeId)
+        .HasForeignKey(p => new { p.PositionType, p.PositionCode })
+        .HasPrincipalKey(c => new { c.Type, c.Code })
+        .IsRequired(false)
         .OnDelete(DeleteBehavior.Restrict);
 
-    builder.HasOne(p => p.SpecialRankCode)
+    // Классификатор категории рабочего/служащего: (WorkerCategoryType, WorkerCategoryCode) -> (Type, Code)
+    builder.HasOne(p => p.WorkerCategory)
         .WithMany()
-        .HasForeignKey(p => p.SpecialRankCodeId)
+        .HasForeignKey(p => new { p.WorkerCategoryType, p.WorkerCategoryCode })
+        .HasPrincipalKey(c => new { c.Type, c.Code })
+        .IsRequired(false)
         .OnDelete(DeleteBehavior.Restrict);
 
-    // Классификаторы должности
-    builder.HasOne(p => p.PositionType)
+    // Классификатор статуса: (StatusType, StatusCode) -> (Type, Code)
+    builder.HasOne(p => p.StatusClassifier)
         .WithMany()
-        .HasForeignKey(p => p.PositionTypeId)
+        .HasForeignKey(p => new { p.StatusType, p.StatusCode })
+        .HasPrincipalKey(c => new { c.Type, c.Code })
+        .IsRequired(false)
         .OnDelete(DeleteBehavior.Restrict);
 
-    builder.HasOne(p => p.PositionCode)
-        .WithMany()
-        .HasForeignKey(p => p.PositionCodeId)
-        .OnDelete(DeleteBehavior.Restrict);
-
-    // Классификаторы категории рабочего/служащего
-    builder.HasOne(p => p.WorkerCategoryType)
-        .WithMany()
-        .HasForeignKey(p => p.WorkerCategoryTypeId)
-        .OnDelete(DeleteBehavior.Restrict);
-
-    builder.HasOne(p => p.WorkerCategoryCode)
-        .WithMany()
-        .HasForeignKey(p => p.WorkerCategoryCodeId)
-        .OnDelete(DeleteBehavior.Restrict);
-
-    // Классификаторы статуса
-    builder.HasOne(p => p.StatusType)
-        .WithMany()
-        .HasForeignKey(p => p.StatusTypeId)
-        .OnDelete(DeleteBehavior.Restrict);
-
-    builder.HasOne(p => p.StatusCode)
-        .WithMany()
-        .HasForeignKey(p => p.StatusCodeId)
-        .OnDelete(DeleteBehavior.Restrict);
+    builder.HasIndex(p => p.PersonalId)
+    .IsUnique()
+    .HasDatabaseName("UX_Personals_PersonalId");
   }
 }

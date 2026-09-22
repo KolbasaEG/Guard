@@ -3,6 +3,7 @@ using System;
 using Guard.Core.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Guard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260922090427_Mig13")]
+    partial class Mig13
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -338,13 +341,6 @@ namespace Guard.Migrations
                         .HasColumnType("character varying(50)")
                         .HasComment("Личный номер");
 
-                    b.Property<long>("PersonalSubdivisionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasComment("Уникальный автоинкрементный идентификатор подразделения сотрудника в АИС Личное дело");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("PersonalSubdivisionId"));
-
                     b.Property<int?>("PersonnelCategoryCode")
                         .HasColumnType("integer");
 
@@ -376,6 +372,9 @@ namespace Guard.Migrations
                     b.Property<Guid?>("SubdivisionId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SubdivisionId1")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasComment("Дата последнего обновления информации");
@@ -392,11 +391,9 @@ namespace Guard.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_Personals_PersonalId");
 
-                    b.HasIndex("PersonalSubdivisionId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Subdivisions_PersonalSubdivisionId");
-
                     b.HasIndex("SubdivisionId");
+
+                    b.HasIndex("SubdivisionId1");
 
                     b.HasIndex("PersonnelCategoryType", "PersonnelCategoryCode");
 
@@ -476,10 +473,6 @@ namespace Guard.Migrations
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uuid");
 
-                    b.Property<long?>("ParentSubdivisionId")
-                        .HasColumnType("bigint")
-                        .HasComment("идентификатор родителя");
-
                     b.Property<string>("Path")
                         .IsRequired()
                         .HasColumnType("text")
@@ -500,8 +493,8 @@ namespace Guard.Migrations
                         .HasColumnType("character varying(20)")
                         .HasComment("Почтовый индекс");
 
-                    b.Property<double>("StaffCount")
-                        .HasColumnType("double precision")
+                    b.Property<int>("StaffCount")
+                        .HasColumnType("integer")
                         .HasComment("Снимок штатной численности (может устаревать)");
 
                     b.Property<int>("Status")
@@ -521,16 +514,9 @@ namespace Guard.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("SubdivisionId"));
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasComment("Дата последнего обновления информации");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ParentId");
-
-                    b.HasIndex("ParentSubdivisionId")
-                        .HasDatabaseName("UX_Subdivisions_ParentSubdivisionId");
 
                     b.HasIndex("Path");
 
@@ -729,9 +715,13 @@ namespace Guard.Migrations
             modelBuilder.Entity("Guard.Core.Entities.Personal", b =>
                 {
                     b.HasOne("Guard.Core.Entities.Subdivision", "Subdivision")
-                        .WithMany("Personals")
+                        .WithMany()
                         .HasForeignKey("SubdivisionId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Guard.Core.Entities.Subdivision", null)
+                        .WithMany("Personals")
+                        .HasForeignKey("SubdivisionId1");
 
                     b.HasOne("Guard.Core.Entities.Classifier", "PersonnelCategory")
                         .WithMany()

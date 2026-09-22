@@ -8,12 +8,21 @@ public class SubdivisionConfiguration : BaseEntityConfiguration<Subdivision>
 {
   public override void Configure(EntityTypeBuilder<Subdivision> builder)
   {
-    builder.ToTable("Subdivisions", t => t.HasComment(@"Иерархический справочник подразделений / отделов / органов организационной структуры системы Guard."));
+    base.Configure(builder);
+
+    builder.ToTable("Subdivisions", t => t.HasComment("Иерархический справочник подразделений организационной структуры системы Guard."));
 
     builder.Property(x => x.SubdivisionId)
+        .IsRequired()
         .ValueGeneratedOnAdd()
-        .UseIdentityByDefaultColumn() 
+        .UseIdentityByDefaultColumn()
         .HasComment("Уникальный автоинкрементный идентификатор для Path");
+
+    builder.Property(x => x.ParentSubdivisionId)
+        .HasComment("идентификатор родителя");
+
+    builder.HasIndex(x => x.ParentSubdivisionId)
+        .HasDatabaseName("UX_Subdivisions_ParentSubdivisionId");
 
     builder.HasIndex(x => x.SubdivisionId)
         .IsUnique()
@@ -53,44 +62,41 @@ public class SubdivisionConfiguration : BaseEntityConfiguration<Subdivision>
     builder.Property(x => x.Path)
         .HasComment("Путь подразделения");
 
+    builder.Property(x => x.IsDepartment)
+    .HasDefaultValue(false)
+    .HasComment("Признак: является ли подразделение отделом");
+
+    builder.Property(p => p.UpdatedAt)
+        .HasComment("Дата последнего обновления информации");
+
+    // Иерархия (Parent -> Children)
     builder.HasOne(x => x.Parent)
-           .WithMany(x => x.Childrens)
-           .HasForeignKey(x => x.ParentId)
-           .OnDelete(DeleteBehavior.Restrict); 
+        .WithMany(x => x.Children)
+        .HasForeignKey(x => x.ParentId)
+        .OnDelete(DeleteBehavior.Restrict);
 
-    builder.HasOne(s => s.StatusType)
-        .WithMany()
-        .HasForeignKey(s => s.StatusTypeId)
+    // Составной внешний ключ на Classifiers: (StatusType, StatusCode) -> (Type, Code)
+    builder.HasOne(s => s.StatusClassifier)
+        .WithMany(p => p.Subdivisions)
+        .HasForeignKey(s => new { s.StatusType, s.StatusCode })
+        .HasPrincipalKey(c => new { c.Type, c.Code })
         .IsRequired(false)
         .OnDelete(DeleteBehavior.Restrict);
 
-    builder.HasOne(s => s.StatusCode)
-        .WithMany()
-        .HasForeignKey(s => s.StatusCodeId)
-        .IsRequired(false)
-        .OnDelete(DeleteBehavior.Restrict);
-
-    builder.HasOne(s => s.OrganTypeCode)
-        .WithMany()
-        .HasForeignKey(s => s.OrganTypeCodeId)
-        .IsRequired(false)
-        .OnDelete(DeleteBehavior.Restrict);
-
+    // Составной внешний ключ на OrganTypes: (OrganTypeId, OrganTypeCode) -> (Id, Code)
     builder.HasOne(s => s.OrganType)
-        .WithMany()
-        .HasForeignKey(s => s.OrganTypeId)
+        .WithMany(p => p.Subdivisions)
+        .HasForeignKey(s => new { s.OrganTypeId, s.OrganTypeCode })
+        .HasPrincipalKey(o => new { o.Id, o.Code })
         .IsRequired(false)
         .OnDelete(DeleteBehavior.Restrict);
 
     // Индексы
-    // 1. Поиск по родителям 
     builder.HasIndex(x => x.ParentId);
 
-    // 2. Поиск по путям 
     builder.HasIndex(s => s.Path)
         .HasOperators("varchar_pattern_ops");
 
-    // 3. Составной индекс: Фильтр по режиму (Status) + Дефолтная сортировка (InsertedDate DESC)
     builder.HasIndex(x => new { x.Status, x.InsertedDate })
         .IsDescending(false, true)
         .HasDatabaseName("IX_Subdivisions_Status_InsertedDate");

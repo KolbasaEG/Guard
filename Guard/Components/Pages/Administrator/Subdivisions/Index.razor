@@ -19,6 +19,7 @@
             <RadzenMenu>
               <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
                 <RadzenMenuItem Text="Экспорт" Icon="get_app" Click="@OnExportClick" Style="font-weight:500;" />
+                <RadzenMenuItem Text="Правка подчиненности" Icon="get_app" Click="@RebuildHierarchyAndPathsAsync" Style="font-weight:500;" />
               </RadzenMenuItem>
             </RadzenMenu>
           </RadzenStack>
@@ -38,7 +39,9 @@
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="Subdivision" Property="Name" Title="Наименование" Frozen="true" Width="300px" />
+        <RadzenDataGridColumn TItem="Subdivision" Property="OrganType.Name" Title="Тип органа" Frozen="true" Width="200px" />
+        <RadzenDataGridColumn TItem="Subdivision" Property="StatusClassifier.Value" Title="Статус" Width="200px" />
+        <RadzenDataGridColumn TItem="Subdivision" Property="Name" Title="Наименование" Width="200px" />
         <RadzenDataGridColumn TItem="Subdivision" Property="Parent.Name" Title="Родительское подразделение" Width="100px" />
         <RadzenDataGridColumn TItem="Subdivision" Property="PositionFormationName" Title="Наименование, используемое при формировании должности" Width="100px" />
         <RadzenDataGridColumn TItem="Subdivision" Property="PostalCode" Title="Почтовый индекс" Width="100px" />
@@ -46,10 +49,6 @@
         <RadzenDataGridColumn TItem="Subdivision" Property="Phone" Title="Телефон" Width="100px" />
         <RadzenDataGridColumn TItem="Subdivision" Property="StaffCount" Title="Штатная численность" Width="100px" />
         <RadzenDataGridColumn TItem="Subdivision" Property="LevelOrder" Title="Порядковый номер внутри одного уровня иерархии" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="StatusType.Value" Title="1" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="StatusCode.Value" Title="2" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="OrganTypeCode.Value" Title="3" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="OrganType.Value" Title="4" Width="100px" />
         <RadzenDataGridColumn TItem="Subdivision" Property="IsDepartment" Title="Признак: является ли подразделение отделом" Width="100px" />
         <RadzenDataGridColumn TItem="Subdivision" Filterable="false" Sortable="false" Width="90px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">

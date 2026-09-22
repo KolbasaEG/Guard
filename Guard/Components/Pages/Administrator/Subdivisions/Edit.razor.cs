@@ -1,4 +1,5 @@
 using Guard.ComponentLibrary.Loading;
+using Guard.Components.Pages.Workspaces.Administrator;
 using Guard.Core.Entities;
 using Guard.Core.Services;
 using Guard.Shared;
@@ -27,6 +28,10 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 
     protected bool isLoading = false;
     protected Subdivision item = new();
+    protected OrganType? selectedOrganType;
+    protected Classifier? selectedStatusClassifier;
+    protected IEnumerable<OrganType> organTypes = [];
+    protected IEnumerable<Classifier> statusClassifiers = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -45,7 +50,20 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         var entity = await SubdivisionService.GetByIdAsync(Id, _cts.Token);
         if (entity != null)
         {
+          // Параллельная загрузка справочников и списка подразделений
+          var organTypesTask = SubdivisionService.GetOrganTypesAsync(_cts.Token);
+          var statusClassifiersTask = SubdivisionService.GetClassifiersByTypeAsync(Core.Enums.ClassifierType.СтатусПодразделения, _cts.Token);
+
+          await Task.WhenAll(organTypesTask, statusClassifiersTask);
+
+          organTypes = await organTypesTask;
+          statusClassifiers = await statusClassifiersTask;
+
           item = entity;
+
+          // Инициализация выбранных объектов для корректного отображения в DropDown
+          selectedOrganType = organTypes.FirstOrDefault(x => x.Id == item.OrganTypeId && x.Code == item.OrganTypeCode);
+          selectedStatusClassifier = statusClassifiers.FirstOrDefault(x => x.Type == item.StatusType && x.Code == item.StatusCode);
         }
         else
         {
@@ -127,6 +145,36 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       Logger.LogInformation("Пользователь отменил редактирование подразделения через кнопку 'Отмена'");
       _cts.Cancel();
       DialogService.Close(null);
+    }
+
+    protected void OnOrganTypeChanged(object value)
+    {
+      selectedOrganType = value as OrganType;
+      if (selectedOrganType != null)
+      {
+        item.OrganTypeId = selectedOrganType.Id;
+        item.OrganTypeCode = selectedOrganType.Code;
+      }
+      else
+      {
+        item.OrganTypeId = null;
+        item.OrganTypeCode = null;
+      }
+    }
+
+    protected void OnStatusClassifierChanged(object value)
+    {
+      selectedStatusClassifier = value as Classifier;
+      if (selectedStatusClassifier != null)
+      {
+        item.StatusType = selectedStatusClassifier.Type;
+        item.StatusCode = selectedStatusClassifier.Code;
+      }
+      else
+      {
+        item.StatusType = null;
+        item.StatusCode = null;
+      }
     }
 
     public void Dispose()

@@ -1,107 +1,67 @@
 namespace Guard.Core.Entities;
 
 /// <summary>
-/// Сущность персонала системы Guard.
+/// Справочник персонала системы Guard.
 /// </summary>
 public class Personal : BaseEntity, IHasSubdivision
 {
+
   /// <summary>
-  /// Идентификатор подразделения (Внешний ключ).
+  /// Идентификатор сотрудника АИС Личное дело.
+  /// </summary>
+  public long PersonalId { get; set; }
+  /// <summary>
+  /// Идентификатор подразделения (внешний ключ).
   /// </summary>
   public Guid? SubdivisionId { get; set; }
   public Subdivision? Subdivision { get; set; }
 
-  // --- Категория персонала ---
-  public long? PersonnelCategoryTypeId { get; set; }
-  public Classifier? PersonnelCategoryType { get; set; }
+  /// <summary>
+  /// Идентификатор подразделения АИС Личное дело.
+  /// </summary>
+  public long PersonalSubdivisionId { get; set; }
 
-  public long? PersonnelCategoryCodeId { get; set; }
-  public Classifier? PersonnelCategoryCode { get; set; }
+  // --- Категория персонала ---
+  public int? PersonnelCategoryType { get; set; }
+  public int? PersonnelCategoryCode { get; set; }
+  public Classifier? PersonnelCategory { get; set; }
 
   // --- Специальное звание ---
-  public long? SpecialRankTypeId { get; set; }
-  public Classifier? SpecialRankType { get; set; }
-
-  public long? SpecialRankCodeId { get; set; }
-  public Classifier? SpecialRankCode { get; set; }
+  public int? SpecialRankType { get; set; }
+  public int? SpecialRankCode { get; set; }
+  public Classifier? SpecialRank { get; set; }
 
   // --- Должность ---
-  public long? PositionTypeId { get; set; }
-  public Classifier? PositionType { get; set; }
-
-  public long? PositionCodeId { get; set; }
-  public Classifier? PositionCode { get; set; }
+  public int? PositionType { get; set; }
+  public int? PositionCode { get; set; }
+  public Classifier? Position { get; set; }
 
   // --- Категория рабочего/служащего ---
-  public long? WorkerCategoryTypeId { get; set; }
-  public Classifier? WorkerCategoryType { get; set; }
-
-  public long? WorkerCategoryCodeId { get; set; }
-  public Classifier? WorkerCategoryCode { get; set; }
+  public int? WorkerCategoryType { get; set; }
+  public int? WorkerCategoryCode { get; set; }
+  public Classifier? WorkerCategory { get; set; }
 
   // --- Персональные данные ---
-  /// <summary>
-  /// Фамилия.
-  /// </summary>
   public string LastName { get; set; } = default!;
-
-  /// <summary>
-  /// Имя.
-  /// </summary>
   public string FirstName { get; set; } = default!;
-
-  /// <summary>
-  /// Отчество.
-  /// </summary>
   public string? MiddleName { get; set; }
-
-  /// <summary>
-  /// Фамилия и инициалы.
-  /// </summary>
   public string? FullName { get; set; }
 
-  /// <summary>
-  /// Год принятия на службу.
-  /// </summary>
   public int? EnlistmentYear { get; set; }
-
-  /// <summary>
-  /// Личный номер.
-  /// </summary>
   public string? PersonalNumber { get; set; }
 
   // --- ФИО в родительном падеже ---
-  /// <summary>
-  /// Фамилия в родительном падеже.
-  /// </summary>
   public string? LastNameGen { get; set; }
-
-  /// <summary>
-  /// Имя в родительном падеже.
-  /// </summary>
   public string? FirstNameGen { get; set; }
-
-  /// <summary>
-  /// Отчество в родительном падеже.
-  /// </summary>
   public string? MiddleNameGen { get; set; }
 
-  // --- Статусы записи ---
-  public long? StatusTypeId { get; set; }
-  public Classifier? StatusType { get; set; }
-
-  public long? StatusCodeId { get; set; }
-  public Classifier? StatusCode { get; set; }
-
-  /// <summary>
-  /// Дата последнего обновления информации.
-  /// </summary>
-  public DateTime? UpdatedAt { get; set; }
-
-
-
-  /// <summary>
-  /// Связанная учетная запись пользователя.
-  /// </summary>
+  // --- Связанная учетная запись пользователя ---
   public ApplicationUser? User { get; set; }
+
+  // --- Классификатор статуса ---
+  public int? StatusType { get; set; }
+  public int? StatusCode { get; set; }
+  public Classifier? StatusClassifier { get; set; }
+
+  public DateTime? UpdatedAt { get; set; }
 }

@@ -2,19 +2,18 @@
 
 /// <summary>
 /// Подразделение / отдел / орган организационной структуры системы Guard.
-/// 
-/// Назначение:
-/// - Иерархический справочник организационной структуры (adjacency list).
-/// - Поддерживает вложенность любой глубины через ParentId.
 /// </summary>
-/// 
 public class Subdivision : BaseEntity
 {
   /// <summary>
   /// Идентификатор подразделения для Path.
-  /// null = корневой узел.
   /// </summary>
-  public long SubdivisionId { get; set; }
+  public long? SubdivisionId { get; set; }
+
+  /// <summary>
+  /// Идентификатор подразделения АИС Личное дело.
+  /// </summary>
+  public long? ParentSubdivisionId { get; set; }
 
   /// <summary>
   /// Идентификатор родительского подразделения.
@@ -29,8 +28,7 @@ public class Subdivision : BaseEntity
   public string Name { get; set; } = default!;
 
   /// <summary>
-  /// Наименование, используемое при формировании должности
-  /// (например: "Управление информационной безопасности").
+  /// Наименование, используемое при формировании должности.
   /// </summary>
   public string? PositionFormationName { get; set; }
 
@@ -55,14 +53,14 @@ public class Subdivision : BaseEntity
   public string? Fax { get; set; }
 
   /// <summary>
-  /// Признак: является ли подразделение отделом
+  /// Признак: является ли подразделение отделом.
   /// </summary>
   public bool IsDepartment { get; set; }
 
   /// <summary>
-  /// Штатная численность 
+  /// Штатная численность.
   /// </summary>
-  public int StaffCount { get; set; }
+  public double StaffCount { get; set; }
 
   /// <summary>
   /// Порядковый номер внутри одного уровня иерархии.
@@ -70,21 +68,24 @@ public class Subdivision : BaseEntity
   public int LevelOrder { get; set; }
 
   /// <summary>
-  /// Путь подразделения. Хранится как обычная строка с разделителями, например: /1/4/12/
+  /// Путь подразделения (например: /1/4/12/).
   /// </summary>
   public string Path { get; set; } = string.Empty;
 
-  public long? StatusTypeId { get; set; }
-  public Classifier? StatusType { get; set; }
-  public long? StatusCodeId { get; set; }
-  public Classifier? StatusCode { get; set; }
-  public long? OrganTypeCodeId { get; set; }
-  public Classifier? OrganTypeCode { get; set; }
-  public long? OrganTypeId { get; set; }
-  public Classifier? OrganType { get; set; }
+  // --- Составной внешний ключ на Classifiers (Тип и Код статуса) ---
+  public int? StatusType { get; set; }
+  public int? StatusCode { get; set; }
+  public Classifier? StatusClassifier { get; set; }
+
+  // --- Составной внешний ключ на OrganTypes (ID и Код органа) ---
+  public int? OrganTypeId { get; set; }
+  public int? OrganTypeCode { get; set; }
+  public OrganType? OrganType { get; set; }
+
+  public DateTime? UpdatedAt { get; set; }
 
 
   // --- Navigation ---
-  
-  public ICollection<Subdivision> Childrens { get; private set; } = new List<Subdivision>();
+  public ICollection<Subdivision> Children { get; private set; } = new List<Subdivision>();
+  public ICollection<Personal> Personals { get; private set; } = new List<Personal>();
 }

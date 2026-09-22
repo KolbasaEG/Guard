@@ -8,6 +8,10 @@ public interface IUnitOfWork : IAsyncDisposable, IDisposable
   Task<int> SaveChangesAsync(CancellationToken ct = default);
   int SaveChanges();
 
+  // Выполнение сырых SQL-команд / скриптов
+  Task<int> ExecuteSqlRawAsync(string sql, CancellationToken ct = default);
+  Task<int> ExecuteSqlRawAsync(string sql, IEnumerable<object> parameters, CancellationToken ct = default);
+
   // Транзакции (низкоуровневые)
   Task BeginTransactionAsync(CancellationToken ct = default);
   Task CommitTransactionAsync(CancellationToken ct = default);

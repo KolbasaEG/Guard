@@ -3,7 +3,27 @@
 
 <CreateEntity TItem="Subdivision" Data="@item" Submit="@FormSubmit" Cancel="HandleCancelButtonClick" IsLoading="isLoading">
   <RadzenStack Gap="0px" Orientation="Orientation.Vertical">
-    <RadzenStack Orientation="Orientation.Horizontal" Style="width:100%;" Gap="0px">
+    <RadzenStack Orientation="Orientation.Horizontal" Style="width:100%;" Gap="5px">
+      <RadzenFormField Text="Тип органа" Variant="Variant.Text" Style="width:100%;">
+        <ChildContent>
+          <RadzenDropDown Data="@organTypes" TextProperty="Name" AllowClear="true"
+                          FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                          FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
+                          style="display: block; width: 100%"
+                          TValue="OrganType" Change="@OnOrganTypeChanged" Name="OrganType" />
+        </ChildContent>
+      </RadzenFormField>
+
+      <!-- Выбор статуса подразделения (StatusType + StatusCode) -->
+      <RadzenFormField Text="Статус подразделения" Variant="Variant.Text" Style="width:100%;">
+        <ChildContent>
+          <RadzenDropDown Data="@statusClassifiers" TextProperty="Value" AllowClear="true"
+                          FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                          FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
+                          style="display: block; width: 100%"
+                          TValue="Classifier" Change="@OnStatusClassifierChanged" Name="StatusClassifier" />
+        </ChildContent>
+      </RadzenFormField>
       <RadzenFormField Text="Вышестоящее подразделение" Variant="Variant.Text" Style="width:100%;">
         <ChildContent>
           <RadzenDropDown Data="@subdivisions" TextProperty="Name" ValueProperty="Id" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
@@ -11,7 +31,22 @@
         </ChildContent>
       </RadzenFormField>
     </RadzenStack>
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Style="width:100%; margin-top: 10px;" Gap="1rem">
 
+      <!-- Порядковый номер в иерархии (LevelOrder) -->
+      <RadzenFormField Text="Порядковый номер внутри одного уровня иерархии" Variant="Variant.Text" Style="width:50%;">
+        <ChildContent>
+          <RadzenNumeric style="display: block; width: 100%" @bind-Value="@item.LevelOrder" Name="LevelOrder" TValue="int" Min="0" />
+        </ChildContent>
+      </RadzenFormField>
+
+      <!-- Флаг 'Является отделом' (IsDepartment) -->
+      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Style="width:50%; margin-top: 8px;">
+        <RadzenCheckBox @bind-Value="@item.IsDepartment" Name="IsDepartment" TValue="bool" />
+        <RadzenLabel Text="Признак: является ли подразделение отделом" Component="IsDepartment" Style="cursor: pointer;" />
+      </RadzenStack>
+
+    </RadzenStack>
     <RadzenFormField Text="Наименование подразделения" Variant="Variant.Text" Style="width:100%">
       <ChildContent>
         <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Name" Name="Name" />

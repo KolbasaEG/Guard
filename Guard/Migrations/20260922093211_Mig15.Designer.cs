@@ -3,6 +3,7 @@ using System;
 using Guard.Core.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Guard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260922093211_Mig15")]
+    partial class Mig15
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -476,9 +479,12 @@ namespace Guard.Migrations
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uuid");
 
-                    b.Property<long?>("ParentSubdivisionId")
+                    b.Property<long>("ParentSubdivisionId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
-                        .HasComment("идентификатор родителя");
+                        .HasComment("Уникальный автоинкрементный идентификатор родителя");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("ParentSubdivisionId"));
 
                     b.Property<string>("Path")
                         .IsRequired()
@@ -500,8 +506,8 @@ namespace Guard.Migrations
                         .HasColumnType("character varying(20)")
                         .HasComment("Почтовый индекс");
 
-                    b.Property<double>("StaffCount")
-                        .HasColumnType("double precision")
+                    b.Property<int>("StaffCount")
+                        .HasColumnType("integer")
                         .HasComment("Снимок штатной численности (может устаревать)");
 
                     b.Property<int>("Status")
@@ -530,6 +536,7 @@ namespace Guard.Migrations
                     b.HasIndex("ParentId");
 
                     b.HasIndex("ParentSubdivisionId")
+                        .IsUnique()
                         .HasDatabaseName("UX_Subdivisions_ParentSubdivisionId");
 
                     b.HasIndex("Path");

@@ -13,7 +13,7 @@ using System.Linq.Dynamic.Core;
 
 namespace Guard.Components.Pages.Administrator.Subdivisions
 {
-  public partial class Index
+  public partial class Index : IDisposable
   {
     [Inject]
     protected IJSRuntime JSRuntime { get; set; }
@@ -24,7 +24,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     [Inject]
     protected ISubdivisionService SubdivisionService { get; set; }
     [Inject]
-    protected ILogger<Add> Logger { get; set; }
+    protected ILogger<Index> Logger { get; set; }
 
     protected IEnumerable<Subdivision> data; 
     protected IEnumerable<Subdivision> filteredData;
@@ -32,7 +32,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 
     protected RadzenDataFilter<Subdivision> dataFilter;
 
-    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource _cts = new();
     int count;
     protected bool isEditor = true;
     protected bool isLoading = false;
@@ -84,6 +84,8 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
             {
               query = query.FilterByMode(currentMode);
               query = query.Include(p => p.Parent);
+              query = query.Include(p => p.OrganType);
+              query = query.Include(p => p.StatusClassifier);
               if (dataFilter != null)
               {
                 query = query.Where(dataFilter);
@@ -252,7 +254,49 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     {
       await grid.Reload();
     }
+    protected async Task RebuildHierarchyAndPathsAsync()
+    {
+      isLoading = true;
 
+      try
+      {
+        Logger.LogInformation("Запуск операции пересчета иерархии и путей подразделений...");
+
+        await SubdivisionService.RebuildHierarchyAndPathsAsync(_cts.Token);
+
+        Logger.LogInformation("Иерархия и пути подразделений успешно перестроены.");
+
+        NotificationService.Notify(new NotificationMessage
+        {
+          Severity = NotificationSeverity.Success,
+          Summary = "Успешно",
+          Detail = "Иерархия и пути подразделений обновлены.",
+          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+        });
+
+        await grid.Reload();
+      }
+      catch (OperationCanceledException)
+      {
+        Logger.LogWarning("Операция пересчета иерархии подразделений была отменена.");
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex, "Ошибка при выполнении пересчета иерархии и путей подразделений.");
+
+        NotificationService.Notify(new NotificationMessage
+        {
+          Severity = NotificationSeverity.Error,
+          Summary = "Ошибка",
+          Detail = "Не удалось перестроить иерархию подразделений.",
+          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+        });
+      }
+      finally
+      {
+        isLoading = false;
+      }
+    }
     private async Task OnExportClick()
     {
     }
@@ -277,6 +321,12 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
           NormalizeFilterDatesToUtc(filter.Filters);
         }
       }
+    }
+
+    public void Dispose()
+    {
+      _cts?.Cancel();
+      _cts?.Dispose();
     }
 
   }

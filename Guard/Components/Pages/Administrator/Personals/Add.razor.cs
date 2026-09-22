@@ -1,8 +1,6 @@
-using Guard.Components.Pages.Workspaces.Administrator;
 using Guard.Core.Entities;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Logging;
 using Radzen;
 
 namespace Guard.Components.Pages.Administrator.Personals
