@@ -38,7 +38,7 @@ public class SubdivisionService : ISubdivisionService
   public async Task<Subdivision?> GetByIdAsync(Guid id, CancellationToken ct = default)
   {
     _logger.LogDebug("Запрос подразделения по ID: {SubdivisionId}", id);
-    return await _uow.Repository<Subdivision>().GetByIdAsync(id, ct);
+    return await _readSubdivisionRepository.GetByIdAsync(id, ct);
   }
 
   public async Task<IReadOnlyList<Subdivision>> GetAllActiveAsync(CancellationToken ct = default)

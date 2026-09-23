@@ -64,4 +64,7 @@ public class Personal : BaseEntity, IHasSubdivision
   public Classifier? StatusClassifier { get; set; }
 
   public DateTime? UpdatedAt { get; set; }
+
+  // Прямая коллекция разрешенных IP-адресов сотрудника
+  public virtual ICollection<IpAddress> IpAddresses { get; set; } = new List<IpAddress>();
 }

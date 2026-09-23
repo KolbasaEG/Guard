@@ -85,10 +85,13 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
   {
     ArgumentNullException.ThrowIfNull(entity);
 
+    // 1. Ищем сущность в локальном ChangeTracker
     var trackedEntry = Context.ChangeTracker
         .Entries<T>()
         .FirstOrDefault(e => e.Entity.Id == entity.Id);
 
+    // 2. Если сущность загружалась с AsNoTracking, в ChangeTracker её нет.
+    // Загружаем отслеживаемый экземпляр из БД.
     if (trackedEntry == null)
     {
       var dbEntity = await DbSet.FindAsync(new object[] { entity.Id }, ct)
@@ -97,14 +100,19 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
       trackedEntry = Context.Entry(dbEntity);
     }
 
-    var incomingValues = Context.Entry(entity);
-
-    foreach (var property in trackedEntry.Properties)
+    // 3. Переносим измененные значения из переданной сущности в отслеживаемую
+    if (!ReferenceEquals(trackedEntry.Entity, entity))
     {
-      if (ReadOnlyAuditProperties.Contains(property.Metadata.Name))
-        continue;
+      var incomingValues = Context.Entry(entity);
 
-      property.CurrentValue = incomingValues.Property(property.Metadata.Name).CurrentValue;
+      foreach (var property in trackedEntry.Properties)
+      {
+        // Пропускаем служебные поля и аудит (Id, InsertedDate, CreatedBy и т.д.)
+        if (ReadOnlyAuditProperties.Contains(property.Metadata.Name))
+          continue;
+
+        property.CurrentValue = incomingValues.Property(property.Metadata.Name).CurrentValue;
+      }
     }
   }
   public void UpdateRange(IEnumerable<T> entities)

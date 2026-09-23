@@ -1,28 +1,32 @@
 @using Guard.Core.Entities
 @attribute [Authorize]
 
-<CreateEntity TItem="IpAddress" Data="@item" Submit="@FormSubmit">
-  <RadzenStack Gap="0px" Orientation="Orientation.Vertical">
-    <RadzenFormField Text="Наименование" Variant="Variant.Text" Style="width:100%">
+<CreateEntity TItem="IpAddress" Data="@item" Submit="@FormSubmit" Cancel="HandleCancelButtonClick" IsLoading="isLoading">
+  <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
+    <RadzenFormField Text="Подразделение" Variant="Variant.Text" Style="width:100%;">
       <ChildContent>
-        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Address" Name="Address" />
+        <RadzenDropDown Data="@subdivisions" TextProperty="Name" ValueProperty="Id" AllowClear="true"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
+                        style="display: block; width: 100%"
+                        @bind-Value="@item.SubdivisionId" Name="SubdivisionId" />
+      </ChildContent>
+    </RadzenFormField>
+    <RadzenFormField Text="IP-адрес" Variant="Variant.Text" Style="width:100%;">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Address" Name="IpAddress" Placeholder="192.168.1.1" />
       </ChildContent>
       <Helper>
-        <RadzenRequiredValidator Component="Address" Text="Обязательно для заполнения!" />
+        <RadzenRequiredValidator Component="IpAddress" Text="Обязательно для заполнения!" />
+        <RadzenRegexValidator Component="IpAddress" Text="Некорректный формат IP-адреса"
+                              Pattern="^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d)$" />
       </Helper>
     </RadzenFormField>
-    <RadzenFormField Text="Человекочитаемое название" Variant="Variant.Text" Style="width:100%">
-      <ChildContent>
-        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Name" Name="Name" />
-      </ChildContent>
-      <Helper>
-        <RadzenRequiredValidator Component="Name" Text="Обязательно для заполнения!" />
-      </Helper>
-    </RadzenFormField>
-    <RadzenFormField Text="Дополнительное описание" Variant="Variant.Text" Style="width:100%">
+    <RadzenFormField Text="Описание / Назначение" Variant="Variant.Text" Style="width:100%">
       <ChildContent>
         <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Description" Name="Description" />
       </ChildContent>
     </RadzenFormField>
+
   </RadzenStack>
 </CreateEntity>

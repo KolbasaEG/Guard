@@ -3,6 +3,7 @@ using System;
 using Guard.Core.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Guard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923074544_Apt67")]
+    partial class Apt67
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -184,6 +187,9 @@ namespace Guard.Migrations
                         .HasColumnType("character varying(50)")
                         .HasComment("IP-адрес или CIDR-нотация");
 
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("text");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("text");
@@ -201,18 +207,21 @@ namespace Guard.Migrations
                     b.Property<string>("ModifiedBy")
                         .HasColumnType("text");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasComment("Человекочитаемое название");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
-
-                    b.Property<Guid?>("SubdivisionId")
-                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Address")
                         .IsUnique();
 
-                    b.HasIndex("SubdivisionId");
+                    b.HasIndex("ApplicationUserId");
 
                     b.ToTable("IpAddresses", null, t =>
                         {
@@ -554,15 +563,15 @@ namespace Guard.Migrations
 
             modelBuilder.Entity("IpAddressPersonal", b =>
                 {
-                    b.Property<Guid>("IpAddressesId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("PersonalsId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("IpAddressesId", "PersonalsId");
+                    b.Property<Guid>("IpAddressesId")
+                        .HasColumnType("uuid");
 
-                    b.HasIndex("PersonalsId");
+                    b.HasKey("PersonalsId", "IpAddressesId");
+
+                    b.HasIndex("IpAddressesId");
 
                     b.ToTable("PersonalIpAddresses", (string)null);
                 });
@@ -685,12 +694,9 @@ namespace Guard.Migrations
 
             modelBuilder.Entity("Guard.Core.Entities.IpAddress", b =>
                 {
-                    b.HasOne("Guard.Core.Entities.Subdivision", "Subdivision")
+                    b.HasOne("Guard.Core.Entities.ApplicationUser", null)
                         .WithMany("IpAddresses")
-                        .HasForeignKey("SubdivisionId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Subdivision");
+                        .HasForeignKey("ApplicationUserId");
                 });
 
             modelBuilder.Entity("Guard.Core.Entities.OrganType", b =>
@@ -847,6 +853,11 @@ namespace Guard.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Guard.Core.Entities.ApplicationUser", b =>
+                {
+                    b.Navigation("IpAddresses");
+                });
+
             modelBuilder.Entity("Guard.Core.Entities.Classifier", b =>
                 {
                     b.Navigation("Subdivisions");
@@ -865,8 +876,6 @@ namespace Guard.Migrations
             modelBuilder.Entity("Guard.Core.Entities.Subdivision", b =>
                 {
                     b.Navigation("Children");
-
-                    b.Navigation("IpAddresses");
 
                     b.Navigation("Personals");
                 });

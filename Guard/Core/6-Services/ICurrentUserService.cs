@@ -1,4 +1,4 @@
-﻿namespace Guard.Core.Services;
+﻿using Guard.Core.Identity;
 
 public interface ICurrentUserService
 {
@@ -11,4 +11,9 @@ public interface ICurrentUserService
   /// Имя текущего пользователя
   /// </summary>
   string? UserName { get; }
+
+  /// <summary>
+  /// Получить полный контекст пользователя (аккаунт, физ. лицо, подразделение и подчиненные)
+  /// </summary>
+  Task<UserContext?> GetContextAsync(CancellationToken ct = default);
 }

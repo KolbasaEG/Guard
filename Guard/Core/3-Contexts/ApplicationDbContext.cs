@@ -31,7 +31,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
   }
 
   public DbSet<IpAddress> IpAddresses { get; set; } = null!;
-  public DbSet<UserIpAddress> UserIpAddresses { get; set; } = null!;
   public DbSet<Subdivision> Subdivisions { get; set; } = null!;
   public DbSet<Classifier> Classifiers { get; set; } = null!;
   public DbSet<Personal> Personals { get; set; } = null!;

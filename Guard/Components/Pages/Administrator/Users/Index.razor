@@ -1,10 +1,11 @@
 @using Guard.Core.Entities
 @using Guard.Core.Enums
+@using Guard.Core.Services.DTOs
 @attribute [Authorize]
 <PageTitle>АИС "Охрана"</PageTitle>
 <TableWrapperWithFilterAndAnalytics >
   <Table>
-    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="Subdivision" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"
+    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="UserDto" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"
                     AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                     DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
                     LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NotEqualsText="Не равно" OrOperatorText="Или"
@@ -18,7 +19,6 @@
             <RadzenMenu>
               <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
                 <RadzenMenuItem Text="Экспорт" Icon="get_app" Click="@OnExportClick" Style="font-weight:500;" />
-                <RadzenMenuItem Text="Правка подчиненности" Icon="get_app" Click="@RebuildHierarchyAndPathsAsync" Style="font-weight:500;" />
               </RadzenMenuItem>
             </RadzenMenu>
           </RadzenStack>
@@ -38,38 +38,24 @@
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="Subdivision" Property="OrganType.Name" Title="Тип органа" Frozen="true" Width="200px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="StatusClassifier.Value" Title="Статус" Width="200px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="Name" Title="Наименование" Width="200px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="Parent.Name" Title="Родительское подразделение" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="PositionFormationName" Title="Наименование, используемое при формировании должности" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="PostalCode" Title="Почтовый индекс" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="Address" Title="Город / полный адрес" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="Phone" Title="Телефон" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="StaffCount" Title="Штатная численность" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="LevelOrder" Title="Порядковый номер внутри одного уровня иерархии" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="IsDepartment" Title="Признак: является ли подразделение отделом" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Filterable="false" Sortable="false" Width="90px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
+        <RadzenDataGridColumn TItem="UserDto" Property="Id" Title="Id" Frozen="true" Width="200px" />
+        <RadzenDataGridColumn TItem="UserDto" Property="UserName" Title="Имя пользователя" Width="200px" />
+        <RadzenDataGridColumn TItem="UserDto" Property="Email" Title="Email" Width="200px" />
+        <RadzenDataGridColumn TItem="UserDto" Property="PersonalId" Title="Id сотрудника" Width="200px" />
+        <RadzenDataGridColumn TItem="UserDto" Property="PersonalFullName" Title="ФИО" Width="100%" />
+        <RadzenDataGridColumn TItem="UserDto" Property="IsLockedOut" Title="Блокировка" Width="200px" />
+        <RadzenDataGridColumn TItem="UserDto" Filterable="false" Sortable="false" Width="90px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
             <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
-              <RadzenButton ButtonStyle="ButtonStyle.Info" Icon="drive_file_move" Size="Radzen.ButtonSize.ExtraSmall"
+              <RadzenButton Icon="archive" Size="Radzen.ButtonSize.ExtraSmall"
                             Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
-                            Click=@(args => GridMoveButtonClick(args, item)) @onclick:stopPropagation="true" />
-              @if (item.Status < Status.Blocked)
-              {
-                <RadzenButton Icon="archive" Size="Radzen.ButtonSize.ExtraSmall"
-                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
-                              Click=@(args => GridArchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
-                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="Radzen.ButtonSize.ExtraSmall"
-                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
-                              Click=@(args => GridDeleteButtonClick(args, item)) @onclick:stopPropagation="true" />
-              }
-              @if (item.Status == Status.Archived)
-              {
-                <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="unarchive" Size="Radzen.ButtonSize.ExtraSmall"
-                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
-                              Click=@(args => GridUnarchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
-              }
+                            Click=@(args => GridArchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
+              <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="Radzen.ButtonSize.ExtraSmall"
+                            Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                            Click=@(args => GridDeleteButtonClick(args, item)) @onclick:stopPropagation="true" />
+              <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="unarchive" Size="Radzen.ButtonSize.ExtraSmall"
+                            Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                            Click=@(args => GridUnarchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
             </RadzenStack>
           </Template>
         </RadzenDataGridColumn>
@@ -77,23 +63,13 @@
     </RadzenDataGrid>
   </Table>
   <Filter>
-    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="Subdivision" ViewChanged=@(view => grid.Reload())
+    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="ApplicationUser" ViewChanged=@(view => grid.Reload())
                       AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                       DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
                       AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
       <Properties>
-        <RadzenDataFilterProperty TItem="Subdivision" Property="Name" Title="Наименование" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="PositionFormationName" Title="Наименование, используемое при формировании должности" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="PostalCode" Title="Почтовый индекс" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="Address" Title="Город / полный адрес" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="Phone" Title="Телефон" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="Fax" Title="Факс" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="IsDepartment" Title="Признак: является ли подразделение отделом" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="StaffCount" Title="Штатная численность" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="LevelOrder" Title="Порядковый номер внутри одного уровня иерархии" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="Path" Title="Путь подразделения" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="StatusClassifier.Value" Title="Статус" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="OrganType.Value" Title="Тип органа" />
+        <RadzenDataFilterProperty TItem="ApplicationUser" Property="Address" Title="IP-адрес" />
+        <RadzenDataFilterProperty TItem="ApplicationUser" Property="Description" Title="Описание" />
       </Properties>
     </RadzenDataFilter>
   </Filter>

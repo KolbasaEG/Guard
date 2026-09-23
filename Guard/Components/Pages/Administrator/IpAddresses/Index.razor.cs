@@ -1,7 +1,7 @@
-using Guard.ComponentLibrary.Loading;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
+using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -11,46 +11,63 @@ using Radzen;
 using Radzen.Blazor;
 using System.Linq.Dynamic.Core;
 
-namespace Guard.Components.Pages.Administrator.Subdivisions
+namespace Guard.Components.Pages.Administrator.IpAddresses
 {
   public partial class Index : IDisposable
   {
-    [Inject]
-    protected IJSRuntime JSRuntime { get; set; } = default!;
-    [Inject]
-    protected NotificationService NotificationService { get; set; } = default!;
-    [Inject]
-    protected DialogService DialogService { get; set; } = default!;
-    [Inject]
-    protected ISubdivisionService SubdivisionService { get; set; } = default!;
-    [Inject]
-    protected ILogger<Index> Logger { get; set; } = default!;
+    [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] protected NotificationService NotificationService { get; set; } = default!;
+    [Inject] protected DialogService DialogService { get; set; } = default!;
+    [Inject] protected ILogger<Index> Logger { get; set; } = default!;
+    [Inject] protected IIpAddressService IpAddressService { get; set; } = default!;
 
-    protected IEnumerable<Subdivision> data = default!;
-    protected IEnumerable<Subdivision> filteredData = default!;
-    protected RadzenDataGrid<Subdivision> grid = default!;
-
-    protected RadzenDataFilter<Subdivision> dataFilter = default!;
-
-    private CancellationTokenSource _cts = new();
-    private CancellationTokenSource? _loadDataCts;
+    [CascadingParameter] protected UserContext? UserContext { get; set; }
 
     int count;
     protected bool isEditor = true;
     protected bool isLoading = false;
-    protected DataViewMode currentMode = DataViewMode.Active; 
+    protected string subdivisionPath = "-";
+    protected DataViewMode currentMode = DataViewMode.Active;
+    protected SubdivisionHierarchyMode hierarchyMode = SubdivisionHierarchyMode.CurrentOnly;
     string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
+
+    private CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _loadDataCts;
+
+    protected IEnumerable<IpAddress> data = default!;
+    protected IEnumerable<IpAddress> filteredData = default!;
+    protected RadzenDataGrid<IpAddress> grid = default!;
+    protected RadzenDataFilter<IpAddress> dataFilter = default!;
+    
+
+    IEnumerable<string>? itemsSubdivision;
+    IEnumerable<string>? selectedItemsSubdivision;
+    IEnumerable<string>? finalSelectedItemsSubdivision;
+    void OnSelectedSubdivisionChange(object value)
+    {
+      if (selectedItemsSubdivision != null && !selectedItemsSubdivision.Any())
+      {
+        selectedItemsSubdivision = null;
+      }
+    }
 
     protected override async Task OnInitializedAsync()
     {
       try
       {
         isLoading = true;
+        Logger.LogDebug("Инициализация страницы IP-адресов");
+        itemsSubdivision = UserContext?.SubordinateSubdivisions.Select(p => p.Name) ?? [];
+        subdivisionPath = UserContext?.Subdivision?.Path ?? "-";
         await Task.CompletedTask;
+      }
+      catch (OperationCanceledException)
+      {
+        Logger.LogInformation("Инициализация страницы IP-адресов была отменена");
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при инициализации страницы подразделений");
+        Logger.LogError(ex, "Ошибка при инициализации страницы IP-адресов");
         ShowErrorNotification(ex.Message);
       }
       finally
@@ -68,36 +85,36 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 
       try
       {
-        if(dataFilter?.Filters != null) NormalizeFilterDatesToUtc(dataFilter.Filters);
-        var (items, totalCount) = await SubdivisionService.QuerySubdivisionsAsync(async query =>
-            {
-              query = query.FilterByMode(currentMode);
-              query = query.Include(p => p.Parent);
-              query = query.Include(p => p.OrganType);
-              query = query.Include(p => p.StatusClassifier);
-              if (dataFilter != null)
-              {
-                query = query.Where(dataFilter);
-              }
+        if (dataFilter?.Filters != null) NormalizeFilterDatesToUtc(dataFilter.Filters);
+        var (items, totalCount) = await IpAddressService.QueryIpAddressesAsync(async query =>
+        {
+          query = query
+            .FilterByMode(currentMode)
+            .FilterBySubdivision(subdivisionPath, hierarchyMode)
+            .Include(p=>p.Subdivision);
+          if (dataFilter != null)
+          {
+            query = query.Where(dataFilter);
+          }
 
-              if (!string.IsNullOrEmpty(args.OrderBy))
-              {
-                query = query.OrderBy(args.OrderBy);
-              }
-              else
-              {
-                query = query.OrderByDescending(s => s.InsertedDate);
-              }
+          if (!string.IsNullOrEmpty(args.OrderBy))
+          {
+            query = query.OrderBy(args.OrderBy);
+          }
+          else
+          {
+            query = query.OrderByDescending(s => s.InsertedDate);
+          }
 
-              var total = await query.CountAsync();
+          var total = await query.CountAsync(ct);
 
-              var pageData = await query
-                  .Skip(args.Skip ?? 0)
-                  .Take(args.Top ?? 10)
-                  .ToListAsync();
+          var pageData = await query
+              .Skip(args.Skip ?? 0)
+              .Take(args.Top ?? 10)
+              .ToListAsync(ct);
 
-              return (pageData, total);
-            }, ct);
+          return (pageData, total);
+        }, ct);
 
         filteredData = items.ConvertDateTimesToLocal();
         count = totalCount;
@@ -108,7 +125,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка загрузки данных подразделений");
+        Logger.LogError(ex, "Ошибка загрузки данных ip");
         ShowErrorNotification("Не удалось загрузить данные");
       }
       finally
@@ -116,109 +133,85 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         isLoading = false;
       }
     }
+    protected async Task ReloadAsync()
+    {
+      await grid.Reload();
+    }
     protected async Task AddClick(MouseEventArgs args)
     {
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
       if (result != null)
       {
-        ShowSuccessNotification("Добавлена новая запись!"); 
+        ShowSuccessNotification("Добавлена новая запись!");
         await grid.Reload();
       }
     }
-    protected async Task EditRow(Subdivision item)
+
+    protected async Task EditRow(IpAddress item)
     {
       var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+
       if (result != null)
       {
         ShowSuccessNotification("Информация обновлена!");
         await grid.Reload();
       }
     }
-    protected async Task GridMoveButtonClick(MouseEventArgs args, Subdivision item)
-    {
-      var result = await DialogService.OpenAsync<Move>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      if (result != null)
-      {
-        ShowSuccessNotification("Информация обновлена!");
-        await grid.Reload();
-      }
-    }
-    protected async Task GridArchiveButtonClick(MouseEventArgs args, Subdivision item)
+
+    protected async Task GridArchiveButtonClick(MouseEventArgs args, IpAddress item)
     {
       if (await DialogService.Confirm("Вы действительно хотите поместить запись в архив?", "Архивирование", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
         {
-          await SubdivisionService.ArchiveAsync(item.Id, ct: CancellationToken.None);
+          await IpAddressService.ArchiveAsync(item.Id, _cts.Token);
           ShowSuccessNotification("Запись помещена в архив!");
           await grid.Reload();
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+          Logger.LogError(ex, "Ошибка при архивировании IP-адреса ID: {IpAddressId}", item.Id);
           ShowErrorNotification(ex.Message);
         }
       }
     }
-    protected async Task GridUnarchiveButtonClick(MouseEventArgs args, Subdivision item)
+
+    protected async Task GridUnarchiveButtonClick(MouseEventArgs args, IpAddress item)
     {
       if (await DialogService.Confirm("Вы действительно хотите извлечь запись из архива?", "Извлечение из архива", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
         {
-          await SubdivisionService.RestoreAsync(item.Id, ct: _cts.Token);
+          await IpAddressService.RestoreAsync(item.Id, _cts.Token);
           ShowSuccessNotification("Запись извлечена из архива!");
           await grid.Reload();
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+          Logger.LogError(ex, "Ошибка при извлечении из архива IP-адреса ID: {IpAddressId}", item.Id);
           ShowErrorNotification(ex.Message);
         }
       }
     }
-    protected async Task GridDeleteButtonClick(MouseEventArgs args, Subdivision item)
+
+    protected async Task GridDeleteButtonClick(MouseEventArgs args, IpAddress item)
     {
       if (await DialogService.Confirm("Вы действительно хотите удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
         {
-          await SubdivisionService.SoftDeleteAsync(item.Id, ct: _cts.Token);
+          await IpAddressService.SoftDeleteAsync(item.Id, _cts.Token);
           ShowSuccessNotification("Запись удалена!");
           await grid.Reload();
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+          Logger.LogError(ex, "Ошибка при удалении IP-адреса ID: {IpAddressId}", item.Id);
           ShowErrorNotification(ex.Message);
         }
-      }
-    }
-    protected async Task ReloadAsunc()
-    {
-      await grid.Reload();
-    }
-    protected async Task RebuildHierarchyAndPathsAsync()
-    {
-      isLoading = true;
-
-      try
-      {
-        Logger.LogInformation("Запуск операции пересчета иерархии и путей подразделений...");
-        await SubdivisionService.RebuildHierarchyAndPathsAsync(_cts.Token);
-
-        ShowSuccessNotification("Иерархия и пути подразделений обновлены.");
-        await grid.Reload();
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogWarning("Операция пересчета иерархии подразделений была отменена.");
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при выполнении пересчета иерархии и путей подразделений.");
-        ShowErrorNotification("Не удалось перестроить иерархию подразделений.");
-      }
-      finally
-      {
-        isLoading = false;
       }
     }
 
@@ -227,10 +220,21 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       // TODO: Реализовать экспорт
       await Task.CompletedTask;
     }
+
     async Task ApplyFilter()
     {
+      finalSelectedItemsSubdivision = selectedItemsSubdivision;
       await grid.Reload();
     }
+    private async Task OnHierarchyModeChanged(bool isToggled)
+    {
+      hierarchyMode = isToggled
+          ? SubdivisionHierarchyMode.IncludeChildren
+          : SubdivisionHierarchyMode.CurrentOnly;
+
+      await grid.Reload();
+    }
+
     private void NormalizeFilterDatesToUtc(IEnumerable<CompositeFilterDescriptor> filters)
     {
       if (filters == null) return;
@@ -239,7 +243,6 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       {
         if (filter.FilterValue is DateTime dt && dt.Kind != DateTimeKind.Utc)
         {
-          // Перевод даты в UTC
           filter.FilterValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
         }
 
@@ -249,6 +252,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         }
       }
     }
+
     private void ShowSuccessNotification(string detail)
     {
       NotificationService.Notify(new NotificationMessage
@@ -270,6 +274,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });
     }
+
     public void Dispose()
     {
       _loadDataCts?.Cancel();
@@ -277,6 +282,5 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       _cts?.Cancel();
       _cts?.Dispose();
     }
-
   }
 }

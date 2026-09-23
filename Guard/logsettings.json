@@ -1,4 +1,4 @@
 {
-  "MinimumLevel": "Information",
+  "MinimumLevel": "Debug",
   "MaxSessions": 100
 }

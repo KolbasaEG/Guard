@@ -26,13 +26,14 @@ public class IpAddressConfiguration : IEntityTypeConfiguration<IpAddress>
         .HasMaxLength(50)
         .HasComment("IP-адрес или CIDR-нотация");
 
-    builder.Property(x => x.Name)
-        .IsRequired()
-        .HasMaxLength(200)
-        .HasComment("Человекочитаемое название");
-
     builder.Property(x => x.Description)
         .HasMaxLength(1000);
+
+    // Связь с подразделением
+    builder.HasOne(p => p.Subdivision)
+        .WithMany(p => p.IpAddresses)
+        .HasForeignKey(p => p.SubdivisionId)
+        .OnDelete(DeleteBehavior.Restrict);
 
     builder.HasIndex(x => x.Address).IsUnique();
   }

@@ -125,6 +125,11 @@ public class PersonalConfiguration : BaseEntityConfiguration<Personal>
         .IsRequired(false)
         .OnDelete(DeleteBehavior.Restrict);
 
+    // Неявная связь Многие-ко-Многим между Personal и IpAddress
+    builder.HasMany(p => p.IpAddresses)
+           .WithMany(i => i.Personals)
+           .UsingEntity(j => j.ToTable("PersonalIpAddresses"));
+
     builder.HasIndex(p => p.PersonalId)
     .IsUnique()
     .HasDatabaseName("UX_Personals_PersonalId");

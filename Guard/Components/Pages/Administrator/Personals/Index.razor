@@ -2,7 +2,6 @@
 @using Guard.Core.Enums
 @attribute [Authorize]
 <PageTitle>АИС "Охрана"</PageTitle>
-<LoadingIndicator @ref=(loading) />
 <TableWrapperWithFilterAndAnalytics >
   <Table>
     <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="Personal" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"

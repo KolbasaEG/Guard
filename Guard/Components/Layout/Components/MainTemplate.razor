@@ -1,48 +1,51 @@
-<RadzenComponents />
 
-<RadzenLayout Style="background-image: url('images/backg.jpg');background-repeat: no-repeat; background-attachment: fixed; background-size: cover; background-position: center; grid-template-columns: auto 1fr auto; grid-template-areas: 'rz-sidebar rz-header rz-header' 'rz-sidebar rz-body rz-right-sidebar'">
-  <RadzenHeader>
-    <RadzenRow JustifyContent="JustifyContent.Start" AlignItems="AlignItems.Center" Gap="0">
-      <RadzenStack AlignItems="AlignItems.Center" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
-          <RadzenSidebarToggle Click="@(() => leftSidebarExpanded = !leftSidebarExpanded)"></RadzenSidebarToggle>
-          <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Start">
-            <RadzenText Text="вкпвпк" TextStyle="Radzen.Blazor.TextStyle.Subtitle1" class="rz-m-0" style="font-weight: 500" />
-            <RadzenLabel Class="rz-display-flex rz-align-items-center rz-m-0 " TextAlign="Radzen.TextAlign.Left">
-              <RadzenIcon class="rz-mr-3" Icon="@Icon" /><b>@Name</b>
-            </RadzenLabel>
+<CascadingValue Value="@UserContext">
+  <RadzenComponents />
+  <RadzenLayout Style="background-image: url('images/backg.jpg');background-repeat: no-repeat; background-attachment: fixed; background-size: cover; background-position: center; grid-template-columns: auto 1fr auto; grid-template-areas: 'rz-sidebar rz-header rz-header' 'rz-sidebar rz-body rz-right-sidebar'">
+    <RadzenHeader>
+      <RadzenRow JustifyContent="JustifyContent.Start" AlignItems="AlignItems.Center" Gap="0">
+        <RadzenStack AlignItems="AlignItems.Center" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
+            <RadzenSidebarToggle Click="@(() => leftSidebarExpanded = !leftSidebarExpanded)"></RadzenSidebarToggle>
+            <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Start">
+              <!-- Наименование подразделения из контекста -->
+              <RadzenText Text="@(UserContext?.Subdivision?.Name ?? "Загрузка...")" TextStyle="Radzen.Blazor.TextStyle.Subtitle1" class="rz-m-0" style="font-weight: 500" />
+              <RadzenLabel Class="rz-display-flex rz-align-items-center rz-m-0 " TextAlign="Radzen.TextAlign.Left">
+                <RadzenIcon class="rz-mr-3" Icon="@Icon" /><b>@Name</b>
+              </RadzenLabel>
+            </RadzenStack>
+          </RadzenStack>
+          <RadzenStack AlignItems="AlignItems.Center" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+            <!-- Динамическое имя текущего пользователя -->
+            <RadzenButton Icon="account_circle" Text="@(UserContext?.Personal?.FullName ?? UserContext?.UserName ?? "Авторизация...")" class="rz-button rz-toggle-button rz-button-icon-only rz-button-md rz-variant-text rz-base" />
+            <RadzenAppearanceToggle />
+            <RadzenButton Icon="power_settings_new" Click="@Logout" class="rz-button rz-toggle-button rz-button-icon-only rz-button-md rz-variant-text rz-base" Style="margin-right:5px;" />
+            <RadzenSidebarToggle Click="@(() => rightSidebarExpanded = !rightSidebarExpanded)" Style="margin:0px;" />
           </RadzenStack>
         </RadzenStack>
-        <RadzenStack AlignItems="AlignItems.Center" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
-          <RadzenButton Icon="account_circle" Text="Колбаса Е.Г." class="rz-button rz-toggle-button rz-button-icon-only rz-button-md rz-variant-text rz-base" />
-          <RadzenAppearanceToggle />
-          <RadzenButton Icon="power_settings_new" Click="@Logout" class="rz-button rz-toggle-button rz-button-icon-only rz-button-md rz-variant-text rz-base" Style="margin-right:5px;" />
-          <RadzenSidebarToggle Click="@(() => rightSidebarExpanded = !rightSidebarExpanded)" Style="margin:0px;"/>
-        </RadzenStack>
+      </RadzenRow>
+    </RadzenHeader>
+    <RadzenSidebar @bind-Expanded="@leftSidebarExpanded">
+      <RadzenStack AlignItems="Radzen.AlignItems.Center" class="rz-py-4 rz-py-lg-6" Style="padding: var(--rz-panel-menu-item-padding); border-bottom: var(--rz-panel-menu-item-border);">
+        <RadzenImage Path="images/logo.png" style="width: 128px; height: 128px;"></RadzenImage>
+        <RadzenText Text="АИС Охрана" TextStyle="Radzen.Blazor.TextStyle.Subtitle1" class="rz-mb-0" style="color: var(--rz-sidebar-color); font-weight: 500" />
       </RadzenStack>
-    </RadzenRow>
-  </RadzenHeader>
-  <RadzenSidebar @bind-Expanded="@leftSidebarExpanded" >
-    <RadzenStack AlignItems="Radzen.AlignItems.Center" class="rz-py-4 rz-py-lg-6" Style="padding: var(--rz-panel-menu-item-padding); border-bottom: var(--rz-panel-menu-item-border);">
-      <RadzenImage Path="images/logo.png" style="width: 128px; height: 128px;"></RadzenImage>
-      <RadzenText Text="АИС Охрана" TextStyle="Radzen.Blazor.TextStyle.Subtitle1" class="rz-mb-0" style="color: var(--rz-sidebar-color); font-weight: 500" />
-    </RadzenStack>
-    <RadzenPanelMenu Style="font-weight: 500; font-size: 15px">
-      <RadzenPanelMenuItem Text="Рабочие места" Expanded="true" Icon="desktop_windows">
-        <RadzenPanelMenuItem Text="Root" Path="/Logs" Icon="admin_panel_settings" />
-        <RadzenPanelMenuItem Text="Администратор" Path="/AdminPannel" Icon="admin_panel_settings" />
-      </RadzenPanelMenuItem>
-    </RadzenPanelMenu>
-    <RadzenStack AlignItems="Radzen.AlignItems.Center" Gap="0" class="rz-py-4 rz-py-lg-6" Style="padding: var(--rz-panel-menu-item-padding);">
-      <RadzenText Text="АИС Охрана v3.5.0" TextStyle="Radzen.Blazor.TextStyle.Caption" style="color: var(--rz-text-disabled-color); font-weight: 500" TagName="Radzen.Blazor.TagName.P" TextAlign="Radzen.TextAlign.Center" />
-      <RadzenText Text="Copyright Ⓒ 2025" TextStyle="Radzen.Blazor.TextStyle.Caption" class="rz-mb-0" style="color: var(--rz-text-disabled-color);" TagName="Radzen.Blazor.TagName.P" TextAlign="Radzen.TextAlign.Center" />
-    </RadzenStack>
-  </RadzenSidebar>
-  <RadzenBody Style="padding:0px;">
-    @ChildContent
-  </RadzenBody>
-  <RadzenSidebar @bind-Expanded="@rightSidebarExpanded" Style="width: 300px; grid-area: rz-right-sidebar">
-    @MenueContent
-  </RadzenSidebar>
-</RadzenLayout>
-
+      <RadzenPanelMenu Style="font-weight: 500; font-size: 15px">
+        <RadzenPanelMenuItem Text="Рабочие места" Expanded="true" Icon="desktop_windows">
+          <RadzenPanelMenuItem Text="Root" Path="/Logs" Icon="admin_panel_settings" />
+          <RadzenPanelMenuItem Text="Администратор" Path="/AdminPannel" Icon="admin_panel_settings" />
+        </RadzenPanelMenuItem>
+      </RadzenPanelMenu>
+      <RadzenStack AlignItems="Radzen.AlignItems.Center" Gap="0" class="rz-py-4 rz-py-lg-6" Style="padding: var(--rz-panel-menu-item-padding);">
+        <RadzenText Text="АИС Охрана v3.5.0" TextStyle="Radzen.Blazor.TextStyle.Caption" style="color: var(--rz-text-disabled-color); font-weight: 500" TagName="Radzen.Blazor.TagName.P" TextAlign="Radzen.TextAlign.Center" />
+        <RadzenText Text="Copyright Ⓒ 2025" TextStyle="Radzen.Blazor.TextStyle.Caption" class="rz-mb-0" style="color: var(--rz-text-disabled-color);" TagName="Radzen.Blazor.TagName.P" TextAlign="Radzen.TextAlign.Center" />
+      </RadzenStack>
+    </RadzenSidebar>
+    <RadzenBody Style="padding:0px;">
+      @ChildContent
+    </RadzenBody>
+    <RadzenSidebar @bind-Expanded="@rightSidebarExpanded" Style="width: 300px; grid-area: rz-right-sidebar">
+      @MenueContent
+    </RadzenSidebar>
+  </RadzenLayout>
+</CascadingValue>

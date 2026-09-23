@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace Guard.Core.Entities;
+﻿namespace Guard.Core.Entities;
 
 /// <summary>
 /// Справочник IP-адресов и подсетей системы Guard.
@@ -10,33 +8,26 @@ namespace Guard.Core.Entities;
 /// - Может использоваться для пользователей, подразделений, активов и других сущностей.
 /// - Поддерживает как точные IP, так и диапазоны (CIDR).
 /// </summary>
-public class IpAddress : BaseEntity
+public class IpAddress : BaseEntity, IHasSubdivision
 {
   /// <summary>
-  /// IP-адрес или CIDR-нотация.
-  /// Примеры: "192.168.1.50", "10.0.0.0/24", "2001:db8::/32"
+  /// IP-адрес 
   /// </summary>
   public string Address { get; set; } = default!;
 
   /// <summary>
-  /// Человекочитаемое название IP-адреса или подсети.
-  /// Пример: "Офис Москва - Основная сеть"
-  /// </summary>
-  public string Name { get; set; } = default!;
-
-  /// <summary>
-  /// Дополнительное описание.
+  /// Описание.
   /// </summary>
   public string? Description { get; set; }
 
   /// <summary>
-  /// Пользователи, которым назначен данный IP (прямая навигация).
+  /// Идентификатор подразделения (внешний ключ).
   /// </summary>
-  public ICollection<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
+  public Guid? SubdivisionId { get; set; }
+  public Subdivision? Subdivision { get; set; }
 
   /// <summary>
-  /// Назначения IP пользователям с метаданными (join-сущность).
+  /// Пользователи, которым назначен данный IP (прямая навигация).
   /// </summary>
-  public ICollection<UserIpAddress> UserAssignments { get; set; } = new List<UserIpAddress>();
-
+  public virtual ICollection<Personal> Personals { get; set; } = new List<Personal>();
 }

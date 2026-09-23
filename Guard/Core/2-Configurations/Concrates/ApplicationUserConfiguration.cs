@@ -12,21 +12,13 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 {
   public void Configure(EntityTypeBuilder<ApplicationUser> builder)
   {
-    // Простая и надёжная настройка many-to-many
-    // EF Core автоматически использует навигационные свойства из UserIpAddress
-    builder.HasMany(u => u.IpAddresses)
-           .WithMany(i => i.Users)
-           .UsingEntity<UserIpAddress>();
-
     // Настройка связи 1-к-1 с Personal
     builder.HasOne(u => u.Personal)
            .WithOne(p => p.User)
            .HasForeignKey<ApplicationUser>(u => u.PersonalId)
-           .OnDelete(DeleteBehavior.SetNull); // При удалении сотрудника отвязываем пользователя (PersonalId = null)
+           .OnDelete(DeleteBehavior.SetNull);
 
-    // Уникальный индекс, гарантирующий связь именно 1 к 1
     builder.HasIndex(u => u.PersonalId)
-           .IsUnique()
-           .HasFilter("\"PersonalId\" IS NOT NULL");
+           .IsUnique();
   }
 }

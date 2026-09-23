@@ -1,63 +1,104 @@
 using Guard.Core.Entities;
+using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.JSInterop;
 using Radzen;
-using Radzen.Blazor;
-
 
 namespace Guard.Components.Pages.Administrator.IpAddresses
 {
-  public partial class Add
+  public partial class Add : IDisposable
   {
-    [Inject]
-    protected IJSRuntime JSRuntime { get; set; }
-    [Inject]
-    protected NavigationManager NavigationManager { get; set; }
-    [Inject]
-    protected DialogService DialogService { get; set; }
-    [Inject]
-    protected TooltipService TooltipService { get; set; }
-    [Inject]
-    protected ContextMenuService ContextMenuService { get; set; }
-    [Inject]
-    protected NotificationService NotificationService { get; set; }
-    [Inject]
-    protected IUserManagementService UserManagementService { get; set; }
+    [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] protected NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] protected DialogService DialogService { get; set; } = default!;
+    [Inject] protected TooltipService TooltipService { get; set; } = default!;
+    [Inject] protected ContextMenuService ContextMenuService { get; set; } = default!;
+    [Inject] protected NotificationService NotificationService { get; set; } = default!;
+    [Inject] protected IIpAddressService IpAddressService { get; set; } = default!;
+    [Inject] protected ISubdivisionService SubdivisionService { get; set; } = default!;
+    [Inject] protected ILogger<Add> Logger { get; set; } = default!;
+    [CascadingParameter] protected UserContext? UserContext { get; set; }
 
-    protected IpAddress item;
+    private readonly CancellationTokenSource _cts = new();
+
+    protected bool isLoading = false;
+    protected IpAddress item = new();
+    protected IEnumerable<Subdivision> subdivisions = Enumerable.Empty<Subdivision>();
 
     protected override async Task OnInitializedAsync()
     {
-      item = new IpAddress();
+      try
+      {
+        isLoading = true;
+        Logger.LogDebug("Инициализация диалогового окна создания IP-адреса");
+
+        subdivisions = UserContext?.SubordinateSubdivisions ?? [];
+      }
+      catch (OperationCanceledException)
+      {
+        Logger.LogInformation("Инициализация диалогового окна создания IP-адреса была отменена");
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex, "Ошибка при инициализации диалогового окна создания IP-адреса");
+        ShowErrorNotification(ex.Message);
+      }
+      finally
+      {
+        isLoading = false;
+      }
     }
+
     protected async Task FormSubmit()
     {
       try
       {
-        var createdIp = await UserManagementService.CreateIpAddressAsync(
-            address: item.Address,
-            name: item.Name,
-            description: item.Description,
-            ct: CancellationToken.None);
+        isLoading = true;
+        Logger.LogInformation("Запуск создания IP-адреса '{IpAddress}'", item.Address);
+
+        await IpAddressService.CreateAsync(item, _cts.Token);
+
+        Logger.LogInformation("IP-адрес '{IpAddress}' успешно создан", item.Address);
         DialogService.Close(true);
+      }
+      catch (OperationCanceledException)
+      {
+        Logger.LogWarning("Операция создания IP-адреса '{IpAddress}' была отменена пользователем", item.Address);
       }
       catch (Exception ex)
       {
-        NotificationService.Notify(new NotificationMessage
-        {
-          Severity = NotificationSeverity.Error,
-          Summary = $"Внимание!",
-          Detail = ex.Message,
-          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-        });
+        Logger.LogError(ex, "Ошибка при создании IP-адреса '{IpAddress}'", item.Address);
+        ShowErrorNotification(ex.Message);
+      }
+      finally
+      {
+        isLoading = false;
       }
     }
-    
-    protected async Task HandleCancelButtonClick()
+
+    protected void HandleCancelButtonClick()
     {
+      Logger.LogInformation("Пользователь отменил создание IP-адреса через кнопку 'Отмена'");
+      _cts.Cancel();
       DialogService.Close(null);
-    }   
+    }
+
+    private void ShowErrorNotification(string detail)
+    {
+      NotificationService.Notify(new NotificationMessage
+      {
+        Severity = NotificationSeverity.Error,
+        Summary = "Внимание!",
+        Detail = detail,
+        Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+      });
+    }
+
+    public void Dispose()
+    {
+      _cts.Cancel();
+      _cts.Dispose();
+    }
   }
 }

@@ -42,7 +42,17 @@ namespace Guard.Components.Pages.Administrator.Personals
 
     string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
 
-    protected LoadingIndicator loading;
+
+    IEnumerable<string> itemsSubdivision;
+    IEnumerable<string> selectedItemsSubdivision;
+    IEnumerable<string> finalSelectedItemsSubdivision;
+    void OnSelectedSubdivisionChange(object value)
+    {
+      if (selectedItemsSubdivision != null && !selectedItemsSubdivision.Any())
+      {
+        selectedItemsSubdivision = null;
+      }
+    }
 
     protected override async Task OnInitializedAsync()
     {

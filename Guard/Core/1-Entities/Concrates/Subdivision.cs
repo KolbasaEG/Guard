@@ -88,4 +88,5 @@ public class Subdivision : BaseEntity
   // --- Navigation ---
   public ICollection<Subdivision> Children { get; private set; } = new List<Subdivision>();
   public ICollection<Personal> Personals { get; private set; } = new List<Personal>();
+  public ICollection<IpAddress> IpAddresses { get; private set; } = new List<IpAddress>();
 }

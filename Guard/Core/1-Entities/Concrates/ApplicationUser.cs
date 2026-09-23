@@ -10,14 +10,4 @@ public class ApplicationUser : IdentityUser
   /// </summary>
   public Guid? PersonalId { get; set; }
   public Personal? Personal { get; set; }
-
-  /// <summary>
-  /// Прямая навигация к назначенным IP-адресам.
-  /// </summary>
-  public ICollection<IpAddress> IpAddresses { get; private set; } = new List<IpAddress>();
-
-  /// <summary>
-  /// Назначения IP с метаданными (когда, кем, с какой целью).
-  /// </summary>
-  public ICollection<UserIpAddress> UserIpAddresses { get; private set; } = new List<UserIpAddress>();
 }

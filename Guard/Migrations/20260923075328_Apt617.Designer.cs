@@ -3,6 +3,7 @@ using System;
 using Guard.Core.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Guard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923075328_Apt617")]
+    partial class Apt617
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -204,15 +207,10 @@ namespace Guard.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("SubdivisionId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Address")
                         .IsUnique();
-
-                    b.HasIndex("SubdivisionId");
 
                     b.ToTable("IpAddresses", null, t =>
                         {
@@ -683,16 +681,6 @@ namespace Guard.Migrations
                     b.Navigation("Personal");
                 });
 
-            modelBuilder.Entity("Guard.Core.Entities.IpAddress", b =>
-                {
-                    b.HasOne("Guard.Core.Entities.Subdivision", "Subdivision")
-                        .WithMany("IpAddresses")
-                        .HasForeignKey("SubdivisionId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Subdivision");
-                });
-
             modelBuilder.Entity("Guard.Core.Entities.OrganType", b =>
                 {
                     b.HasOne("Guard.Core.Entities.Classifier", "Classifier")
@@ -865,8 +853,6 @@ namespace Guard.Migrations
             modelBuilder.Entity("Guard.Core.Entities.Subdivision", b =>
                 {
                     b.Navigation("Children");
-
-                    b.Navigation("IpAddresses");
 
                     b.Navigation("Personals");
                 });
