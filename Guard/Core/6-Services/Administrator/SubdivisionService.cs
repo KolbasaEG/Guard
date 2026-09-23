@@ -74,7 +74,7 @@ public class SubdivisionService : ISubdivisionService
       string parentPath = "/";
       if (subdivision.ParentId.HasValue)
       {
-        var parent = await _uow.Repository<Subdivision>().GetByIdAsync(subdivision.ParentId.Value, ct);
+        var parent = await _uow.BaseEntityRepository<Subdivision>().GetByIdAsync(subdivision.ParentId.Value, ct);
         if (parent == null)
           throw new KeyNotFoundException($"Родительское подразделение с ID '{subdivision.ParentId}' не найдено.");
 
@@ -96,7 +96,7 @@ public class SubdivisionService : ISubdivisionService
       }
 
       // 3. Добавление записи (при null PostgreSQL возьмет следующий корректный значение из sequence)
-      await _uow.Repository<Subdivision>().AddAsync(subdivision, ct);
+      await _uow.BaseEntityRepository<Subdivision>().AddAsync(subdivision, ct);
       await _uow.SaveChangesAsync(ct);
 
       // 4. Если ID БЫЛ передан вручную — выравниваем счетчик ПОСЛЕ сохранения, 
@@ -115,7 +115,7 @@ public class SubdivisionService : ISubdivisionService
 
       // 5. Формирование Path на основе полученного SubdivisionId
       subdivision.Path = $"{parentPath}{subdivision.SubdivisionId}/";
-      await _uow.Repository<Subdivision>().UpdateAsync(subdivision, ct);
+      await _uow.BaseEntityRepository<Subdivision>().UpdateAsync(subdivision, ct);
       await _uow.SaveChangesAsync(ct);
 
       _logger.LogInformation("Создано новое подразделение '{SubdivisionName}' с Path: '{Path}' (ID: {SubdivisionId})",
@@ -128,7 +128,7 @@ public class SubdivisionService : ISubdivisionService
   {
     ArgumentNullException.ThrowIfNull(subdivision);
 
-    await _uow.Repository<Subdivision>().UpdateAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().UpdateAsync(subdivision, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Обновлены данные подразделения '{SubdivisionName}' (ID: {SubdivisionId})",
@@ -154,7 +154,7 @@ public class SubdivisionService : ISubdivisionService
         if (newParentId.Value == target.Id)
           throw new InvalidOperationException("Нельзя переместить подразделение в самого себя.");
 
-        var newParent = await _uow.Repository<Subdivision>().GetByIdAsync(newParentId.Value, ct);
+        var newParent = await _uow.BaseEntityRepository<Subdivision>().GetByIdAsync(newParentId.Value, ct);
         if (newParent == null)
           throw new KeyNotFoundException($"Новое родительское подразделение с ID '{newParentId}' не найдено.");
 
@@ -169,7 +169,7 @@ public class SubdivisionService : ISubdivisionService
       string newPath = $"{newParentPath}{target.SubdivisionId}/";
 
       // 3. Выборка целевого узла и ВСЕХ его потомков через Prefix Match (StartsWith)
-      var repo = _uow.Repository<Subdivision>();
+      var repo = _uow.BaseEntityRepository<Subdivision>();
       var affectedSubdivisions = await repo.Query()
           .Where(s => s.Path.StartsWith(oldPath))
           .ToListAsync(ct);
@@ -201,7 +201,7 @@ public class SubdivisionService : ISubdivisionService
   {
     var subdivision = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<Subdivision>().SoftDeleteAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().SoftDeleteAsync(subdivision, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("Подразделение '{SubdivisionName}' (ID: {SubdivisionId}) помечено как удаленное",
@@ -212,7 +212,7 @@ public class SubdivisionService : ISubdivisionService
   {
     var subdivision = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<Subdivision>().ArchiveAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().ArchiveAsync(subdivision, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Подразделение '{SubdivisionName}' (ID: {SubdivisionId}) отправлено в архив",
@@ -223,7 +223,7 @@ public class SubdivisionService : ISubdivisionService
   {
     var subdivision = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<Subdivision>().BlockAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().BlockAsync(subdivision, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("Подразделение '{SubdivisionName}' (ID: {SubdivisionId}) заблокировано",
@@ -234,7 +234,7 @@ public class SubdivisionService : ISubdivisionService
   {
     var subdivision = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<Subdivision>().UnblockAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().UnblockAsync(subdivision, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Подразделение '{SubdivisionName}' (ID: {SubdivisionId}) разблокировано",
@@ -245,7 +245,7 @@ public class SubdivisionService : ISubdivisionService
   {
     var subdivision = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<Subdivision>().RestoreAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().RestoreAsync(subdivision, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Подразделение '{SubdivisionName}' (ID: {SubdivisionId}) восстановлено",
@@ -256,7 +256,7 @@ public class SubdivisionService : ISubdivisionService
 
   private async Task<Subdivision> GetRequiredForWriteAsync(Guid id, CancellationToken ct)
   {
-    var subdivision = await _uow.Repository<Subdivision>().GetByIdAsync(id, ct);
+    var subdivision = await _uow.BaseEntityRepository<Subdivision>().GetByIdAsync(id, ct);
 
     if (subdivision == null)
     {
@@ -271,7 +271,7 @@ public class SubdivisionService : ISubdivisionService
   {
     await _uow.ExecuteInTransactionAsync(async () =>
     {
-      var repo = _uow.Repository<Subdivision>();
+      var repo = _uow.BaseEntityRepository<Subdivision>();
 
       // 1. Загружаем все подразделения из базы данных
       var allSubdivisions = await repo.Query().ToListAsync(ct);

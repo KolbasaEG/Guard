@@ -1,5 +1,6 @@
 ﻿using Core.Repositories;
 using Guard.Core.Contexts;
+using Guard.Core.Entities;
 using Guard.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -10,6 +11,7 @@ public class UnitOfWork : IUnitOfWork
   private readonly IServiceProvider _serviceProvider;
   private readonly ILogger<UnitOfWork> _logger;
   private readonly Dictionary<Type, object> _repositories = [];
+  private readonly Dictionary<Type, object> _basicRepositories = [];
   private IDbContextTransaction? _currentTransaction;
 
 
@@ -21,19 +23,38 @@ public class UnitOfWork : IUnitOfWork
   }
 
   // ==================== Репозитории ====================
-
-  public IGenericRepository<T> Repository<T>() where T : class
+  /// <summary>
+  /// Для сущностей с BaseEntity (IGenericRepository)
+  /// </summary>
+  public IGenericRepository<T> BaseEntityRepository<T>() where T : BaseEntity
   {
     var type = typeof(T);
 
     if (!_repositories.TryGetValue(type, out var repo))
     {
-      _logger.LogDebug("Инициализация и кэширование репозитория для сущности '{EntityType}'", type.Name);
+      _logger.LogDebug("Инициализация IGenericRepository для '{EntityType}'", type.Name);
       repo = _serviceProvider.GetRequiredService<IGenericRepository<T>>();
       _repositories[type] = repo;
     }
 
     return (IGenericRepository<T>)_repositories[type];
+  }
+
+  /// <summary>
+  /// Для всех остальных сущностей (IBasicRepository)
+  /// </summary>
+  public IBasicRepository<T> BasicRepository<T>() where T : class
+  {
+    var type = typeof(T);
+
+    if (!_basicRepositories.TryGetValue(type, out var repo))
+    {
+      _logger.LogDebug("Инициализация IBasicRepository для '{EntityType}'", type.Name);
+      repo = _serviceProvider.GetRequiredService<IBasicRepository<T>>();
+      _basicRepositories[type] = repo;
+    }
+
+    return (IBasicRepository<T>)_basicRepositories[type];
   }
 
   // ==================== SaveChanges ====================

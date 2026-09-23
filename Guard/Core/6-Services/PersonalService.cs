@@ -45,7 +45,7 @@ public class PersonalService : IPersonalService
   public async Task<Personal?> GetByIdAsync(Guid id, CancellationToken ct = default)
   {
     _logger.LogDebug("Запрос персонала по ID: {PersonalId}", id);
-    return await _uow.Repository<Personal>().GetByIdAsync(id, ct);
+    return await _uow.BaseEntityRepository<Personal>().GetByIdAsync(id, ct);
   }
 
   public async Task<IReadOnlyList<Personal>> GetAllActiveAsync(CancellationToken ct = default)
@@ -93,7 +93,7 @@ public class PersonalService : IPersonalService
 
     Personal.Status = Status.Inserted;
 
-    await _uow.Repository<Personal>().AddAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().AddAsync(Personal, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Создана новая запись сотрудника '{LastName} {FirstName}' с ID: {PersonalId}",
@@ -108,7 +108,7 @@ public class PersonalService : IPersonalService
 
     Personal.UpdatedAt = DateTime.UtcNow;
 
-    await _uow.Repository<Personal>().UpdateAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().UpdateAsync(Personal, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Обновлены данные сотрудника '{LastName} {FirstName}' (ID: {PersonalId})",
@@ -121,7 +121,7 @@ public class PersonalService : IPersonalService
   {
     var Personal = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<Personal>().SoftDeleteAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().SoftDeleteAsync(Personal, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) помечен как удаленный",
@@ -132,7 +132,7 @@ public class PersonalService : IPersonalService
   {
     var Personal = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<Personal>().ArchiveAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().ArchiveAsync(Personal, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) отправлен в архив",
@@ -143,7 +143,7 @@ public class PersonalService : IPersonalService
   {
     var Personal = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<Personal>().BlockAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().BlockAsync(Personal, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) заблокирован",
@@ -154,7 +154,7 @@ public class PersonalService : IPersonalService
   {
     var Personal = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<Personal>().UnblockAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().UnblockAsync(Personal, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) разблокирован",
@@ -165,7 +165,7 @@ public class PersonalService : IPersonalService
   {
     var Personal = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<Personal>().RestoreAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().RestoreAsync(Personal, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) восстановлен",
@@ -176,7 +176,7 @@ public class PersonalService : IPersonalService
 
   private async Task<Personal> GetRequiredForWriteAsync(Guid id, CancellationToken ct)
   {
-    var Personal = await _uow.Repository<Personal>().GetByIdAsync(id, ct);
+    var Personal = await _uow.BaseEntityRepository<Personal>().GetByIdAsync(id, ct);
 
     if (Personal == null)
     {

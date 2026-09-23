@@ -174,22 +174,21 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddScoped<IReadContextService, ReadContextService>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
-
+builder.Services.AddScoped(typeof(IBasicRepository<>), typeof(BasicRepository<>));
 
 builder.Services.Scan(scan => scan
     .FromAssemblies(typeof(Program).Assembly)
     .AddClasses(classes => classes.Where(type =>
         (type.Name.EndsWith("Repository") || type.Name.EndsWith("Service")) &&
-        !type.Name.Contains("Generic") &&
+        !type.Name.Contains("GenericRepository") &&
+        !type.Name.Contains("BasicRepository") &&
         !type.Name.Contains("UnitOfWork") &&
         !type.Name.Contains("ScopeService") &&
         !type.Name.Contains("CurrentUserService") &&
         !type.Name.Contains("AuditService") &&
-        !type.Name.Contains("LogService") &&
-        !type.Name.Contains("ReadContextService")))
+        !type.Name.Contains("LogService")))
     .AsImplementedInterfaces()
     .WithScopedLifetime());
 

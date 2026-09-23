@@ -1,55 +1,81 @@
-@using Guard.Core.Entities
-@using Guard.Core.Enums
+п»ї@using Guard.Core.Entities
+@using Guard.Core.Services
 @attribute [Authorize]
-<PageTitle>АИС "Охрана"</PageTitle>
-<TableWrapperWithFilterAndAnalytics >
+
+<PageTitle>РђРРЎ "РћС…СЂР°РЅР°" вЂ” РЈРїСЂР°РІР»РµРЅРёРµ СЂРѕР»СЏРјРё</PageTitle>
+
+<TableWrapperWithFilterAndAnalytics>
   <Table>
-    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="ApplicationRole" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"
-                    AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
-                    DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
-                    LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NotEqualsText="Не равно" OrOperatorText="Или"
-                    PageAriaLabelFormat="К странице {0}" PageSizeText="записей на странице" PrevPageTitle="Предыдущая страница" ShowMultiColumnSortingIndex="true"
-                    EmptyText="Записи не найдены" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" StartsWithText="Начинается c" LessThanText="Меньше" LessThanOrEqualsText="Меньше или равно"
-                    PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" ShowPagingSummary="true" PagingSummaryFormat="@pagingSummaryFormat"
+    <RadzenDataGrid @ref="grid"
+                    IsLoading="@isLoading"
+                    LoadData="@LoadData"
+                    RowSelect="@EditRow"
+                    Count="@count"
+                    Data="@filteredData"
+                    TItem="ApplicationRole"
+                    ColumnWidth="200px"
+                    AllowPaging="true"
+                    AllowSorting="true"
+                    PageSizeOptions="@(new int[] { 10, 20, 30, 50, 100 })"
+                    PageSize="20"
+                    AllowColumnResize="true"
+                    Density="Density.Compact"
+                    AndOperatorText="Р"
+                    ApplyFilterText="РџСЂРёРјРµРЅРёС‚СЊ"
+                    ClearFilterText="РћС‡РёСЃС‚РёС‚СЊ"
+                    ContainsText="РЎРѕРґРµСЂР¶РёС‚"
+                    FilterText="Р¤РёР»СЊС‚СЂ"
+                    EndsWithText="Р—Р°РєР°РЅС‡РёРІР°РµС‚СЃСЏ РЅР°"
+                    EqualsText="Р Р°РІРЅРѕ"
+                    DoesNotContainText="РќРµ СЃРѕРґРµСЂР¶РёС‚"
+                    FirstPageTitle="РџРµСЂРІР°СЏ СЃС‚СЂР°РЅРёС†Р°"
+                    FirstPageAriaLabel="Рљ РїРµСЂРІРѕР№ СЃС‚СЂР°РЅРёС†Рµ"
+                    IsEmptyText="РџСѓСЃС‚Рѕ"
+                    IsNotEmptyText="РќРµ РїСѓСЃС‚Рѕ"
+                    LastPageAriaLabel="Рљ РїРѕСЃР»РµРґРЅРµР№ СЃС‚СЂР°РЅРёС†Рµ"
+                    LastPageTitle="РџРѕСЃР»РµРґРЅСЏСЏ СЃС‚СЂР°РЅРёС†Р°"
+                    NextPageTitle="РЎР»РµРґСѓСЋС‰Р°СЏ СЃС‚СЂР°РЅРёС†Р°"
+                    NotEqualsText="РќРµ СЂР°РІРЅРѕ"
+                    OrOperatorText="РР»Рё"
+                    PageAriaLabelFormat="Рљ СЃС‚СЂР°РЅРёС†Рµ {0}"
+                    PageSizeText="Р·Р°РїРёСЃРµР№ РЅР° СЃС‚СЂР°РЅРёС†Рµ"
+                    PrevPageTitle="РџСЂРµРґС‹РґСѓС‰Р°СЏ СЃС‚СЂР°РЅРёС†Р°"
+                    ShowMultiColumnSortingIndex="true"
+                    EmptyText="Р—Р°РїРёСЃРё РЅРµ РЅР°Р№РґРµРЅС‹"
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    StartsWithText="РќР°С‡РёРЅР°РµС‚СЃСЏ c"
+                    LessThanText="РњРµРЅСЊС€Рµ"
+                    LessThanOrEqualsText="РњРµРЅСЊС€Рµ РёР»Рё СЂР°РІРЅРѕ"
+                    PagerHorizontalAlign="HorizontalAlign.Right"
+                    PagerPosition="PagerPosition.Top"
+                    GreaterThanText="Р‘РѕР»СЊС€Рµ"
+                    GreaterThanOrEqualsText="Р‘РѕР»СЊС€Рµ РёР»Рё СЂР°РІРЅРѕ"
+                    ShowPagingSummary="true"
+                    PagingSummaryFormat="@pagingSummaryFormat"
                     Style="height:100%;">
       <HeaderTemplate>
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
             <RadzenMenu>
-              <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
-                <RadzenMenuItem Text="Экспорт" Icon="get_app" Click="@OnExportClick" Style="font-weight:500;" />
+              <RadzenMenuItem Text="РњРµРЅСЋ" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
+                <RadzenMenuItem Text="Р­РєСЃРїРѕСЂС‚" Icon="get_app" Click="@OnExportClick" Style="font-weight:500;" />
               </RadzenMenuItem>
             </RadzenMenu>
           </RadzenStack>
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
-            <RadzenSelectBar TValue="DataViewMode" Size="ButtonSize.Medium" @bind-Value="@currentMode" Change="() => ReloadAsunc()" Style="background-color: var(--rz-menu-top-item-background-color); border-radius: 0px;">
-              <Items>
-                <RadzenSelectBarItem Value="@(DataViewMode.Archived)" Text="Архив" Style="border-radius:0px; width:105px; text-align:center;" />
-                <RadzenSelectBarItem Value="@(DataViewMode.Active)" Text="Активные" Style="border-radius:0px; width:105px; text-align:center;" />
-                <RadzenSelectBarItem Value="@(DataViewMode.Deleted)" Text="Удаленные" Style="border-radius:0px; width:105px; text-align:center;" />
-              </Items>
-            </RadzenSelectBar>
-          </RadzenStack>
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
             <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
-            <RadzenButton Icon="add_circle_outline" Visible="@(isEditor)" Click="@AddClick" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+            <RadzenButton Icon="add_circle_outline" Visible="@isEditor" Click="@AddClick" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
           </RadzenStack>
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="ApplicationRole" Property="Name" Title="Наименование" Width="100%" />
-        <RadzenDataGridColumn TItem="ApplicationRole" Filterable="false" Sortable="false" Width="90px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
+        <RadzenDataGridColumn TItem="ApplicationRole" Property="Name" Title="РќР°РёРјРµРЅРѕРІР°РЅРёРµ" Width="100%" />
+        <RadzenDataGridColumn TItem="ApplicationRole" Filterable="false" Sortable="false" Width="60px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
             <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
-              <RadzenButton Icon="archive" Size="Radzen.ButtonSize.ExtraSmall"
-                            Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
-                            Click=@(args => GridArchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
               <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="Radzen.ButtonSize.ExtraSmall"
                             Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
-                            Click=@(args => GridDeleteButtonClick(args, item)) @onclick:stopPropagation="true" />
-              <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="unarchive" Size="Radzen.ButtonSize.ExtraSmall"
-                            Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
-                            Click=@(args => GridUnarchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
+                            Click="@(args => GridDeleteButtonClick(args, item))" @onclick:stopPropagation="true" />
             </RadzenStack>
           </Template>
         </RadzenDataGridColumn>
@@ -57,17 +83,17 @@
     </RadzenDataGrid>
   </Table>
   <Filter>
-    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="ApplicationRole" ViewChanged=@(view => grid.Reload())
-                      AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
-                      DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
-                      AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
+    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto="false" Data="@data" TItem="ApplicationRole" ViewChanged="@(view => grid.Reload())"
+                      AndOperatorText="Р" ApplyFilterText="РџСЂРёРјРµРЅРёС‚СЊ" ClearFilterText="РћС‡РёСЃС‚РёС‚СЊ" ContainsText="РЎРѕРґРµСЂР¶РёС‚" FilterText="Р¤РёР»СЊС‚СЂ" EndsWithText="Р—Р°РєР°РЅС‡РёРІР°РµС‚СЃСЏ РЅР°" EqualsText="Р Р°РІРЅРѕ"
+                      DoesNotContainText="РќРµ СЃРѕРґРµСЂР¶РёС‚" IsEmptyText="РџСѓСЃС‚Рѕ" IsNotEmptyText="РќРµ РїСѓСЃС‚Рѕ" NotEqualsText="РќРµ СЂР°РІРЅРѕ" OrOperatorText="РР»Рё" StartsWithText="РќР°С‡РёРЅР°РµС‚СЃСЏ c" LessThanText="РњРµРЅСЊС€Рµ"
+                      AddFilterText="Р”РѕР±Р°РІРёС‚СЊ С„РёР»СЊС‚СЂ" AddFilterGroupText="Р”РѕР±Р°РІРёС‚СЊ РіСЂСѓРїРїСѓ С„РёР»СЊС‚СЂРѕРІ" LessThanOrEqualsText="РњРµРЅСЊС€Рµ РёР»Рё СЂР°РІРЅРѕ" GreaterThanText="Р‘РѕР»СЊС€Рµ" GreaterThanOrEqualsText="Р‘РѕР»СЊС€Рµ РёР»Рё СЂР°РІРЅРѕ" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
       <Properties>
-        <RadzenDataFilterProperty TItem="ApplicationRole" Property="Name" Title="Наименование" />
+        <RadzenDataFilterProperty TItem="ApplicationRole" Property="Name" Title="РќР°РёРјРµРЅРѕРІР°РЅРёРµ" />
       </Properties>
     </RadzenDataFilter>
   </Filter>
   <FilterButtons>
-    <RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+    <RadzenButton Icon="filter_alt" Text="РџСЂРёРјРµРЅРёС‚СЊ" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
   </FilterButtons>
   <Analitycs>
     <AnalitycsWrapper>
@@ -75,7 +101,7 @@
         <RadzenStack Gap="10px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="0px" Style="width:100%;">
             <RadzenIcon Icon="analytics" Style="margin:8px; color:var(--rz-on-primary-darker); margin-right:15px;margin-left:12px;" />
-            <RadzenText TextStyle="TextStyle.Body1" Style="margin-right:15px; color:var(--rz-on-primary-darker);"><strong>Аналитическая информация</strong></RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1" Style="margin-right:15px; color:var(--rz-on-primary-darker);"><strong>РђРЅР°Р»РёС‚РёС‡РµСЃРєР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ</strong></RadzenText>
           </RadzenStack>
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="height:100%;">
             <RadzenButton Icon="autorenew" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
@@ -83,9 +109,8 @@
         </RadzenStack>
       </RadzenCard>
       <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%; height:100%;">
-        
+
       </RadzenStack>
     </AnalitycsWrapper>
   </Analitycs>
-
 </TableWrapperWithFilterAndAnalytics>

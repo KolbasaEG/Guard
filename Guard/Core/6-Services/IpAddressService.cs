@@ -83,7 +83,7 @@ public class IpAddressService : IIpAddressService
         ipAddress.Address = ipAddress.Address.Trim();
       }
 
-      await _uow.Repository<IpAddress>().AddAsync(ipAddress, ct);
+      await _uow.BaseEntityRepository<IpAddress>().AddAsync(ipAddress, ct);
       await _uow.SaveChangesAsync(ct);
 
       _logger.LogInformation("Создана новая запись IP-адреса '{IpAddress}' (ID: {IpAddressId})",
@@ -102,7 +102,7 @@ public class IpAddressService : IIpAddressService
       ipAddress.Address = ipAddress.Address.Trim();
     }
 
-    await _uow.Repository<IpAddress>().UpdateAsync(ipAddress, ct);
+    await _uow.BaseEntityRepository<IpAddress>().UpdateAsync(ipAddress, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Обновлены данные IP-адреса '{IpAddress}' (ID: {IpAddressId})",
@@ -115,7 +115,7 @@ public class IpAddressService : IIpAddressService
   {
     var ipAddress = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<IpAddress>().SoftDeleteAsync(ipAddress, ct);
+    await _uow.BaseEntityRepository<IpAddress>().SoftDeleteAsync(ipAddress, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("IP-адрес '{IpAddress}' (ID: {IpAddressId}) помечен как удаленный",
@@ -126,7 +126,7 @@ public class IpAddressService : IIpAddressService
   {
     var ipAddress = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<IpAddress>().ArchiveAsync(ipAddress, ct);
+    await _uow.BaseEntityRepository<IpAddress>().ArchiveAsync(ipAddress, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("IP-адрес '{IpAddress}' (ID: {IpAddressId}) отправлен в архив",
@@ -137,7 +137,7 @@ public class IpAddressService : IIpAddressService
   {
     var ipAddress = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<IpAddress>().BlockAsync(ipAddress, ct);
+    await _uow.BaseEntityRepository<IpAddress>().BlockAsync(ipAddress, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("IP-адрес '{IpAddress}' (ID: {IpAddressId}) заблокирован",
@@ -148,7 +148,7 @@ public class IpAddressService : IIpAddressService
   {
     var ipAddress = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<IpAddress>().UnblockAsync(ipAddress, ct);
+    await _uow.BaseEntityRepository<IpAddress>().UnblockAsync(ipAddress, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("IP-адрес '{IpAddress}' (ID: {IpAddressId}) разблокирован",
@@ -159,7 +159,7 @@ public class IpAddressService : IIpAddressService
   {
     var ipAddress = await GetRequiredForWriteAsync(id, ct);
 
-    await _uow.Repository<IpAddress>().RestoreAsync(ipAddress, ct);
+    await _uow.BaseEntityRepository<IpAddress>().RestoreAsync(ipAddress, ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("IP-адрес '{IpAddress}' (ID: {IpAddressId}) восстановлен",
@@ -170,7 +170,7 @@ public class IpAddressService : IIpAddressService
 
   private async Task<IpAddress> GetRequiredForWriteAsync(Guid id, CancellationToken ct)
   {
-    var ipAddress = await _uow.Repository<IpAddress>().GetByIdAsync(id, ct);
+    var ipAddress = await _uow.BaseEntityRepository<IpAddress>().GetByIdAsync(id, ct);
 
     if (ipAddress == null)
     {

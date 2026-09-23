@@ -1,0 +1,15 @@
+﻿@using Guard.Core.Entities
+@attribute [Authorize]
+
+<EditEntity TItem="ApplicationRole" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="false" IsLoading="isLoading">
+  <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
+    <RadzenFormField Text="Наименование роли" Variant="Variant.Text" Style="width:100%;">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Name" Name="RoleName" Placeholder="Введите наименование роли" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="RoleName" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+  </RadzenStack>
+</EditEntity>

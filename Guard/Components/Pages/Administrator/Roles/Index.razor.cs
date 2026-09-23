@@ -1,5 +1,4 @@
-using Guard.Core.Entities;
-using Guard.Core.Enums;
+п»їusing Guard.Core.Entities;
 using Guard.Core.Extensions;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -18,21 +17,20 @@ namespace Guard.Components.Pages.Administrator.Roles
     [Inject] protected NotificationService NotificationService { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!;
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
-    [Inject] protected ISecurityService Security { get; set; } = default!;
+    [Inject] protected IApplicationRoleService RoleService { get; set; } = default!;
 
     protected IEnumerable<ApplicationRole> data = default!;
     protected IEnumerable<ApplicationRole> filteredData = default!;
     protected RadzenDataGrid<ApplicationRole> grid = default!;
     protected RadzenDataFilter<ApplicationRole> dataFilter = default!;
 
-    private CancellationTokenSource _cts = new();
+    private readonly CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
 
     int count;
     protected bool isEditor = true;
     protected bool isLoading = false;
-    protected DataViewMode currentMode = DataViewMode.Active;
-    string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
+    string pagingSummaryFormat = "РЎС‚СЂР°РЅРёС†Р° {0} РёР· {1} (РІСЃРµРіРѕ {2} Р·Р°РїРёСЃРµР№)";
 
     protected override async Task OnInitializedAsync()
     {
@@ -43,7 +41,7 @@ namespace Guard.Components.Pages.Administrator.Roles
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при инициализации страницы IP-адресов");
+        Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё СЃС‚СЂР°РЅРёС†С‹ СЂРѕР»РµР№");
         ShowErrorNotification(ex.Message);
       }
       finally
@@ -62,7 +60,8 @@ namespace Guard.Components.Pages.Administrator.Roles
       try
       {
         if (dataFilter?.Filters != null) NormalizeFilterDatesToUtc(dataFilter.Filters);
-        var (items, totalCount) = await Security.QueryRolesAsync(async query =>
+
+        var (items, totalCount) = await RoleService.QueryRolesAsync(async query =>
         {
           if (dataFilter != null)
           {
@@ -75,7 +74,7 @@ namespace Guard.Components.Pages.Administrator.Roles
           }
           else
           {
-            query = query.OrderByDescending(s => s.Id);
+            query = query.OrderBy(r => r.Name);
           }
 
           var total = await query.CountAsync(ct);
@@ -93,95 +92,16 @@ namespace Guard.Components.Pages.Administrator.Roles
       }
       catch (OperationCanceledException)
       {
-        // Игнорируем отмененные запросы
+        // РРіРЅРѕСЂРёСЂСѓРµРј РѕС‚РјРµРЅРµРЅРЅС‹Рµ Р·Р°РїСЂРѕСЃС‹
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка загрузки данных ip");
-        ShowErrorNotification("Не удалось загрузить данные");
+        Logger.LogError(ex, "РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РґР°РЅРЅС‹С… СЂРѕР»РµР№");
+        ShowErrorNotification("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РґР°РЅРЅС‹Рµ СЂРѕР»РµР№");
       }
       finally
       {
         isLoading = false;
-      }
-    }
-    protected async Task ReloadAsunc()
-    {
-      await grid.Reload();
-    }
-    protected async Task AddClick(MouseEventArgs args)
-    {
-      //var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      //if (result != null)
-      //{
-      //  ShowSuccessNotification("Добавлена новая запись!");
-      //  await grid.Reload();
-      //}
-    }
-
-    protected async Task EditRow(ApplicationRole item)
-    {
-      //var result = await DialogService.OpenAsync<Edit>(
-      //  "",
-      //  new Dictionary<string, object?> { { "Id", item.Id } },
-      //  new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" }
-      //);
-
-      //if (result != null)
-      //{
-      //  ShowSuccessNotification("Информация обновлена!");
-      //  await grid.Reload();
-      //}
-    }
-
-    protected async Task GridArchiveButtonClick(MouseEventArgs args, ApplicationRole item)
-    {
-      if (await DialogService.Confirm("Вы действительно хотите поместить запись в архив?", "Архивирование", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
-      {
-        try
-        {
-          //await Security.ArchiveAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись помещена в архив!");
-          await grid.Reload();
-        }
-        catch (Exception ex)
-        {
-          ShowErrorNotification(ex.Message);
-        }
-      }
-    }
-
-    protected async Task GridUnarchiveButtonClick(MouseEventArgs args, ApplicationRole item)
-    {
-      if (await DialogService.Confirm("Вы действительно хотите извлечь запись из архива?", "Извлечение из архива", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
-      {
-        try
-        {
-          //await Security.RestoreAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись извлечена из архива!");
-          await grid.Reload();
-        }
-        catch (Exception ex)
-        {
-          ShowErrorNotification(ex.Message);
-        }
-      }
-    }
-
-    protected async Task GridDeleteButtonClick(MouseEventArgs args, ApplicationRole item)
-    {
-      if (await DialogService.Confirm("Вы действительно хотите удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
-      {
-        try
-        {
-          //await Security.SoftDeleteAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись удалена!");
-          await grid.Reload();
-        }
-        catch (Exception ex)
-        {
-          ShowErrorNotification(ex.Message);
-        }
       }
     }
 
@@ -190,9 +110,48 @@ namespace Guard.Components.Pages.Administrator.Roles
       await grid.Reload();
     }
 
+    protected async Task AddClick(MouseEventArgs args)
+    {
+      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      if (result != null)
+      {
+        ShowSuccessNotification("Р”РѕР±Р°РІР»РµРЅР° РЅРѕРІР°СЏ Р·Р°РїРёСЃСЊ!");
+        await grid.Reload();
+      }
+    }
+
+    protected async Task EditRow(ApplicationRole item)
+    {
+      var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+
+      if (result != null)
+      {
+        ShowSuccessNotification("РРЅС„РѕСЂРјР°С†РёСЏ РѕР±РЅРѕРІР»РµРЅР°!");
+        await grid.Reload();
+      }
+    }
+
+    protected async Task GridDeleteButtonClick(MouseEventArgs args, ApplicationRole item)
+    {
+      if (await DialogService.Confirm($"Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ СЂРѕР»СЊ '{item.Name}'?", "РЈРґР°Р»РµРЅРёРµ СЂРѕР»Рё", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
+      {
+        try
+        {
+          await RoleService.DeleteAsync(item.Id, ct: _cts.Token);
+          ShowSuccessNotification("Р РѕР»СЊ СѓСЃРїРµС€РЅРѕ СѓРґР°Р»РµРЅР°!");
+          await grid.Reload();
+        }
+        catch (Exception ex)
+        {
+          Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё СѓРґР°Р»РµРЅРёРё СЂРѕР»Рё {RoleId}", item.Id);
+          ShowErrorNotification(ex.Message);
+        }
+      }
+    }
+
     private async Task OnExportClick()
     {
-      // TODO: Реализовать экспорт
+      // TODO: Р РµР°Р»РёР·РѕРІР°С‚СЊ СЌРєСЃРїРѕСЂС‚
       await Task.CompletedTask;
     }
 
@@ -224,7 +183,7 @@ namespace Guard.Components.Pages.Administrator.Roles
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Success,
-        Summary = "Информационное",
+        Summary = "РЈСЃРїРµС€РЅРѕ",
         Detail = detail,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });
@@ -235,7 +194,7 @@ namespace Guard.Components.Pages.Administrator.Roles
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Error,
-        Summary = "Внимание!",
+        Summary = "Р’РЅРёРјР°РЅРёРµ!",
         Detail = detail,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });
