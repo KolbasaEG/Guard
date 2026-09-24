@@ -2,7 +2,7 @@
 @using System.Text.Json
 @using System.Text.RegularExpressions
 @inject DialogService DialogService
-<ViewEntity TItem="LogEntry" Data="Log">
+<ViewEntity TItem="LogEntry" Data="Log" OnCancelButtonClick="HandleCancelButtonClick">
   <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;height:100%;">
     <InfoBlock Title="Основные метаданные контекста">
       <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="10px">
@@ -156,4 +156,8 @@
     "Database" => BadgeStyle.Warning,
     _ => BadgeStyle.Light
   };
+  protected void HandleCancelButtonClick()
+  {
+    DialogService.Close(null);
+  }
 }

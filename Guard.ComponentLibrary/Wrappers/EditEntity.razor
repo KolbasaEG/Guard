@@ -1,11 +1,16 @@
 ﻿@using Guard.ComponentLibrary.Loading
 @typeparam TItem
-@inject DialogService DialogService;
 
 <RadzenStack Style="width:100%;height:100%;" Gap="0px">
   <RadzenTemplateForm Submit="FormSubmit" TItem="TItem" Data="@Data" Visible="@(Data != null)" Style="width:100%;height:100%; padding:0px; margin:0px;">
     <RadzenStack Style="width:100%;height:100%;" Gap="0px">
-      <Guard.ComponentLibrary.Wrappers.Elements.CardHeader Icon="@Icon" Name="@Name" ShowSaveButton="ShowSaveButton" OnInfoClick="InfoButtonClick" OnCancelButtonClick="CancelButtonClick" ShowInfoButton="ShowInfoButton" />
+      <Guard.ComponentLibrary.Wrappers.Elements.CardHeader 
+        Icon="@Icon" 
+        Name="@Name" 
+        ShowSaveButton="ShowSaveButton" 
+        ShowInfoButton="ShowInfoButton"
+        OnInfoClick="InfoButtonClick" 
+        OnCancelButtonClick="CancelButtonClick" />
 
       <RadzenStack Orientation="Orientation.Horizontal" Gap="5px;" Style="flex: 1; min-height: 0; width:100%; margin-top:5px;">
         <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;min-height:0;">
@@ -21,7 +26,6 @@
     </RadzenStack>
   </RadzenTemplateForm>
 </RadzenStack>
-
 
 @code {
   [Parameter] public bool ShowSaveButton { get; set; } = true;
@@ -52,6 +56,9 @@
 
   protected async Task CancelButtonClick()
   {
-    await OnCancelButtonClick.InvokeAsync();
+    if (OnCancelButtonClick.HasDelegate)
+    {
+      await OnCancelButtonClick.InvokeAsync();
+    }
   }
 }

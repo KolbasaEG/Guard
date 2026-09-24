@@ -2,7 +2,7 @@
 @using Guard.Core.Enums
 @attribute [Authorize]
 
-<EditEntity TItem="Subdivision" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="true" OnInfoClick="InfoButtonClick" IsLoading="isLoading">
+<EditEntity TItem="Subdivision" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="true" OnInfoClick="InfoButtonClick" IsLoading="isLoading" OnCancelButtonClick="HandleCancelButtonClick">
   <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" Style="width: 100%;">
 
     <!-- Выбор нового родительского подразделения -->

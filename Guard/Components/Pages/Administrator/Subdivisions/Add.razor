@@ -1,7 +1,7 @@
 @using Guard.Core.Entities
 @attribute [Authorize]
 
-<CreateEntity TItem="Subdivision" Data="@item" Submit="@FormSubmit" Cancel="HandleCancelButtonClick" IsLoading="isLoading">
+<CreateEntity TItem="Subdivision" Data="@item" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading">
   <RadzenStack Gap="0px" Orientation="Orientation.Vertical">
     <RadzenStack Orientation="Orientation.Horizontal" Style="width:100%;" Gap="5px">
       <RadzenFormField Text="Тип органа" Variant="Variant.Text" Style="width:100%;">

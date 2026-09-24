@@ -1,7 +1,4 @@
-﻿@inject DialogService DialogService;
-
-
-<RadzenCard Style="width:100%; height:46px; border-radius:0px; border:none; padding:5px; background-color:var(--rz-primary-darker);flex-shrink:0;">
+﻿<RadzenCard Style="width:100%; height:46px; border-radius:0px; border:none; padding:5px; background-color:var(--rz-primary-darker);flex-shrink:0;">
   <RadzenStack Gap="10px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="0px" Style="width:100%;">
       <RadzenIcon Icon="@Icon" Style="margin:8px; color:var(--rz-on-primary-darker); margin-right:15px;margin-left:12px;" />
@@ -19,7 +16,6 @@
   [Parameter] public bool ShowSaveButton { get; set; } = true;
   [Parameter] public bool ShowInfoButton { get; set; } = false;
 
-
   [Parameter] public string Name { get; set; } = "Просмотр";
   [Parameter] public string Icon { get; set; } = "event_note";
 
@@ -34,8 +30,11 @@
     }
   }
 
-  protected async Task CancelButtonClick()
+  private async Task CancelButtonClick()
   {
-    await OnCancelButtonClick.InvokeAsync();
+    if (OnCancelButtonClick.HasDelegate)
+    {
+      await OnCancelButtonClick.InvokeAsync();
+    }
   }
 }

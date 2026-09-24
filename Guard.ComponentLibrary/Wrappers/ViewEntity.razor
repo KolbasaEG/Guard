@@ -1,24 +1,33 @@
-﻿@typeparam TItem
-@inject DialogService DialogService;
+﻿@using Guard.ComponentLibrary.Loading
+@typeparam TItem
 
 <RadzenStack Style="width:100%;height:100%;" Gap="0px">
   <RadzenStack Style="width:100%;height:100%;" Gap="0px">
-    <Guard.ComponentLibrary.Wrappers.Elements.CardHeader Icon="@Icon" Name="@Name" ShowSaveButton="false" OnInfoClick="InfoButtonClick" ShowInfoButton="ShowInfoButton" />
+    <Guard.ComponentLibrary.Wrappers.Elements.CardHeader 
+      Icon="@Icon" 
+      Name="@Name" 
+      ShowSaveButton="false" 
+      ShowInfoButton="ShowInfoButton"
+      OnInfoClick="InfoButtonClick" 
+      OnCancelButtonClick="CancelButtonClick" />
+
     <RadzenStack Orientation="Orientation.Horizontal" Gap="5px;" Style="flex: 1; min-height: 0; width:100%; margin-top:5px;">
       <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;min-height:0;">
-        <RadzenCard Variant="Variant.Outlined" Style="padding:5px; border-radius:0px;height:100%;display:flex; flex-direction:column;">
-          <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;">
-            @ChildContent
-          </RadzenStack>
-        </RadzenCard>
+        <LoadingContainer IsLoading="IsLoading">
+          <RadzenCard Variant="Variant.Outlined" Style="padding:5px; border-radius:0px;height:100%;display:flex; flex-direction:column;">
+            <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;">
+              @ChildContent
+            </RadzenStack>
+          </RadzenCard>
+        </LoadingContainer>
       </RadzenStack>
     </RadzenStack>
   </RadzenStack>
 </RadzenStack>
 
-
 @code {
   [Parameter] public bool ShowInfoButton { get; set; } = false;
+  [Parameter] public bool IsLoading { get; set; }
 
   [Parameter] public TItem? Data { get; set; }
   [Parameter] public string Name { get; set; } = "ПРОСМОТР";
@@ -26,6 +35,7 @@
 
   [Parameter] public RenderFragment? ChildContent { get; set; }
   [Parameter] public EventCallback OnInfoClick { get; set; }
+  [Parameter] public EventCallback OnCancelButtonClick { get; set; }
 
   private async Task InfoButtonClick()
   {
@@ -35,8 +45,11 @@
     }
   }
 
-  protected async Task CancelButtonClick(MouseEventArgs args)
+  protected async Task CancelButtonClick()
   {
-    DialogService.Close(null);
+    if (OnCancelButtonClick.HasDelegate)
+    {
+      await OnCancelButtonClick.InvokeAsync();
+    }
   }
 }
