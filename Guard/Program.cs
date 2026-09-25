@@ -178,6 +178,12 @@ builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepositor
 builder.Services.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
 builder.Services.AddScoped(typeof(IBasicRepository<>), typeof(BasicRepository<>));
 
+builder.Services.AddHttpClient<IRemoteClassifierService, RemoteClassifierService>(client =>
+{
+  client.BaseAddress = new Uri("https://6ab65702c4c7bb67b918bcd6.mockapi.io/");
+  client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 builder.Services.Scan(scan => scan
     .FromAssemblies(typeof(Program).Assembly)
     .AddClasses(classes => classes.Where(type =>

@@ -18,8 +18,9 @@
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
             <RadzenMenu>
               <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
-                <RadzenMenuItem Text="Экспорт" Icon="get_app" Click="@OnExportClick" Style="font-weight:500;" />
-              </RadzenMenuItem>
+<RadzenButton Icon="sync" Click="@OnSyncClick" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" ToolTip="Синхронизировать с внешним API" />
+            <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" ToolTip="Обновить" />
+            <RadzenButton Icon="add_circle_outline" Visible="@isEditor" Click="@AddClick" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" ToolTip="Добавить" />              </RadzenMenuItem>
             </RadzenMenu>
           </RadzenStack>
 

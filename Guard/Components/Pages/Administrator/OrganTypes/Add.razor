@@ -1,0 +1,35 @@
+﻿@using Guard.Core.Entities
+@attribute [Authorize]
+
+<CreateEntity TItem="OrganType" Data="@item" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading">
+  <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
+    <RadzenFormField Text="Статус подразделения" Variant="Variant.Text" Style="width:100%;">
+      <ChildContent>
+        <RadzenDropDown Data="@statusClassifiers" TextProperty="Value" AllowClear="true"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
+                        style="display: block; width: 100%"
+                        TValue="Classifier" Change="@OnStatusClassifierChanged" Name="StatusClassifier" />
+      </ChildContent>
+    </RadzenFormField>
+    <RadzenFormField Text="Код типа органа" Variant="Variant.Text" Style="width:100%;">
+      <ChildContent>
+        <RadzenNumeric style="display: block; width: 100%" @bind-Value="@item.Code" Name="Code" ShowUpDown="false" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Code" Text="Обязательно для заполнения!" />
+        <RadzenNumericRangeValidator Component="Code" Min="1" Text="Код должен быть больше 0" />
+      </Helper>
+    </RadzenFormField>
+
+    <RadzenFormField Text="Наименование типа органа" Variant="Variant.Text" Style="width:100%;">
+      <ChildContent>
+        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Name" Name="Name" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Name" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+
+  </RadzenStack>
+</CreateEntity>

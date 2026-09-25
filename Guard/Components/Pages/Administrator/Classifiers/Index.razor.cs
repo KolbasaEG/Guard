@@ -18,6 +18,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
     [Inject] protected DialogService DialogService { get; set; } = default!;
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
     [Inject] protected IClassifierService ClassifierService { get; set; } = default!;
+    [Inject] protected IRemoteClassifierService RemoteClassifierService { get; set; } = default!;
 
     [CascadingParameter] protected UserContext? UserContext { get; set; }
 
@@ -117,6 +118,32 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       await grid.Reload();
     }
 
+    protected async Task OnSyncClick()
+    {
+      try
+      {
+        isLoading = true;
+        Logger.LogInformation("Запуск синхронизации классификаторов с внешним API...");
+
+        await RemoteClassifierService.SyncClassifiersAsync(_cts.Token);
+
+        ShowSuccessNotification("Синхронизация с API успешно завершена!");
+        await grid.Reload();
+      }
+      catch (OperationCanceledException)
+      {
+        Logger.LogInformation("Синхронизация с API была отменена");
+      }
+      catch (Exception ex)
+      {
+        Logger.LogError(ex, "Ошибка при синхронизации классификаторов с внешним API");
+        ShowErrorNotification($"Не удалось синхронизировать данные: {ex.Message}");
+      }
+      finally
+      {
+        isLoading = false;
+      }
+    }
     protected async Task AddClick(MouseEventArgs args)
     {
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
