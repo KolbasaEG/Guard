@@ -1,5 +1,4 @@
 ﻿using Guard.Core.Entities;
-using Guard.Core.Interceptors;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
@@ -34,4 +33,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
   public DbSet<Subdivision> Subdivisions { get; set; } = null!;
   public DbSet<Classifier> Classifiers { get; set; } = null!;
   public DbSet<Personal> Personals { get; set; } = null!;
+  public DbSet<ProtectedObject> ProtectedObjects { get; set; } = null!;
+  public DbSet<MaintenanceSectorObject> MaintenanceSectorObjects { get; set; } = null!;
+  public DbSet<MaintenanceSector> MaintenanceSectors { get; set; } = null!;
 }

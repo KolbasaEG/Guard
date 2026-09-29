@@ -3,6 +3,7 @@ using System;
 using Guard.Core.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Guard.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260929113434_ad-ng")]
+    partial class adng
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -284,73 +287,6 @@ namespace Guard.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Guard.Core.Entities.MaintenanceSectorMonthlySchedule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasComment("Уникальный идентификатор записи (UUIDv7)");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)")
-                        .HasComment("Идентификатор пользователя (string), создавшего запись. Ссылается на AspNetUsers.Id");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date")
-                        .HasComment("Календарная дата");
-
-                    b.Property<DateTime>("InsertedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'")
-                        .HasComment("Дата и время создания записи (UTC)");
-
-                    b.Property<bool>("IsWorkDay")
-                        .HasColumnType("boolean")
-                        .HasComment("Рабочая смена участка");
-
-                    b.Property<DateTime?>("LastModifiedDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasComment("Дата и время последнего изменения записи (UTC)");
-
-                    b.Property<Guid>("MaintenanceSectorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)")
-                        .HasComment("Идентификатор пользователя (string), последним изменившего запись");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasComment("Примечание к смене (праздник, сокращенный день)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasComment("Текущий статус жизненного цикла записи.");
-
-                    b.Property<TimeSpan?>("WorkEnd")
-                        .HasColumnType("interval")
-                        .HasComment("Время окончания смены участка");
-
-                    b.Property<TimeSpan?>("WorkStart")
-                        .HasColumnType("interval")
-                        .HasComment("Время начала смены участка");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MaintenanceSectorId", "Date")
-                        .IsUnique()
-                        .HasDatabaseName("UX_MaintenanceSectorMonthlySchedules_Sector_Date");
-
-                    b.ToTable("MaintenanceSectorMonthlySchedules", "public", t =>
-                        {
-                            t.HasComment("Календарный график работы участка на месяц");
-                        });
-                });
-
             modelBuilder.Entity("Guard.Core.Entities.MaintenanceSectorObject", b =>
                 {
                     b.Property<Guid>("Id")
@@ -402,136 +338,6 @@ namespace Guard.Migrations
                     b.ToTable("MaintenanceSectorObjects", "public", t =>
                         {
                             t.HasComment("Связь участков обслуживания и охраняемых объектов");
-                        });
-                });
-
-            modelBuilder.Entity("Guard.Core.Entities.MaintenanceSectorObjectSchedule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasComment("Уникальный идентификатор записи (UUIDv7)");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)")
-                        .HasComment("Идентификатор пользователя (string), создавшего запись. Ссылается на AspNetUsers.Id");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date")
-                        .HasComment("Дата запланированного регламента");
-
-                    b.Property<DateTime>("InsertedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'")
-                        .HasComment("Дата и время создания записи (UTC)");
-
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("boolean")
-                        .HasComment("Отметка о фактическом выполнении");
-
-                    b.Property<bool>("IsScheduled")
-                        .HasColumnType("boolean")
-                        .HasComment("Отметка планирования (крестик)");
-
-                    b.Property<DateTime?>("LastModifiedDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasComment("Дата и время последнего изменения записи (UTC)");
-
-                    b.Property<Guid>("MaintenanceSectorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)")
-                        .HasComment("Идентификатор пользователя (string), последним изменившего запись");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasComment("Вид регламента или примечание");
-
-                    b.Property<Guid>("ProtectedObjectId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasComment("Текущий статус жизненного цикла записи.");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProtectedObjectId");
-
-                    b.HasIndex("MaintenanceSectorId", "ProtectedObjectId", "Date")
-                        .IsUnique()
-                        .HasDatabaseName("UX_MaintenanceSectorObjectSchedules_Sector_Object_Date");
-
-                    b.ToTable("MaintenanceSectorObjectSchedules", "public", t =>
-                        {
-                            t.HasComment("График обслуживания объектов участка (крестики по датам)");
-                        });
-                });
-
-            modelBuilder.Entity("Guard.Core.Entities.MaintenanceSectorWeeklyPattern", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasComment("Уникальный идентификатор записи (UUIDv7)");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)")
-                        .HasComment("Идентификатор пользователя (string), создавшего запись. Ссылается на AspNetUsers.Id");
-
-                    b.Property<int>("DayOfWeek")
-                        .HasColumnType("integer")
-                        .HasComment("День недели (0 = Sunday, 1 = Monday...)");
-
-                    b.Property<DateTime>("InsertedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'")
-                        .HasComment("Дата и время создания записи (UTC)");
-
-                    b.Property<bool>("IsWorkDay")
-                        .HasColumnType("boolean")
-                        .HasComment("Признак рабочего дня");
-
-                    b.Property<DateTime?>("LastModifiedDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasComment("Дата и время последнего изменения записи (UTC)");
-
-                    b.Property<Guid>("MaintenanceSectorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ModifiedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("character varying(450)")
-                        .HasComment("Идентификатор пользователя (string), последним изменившего запись");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasComment("Текущий статус жизненного цикла записи.");
-
-                    b.Property<TimeSpan?>("WorkEnd")
-                        .HasColumnType("interval")
-                        .HasComment("Время окончания смены");
-
-                    b.Property<TimeSpan?>("WorkStart")
-                        .HasColumnType("interval")
-                        .HasComment("Время начала смены");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MaintenanceSectorId", "DayOfWeek")
-                        .IsUnique()
-                        .HasDatabaseName("UX_MaintenanceSectorWeeklyPatterns_Sector_DayOfWeek");
-
-                    b.ToTable("MaintenanceSectorWeeklyPatterns", "public", t =>
-                        {
-                            t.HasComment("Шаблон рабочей недели участка обслуживания (7 дней)");
                         });
                 });
 
@@ -724,6 +530,64 @@ namespace Guard.Migrations
                     b.ToTable("Personals", null, t =>
                         {
                             t.HasComment("Справочник персонала системы Guard.");
+                        });
+                });
+
+            modelBuilder.Entity("Guard.Core.Entities.PersonalWorkSchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasComment("Уникальный идентификатор записи (UUIDv7)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasComment("Идентификатор пользователя (string), создавшего запись. Ссылается на AspNetUsers.Id");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("InsertedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'")
+                        .HasComment("Дата и время создания записи (UTC)");
+
+                    b.Property<bool>("IsDayOff")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastModifiedDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasComment("Дата и время последнего изменения записи (UTC)");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasComment("Идентификатор пользователя (string), последним изменившего запись");
+
+                    b.Property<Guid>("PersonalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly?>("ShiftEnd")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<TimeOnly?>("ShiftStart")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasComment("Текущий статус жизненного цикла записи.");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonalId", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PersonalWorkSchedules_Personal_Date");
+
+                    b.ToTable("PersonalWorkSchedules", "public", t =>
+                        {
+                            t.HasComment("График работы и смен сотрудников");
                         });
                 });
 
@@ -1115,17 +979,6 @@ namespace Guard.Migrations
                     b.Navigation("Subdivision");
                 });
 
-            modelBuilder.Entity("Guard.Core.Entities.MaintenanceSectorMonthlySchedule", b =>
-                {
-                    b.HasOne("Guard.Core.Entities.MaintenanceSector", "MaintenanceSector")
-                        .WithMany("MonthlySchedules")
-                        .HasForeignKey("MaintenanceSectorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("MaintenanceSector");
-                });
-
             modelBuilder.Entity("Guard.Core.Entities.MaintenanceSectorObject", b =>
                 {
                     b.HasOne("Guard.Core.Entities.MaintenanceSector", "MaintenanceSector")
@@ -1143,36 +996,6 @@ namespace Guard.Migrations
                     b.Navigation("MaintenanceSector");
 
                     b.Navigation("ProtectedObject");
-                });
-
-            modelBuilder.Entity("Guard.Core.Entities.MaintenanceSectorObjectSchedule", b =>
-                {
-                    b.HasOne("Guard.Core.Entities.MaintenanceSector", "MaintenanceSector")
-                        .WithMany("ObjectSchedules")
-                        .HasForeignKey("MaintenanceSectorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Guard.Core.Entities.ProtectedObject", "ProtectedObject")
-                        .WithMany()
-                        .HasForeignKey("ProtectedObjectId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("MaintenanceSector");
-
-                    b.Navigation("ProtectedObject");
-                });
-
-            modelBuilder.Entity("Guard.Core.Entities.MaintenanceSectorWeeklyPattern", b =>
-                {
-                    b.HasOne("Guard.Core.Entities.MaintenanceSector", "MaintenanceSector")
-                        .WithMany("WeeklyPatterns")
-                        .HasForeignKey("MaintenanceSectorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("MaintenanceSector");
                 });
 
             modelBuilder.Entity("Guard.Core.Entities.OrganType", b =>
@@ -1235,6 +1058,17 @@ namespace Guard.Migrations
                     b.Navigation("Subdivision");
 
                     b.Navigation("WorkerCategory");
+                });
+
+            modelBuilder.Entity("Guard.Core.Entities.PersonalWorkSchedule", b =>
+                {
+                    b.HasOne("Guard.Core.Entities.Personal", "Personal")
+                        .WithMany()
+                        .HasForeignKey("PersonalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Personal");
                 });
 
             modelBuilder.Entity("Guard.Core.Entities.ProtectedObject", b =>
@@ -1345,13 +1179,7 @@ namespace Guard.Migrations
 
             modelBuilder.Entity("Guard.Core.Entities.MaintenanceSector", b =>
                 {
-                    b.Navigation("MonthlySchedules");
-
-                    b.Navigation("ObjectSchedules");
-
                     b.Navigation("SectorObjects");
-
-                    b.Navigation("WeeklyPatterns");
                 });
 
             modelBuilder.Entity("Guard.Core.Entities.OrganType", b =>

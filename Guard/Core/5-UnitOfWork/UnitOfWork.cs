@@ -1,5 +1,4 @@
-﻿using Core.Repositories;
-using Guard.Core.Contexts;
+﻿using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Repositories;
 using Microsoft.EntityFrameworkCore;

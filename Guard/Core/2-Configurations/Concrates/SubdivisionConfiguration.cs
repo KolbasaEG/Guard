@@ -91,6 +91,12 @@ public class SubdivisionConfiguration : BaseEntityConfiguration<Subdivision>
         .IsRequired(false)
         .OnDelete(DeleteBehavior.Restrict);
 
+    // Связь 1:N с MaintenanceSector
+    builder.HasMany(s => s.MaintenanceSectors)
+        .WithOne(m => m.Subdivision)
+        .HasForeignKey(m => m.SubdivisionId)
+        .OnDelete(DeleteBehavior.Restrict);
+
     // Индексы
     builder.HasIndex(x => x.ParentId);
 

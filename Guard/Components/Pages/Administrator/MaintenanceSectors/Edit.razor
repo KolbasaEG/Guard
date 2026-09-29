@@ -1,0 +1,128 @@
+﻿@using Guard.Core.Entities
+@attribute [Authorize]
+
+<EditEntity TItem="MaintenanceSector" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="true" OnInfoClick="InfoButtonClick" IsLoading="isLoading" OnCancelButtonClick="HandleCancelButtonClick">
+  <RadzenStack Gap="12px" Orientation="Orientation.Vertical" Style="width:100%;">
+    
+    <RadzenFormField Text="Подразделение" Variant="Variant.Text" Style="width:100%;">
+      <ChildContent>
+        <RadzenDropDown Data="@subdivisions" TextProperty="Name" ValueProperty="Id" AllowClear="true"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
+                        Style="display: block; width: 100%"
+                        Change="@OnSubdivisionChanged"
+                        @bind-Value="@item.SubdivisionId" Name="SubdivisionId" />
+      </ChildContent>
+    </RadzenFormField>
+
+    <RadzenFormField Text="Наименование участка" Variant="Variant.Text" Style="width:100%;">
+      <ChildContent>
+        <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@item.Name" Name="Name" Placeholder="Введите наименование участка" />
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="Name" Text="Обязательно для заполнения!" />
+      </Helper>
+    </RadzenFormField>
+
+    <RadzenFormField Text="Ответственный сотрудник" Variant="Variant.Text" Style="width:100%;">
+      <ChildContent>
+        <RadzenDropDown Data="@personals" TextProperty="LastName" ValueProperty="Id" AllowClear="true"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
+                        Style="display: block; width: 100%"
+                        @bind-Value="@item.ResponsiblePersonalId" Name="ResponsiblePersonalId">
+          <Template Context="personal">
+            @($"{personal.LastName} {personal.FirstName} {personal.MiddleName}".Trim())
+          </Template>
+        </RadzenDropDown>
+      </ChildContent>
+      <Helper>
+        <RadzenRequiredValidator Component="ResponsiblePersonalId" DefaultValue="Guid.Empty" Text="Необходимо выбрать ответственного сотрудника!" />
+      </Helper>
+    </RadzenFormField>
+
+    <RadzenFormField Text="Описание / Примечание" Variant="Variant.Text" Style="width:100%">
+      <ChildContent>
+        <RadzenTextArea Style="display: block; width: 100%" @bind-Value="@item.Description" Name="Description" Rows="2" />
+      </ChildContent>
+    </RadzenFormField>
+
+    <!-- Настройка недельного шаблона работы -->
+    <RadzenStack Gap="6px" Style="width:100%;">
+      <RadzenText TextStyle="TextStyle.Subtitle2" Class="rz-m-0">Недельный режим работы участка (шаблон)</RadzenText>
+      <RadzenDataGrid Data="@weeklyPatterns" TItem="MaintenanceSectorWeeklyPattern" Density="Density.Compact" GridLines="DataGridGridLines.Both" Style="width:100%;">
+        <Columns>
+          <RadzenDataGridColumn TItem="MaintenanceSectorWeeklyPattern" Property="DayOfWeek" Title="День недели" Width="140px">
+            <Template Context="pattern">
+              <strong>@GetDayOfWeekName(pattern.DayOfWeek)</strong>
+            </Template>
+          </RadzenDataGridColumn>
+
+          <RadzenDataGridColumn TItem="MaintenanceSectorWeeklyPattern" Property="IsWorkDay" Title="Рабочий день" Width="120px" TextAlign="TextAlign.Center">
+            <Template Context="pattern">
+              <RadzenCheckBox TValue="bool" Value="@pattern.IsWorkDay" ValueChanged="@((bool val) => OnWorkDayChanged(pattern, val))" />
+            </Template>
+          </RadzenDataGridColumn>
+
+          <RadzenDataGridColumn TItem="MaintenanceSectorWeeklyPattern" Property="WorkStart" Title="Начало смены">
+            <Template Context="pattern">
+              <RadzenDatePicker TValue="DateTime?"
+                                Value="@(pattern.WorkStart.HasValue ? DateTime.Today.Add(pattern.WorkStart.Value) : null)"
+                                ValueChanged="@((DateTime? dt) => pattern.WorkStart = dt?.TimeOfDay)"
+                                TimeOnly="true" DateFormat="HH:mm"
+                                Disabled="@(!pattern.IsWorkDay)" Style="width:100%;" Placeholder="00:00" />
+            </Template>
+          </RadzenDataGridColumn>
+
+          <RadzenDataGridColumn TItem="MaintenanceSectorWeeklyPattern" Property="WorkEnd" Title="Окончание смены">
+            <Template Context="pattern">
+              <RadzenDatePicker TValue="DateTime?"
+                                Value="@(pattern.WorkEnd.HasValue ? DateTime.Today.Add(pattern.WorkEnd.Value) : null)"
+                                ValueChanged="@((DateTime? dt) => pattern.WorkEnd = dt?.TimeOfDay)"
+                                TimeOnly="true" DateFormat="HH:mm"
+                                Disabled="@(!pattern.IsWorkDay)" Style="width:100%;" Placeholder="00:00" />
+            </Template>
+          </RadzenDataGridColumn>
+        </Columns>
+      </RadzenDataGrid>
+    </RadzenStack>
+
+    <!-- Выбор обслуживаемых объектов -->
+    <RadzenStack Gap="6px" Style="width:100%;">
+      <RadzenText TextStyle="TextStyle.Subtitle2" Class="rz-m-0">Закреплённые за участком объекты для обслуживания</RadzenText>
+      <RadzenPickList @bind-Source="@availableObjects"
+                      @bind-Target="@selectedObjects"
+                      SourceEmptyText="Записи отсутствуют" 
+                      TargetEmptyText="Записи отсутствуют" 
+                      Multiple="true"
+                      AllowSelectAll="true"
+                      AllowMoveAll="true"
+                      AllowMoveAllSourceToTarget="true"
+                      AllowMoveAllTargetToSource="true"
+                      TextProperty="Name" 
+                      AllowFiltering="true" 
+                      ButtonSize="ButtonSize.Small" 
+                      ButtonStyle="ButtonStyle.Secondary" 
+                      ButtonVariant="Variant.Outlined" 
+                      ButtonShade="Shade.Dark"
+                      Style="width: 100%; height: 280px;">
+        <SourceHeader>
+          Источник:
+        </SourceHeader>
+        <TargetHeader>
+          Выбранные значения:
+        </TargetHeader>
+        <Template Context="obj">
+          <div>
+            <strong>@obj.Name</strong>
+            @if (!string.IsNullOrWhiteSpace(obj.LegalAddress))
+            {
+              <div class="rz-text-caption rz-text-truncate">@obj.LegalAddress</div>
+            }
+          </div>
+        </Template>
+      </RadzenPickList>
+    </RadzenStack>
+
+  </RadzenStack>
+</EditEntity>
