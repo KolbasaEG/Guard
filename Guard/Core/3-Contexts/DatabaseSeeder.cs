@@ -51,6 +51,7 @@ public static class DatabaseSeeder
       }
     }
 
+    await SeedOrganTypesAsync(context);
     await SeedSubdivisionsAsync(context);
   }
 
@@ -61,6 +62,40 @@ public static class DatabaseSeeder
       await roleManager.CreateAsync(new ApplicationRole { Name = roleName });
     }
   }
+  private static async Task SeedOrganTypesAsync(ApplicationDbContext context)
+  {
+    if (await context.OrganTypes.AnyAsync())
+      return;
+
+    var organTypes = new List<OrganType>
+    {
+        new OrganType
+        {
+            Id = 1,
+            ClassifierType = 906,
+            Code = 10,
+            Name = "Главное управление"
+        },
+        new OrganType
+        {
+            Id = 2,
+            ClassifierType = 906,
+            Code = 20,
+            Name = "Управление"
+        },
+        new OrganType
+        {
+            Id = 3,
+            ClassifierType = 906,
+            Code = 30,
+            Name = "Отдел"
+        }
+    };
+
+    context.OrganTypes.AddRange(organTypes);
+    await context.SaveChangesAsync();
+  }
+
   /// <summary>
   /// Добавление иерархии подразделений из Subdivision_4.xlsx
   /// </summary>
