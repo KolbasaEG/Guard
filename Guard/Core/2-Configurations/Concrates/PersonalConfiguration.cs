@@ -130,13 +130,6 @@ public class PersonalConfiguration : BaseEntityConfiguration<Personal>
            .WithMany(i => i.Personals)
            .UsingEntity(j => j.ToTable("PersonalIpAddresses"));
 
-    // Связь с участками обслуживания (где Personal — ответственный)
-    builder.HasMany(p => p.ResponsibleSectors)
-        .WithOne(s => s.ResponsiblePersonal)
-        .HasForeignKey(s => s.ResponsiblePersonalId)
-        .OnDelete(DeleteBehavior.Restrict);
-
-
     builder.HasIndex(p => p.PersonalId)
     .IsUnique()
     .HasDatabaseName("UX_Personals_PersonalId");

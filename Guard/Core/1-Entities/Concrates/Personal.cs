@@ -67,9 +67,4 @@ public class Personal : BaseEntity, IHasSubdivision
 
   // ѕр€ма€ коллекци€ разрешенных IP-адресов сотрудника
   public virtual ICollection<IpAddress> IpAddresses { get; set; } = new List<IpAddress>();
-  /// <summary>
-  /// ”частки обслуживани€, где сотрудник назначен ответственным.
-  /// </summary>
-  public virtual ICollection<MaintenanceSector> ResponsibleSectors { get; set; } = new List<MaintenanceSector>();
-
 }
