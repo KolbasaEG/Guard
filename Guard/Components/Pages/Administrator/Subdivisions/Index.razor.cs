@@ -1,4 +1,4 @@
-using Guard.Components.Library.Loading;
+п»їusing Guard.Components.Library.Loading;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
@@ -39,7 +39,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     protected bool isEditor = true;
     protected bool isLoading = false;
     protected DataViewMode currentMode = DataViewMode.Active; 
-    string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
+    string pagingSummaryFormat = "РЎС‚СЂР°РЅРёС†Р° {0} РёР· {1} (РІСЃРµРіРѕ {2} Р·Р°РїРёСЃРµР№)";
 
     protected override async Task OnInitializedAsync()
     {
@@ -50,7 +50,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при инициализации страницы подразделений");
+        Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё СЃС‚СЂР°РЅРёС†С‹ РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№");
         ShowErrorNotification(ex.Message);
       }
       finally
@@ -104,12 +104,12 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       }
       catch (OperationCanceledException)
       {
-        // Игнорируем отмененные запросы
+        // РРіРЅРѕСЂРёСЂСѓРµРј РѕС‚РјРµРЅРµРЅРЅС‹Рµ Р·Р°РїСЂРѕСЃС‹
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка загрузки данных подразделений");
-        ShowErrorNotification("Не удалось загрузить данные");
+        Logger.LogError(ex, "РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РґР°РЅРЅС‹С… РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№");
+        ShowErrorNotification("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РґР°РЅРЅС‹Рµ");
       }
       finally
       {
@@ -121,7 +121,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
       if (result != null)
       {
-        ShowSuccessNotification("Добавлена новая запись!"); 
+        ShowSuccessNotification("Р”РѕР±Р°РІР»РµРЅР° РЅРѕРІР°СЏ Р·Р°РїРёСЃСЊ!"); 
         await grid.Reload();
       }
     }
@@ -130,7 +130,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
       if (result != null)
       {
-        ShowSuccessNotification("Информация обновлена!");
+        ShowSuccessNotification("РРЅС„РѕСЂРјР°С†РёСЏ РѕР±РЅРѕРІР»РµРЅР°!");
         await grid.Reload();
       }
     }
@@ -139,18 +139,18 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       var result = await DialogService.OpenAsync<Move>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
       if (result != null)
       {
-        ShowSuccessNotification("Информация обновлена!");
+        ShowSuccessNotification("РРЅС„РѕСЂРјР°С†РёСЏ РѕР±РЅРѕРІР»РµРЅР°!");
         await grid.Reload();
       }
     }
     protected async Task GridArchiveButtonClick(MouseEventArgs args, Subdivision item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите поместить запись в архив?", "Архивирование", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ РїРѕРјРµСЃС‚РёС‚СЊ Р·Р°РїРёСЃСЊ РІ Р°СЂС…РёРІ?", "РђСЂС…РёРІРёСЂРѕРІР°РЅРёРµ", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           await SubdivisionService.ArchiveAsync(item.Id, ct: CancellationToken.None);
-          ShowSuccessNotification("Запись помещена в архив!");
+          ShowSuccessNotification("Р—Р°РїРёСЃСЊ РїРѕРјРµС‰РµРЅР° РІ Р°СЂС…РёРІ!");
           await grid.Reload();
         }
         catch (Exception ex)
@@ -161,12 +161,12 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     }
     protected async Task GridUnarchiveButtonClick(MouseEventArgs args, Subdivision item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите извлечь запись из архива?", "Извлечение из архива", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ РёР·РІР»РµС‡СЊ Р·Р°РїРёСЃСЊ РёР· Р°СЂС…РёРІР°?", "РР·РІР»РµС‡РµРЅРёРµ РёР· Р°СЂС…РёРІР°", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           await SubdivisionService.RestoreAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись извлечена из архива!");
+          ShowSuccessNotification("Р—Р°РїРёСЃСЊ РёР·РІР»РµС‡РµРЅР° РёР· Р°СЂС…РёРІР°!");
           await grid.Reload();
         }
         catch (Exception ex)
@@ -177,12 +177,12 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     }
     protected async Task GridDeleteButtonClick(MouseEventArgs args, Subdivision item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ Р·Р°РїРёСЃСЊ?", "РЈРґР°Р»РµРЅРёРµ", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           await SubdivisionService.SoftDeleteAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись удалена!");
+          ShowSuccessNotification("Р—Р°РїРёСЃСЊ СѓРґР°Р»РµРЅР°!");
           await grid.Reload();
         }
         catch (Exception ex)
@@ -201,20 +201,20 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 
       try
       {
-        Logger.LogInformation("Запуск операции пересчета иерархии и путей подразделений...");
+        Logger.LogInformation("Р—Р°РїСѓСЃРє РѕРїРµСЂР°С†РёРё РїРµСЂРµСЃС‡РµС‚Р° РёРµСЂР°СЂС…РёРё Рё РїСѓС‚РµР№ РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№...");
         await SubdivisionService.RebuildHierarchyAndPathsAsync(_cts.Token);
 
-        ShowSuccessNotification("Иерархия и пути подразделений обновлены.");
+        ShowSuccessNotification("РРµСЂР°СЂС…РёСЏ Рё РїСѓС‚Рё РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№ РѕР±РЅРѕРІР»РµРЅС‹.");
         await grid.Reload();
       }
       catch (OperationCanceledException)
       {
-        Logger.LogWarning("Операция пересчета иерархии подразделений была отменена.");
+        Logger.LogWarning("РћРїРµСЂР°С†РёСЏ РїРµСЂРµСЃС‡РµС‚Р° РёРµСЂР°СЂС…РёРё РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№ Р±С‹Р»Р° РѕС‚РјРµРЅРµРЅР°.");
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при выполнении пересчета иерархии и путей подразделений.");
-        ShowErrorNotification("Не удалось перестроить иерархию подразделений.");
+        Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё РІС‹РїРѕР»РЅРµРЅРёРё РїРµСЂРµСЃС‡РµС‚Р° РёРµСЂР°СЂС…РёРё Рё РїСѓС‚РµР№ РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№.");
+        ShowErrorNotification("РќРµ СѓРґР°Р»РѕСЃСЊ РїРµСЂРµСЃС‚СЂРѕРёС‚СЊ РёРµСЂР°СЂС…РёСЋ РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№.");
       }
       finally
       {
@@ -224,7 +224,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 
     private async Task OnExportClick()
     {
-      // TODO: Реализовать экспорт
+      // TODO: Р РµР°Р»РёР·РѕРІР°С‚СЊ СЌРєСЃРїРѕСЂС‚
       await Task.CompletedTask;
     }
     async Task ApplyFilter()
@@ -239,7 +239,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       {
         if (filter.FilterValue is DateTime dt && dt.Kind != DateTimeKind.Utc)
         {
-          // Перевод даты в UTC
+          // РџРµСЂРµРІРѕРґ РґР°С‚С‹ РІ UTC
           filter.FilterValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
         }
 
@@ -254,7 +254,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Success,
-        Summary = "Информационное",
+        Summary = "РРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕРµ",
         Detail = detail,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });
@@ -265,7 +265,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Error,
-        Summary = "Внимание!",
+        Summary = "Р’РЅРёРјР°РЅРёРµ!",
         Detail = detail,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });

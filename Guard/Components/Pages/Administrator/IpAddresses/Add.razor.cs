@@ -1,4 +1,4 @@
-using Guard.Core.Entities;
+﻿using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;

@@ -1,4 +1,4 @@
-@using Guard.Core.Entities
+п»ї@using Guard.Core.Entities
 @using Serilog.Events
 @attribute [Authorize]
 @attribute [Authorize(Roles = "Root")]
@@ -6,26 +6,26 @@
 <TableWrapperWithFilterAndAnalytics>
   <Table>
     <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="LogEntry" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="100"
-                    AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
-                    DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
-                    LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NotEqualsText="Не равно" OrOperatorText="Или"
-                    PageAriaLabelFormat="К странице {0}" PageSizeText="записей на странице" PrevPageTitle="Предидущая страница" ShowMultiColumnSortingIndex="true"
-                    EmptyText="Записи не найдены" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" StartsWithText="Начинается c" LessThanText="Меньше" LessThanOrEqualsText="Меньше или равно"
-                    PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" ShowPagingSummary="true" PagingSummaryFormat="@pagingSummaryFormat"
+                    AllowColumnResize="true" Density="Density.Compact" AndOperatorText="Р" ApplyFilterText="РџСЂРёРјРµРЅРёС‚СЊ" ClearFilterText="РћС‡РёСЃС‚РёС‚СЊ" ContainsText="РЎРѕРґРµСЂР¶РёС‚" FilterText="Р¤РёР»СЊС‚СЂ" EndsWithText="Р—Р°РєР°РЅС‡РёРІР°РµС‚СЃСЏ РЅР°" EqualsText="Р Р°РІРЅРѕ"
+                    DoesNotContainText="РќРµ СЃРѕРґРµСЂР¶РёС‚" FirstPageTitle="РџРµСЂРІР°СЏ СЃС‚СЂР°РЅРёС†Р°" FirstPageAriaLabel="Рљ РїРµСЂРІРѕР№ СЃС‚СЂР°РЅРёС†Рµ" IsEmptyText="РџСѓСЃС‚Рѕ" IsNotEmptyText="РќРµ РїСѓСЃС‚Рѕ"
+                    LastPageAriaLabel="Рљ РїРѕСЃР»РµРґРЅРµР№ СЃС‚СЂР°РЅРёС†Рµ" LastPageTitle="РџРѕСЃР»РµРґРЅСЏСЏ СЃС‚СЂР°РЅРёС†Р°" NextPageTitle="РЎР»РµРґСѓСЋС‰Р°СЏ СЃС‚СЂР°РЅРёС†Р°" NotEqualsText="РќРµ СЂР°РІРЅРѕ" OrOperatorText="РР»Рё"
+                    PageAriaLabelFormat="Рљ СЃС‚СЂР°РЅРёС†Рµ {0}" PageSizeText="Р·Р°РїРёСЃРµР№ РЅР° СЃС‚СЂР°РЅРёС†Рµ" PrevPageTitle="РџСЂРµРґРёРґСѓС‰Р°СЏ СЃС‚СЂР°РЅРёС†Р°" ShowMultiColumnSortingIndex="true"
+                    EmptyText="Р—Р°РїРёСЃРё РЅРµ РЅР°Р№РґРµРЅС‹" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" StartsWithText="РќР°С‡РёРЅР°РµС‚СЃСЏ c" LessThanText="РњРµРЅСЊС€Рµ" LessThanOrEqualsText="РњРµРЅСЊС€Рµ РёР»Рё СЂР°РІРЅРѕ"
+                    PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" GreaterThanText="Р‘РѕР»СЊС€Рµ" GreaterThanOrEqualsText="Р‘РѕР»СЊС€Рµ РёР»Рё СЂР°РІРЅРѕ" ShowPagingSummary="true" PagingSummaryFormat="@pagingSummaryFormat"
                     Style="height:100%;">
       <HeaderTemplate>
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
             <RadzenMenu>
-              <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
+              <RadzenMenuItem Text="РњРµРЅСЋ" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
               </RadzenMenuItem>
             </RadzenMenu>
           </RadzenStack>
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
             <RadzenSelectBar TValue="bool" Value="@isRealtime" ValueChanged="@OnRealtimeModeChanged">
               <Items>
-                <RadzenSelectBarItem Text="По запросу" Value="false" Icon="touch_app" />
-                <RadzenSelectBarItem Text="Real-time (5 сек)" Value="true" Icon="sync" />
+                <RadzenSelectBarItem Text="РџРѕ Р·Р°РїСЂРѕСЃСѓ" Value="false" Icon="touch_app" />
+                <RadzenSelectBarItem Text="Real-time (5 СЃРµРє)" Value="true" Icon="sync" />
               </Items>
             </RadzenSelectBar>
           </RadzenStack>
@@ -35,25 +35,25 @@
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="LogEntry" Property="Timestamp" Title="Дата и время" FormatString="{0:dd.MM.yyyy HH:mm:ss}" Width="160px" Frozen="true" />
-        <RadzenDataGridColumn TItem="LogEntry" Property="Level" Title="Уровень" Width="120px">
+        <RadzenDataGridColumn TItem="LogEntry" Property="Timestamp" Title="Р”Р°С‚Р° Рё РІСЂРµРјСЏ" FormatString="{0:dd.MM.yyyy HH:mm:ss}" Width="160px" Frozen="true" />
+        <RadzenDataGridColumn TItem="LogEntry" Property="Level" Title="РЈСЂРѕРІРµРЅСЊ" Width="120px">
           <Template Context="log">
             <RadzenBadge BadgeStyle="@GetBadgeStyle(log.Level)" Text="@log.Level" IsPill="true" />
           </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LogEntry" Property="Layer" Title="Слой" Width="130px">
+        <RadzenDataGridColumn TItem="LogEntry" Property="Layer" Title="РЎР»РѕР№" Width="130px">
           <Template Context="log">
             <RadzenBadge BadgeStyle="@GetLayerBadgeStyle(log.Layer)" Text="@(log.Layer ?? "System")" IsPill="true" />
           </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LogEntry" Property="UserId" Title="Пользователь" Width="150px" />
-        <RadzenDataGridColumn TItem="LogEntry" Property="ClientIp" Title="IP-адрес" Width="130px" />
-        <RadzenDataGridColumn TItem="LogEntry" Property="Message" Title="Сообщение" Width="400px">
+        <RadzenDataGridColumn TItem="LogEntry" Property="UserId" Title="РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ" Width="150px" />
+        <RadzenDataGridColumn TItem="LogEntry" Property="ClientIp" Title="IP-Р°РґСЂРµСЃ" Width="130px" />
+        <RadzenDataGridColumn TItem="LogEntry" Property="Message" Title="РЎРѕРѕР±С‰РµРЅРёРµ" Width="400px">
           <Template Context="log">
             <span style="white-space: pre-wrap; word-break: break-word;">@log.Message</span>
           </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LogEntry" Property="Exception" Title="Исключение" Width="300px">
+        <RadzenDataGridColumn TItem="LogEntry" Property="Exception" Title="РСЃРєР»СЋС‡РµРЅРёРµ" Width="300px">
           <Template Context="log">
             @if (!string.IsNullOrEmpty(log.Exception))
             {
@@ -69,13 +69,13 @@
   </Table>
   <Filter>
     <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="LogEntry" ViewChanged=@(view => grid.Reload())
-                      AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
-                      DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
-                      AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
+                      AndOperatorText="Р" ApplyFilterText="РџСЂРёРјРµРЅРёС‚СЊ" ClearFilterText="РћС‡РёСЃС‚РёС‚СЊ" ContainsText="РЎРѕРґРµСЂР¶РёС‚" FilterText="Р¤РёР»СЊС‚СЂ" EndsWithText="Р—Р°РєР°РЅС‡РёРІР°РµС‚СЃСЏ РЅР°" EqualsText="Р Р°РІРЅРѕ"
+                      DoesNotContainText="РќРµ СЃРѕРґРµСЂР¶РёС‚" IsEmptyText="РџСѓСЃС‚Рѕ" IsNotEmptyText="РќРµ РїСѓСЃС‚Рѕ" NotEqualsText="РќРµ СЂР°РІРЅРѕ" OrOperatorText="РР»Рё" StartsWithText="РќР°С‡РёРЅР°РµС‚СЃСЏ c" LessThanText="РњРµРЅСЊС€Рµ"
+                      AddFilterText="Р”РѕР±Р°РІРёС‚СЊ С„РёР»СЊС‚СЂ" AddFilterGroupText="Р”РѕР±Р°РІРёС‚СЊ РіСЂСѓРїРїСѓ С„РёР»СЊС‚СЂРѕРІ" LessThanOrEqualsText="РњРµРЅСЊС€Рµ РёР»Рё СЂР°РІРЅРѕ" GreaterThanText="Р‘РѕР»СЊС€Рµ" GreaterThanOrEqualsText="Р‘РѕР»СЊС€Рµ РёР»Рё СЂР°РІРЅРѕ" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
       <Properties>
-        <RadzenDataFilterProperty TItem="LogEntry" Property="Timestamp" Title="Дата и время" />
-        <!-- Фильтр для Level -->
-        <RadzenDataFilterProperty TItem="LogEntry" Property="Level" Title="Уровень" FilterValue="@finalSelectedItemsLevel"
+        <RadzenDataFilterProperty TItem="LogEntry" Property="Timestamp" Title="Р”Р°С‚Р° Рё РІСЂРµРјСЏ" />
+        <!-- Р¤РёР»СЊС‚СЂ РґР»СЏ Level -->
+        <RadzenDataFilterProperty TItem="LogEntry" Property="Level" Title="РЈСЂРѕРІРµРЅСЊ" FilterValue="@finalSelectedItemsLevel"
                                   Type="typeof(IEnumerable<string>)" FilterOperator="FilterOperator.In">
           <FilterTemplate>
             <RadzenDropDown @bind-Value=@selectedItemsLevel Style="width:100%;" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
@@ -83,24 +83,24 @@
           </FilterTemplate>
         </RadzenDataFilterProperty>
 
-        <!-- Фильтр для Layer -->
-        <RadzenDataFilterProperty TItem="LogEntry" Property="Layer" Title="Слой" FilterValue="@finalSelectedItemsLayer"
+        <!-- Р¤РёР»СЊС‚СЂ РґР»СЏ Layer -->
+        <RadzenDataFilterProperty TItem="LogEntry" Property="Layer" Title="РЎР»РѕР№" FilterValue="@finalSelectedItemsLayer"
                                   Type="typeof(IEnumerable<string>)" FilterOperator="FilterOperator.In">
           <FilterTemplate>
             <RadzenDropDown @bind-Value=@selectedItemsLayer Style="width:100%;" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                             Change=@OnSelectedLayerChange Data="@(itemsLayer)" AllowClear="true" Multiple="true" />
           </FilterTemplate>
         </RadzenDataFilterProperty>        
-        <RadzenDataFilterProperty TItem="LogEntry" Property="UserId" Title="ID пользователя" />
-        <RadzenDataFilterProperty TItem="LogEntry" Property="ClientIp" Title="IP-адрес" />
-        <RadzenDataFilterProperty TItem="LogEntry" Property="Message" Title="Сообщение" />
-        <RadzenDataFilterProperty TItem="LogEntry" Property="Exception" Title="Текст ошибки (Exception)" />
+        <RadzenDataFilterProperty TItem="LogEntry" Property="UserId" Title="ID РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ" />
+        <RadzenDataFilterProperty TItem="LogEntry" Property="ClientIp" Title="IP-Р°РґСЂРµСЃ" />
+        <RadzenDataFilterProperty TItem="LogEntry" Property="Message" Title="РЎРѕРѕР±С‰РµРЅРёРµ" />
+        <RadzenDataFilterProperty TItem="LogEntry" Property="Exception" Title="РўРµРєСЃС‚ РѕС€РёР±РєРё (Exception)" />
       </Properties>
     </RadzenDataFilter>
 
   </Filter>
   <FilterButtons>
-    <RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+    <RadzenButton Icon="filter_alt" Text="РџСЂРёРјРµРЅРёС‚СЊ" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
   </FilterButtons>
   <Analitycs>
     <AnalitycsWrapper>
@@ -108,7 +108,7 @@
         <RadzenStack Gap="10px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="0px" Style="width:100%;">
             <RadzenIcon Icon="settings" Style="margin:8px; color:var(--rz-on-primary-darker); margin-right:15px;margin-left:12px;" />
-            <RadzenText TextStyle="TextStyle.Body1" Style="margin-right:15px; color:var(--rz-on-primary-darker);"><strong>Управление уровнем логирования</strong></RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1" Style="margin-right:15px; color:var(--rz-on-primary-darker);"><strong>РЈРїСЂР°РІР»РµРЅРёРµ СѓСЂРѕРІРЅРµРј Р»РѕРіРёСЂРѕРІР°РЅРёСЏ</strong></RadzenText>
           </RadzenStack>
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="height:100%;">
             <RadzenButton Icon="save" Click="SaveLoggerSettings" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
@@ -116,17 +116,17 @@
         </RadzenStack>
       </RadzenCard>
       <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%; height:100%;">
-        <RadzenFormField Text="Текущий уровень логов" Style="width:100%" Variant="Variant.Text">
+        <RadzenFormField Text="РўРµРєСѓС‰РёР№ СѓСЂРѕРІРµРЅСЊ Р»РѕРіРѕРІ" Style="width:100%" Variant="Variant.Text">
           <RadzenDropDown TValue="LogEventLevel"
                           Data="@(Enum.GetValues<LogEventLevel>())"
                           @bind-Value="@selectedLogLevel" />
         </RadzenFormField>
-        <RadzenFormField Text="Макс. подключений (сессий)" Variant="Variant.Text" Style="width:100%">
+        <RadzenFormField Text="РњР°РєСЃ. РїРѕРґРєР»СЋС‡РµРЅРёР№ (СЃРµСЃСЃРёР№)" Variant="Variant.Text" Style="width:100%">
           <ChildContent>
             <RadzenNumeric TValue="int" @bind-Value="@maxSessions" Min="1" Max="10000" Style="width: 180px;" />
           </ChildContent>
           <Helper>
-            <RadzenText TextStyle="TextStyle.Caption">Влияет на размер пачки (Batch Size) в PostgreSQL</RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption">Р’Р»РёСЏРµС‚ РЅР° СЂР°Р·РјРµСЂ РїР°С‡РєРё (Batch Size) РІ PostgreSQL</RadzenText>
           </Helper>
         </RadzenFormField>
       </RadzenStack>

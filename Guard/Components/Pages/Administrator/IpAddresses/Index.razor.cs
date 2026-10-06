@@ -1,4 +1,4 @@
-using Guard.Core.Entities;
+п»їusing Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
 using Guard.Core.Identity;
@@ -29,7 +29,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
     protected string subdivisionPath = "-";
     protected DataViewMode currentMode = DataViewMode.Active;
     protected SubdivisionHierarchyMode hierarchyMode = SubdivisionHierarchyMode.CurrentOnly;
-    string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
+    string pagingSummaryFormat = "РЎС‚СЂР°РЅРёС†Р° {0} РёР· {1} (РІСЃРµРіРѕ {2} Р·Р°РїРёСЃРµР№)";
 
     private CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
@@ -56,18 +56,18 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       try
       {
         isLoading = true;
-        Logger.LogDebug("Инициализация страницы IP-адресов");
+        Logger.LogDebug("РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃС‚СЂР°РЅРёС†С‹ IP-Р°РґСЂРµСЃРѕРІ");
         itemsSubdivision = UserContext?.SubordinateSubdivisions.Select(p => p.Name) ?? [];
         subdivisionPath = UserContext?.Subdivision?.Path ?? "-";
         await Task.CompletedTask;
       }
       catch (OperationCanceledException)
       {
-        Logger.LogInformation("Инициализация страницы IP-адресов была отменена");
+        Logger.LogInformation("РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃС‚СЂР°РЅРёС†С‹ IP-Р°РґСЂРµСЃРѕРІ Р±С‹Р»Р° РѕС‚РјРµРЅРµРЅР°");
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при инициализации страницы IP-адресов");
+        Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё СЃС‚СЂР°РЅРёС†С‹ IP-Р°РґСЂРµСЃРѕРІ");
         ShowErrorNotification(ex.Message);
       }
       finally
@@ -121,12 +121,12 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       }
       catch (OperationCanceledException)
       {
-        // Игнорируем отмененные запросы
+        // РРіРЅРѕСЂРёСЂСѓРµРј РѕС‚РјРµРЅРµРЅРЅС‹Рµ Р·Р°РїСЂРѕСЃС‹
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка загрузки данных ip");
-        ShowErrorNotification("Не удалось загрузить данные");
+        Logger.LogError(ex, "РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РґР°РЅРЅС‹С… ip");
+        ShowErrorNotification("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РґР°РЅРЅС‹Рµ");
       }
       finally
       {
@@ -142,7 +142,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
       if (result != null)
       {
-        ShowSuccessNotification("Добавлена новая запись!");
+        ShowSuccessNotification("Р”РѕР±Р°РІР»РµРЅР° РЅРѕРІР°СЏ Р·Р°РїРёСЃСЊ!");
         await grid.Reload();
       }
     }
@@ -153,25 +153,25 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
 
       if (result != null)
       {
-        ShowSuccessNotification("Информация обновлена!");
+        ShowSuccessNotification("РРЅС„РѕСЂРјР°С†РёСЏ РѕР±РЅРѕРІР»РµРЅР°!");
         await grid.Reload();
       }
     }
 
     protected async Task GridArchiveButtonClick(MouseEventArgs args, IpAddress item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите поместить запись в архив?", "Архивирование", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ РїРѕРјРµСЃС‚РёС‚СЊ Р·Р°РїРёСЃСЊ РІ Р°СЂС…РёРІ?", "РђСЂС…РёРІРёСЂРѕРІР°РЅРёРµ", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           await IpAddressService.ArchiveAsync(item.Id, _cts.Token);
-          ShowSuccessNotification("Запись помещена в архив!");
+          ShowSuccessNotification("Р—Р°РїРёСЃСЊ РїРѕРјРµС‰РµРЅР° РІ Р°СЂС…РёРІ!");
           await grid.Reload();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Ошибка при архивировании IP-адреса ID: {IpAddressId}", item.Id);
+          Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё Р°СЂС…РёРІРёСЂРѕРІР°РЅРёРё IP-Р°РґСЂРµСЃР° ID: {IpAddressId}", item.Id);
           ShowErrorNotification(ex.Message);
         }
       }
@@ -179,18 +179,18 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
 
     protected async Task GridUnarchiveButtonClick(MouseEventArgs args, IpAddress item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите извлечь запись из архива?", "Извлечение из архива", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ РёР·РІР»РµС‡СЊ Р·Р°РїРёСЃСЊ РёР· Р°СЂС…РёРІР°?", "РР·РІР»РµС‡РµРЅРёРµ РёР· Р°СЂС…РёРІР°", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           await IpAddressService.RestoreAsync(item.Id, _cts.Token);
-          ShowSuccessNotification("Запись извлечена из архива!");
+          ShowSuccessNotification("Р—Р°РїРёСЃСЊ РёР·РІР»РµС‡РµРЅР° РёР· Р°СЂС…РёРІР°!");
           await grid.Reload();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Ошибка при извлечении из архива IP-адреса ID: {IpAddressId}", item.Id);
+          Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё РёР·РІР»РµС‡РµРЅРёРё РёР· Р°СЂС…РёРІР° IP-Р°РґСЂРµСЃР° ID: {IpAddressId}", item.Id);
           ShowErrorNotification(ex.Message);
         }
       }
@@ -198,18 +198,18 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
 
     protected async Task GridDeleteButtonClick(MouseEventArgs args, IpAddress item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ Р·Р°РїРёСЃСЊ?", "РЈРґР°Р»РµРЅРёРµ", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           await IpAddressService.SoftDeleteAsync(item.Id, _cts.Token);
-          ShowSuccessNotification("Запись удалена!");
+          ShowSuccessNotification("Р—Р°РїРёСЃСЊ СѓРґР°Р»РµРЅР°!");
           await grid.Reload();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Ошибка при удалении IP-адреса ID: {IpAddressId}", item.Id);
+          Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё СѓРґР°Р»РµРЅРёРё IP-Р°РґСЂРµСЃР° ID: {IpAddressId}", item.Id);
           ShowErrorNotification(ex.Message);
         }
       }
@@ -217,7 +217,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
 
     private async Task OnExportClick()
     {
-      // TODO: Реализовать экспорт
+      // TODO: Р РµР°Р»РёР·РѕРІР°С‚СЊ СЌРєСЃРїРѕСЂС‚
       await Task.CompletedTask;
     }
 
@@ -258,7 +258,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Success,
-        Summary = "Информационное",
+        Summary = "РРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕРµ",
         Detail = detail,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });
@@ -269,7 +269,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Error,
-        Summary = "Внимание!",
+        Summary = "Р’РЅРёРјР°РЅРёРµ!",
         Detail = detail,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });

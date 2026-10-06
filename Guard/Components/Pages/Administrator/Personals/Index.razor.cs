@@ -1,4 +1,4 @@
-using Guard.Components.Library.Loading;
+п»їusing Guard.Components.Library.Loading;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
@@ -40,7 +40,7 @@ namespace Guard.Components.Pages.Administrator.Personals
     protected DataViewMode currentMode = DataViewMode.Active;
     protected SubdivisionHierarchyMode hierarchyMode = SubdivisionHierarchyMode.CurrentOnly;
 
-    string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
+    string pagingSummaryFormat = "РЎС‚СЂР°РЅРёС†Р° {0} РёР· {1} (РІСЃРµРіРѕ {2} Р·Р°РїРёСЃРµР№)";
 
 
     IEnumerable<string> itemsSubdivision;
@@ -61,7 +61,7 @@ namespace Guard.Components.Pages.Administrator.Personals
         isLoading = true;
         Logger.LogDebug("");
 
-        // Имитация загрузки (например, справочников)
+        // РРјРёС‚Р°С†РёСЏ Р·Р°РіСЂСѓР·РєРё (РЅР°РїСЂРёРјРµСЂ, СЃРїСЂР°РІРѕС‡РЅРёРєРѕРІ)
         await Task.CompletedTask;
       }
       catch (OperationCanceledException)
@@ -75,7 +75,7 @@ namespace Guard.Components.Pages.Administrator.Personals
         NotificationService.Notify(new NotificationMessage
         {
           Severity = NotificationSeverity.Error,
-          Summary = "Внимание!",
+          Summary = "Р’РЅРёРјР°РЅРёРµ!",
           Detail = ex.Message,
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
@@ -140,8 +140,8 @@ namespace Guard.Components.Pages.Administrator.Personals
         NotificationService.Notify(new NotificationMessage
         {
           Severity = NotificationSeverity.Success,
-          Summary = $"Информационное",
-          Detail = $"Добавлена новая запись!",
+          Summary = $"РРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕРµ",
+          Detail = $"Р”РѕР±Р°РІР»РµРЅР° РЅРѕРІР°СЏ Р·Р°РїРёСЃСЊ!",
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
         await grid.Reload();
@@ -155,8 +155,8 @@ namespace Guard.Components.Pages.Administrator.Personals
         NotificationService.Notify(new NotificationMessage
         {
           Severity = NotificationSeverity.Success,
-          Summary = $"Информационное",
-          Detail = $"Информация обновлена!",
+          Summary = $"РРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕРµ",
+          Detail = $"РРЅС„РѕСЂРјР°С†РёСЏ РѕР±РЅРѕРІР»РµРЅР°!",
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
         await grid.Reload();
@@ -165,7 +165,7 @@ namespace Guard.Components.Pages.Administrator.Personals
 
     protected async Task GridArchiveButtonClick(MouseEventArgs args, Personal item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите поместить запись в архив?", "Архивирование", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ РїРѕРјРµСЃС‚РёС‚СЊ Р·Р°РїРёСЃСЊ РІ Р°СЂС…РёРІ?", "РђСЂС…РёРІРёСЂРѕРІР°РЅРёРµ", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
@@ -173,8 +173,8 @@ namespace Guard.Components.Pages.Administrator.Personals
           NotificationService.Notify(new NotificationMessage
           {
             Severity = NotificationSeverity.Success,
-            Summary = $"Информационное",
-            Detail = $"Запись удалена!",
+            Summary = $"РРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕРµ",
+            Detail = $"Р—Р°РїРёСЃСЊ СѓРґР°Р»РµРЅР°!",
             Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
           });
           await grid.Reload();
@@ -184,7 +184,7 @@ namespace Guard.Components.Pages.Administrator.Personals
           NotificationService.Notify(new NotificationMessage
           {
             Severity = NotificationSeverity.Error,
-            Summary = $"Внимание!",
+            Summary = $"Р’РЅРёРјР°РЅРёРµ!",
             Detail = ex.Message,
             Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
           });
@@ -193,7 +193,7 @@ namespace Guard.Components.Pages.Administrator.Personals
     }
     protected async Task GridUnarchiveButtonClick(MouseEventArgs args, Personal item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите извлечь запись из архива?", "Извлечение из архива", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ РёР·РІР»РµС‡СЊ Р·Р°РїРёСЃСЊ РёР· Р°СЂС…РёРІР°?", "РР·РІР»РµС‡РµРЅРёРµ РёР· Р°СЂС…РёРІР°", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
@@ -201,8 +201,8 @@ namespace Guard.Components.Pages.Administrator.Personals
           NotificationService.Notify(new NotificationMessage
           {
             Severity = NotificationSeverity.Success,
-            Summary = $"Информационное",
-            Detail = $"Запись удалена!",
+            Summary = $"РРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕРµ",
+            Detail = $"Р—Р°РїРёСЃСЊ СѓРґР°Р»РµРЅР°!",
             Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
           });
           await grid.Reload();
@@ -212,7 +212,7 @@ namespace Guard.Components.Pages.Administrator.Personals
           NotificationService.Notify(new NotificationMessage
           {
             Severity = NotificationSeverity.Error,
-            Summary = $"Внимание!",
+            Summary = $"Р’РЅРёРјР°РЅРёРµ!",
             Detail = ex.Message,
             Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
           });
@@ -221,7 +221,7 @@ namespace Guard.Components.Pages.Administrator.Personals
     }
     protected async Task GridDeleteButtonClick(MouseEventArgs args, Personal item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ Р·Р°РїРёСЃСЊ?", "РЈРґР°Р»РµРЅРёРµ", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
@@ -229,8 +229,8 @@ namespace Guard.Components.Pages.Administrator.Personals
           NotificationService.Notify(new NotificationMessage
           {
             Severity = NotificationSeverity.Success,
-            Summary = $"Информационное",
-            Detail = $"Запись удалена!",
+            Summary = $"РРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕРµ",
+            Detail = $"Р—Р°РїРёСЃСЊ СѓРґР°Р»РµРЅР°!",
             Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
           });
           await grid.Reload();
@@ -240,7 +240,7 @@ namespace Guard.Components.Pages.Administrator.Personals
           NotificationService.Notify(new NotificationMessage
           {
             Severity = NotificationSeverity.Error,
-            Summary = $"Внимание!",
+            Summary = $"Р’РЅРёРјР°РЅРёРµ!",
             Detail = ex.Message,
             Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
           });
@@ -275,7 +275,7 @@ namespace Guard.Components.Pages.Administrator.Personals
       {
         if (filter.FilterValue is DateTime dt && dt.Kind != DateTimeKind.Utc)
         {
-          // Перевод даты в UTC
+          // РџРµСЂРµРІРѕРґ РґР°С‚С‹ РІ UTC
           filter.FilterValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
         }
 

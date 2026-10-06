@@ -1,4 +1,4 @@
-using Guard.Core.Entities;
+﻿using Guard.Core.Entities;
 using Guard.Core.Services;
 using Guard.Shared;
 using Microsoft.AspNetCore.Components;

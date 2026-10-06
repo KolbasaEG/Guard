@@ -1,4 +1,4 @@
-using Guard.Core.Entities;
+п»їusing Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
 using Guard.Core.Services;
@@ -33,7 +33,7 @@ namespace Guard.Components.Pages.Administrator.Users
     protected bool isEditor = true;
     protected bool isLoading = false;
     protected DataViewMode currentMode = DataViewMode.Active;
-    string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
+    string pagingSummaryFormat = "РЎС‚СЂР°РЅРёС†Р° {0} РёР· {1} (РІСЃРµРіРѕ {2} Р·Р°РїРёСЃРµР№)";
 
     protected override async Task OnInitializedAsync()
     {
@@ -44,7 +44,7 @@ namespace Guard.Components.Pages.Administrator.Users
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при инициализации страницы пользователей");
+        Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё СЃС‚СЂР°РЅРёС†С‹ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№");
         ShowErrorNotification(ex.Message);
       }
       finally
@@ -88,7 +88,7 @@ namespace Guard.Components.Pages.Administrator.Users
               {
                 Id = p.Id,
                 Email = p.Email ?? "-",
-                IsLockedOut = p.LockoutEnd > DateTimeOffset.UtcNow, // Или p.IsLockedOut
+                IsLockedOut = p.LockoutEnd > DateTimeOffset.UtcNow, // РР»Рё p.IsLockedOut
                 PersonalId = p.PersonalId,
                 UserName = p.UserName ?? "-",
                 PersonalFullName = p.Personal != null ? p.Personal.FullName : "-"
@@ -103,12 +103,12 @@ namespace Guard.Components.Pages.Administrator.Users
       }
       catch (OperationCanceledException)
       {
-        // Игнорируем отмененные запросы
+        // РРіРЅРѕСЂРёСЂСѓРµРј РѕС‚РјРµРЅРµРЅРЅС‹Рµ Р·Р°РїСЂРѕСЃС‹
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка загрузки данных пользователей");
-        ShowErrorNotification("Не удалось загрузить данные");
+        Logger.LogError(ex, "РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РґР°РЅРЅС‹С… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№");
+        ShowErrorNotification("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РґР°РЅРЅС‹Рµ");
       }
       finally
       {
@@ -124,7 +124,7 @@ namespace Guard.Components.Pages.Administrator.Users
       //var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
       //if (result != null)
       //{
-      //  ShowSuccessNotification("Добавлена новая запись!");
+      //  ShowSuccessNotification("Р”РѕР±Р°РІР»РµРЅР° РЅРѕРІР°СЏ Р·Р°РїРёСЃСЊ!");
       //  await grid.Reload();
       //}
     }
@@ -139,19 +139,19 @@ namespace Guard.Components.Pages.Administrator.Users
 
       //if (result != null)
       //{
-      //  ShowSuccessNotification("Информация обновлена!");
+      //  ShowSuccessNotification("РРЅС„РѕСЂРјР°С†РёСЏ РѕР±РЅРѕРІР»РµРЅР°!");
       //  await grid.Reload();
       //}
     }
 
     protected async Task GridArchiveButtonClick(MouseEventArgs args, UserDto item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите поместить запись в архив?", "Архивирование", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ РїРѕРјРµСЃС‚РёС‚СЊ Р·Р°РїРёСЃСЊ РІ Р°СЂС…РёРІ?", "РђСЂС…РёРІРёСЂРѕРІР°РЅРёРµ", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           //await Security.ArchiveAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись помещена в архив!");
+          ShowSuccessNotification("Р—Р°РїРёСЃСЊ РїРѕРјРµС‰РµРЅР° РІ Р°СЂС…РёРІ!");
           await grid.Reload();
         }
         catch (Exception ex)
@@ -163,12 +163,12 @@ namespace Guard.Components.Pages.Administrator.Users
 
     protected async Task GridUnarchiveButtonClick(MouseEventArgs args, UserDto item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите извлечь запись из архива?", "Извлечение из архива", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ РёР·РІР»РµС‡СЊ Р·Р°РїРёСЃСЊ РёР· Р°СЂС…РёРІР°?", "РР·РІР»РµС‡РµРЅРёРµ РёР· Р°СЂС…РёРІР°", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           //await Security.RestoreAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись извлечена из архива!");
+          ShowSuccessNotification("Р—Р°РїРёСЃСЊ РёР·РІР»РµС‡РµРЅР° РёР· Р°СЂС…РёРІР°!");
           await grid.Reload();
         }
         catch (Exception ex)
@@ -180,12 +180,12 @@ namespace Guard.Components.Pages.Administrator.Users
 
     protected async Task GridDeleteButtonClick(MouseEventArgs args, UserDto item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ Р·Р°РїРёСЃСЊ?", "РЈРґР°Р»РµРЅРёРµ", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           //await Security.SoftDeleteAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись удалена!");
+          ShowSuccessNotification("Р—Р°РїРёСЃСЊ СѓРґР°Р»РµРЅР°!");
           await grid.Reload();
         }
         catch (Exception ex)
@@ -202,7 +202,7 @@ namespace Guard.Components.Pages.Administrator.Users
 
     private async Task OnExportClick()
     {
-      // TODO: Реализовать экспорт
+      // TODO: Р РµР°Р»РёР·РѕРІР°С‚СЊ СЌРєСЃРїРѕСЂС‚
       await Task.CompletedTask;
     }
 
@@ -234,7 +234,7 @@ namespace Guard.Components.Pages.Administrator.Users
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Success,
-        Summary = "Информационное",
+        Summary = "РРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕРµ",
         Detail = detail,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });
@@ -245,7 +245,7 @@ namespace Guard.Components.Pages.Administrator.Users
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Error,
-        Summary = "Внимание!",
+        Summary = "Р’РЅРёРјР°РЅРёРµ!",
         Detail = detail,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });

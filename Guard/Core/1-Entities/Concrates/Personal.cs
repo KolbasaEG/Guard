@@ -1,47 +1,47 @@
-namespace Guard.Core.Entities;
+п»їnamespace Guard.Core.Entities;
 
 /// <summary>
-/// Справочник персонала системы Guard.
+/// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ Guard.
 /// </summary>
 public class Personal : BaseEntity, IHasSubdivision
 {
 
   /// <summary>
-  /// Идентификатор сотрудника АИС Личное дело.
+  /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ.
   /// </summary>
   public long PersonalId { get; set; }
   /// <summary>
-  /// Идентификатор подразделения (внешний ключ).
+  /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ).
   /// </summary>
   public Guid? SubdivisionId { get; set; }
   public Subdivision? Subdivision { get; set; }
 
   /// <summary>
-  /// Идентификатор подразделения АИС Личное дело.
+  /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ.
   /// </summary>
   public long PersonalSubdivisionId { get; set; }
 
-  // --- Категория персонала ---
+  // --- пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ---
   public int? PersonnelCategoryType { get; set; }
   public int? PersonnelCategoryCode { get; set; }
   public Classifier? PersonnelCategory { get; set; }
 
-  // --- Специальное звание ---
+  // --- пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ ---
   public int? SpecialRankType { get; set; }
   public int? SpecialRankCode { get; set; }
   public Classifier? SpecialRank { get; set; }
 
-  // --- Должность ---
+  // --- пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ---
   public int? PositionType { get; set; }
   public int? PositionCode { get; set; }
   public Classifier? Position { get; set; }
 
-  // --- Категория рабочего/служащего ---
+  // --- пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ/пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ---
   public int? WorkerCategoryType { get; set; }
   public int? WorkerCategoryCode { get; set; }
   public Classifier? WorkerCategory { get; set; }
 
-  // --- Персональные данные ---
+  // --- пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ ---
   public string LastName { get; set; } = default!;
   public string FirstName { get; set; } = default!;
   public string? MiddleName { get; set; }
@@ -50,21 +50,21 @@ public class Personal : BaseEntity, IHasSubdivision
   public int? EnlistmentYear { get; set; }
   public string? PersonalNumber { get; set; }
 
-  // --- ФИО в родительном падеже ---
+  // --- пїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ ---
   public string? LastNameGen { get; set; }
   public string? FirstNameGen { get; set; }
   public string? MiddleNameGen { get; set; }
 
-  // --- Связанная учетная запись пользователя ---
+  // --- пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ ---
   public ApplicationUser? User { get; set; }
 
-  // --- Классификатор статуса ---
+  // --- пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ ---
   public int? StatusType { get; set; }
   public int? StatusCode { get; set; }
   public Classifier? StatusClassifier { get; set; }
 
   public DateTime? UpdatedAt { get; set; }
 
-  // Прямая коллекция разрешенных IP-адресов сотрудника
+  // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ IP-пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
   public virtual ICollection<IpAddress> IpAddresses { get; set; } = new List<IpAddress>();
 }

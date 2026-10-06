@@ -1,4 +1,4 @@
-using Guard.Core.Entities;
+п»їusing Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Logging;
 using Guard.Core.Services;
@@ -39,7 +39,7 @@ namespace Guard.Components.Pages.Root.LogInfo
     protected bool isLoading = false;
     protected bool isRealtime = false;
     protected LogEventLevel selectedLogLevel;
-    protected string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
+    protected string pagingSummaryFormat = "РЎС‚СЂР°РЅРёС†Р° {0} РёР· {1} (РІСЃРµРіРѕ {2} Р·Р°РїРёСЃРµР№)";
     
 
     protected IEnumerable<LogEntry> data;
@@ -48,17 +48,17 @@ namespace Guard.Components.Pages.Root.LogInfo
     protected RadzenDataFilter<LogEntry> dataFilter;
     
 
-    // Переменные для Level
+    // РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ Level
     protected IEnumerable<string> itemsLevel = ["Verbose", "Debug", "Information", "Warning", "Error", "Fatal"];
     protected IEnumerable<string> selectedItemsLevel;
     protected IEnumerable<string> finalSelectedItemsLevel;
 
-    // Переменные для Layer
+    // РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ Layer
     protected IEnumerable<string> itemsLayer = ["Components", "Service", "Database", "System"];
     protected IEnumerable<string> selectedItemsLayer;
     protected IEnumerable<string> finalSelectedItemsLayer;
 
-    // Обработчики изменений наборов для фильтра
+    // РћР±СЂР°Р±РѕС‚С‡РёРєРё РёР·РјРµРЅРµРЅРёР№ РЅР°Р±РѕСЂРѕРІ РґР»СЏ С„РёР»СЊС‚СЂР°
     void OnSelectedLevelChange(object value)
     {
       if (selectedItemsLevel != null && !selectedItemsLevel.Any())
@@ -90,13 +90,13 @@ namespace Guard.Components.Pages.Root.LogInfo
       _ => BadgeStyle.Light
     };
 
-    // Применение фильтра
+    // РџСЂРёРјРµРЅРµРЅРёРµ С„РёР»СЊС‚СЂР°
     async Task ApplyFilter()
     {
       finalSelectedItemsLevel = selectedItemsLevel;
       finalSelectedItemsLayer = selectedItemsLayer;
 
-      // Принудительно запускаем перерисовку, чтобы FilterValue передался в RadzenDataFilterProperty
+      // РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ Р·Р°РїСѓСЃРєР°РµРј РїРµСЂРµСЂРёСЃРѕРІРєСѓ, С‡С‚РѕР±С‹ FilterValue РїРµСЂРµРґР°Р»СЃСЏ РІ RadzenDataFilterProperty
       StateHasChanged();
       await Task.Yield();
 
@@ -108,8 +108,8 @@ namespace Guard.Components.Pages.Root.LogInfo
       try
       {
         isLoading = true;
-        Logger.LogDebug("Инициализация панели управления системными логами");
-        // Загружаем сохраненный уровень и количество сессий
+        Logger.LogDebug("РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РїР°РЅРµР»Рё СѓРїСЂР°РІР»РµРЅРёСЏ СЃРёСЃС‚РµРјРЅС‹РјРё Р»РѕРіР°РјРё");
+        // Р—Р°РіСЂСѓР¶Р°РµРј СЃРѕС…СЂР°РЅРµРЅРЅС‹Р№ СѓСЂРѕРІРµРЅСЊ Рё РєРѕР»РёС‡РµСЃС‚РІРѕ СЃРµСЃСЃРёР№
         var savedState = LogLevelPersistenceService.LoadState();
         maxSessions = savedState.MaxSessions;
         selectedLogLevel = LevelSwitch.MinimumLevel;
@@ -117,17 +117,17 @@ namespace Guard.Components.Pages.Root.LogInfo
       }
       catch (OperationCanceledException)
       {
-        Logger.LogInformation("Инициализация панели логов была отменена");
+        Logger.LogInformation("РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РїР°РЅРµР»Рё Р»РѕРіРѕРІ Р±С‹Р»Р° РѕС‚РјРµРЅРµРЅР°");
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при инициализации панели логов");
+        Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё РїР°РЅРµР»Рё Р»РѕРіРѕРІ");
 
         NotificationService.Notify(new NotificationMessage
         {
           Severity = NotificationSeverity.Error,
-          Summary = "Ошибка!",
-          Detail = "Не удалось инициализировать панель управления логами",
+          Summary = "РћС€РёР±РєР°!",
+          Detail = "РќРµ СѓРґР°Р»РѕСЃСЊ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°С‚СЊ РїР°РЅРµР»СЊ СѓРїСЂР°РІР»РµРЅРёСЏ Р»РѕРіР°РјРё",
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
       }
@@ -174,16 +174,16 @@ namespace Guard.Components.Pages.Root.LogInfo
       }
       catch (OperationCanceledException)
       {
-        Logger.LogInformation("Выборка системных логов отменена пользователем");
+        Logger.LogInformation("Р’С‹Р±РѕСЂРєР° СЃРёСЃС‚РµРјРЅС‹С… Р»РѕРіРѕРІ РѕС‚РјРµРЅРµРЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј");
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при загрузке системных логов");
+        Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё Р·Р°РіСЂСѓР·РєРµ СЃРёСЃС‚РµРјРЅС‹С… Р»РѕРіРѕРІ");
 
         NotificationService.Notify(new NotificationMessage
         {
           Severity = NotificationSeverity.Error,
-          Summary = "Внимание!",
+          Summary = "Р’РЅРёРјР°РЅРёРµ!",
           Detail = ex.Message,
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
@@ -196,7 +196,7 @@ namespace Guard.Components.Pages.Root.LogInfo
 
 
     /// <summary>
-    /// Переключение между режимами "По запросу" и "Real-time"
+    /// РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РјРµР¶РґСѓ СЂРµР¶РёРјР°РјРё "РџРѕ Р·Р°РїСЂРѕСЃСѓ" Рё "Real-time"
     /// </summary>
     private async Task OnRealtimeModeChanged(bool enabled)
     {
@@ -215,11 +215,11 @@ namespace Guard.Components.Pages.Root.LogInfo
     }
 
     /// <summary>
-    /// Запуск фоновой периодической перезагрузки реестра
+    /// Р—Р°РїСѓСЃРє С„РѕРЅРѕРІРѕР№ РїРµСЂРёРѕРґРёС‡РµСЃРєРѕР№ РїРµСЂРµР·Р°РіСЂСѓР·РєРё СЂРµРµСЃС‚СЂР°
     /// </summary>
     private void StartRealtimeLoop()
     {
-      StopRealtimeLoop(); // Гарантируем остановку предыдущего цикла
+      StopRealtimeLoop(); // Р“Р°СЂР°РЅС‚РёСЂСѓРµРј РѕСЃС‚Р°РЅРѕРІРєСѓ РїСЂРµРґС‹РґСѓС‰РµРіРѕ С†РёРєР»Р°
 
       _realtimeCts = new CancellationTokenSource();
       var token = _realtimeCts.Token;
@@ -232,7 +232,7 @@ namespace Guard.Components.Pages.Root.LogInfo
         {
           while (await timer.WaitForNextTickAsync(token))
           {
-            // RadzenDataGrid и UI обновляются только в потоке SynchronizationContext Blazor
+            // RadzenDataGrid Рё UI РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РІ РїРѕС‚РѕРєРµ SynchronizationContext Blazor
             await InvokeAsync(async () =>
             {
               if (grid != null && !isLoading)
@@ -245,13 +245,13 @@ namespace Guard.Components.Pages.Root.LogInfo
         }
         catch (OperationCanceledException)
         {
-          // Ожидаемая отмена при переключении режима или уничтожении компонента
+          // РћР¶РёРґР°РµРјР°СЏ РѕС‚РјРµРЅР° РїСЂРё РїРµСЂРµРєР»СЋС‡РµРЅРёРё СЂРµР¶РёРјР° РёР»Рё СѓРЅРёС‡С‚РѕР¶РµРЅРёРё РєРѕРјРїРѕРЅРµРЅС‚Р°
         }
       }, token);
     }
 
     /// <summary>
-    /// Остановка фонового таймера
+    /// РћСЃС‚Р°РЅРѕРІРєР° С„РѕРЅРѕРІРѕРіРѕ С‚Р°Р№РјРµСЂР°
     /// </summary>
     private void StopRealtimeLoop()
     {
@@ -269,7 +269,7 @@ namespace Guard.Components.Pages.Root.LogInfo
     }
 
     /// <summary>
-    /// Единый метод сохранения и применения настроек логирования
+    /// Р•РґРёРЅС‹Р№ РјРµС‚РѕРґ СЃРѕС…СЂР°РЅРµРЅРёСЏ Рё РїСЂРёРјРµРЅРµРЅРёСЏ РЅР°СЃС‚СЂРѕРµРє Р»РѕРіРёСЂРѕРІР°РЅРёСЏ
     /// </summary>
     protected void SaveLoggerSettings()
     {
@@ -278,8 +278,8 @@ namespace Guard.Components.Pages.Root.LogInfo
         NotificationService.Notify(new NotificationMessage
         {
           Severity = NotificationSeverity.Warning,
-          Summary = "Внимание",
-          Detail = "Количество подключений должно быть не менее 1",
+          Summary = "Р’РЅРёРјР°РЅРёРµ",
+          Detail = "РљРѕР»РёС‡РµСЃС‚РІРѕ РїРѕРґРєР»СЋС‡РµРЅРёР№ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ РЅРµ РјРµРЅРµРµ 1",
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
         return;
@@ -287,31 +287,31 @@ namespace Guard.Components.Pages.Root.LogInfo
 
       var previousLevel = LevelSwitch.MinimumLevel;
 
-      // 1. Обновляем уровень в switch
+      // 1. РћР±РЅРѕРІР»СЏРµРј СѓСЂРѕРІРµРЅСЊ РІ switch
       LevelSwitch.MinimumLevel = selectedLogLevel;
 
-      // 2. Применяем новую конфигурацию Serilog (батчи + уровень)
+      // 2. РџСЂРёРјРµРЅСЏРµРј РЅРѕРІСѓСЋ РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ Serilog (Р±Р°С‚С‡Рё + СѓСЂРѕРІРµРЅСЊ)
       LoggerManager.ApplyConfiguration(maxSessions, selectedLogLevel);
 
-      // 3. Сохраняем обновленные настройки в файл logsettings.json
+      // 3. РЎРѕС…СЂР°РЅСЏРµРј РѕР±РЅРѕРІР»РµРЅРЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РІ С„Р°Р№Р» logsettings.json
       LogLevelPersistenceService.SaveState(LevelSwitch, maxSessions);
 
-      // 4. Логируем действие администратора
-      Logger.LogWarning("Изменены настройки логгера: Уровень = {NewLevel} (был {PreviousLevel}), Макс. сессий = {MaxSessions}",
+      // 4. Р›РѕРіРёСЂСѓРµРј РґРµР№СЃС‚РІРёРµ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°
+      Logger.LogWarning("РР·РјРµРЅРµРЅС‹ РЅР°СЃС‚СЂРѕР№РєРё Р»РѕРіРіРµСЂР°: РЈСЂРѕРІРµРЅСЊ = {NewLevel} (Р±С‹Р» {PreviousLevel}), РњР°РєСЃ. СЃРµСЃСЃРёР№ = {MaxSessions}",
           selectedLogLevel, previousLevel, maxSessions);
 
-      // 5. Показываем всплывающее уведомление
+      // 5. РџРѕРєР°Р·С‹РІР°РµРј РІСЃРїР»С‹РІР°СЋС‰РµРµ СѓРІРµРґРѕРјР»РµРЅРёРµ
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Success,
-        Summary = "Успешно",
-        Detail = $"Настройки применены: {selectedLogLevel}, {maxSessions} сессий",
+        Summary = "РЈСЃРїРµС€РЅРѕ",
+        Detail = $"РќР°СЃС‚СЂРѕР№РєРё РїСЂРёРјРµРЅРµРЅС‹: {selectedLogLevel}, {maxSessions} СЃРµСЃСЃРёР№",
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });
     }
 
     /// <summary>
-    /// Освобождение ресурсов при закрытии страницы
+    /// РћСЃРІРѕР±РѕР¶РґРµРЅРёРµ СЂРµСЃСѓСЂСЃРѕРІ РїСЂРё Р·Р°РєСЂС‹С‚РёРё СЃС‚СЂР°РЅРёС†С‹
     /// </summary>
     public void Dispose()
     {

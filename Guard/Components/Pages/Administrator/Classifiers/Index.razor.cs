@@ -1,4 +1,4 @@
-using Guard.Core.Entities;
+п»їusing Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -25,7 +25,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
     int count;
     protected bool isEditor = true;
     protected bool isLoading = false;
-    string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
+    string pagingSummaryFormat = "РЎС‚СЂР°РЅРёС†Р° {0} РёР· {1} (РІСЃРµРіРѕ {2} Р·Р°РїРёСЃРµР№)";
 
     private readonly CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
@@ -40,16 +40,16 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       try
       {
         isLoading = true;
-        Logger.LogDebug("Инициализация страницы классификаторов");
+        Logger.LogDebug("РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃС‚СЂР°РЅРёС†С‹ РєР»Р°СЃСЃРёС„РёРєР°С‚РѕСЂРѕРІ");
         await Task.CompletedTask;
       }
       catch (OperationCanceledException)
       {
-        Logger.LogInformation("Инициализация страницы классификаторов была отменена");
+        Logger.LogInformation("РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃС‚СЂР°РЅРёС†С‹ РєР»Р°СЃСЃРёС„РёРєР°С‚РѕСЂРѕРІ Р±С‹Р»Р° РѕС‚РјРµРЅРµРЅР°");
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при инициализации страницы классификаторов");
+        Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё СЃС‚СЂР°РЅРёС†С‹ РєР»Р°СЃСЃРёС„РёРєР°С‚РѕСЂРѕРІ");
         ShowErrorNotification(ex.Message);
       }
       finally
@@ -100,12 +100,12 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       }
       catch (OperationCanceledException)
       {
-        // Игнорируем отмененные запросы
+        // РРіРЅРѕСЂРёСЂСѓРµРј РѕС‚РјРµРЅРµРЅРЅС‹Рµ Р·Р°РїСЂРѕСЃС‹
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка загрузки данных классификаторов");
-        ShowErrorNotification("Не удалось загрузить данные");
+        Logger.LogError(ex, "РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РґР°РЅРЅС‹С… РєР»Р°СЃСЃРёС„РёРєР°С‚РѕСЂРѕРІ");
+        ShowErrorNotification("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РґР°РЅРЅС‹Рµ");
       }
       finally
       {
@@ -123,21 +123,21 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       try
       {
         isLoading = true;
-        Logger.LogInformation("Запуск синхронизации классификаторов с внешним API...");
+        Logger.LogInformation("Р—Р°РїСѓСЃРє СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё РєР»Р°СЃСЃРёС„РёРєР°С‚РѕСЂРѕРІ СЃ РІРЅРµС€РЅРёРј API...");
 
         await RemoteClassifierService.SyncClassifiersAsync(_cts.Token);
 
-        ShowSuccessNotification("Синхронизация с API успешно завершена!");
+        ShowSuccessNotification("РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃ API СѓСЃРїРµС€РЅРѕ Р·Р°РІРµСЂС€РµРЅР°!");
         await grid.Reload();
       }
       catch (OperationCanceledException)
       {
-        Logger.LogInformation("Синхронизация с API была отменена");
+        Logger.LogInformation("РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃ API Р±С‹Р»Р° РѕС‚РјРµРЅРµРЅР°");
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при синхронизации классификаторов с внешним API");
-        ShowErrorNotification($"Не удалось синхронизировать данные: {ex.Message}");
+        Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё РєР»Р°СЃСЃРёС„РёРєР°С‚РѕСЂРѕРІ СЃ РІРЅРµС€РЅРёРј API");
+        ShowErrorNotification($"РќРµ СѓРґР°Р»РѕСЃСЊ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°С‚СЊ РґР°РЅРЅС‹Рµ: {ex.Message}");
       }
       finally
       {
@@ -149,7 +149,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
       if (result != null)
       {
-        ShowSuccessNotification("Добавлена новая запись!");
+        ShowSuccessNotification("Р”РѕР±Р°РІР»РµРЅР° РЅРѕРІР°СЏ Р·Р°РїРёСЃСЊ!");
         await grid.Reload();
       }
     }
@@ -160,26 +160,26 @@ namespace Guard.Components.Pages.Administrator.Classifiers
 
       if (result != null)
       {
-        ShowSuccessNotification("Информация обновлена!");
+        ShowSuccessNotification("РРЅС„РѕСЂРјР°С†РёСЏ РѕР±РЅРѕРІР»РµРЅР°!");
         await grid.Reload();
       }
     }
 
     protected async Task ToggleActiveStatusClick(MouseEventArgs args, Classifier item)
     {
-      var actionText = item.IsActive ? "деактивировать" : "активировать";
-      if (await DialogService.Confirm($"Вы действительно хотите {actionText} запись?", "Изменение статуса", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      var actionText = item.IsActive ? "РґРµР°РєС‚РёРІРёСЂРѕРІР°С‚СЊ" : "Р°РєС‚РёРІРёСЂРѕРІР°С‚СЊ";
+      if (await DialogService.Confirm($"Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ {actionText} Р·Р°РїРёСЃСЊ?", "РР·РјРµРЅРµРЅРёРµ СЃС‚Р°С‚СѓСЃР°", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           await ClassifierService.SetActiveStatusAsync(item.Id, !item.IsActive, _cts.Token);
-          ShowSuccessNotification($"Запись успешно {(item.IsActive ? "деактивирована" : "активирована")}!");
+          ShowSuccessNotification($"Р—Р°РїРёСЃСЊ СѓСЃРїРµС€РЅРѕ {(item.IsActive ? "РґРµР°РєС‚РёРІРёСЂРѕРІР°РЅР°" : "Р°РєС‚РёРІРёСЂРѕРІР°РЅР°")}!");
           await grid.Reload();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Ошибка при изменении статуса классификатора ID: {ClassifierId}", item.Id);
+          Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё РёР·РјРµРЅРµРЅРёРё СЃС‚Р°С‚СѓСЃР° РєР»Р°СЃСЃРёС„РёРєР°С‚РѕСЂР° ID: {ClassifierId}", item.Id);
           ShowErrorNotification(ex.Message);
         }
       }
@@ -187,18 +187,18 @@ namespace Guard.Components.Pages.Administrator.Classifiers
 
     protected async Task GridDeleteButtonClick(MouseEventArgs args, Classifier item)
     {
-      if (await DialogService.Confirm("Вы действительно хотите полностью удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
+      if (await DialogService.Confirm("Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ РїРѕР»РЅРѕСЃС‚СЊСЋ СѓРґР°Р»РёС‚СЊ Р·Р°РїРёСЃСЊ?", "РЈРґР°Р»РµРЅРёРµ", new ConfirmOptions { OkButtonText = "Р”Р°", CancelButtonText = "РћС‚РјРµРЅР°" }) == true)
       {
         try
         {
           await ClassifierService.DeleteAsync(item.Id, _cts.Token);
-          ShowSuccessNotification("Запись удалена!");
+          ShowSuccessNotification("Р—Р°РїРёСЃСЊ СѓРґР°Р»РµРЅР°!");
           await grid.Reload();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Ошибка при удалении классификатора ID: {ClassifierId}", item.Id);
+          Logger.LogError(ex, "РћС€РёР±РєР° РїСЂРё СѓРґР°Р»РµРЅРёРё РєР»Р°СЃСЃРёС„РёРєР°С‚РѕСЂР° ID: {ClassifierId}", item.Id);
           ShowErrorNotification(ex.Message);
         }
       }
@@ -206,7 +206,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
 
     private async Task OnExportClick()
     {
-      // TODO: Реализовать экспорт
+      // TODO: Р РµР°Р»РёР·РѕРІР°С‚СЊ СЌРєСЃРїРѕСЂС‚
       await Task.CompletedTask;
     }
 
@@ -238,7 +238,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Success,
-        Summary = "Информационное",
+        Summary = "РРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕРµ",
         Detail = detail,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });
@@ -249,7 +249,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Error,
-        Summary = "Внимание!",
+        Summary = "Р’РЅРёРјР°РЅРёРµ!",
         Detail = detail,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
       });
