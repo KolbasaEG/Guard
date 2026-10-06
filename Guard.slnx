@@ -1,5 +1,3 @@
 <Solution>
-  <Project Path="Guard.ComponentLibrary/Guard.ComponentLibrary.csproj" />
-  <Project Path="Guard.Tests/Guard.Tests.csproj" />
   <Project Path="Guard/Guard.csproj" />
 </Solution>

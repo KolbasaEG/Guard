@@ -1,4 +1,4 @@
-using Guard.ComponentLibrary.Loading;
+using Guard.Components.Library.Loading;
 using Guard.Core.Entities;
 using Guard.Core.Services;
 using Guard.Shared;
