@@ -23,12 +23,13 @@ public class PersonalIpService(IDbContextFactory<ApplicationDbContext> factory,
         .SingleOrDefaultAsync(p => p.Id == personalId, ct) ?? throw new KeyNotFoundException("Сотрудник не найден.");
     RequireAccess(personal, scope);
     var options = await db.IpAddresses.AsNoTracking()
-        .Where(ip => (scope.IsRoot || (ip.SubdivisionId.HasValue && scope.SubdivisionIds.Contains(ip.SubdivisionId.Value))) &&
+        .Where(ip => personal.SubdivisionId.HasValue && ip.SubdivisionId == personal.SubdivisionId &&
             (ip.Status == Status.Inserted || ip.Status == Status.Modified))
         .OrderBy(ip => ip.Address).Select(ip => new IpOptionDto(ip.Id, ip.Address)).ToListAsync(ct);
-    // Не выдаём адреса чужих подразделений. Недоступные старые связи сохраняются при обновлении.
+    // Выбор ограничен подразделением сотрудника, включая операции Root.
     var availableIds = options.Select(ip => ip.Id).ToHashSet();
-    return new(options, personal.IpAddresses.Where(ip => availableIds.Contains(ip.Id)).Select(ip => ip.Id).ToList());
+    return new(options, personal.IpAddresses.Where(ip => availableIds.Contains(ip.Id)).Select(ip => ip.Id).ToList(),
+        personal.IpAddresses.Count(ip => ip.SubdivisionId != personal.SubdivisionId || !personal.SubdivisionId.HasValue));
   }
 
   public async Task UpdateAsync(Guid personalId, IEnumerable<Guid> ipIds, CancellationToken ct = default)
@@ -48,10 +49,10 @@ public class PersonalIpService(IDbContextFactory<ApplicationDbContext> factory,
       throw new InvalidOperationException("Назначения можно менять только у активного незаблокированного сотрудника.");
     var selected = await db.IpAddresses.Where(ip => ids.Contains(ip.Id)).ToListAsync(ct);
     if (selected.Count != ids.Length || selected.Any(ip => ip.Status is not (Status.Inserted or Status.Modified) ||
-        (!scope.IsRoot && (!ip.SubdivisionId.HasValue || !scope.SubdivisionIds.Contains(ip.SubdivisionId.Value)))))
+        !personal.SubdivisionId.HasValue || ip.SubdivisionId != personal.SubdivisionId))
       throw new InvalidOperationException("Выбраны недоступные или неактивные IP-адреса. Обновите список.");
     foreach (var old in personal.IpAddresses.ToList())
-      if (scope.IsRoot || (old.SubdivisionId.HasValue && scope.SubdivisionIds.Contains(old.SubdivisionId.Value)))
+      if (personal.SubdivisionId.HasValue && old.SubdivisionId == personal.SubdivisionId)
         personal.IpAddresses.Remove(old);
     foreach (var ip in selected) personal.IpAddresses.Add(ip);
     // Фабрика не подключает scoped-интерцептор: метаданные операции задаются явно.

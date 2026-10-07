@@ -11,6 +11,8 @@
   <RadzenText Text="Разрешённые IP-адреса сотрудника" TextStyle="TextStyle.H6" />
   <RadzenText Text="Пустой список запрещает вход. Изменения применяются при следующем входе или новом соединении. Root освобождён от проверки IP." />
   @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
+  <RadzenText Text="Выбираются только активные IP подразделения сотрудника, без дочерних подразделений." />
+  @if (hiddenAssignmentCount > 0) { <RadzenAlert AlertStyle="AlertStyle.Warning">Есть ранее назначенные IP вне подразделения сотрудника (@hiddenAssignmentCount). Они не показаны и сохраняются отдельно. Очистка видимого списка не удаляет эти назначения.</RadzenAlert> }
   <RadzenDropDown TValue="IEnumerable<Guid>" Data="@available" TextProperty="Address" ValueProperty="Id"
                   @bind-Value="selected" Multiple="true" AllowClear="true" AllowFiltering="true"
                   Disabled="@loading" Style="width:100%" Placeholder="Выберите IP-адреса или подсети" />
@@ -24,6 +26,7 @@
   private IEnumerable<Guid> selected = [];
   private readonly CancellationTokenSource cts = new();
   private bool loading, loaded;
+  private int hiddenAssignmentCount;
   private string? error;
 
   protected override async Task OnInitializedAsync()
@@ -34,6 +37,7 @@
       var data = await Assignments.GetAsync(PersonalId, cts.Token);
       available = data.Available;
       selected = data.Selected;
+      hiddenAssignmentCount = data.HiddenAssignmentCount;
       loaded = true;
     }
     catch (OperationCanceledException) when (cts.IsCancellationRequested) { }

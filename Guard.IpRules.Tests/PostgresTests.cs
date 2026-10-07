@@ -87,11 +87,22 @@ internal static class PostgresTests
       await ThrowsAsync<InvalidOperationException>(() => assignments.UpdateAsync(personal.Id, [common]), check, "non-Root cannot assign inaccessible common address");
 
       var rootAssignments = new PersonalIpService(factory, rootAccess, NullLogger<PersonalIpService>.Instance);
-      await rootAssignments.UpdateAsync(personal.Id, [common]);
-      check(await gate.IsAllowedAsync(user.Id, "2001:db8::42"), "IPv6 assigned subnet works");
+      check((await rootAssignments.GetAsync(personal.Id)).Available.All(ip => ip.Id != common), "Root assignment selector excludes IP without employee subdivision");
+      await ThrowsAsync<InvalidOperationException>(() => rootAssignments.UpdateAsync(personal.Id, [common]), check, "Root cannot assign IP outside employee subdivision");
+      var ownIpv6 = await rootService.CreateAsync(new IpAddress { Address = "2001:db8:1::/64", SubdivisionId = own.Id });
+      await rootAssignments.UpdateAsync(personal.Id, [ownIpv6]);
+      check(await gate.IsAllowedAsync(user.Id, "2001:db8:1::42"), "IPv6 assigned subnet works");
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "assignment replacement removes old permission");
       await rootAssignments.UpdateAsync(personal.Id, []);
-      check(!await gate.IsAllowedAsync(user.Id, "2001:db8::42"), "clearing assignments denies next connection");
+      check(!await gate.IsAllowedAsync(user.Id, "2001:db8:1::42"), "clearing assignments denies next connection");
+      var nested = new Subdivision { Name = "IP test child", Path = own.Path + "888/", ParentId = own.Id, CreatedBy = "test" };
+      var nestedIp = new IpAddress { Address = "10.88.0.1", Subdivision = nested, CreatedBy = "test" };
+      db.AddRange(nested, nestedIp); await db.SaveChangesAsync();
+      check((await userAccess.GetScopeAsync(true)).SubdivisionIds.Contains(nested.Id), "operator can manage descendant subdivision");
+      check((await assignments.GetAsync(personal.Id)).Available.All(ip => ip.Id != nestedIp.Id), "employee IP selector excludes descendant subdivision despite operator access");
+      await ThrowsAsync<InvalidOperationException>(() => assignments.UpdateAsync(personal.Id, [nestedIp.Id]), check, "server rejects descendant IP for employee in parent subdivision");
+      check((await rootAssignments.GetAsync(personal.Id)).Available.All(ip => ip.Id != nestedIp.Id), "Root also sees only target employee subdivision");
+      db.Remove(nestedIp); db.Remove(nested); await db.SaveChangesAsync();
 
       // Одновременные вставки нормализуются к одному адресу; ровно одна должна пройти.
       var concurrent = await Task.WhenAll(Enumerable.Range(0, 2).Select(async _ =>
