@@ -3,5 +3,13 @@
 @attribute [Authorize]
 <EditEntity TItem="Personal" Data="@item" Submit="@FormSubmit" IsLoading="@isLoading" OnCancelButtonClick="HandleCancelButtonClick">
   <Guard.Components.Pages.Administrator.Personals.Components.PersonalFields Item="@item" Subdivisions="@subdivisions" />
+  @if (Access?.Has(Guard.Core.Identity.Permissions.IpAddresses.Manage) == true)
+  {
+    <RadzenStack Gap="8px" Style="margin-top:12px;">
+      <RadzenButton Text="Назначить IP-адреса" Icon="lan" ButtonType="ButtonType.Button"
+                    Click="OpenIpAssignmentsAsync" Disabled="@isLoading" />
+      <RadzenText Text="IP-адреса сохраняются отдельно от данных сотрудника." />
+    </RadzenStack>
+  }
 </EditEntity>
 </Guard.Components.Layout.Components.AccessDialog>

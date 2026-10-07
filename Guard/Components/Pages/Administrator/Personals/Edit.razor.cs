@@ -12,6 +12,7 @@ public partial class Edit : IDisposable
   [Inject] public NotificationService Notifications { get; set; } = default!;
   [Inject] public ILogger<Edit> Logger { get; set; } = default!;
   [Parameter] public Guid Id { get; set; }
+  [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; }
   private readonly CancellationTokenSource cts = new();
   protected Personal item = new();
   protected IEnumerable<Subdivision> subdivisions = [];
@@ -36,5 +37,18 @@ public partial class Edit : IDisposable
     finally { isLoading = false; }
   }
   protected void HandleCancelButtonClick() { cts.Cancel(); Dialogs.Close(null); }
+  protected async Task OpenIpAssignmentsAsync()
+  {
+    try {
+      await Permissions.RequireAsync(Guard.Core.Identity.Permissions.IpAddresses.Manage, cts.Token);
+      await Dialogs.OpenAsync<IpAssignments>("", new Dictionary<string, object> { ["PersonalId"] = Id },
+        new DialogOptions { Width = "650px", ShowTitle = false });
+    }
+    catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
+    catch (Exception ex) {
+      Logger.LogWarning(ex, "Открытие назначения IP сотруднику");
+      Notifications.Notify(NotificationSeverity.Error, "IP-адреса", "Не удалось открыть назначения. Проверьте права доступа.");
+    }
+  }
   public void Dispose() { cts.Cancel(); cts.Dispose(); }
 }
