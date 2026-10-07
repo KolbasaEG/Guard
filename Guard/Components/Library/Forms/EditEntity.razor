@@ -1,0 +1,29 @@
+@typeparam TItem
+
+<EntityForm TItem="TItem"
+            Data="Data"
+            Name="@Name"
+            Icon="@Icon"
+            IsLoading="IsLoading"
+            ShowSaveButton="ShowSaveButton"
+            ShowInfoButton="ShowInfoButton"
+            Submit="Submit"
+            OnInfoClick="OnInfoClick"
+            OnCancelButtonClick="OnCancelButtonClick">
+  @ChildContent
+</EntityForm>
+@code {
+  [Parameter] public bool ShowSaveButton { get; set; } = true;
+  [Parameter] public bool ShowInfoButton { get; set; } = false;
+
+  [Parameter] public TItem? Data { get; set; }
+  [Parameter] public string Name { get; set; } = "РЕДАКТИРОВАНИЕ";
+  [Parameter] public string Icon { get; set; } = "edit_square";
+  [Parameter] public bool IsLoading { get; set; }
+
+  [Parameter] public RenderFragment? ChildContent { get; set; }
+  [Parameter] public EventCallback Submit { get; set; }
+  [Parameter] public EventCallback OnInfoClick { get; set; }
+  [Parameter] public EventCallback OnCancelButtonClick { get; set; }
+
+}

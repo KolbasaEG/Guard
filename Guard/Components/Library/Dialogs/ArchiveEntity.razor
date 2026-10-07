@@ -1,9 +1,9 @@
-﻿@inject DialogService DialogService;
-<Guard.Components.Library.Wrappers.Elements.CardHeader Icon="@Icon" Name="@Name">
+@inject DialogService DialogService;
+<Guard.Components.Library.Cards.CardHeader Icon="@Icon" Name="@Name" ShowSaveButton="false" OnCancelButtonClick="CancelButtonClick">
   <Menue>
     @Menue
   </Menue>
-</Guard.Components.Library.Wrappers.Elements.CardHeader>
+</Guard.Components.Library.Cards.CardHeader>
 <RadzenCard Variant="Variant.Outlined">
   @Body
 </RadzenCard>
@@ -16,5 +16,5 @@
   [Parameter]
   public string Icon { get; set; } = "inventory_2";
 
-  protected async Task CancelButtonClick(MouseEventArgs args) => DialogService.Close(null);
+  private void CancelButtonClick() => DialogService.Close(null);
 }
