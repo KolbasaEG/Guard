@@ -1,7 +1,7 @@
-﻿@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 @attribute [Authorize]
 
-<EditEntity TItem="ApplicationRole" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" ShowInfoButton="false" IsLoading="isLoading">
+<EditEntity ReadOnly="@item.IsSystem" TItem="RoleEditDto" Data="@item" ShowSaveButton="@(!item.IsSystem)" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" ShowInfoButton="false" IsLoading="isLoading">
   <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
     <RadzenFormField Text="Наименование роли" Variant="Variant.Text" Style="width:100%;">
       <ChildContent>
@@ -11,5 +11,8 @@
         <RadzenRequiredValidator Component="RoleName" Text="Обязательно для заполнения!" />
       </Helper>
     </RadzenFormField>
+    @if (item.IsSystem) { <RadzenAlert>Root имеет полный системный доступ. Роль нельзя изменить.</RadzenAlert> }
+    else { <PermissionSelector Definitions="@PermissionCatalog.All" @bind-Selected="item.Permissions" Disabled="@isLoading" /> }
   </RadzenStack>
 </EditEntity>
+@code { [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; } }

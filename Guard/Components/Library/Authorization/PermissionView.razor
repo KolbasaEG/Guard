@@ -1,0 +1,9 @@
+@using Guard.Core.Services.DTOs
+@if (access?.Has(Permission) == true) { @ChildContent }
+else { @NotAllowed }
+@code {
+  [CascadingParameter] private UserAccessSnapshot? access { get; set; }
+  [Parameter, EditorRequired] public string Permission { get; set; } = "";
+  [Parameter] public RenderFragment? ChildContent { get; set; }
+  [Parameter] public RenderFragment? NotAllowed { get; set; }
+}

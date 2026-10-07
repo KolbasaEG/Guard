@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
 using Guard.Core.Services;
@@ -30,7 +30,7 @@ namespace Guard.Components.Pages.Administrator.Users
     private CancellationTokenSource? _loadDataCts;
 
     int count;
-    protected bool isEditor = true;
+    [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
     protected bool isLoading = false;
     protected DataViewMode currentMode = DataViewMode.Active;
     string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
@@ -119,93 +119,18 @@ namespace Guard.Components.Pages.Administrator.Users
     {
       await grid.Reload();
     }
-    protected async Task AddClick(MouseEventArgs args)
+
+    protected Task EditRoles(UserDto item) => DialogService.OpenAsync<RoleAssignments>("Роли пользователя",
+      new Dictionary<string, object> { ["UserId"] = item.Id }, new DialogOptions { Width = "800px" });
+    protected async Task ToggleLockout(UserDto item)
     {
-      //var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      //if (result != null)
-      //{
-      //  ShowSuccessNotification("Добавлена новая запись!");
-      //  await grid.Reload();
-      //}
+      if (await DialogService.Confirm(item.IsLockedOut ? "Снять блокировку?" : "Заблокировать пользователя?", "Блокировка") != true) return;
+      try {
+        var result = await Security.ToggleUserLockoutAsync(item.Id, !item.IsLockedOut, _cts.Token);
+        if (!result.Succeeded) throw new InvalidOperationException("Не удалось изменить блокировку.");
+        await grid.Reload();
+      } catch (Exception ex) { Logger.LogWarning(ex, "Блокировка пользователя"); ShowErrorNotification("Изменение блокировки недоступно."); }
     }
-
-    protected async Task EditRow(UserDto item)
-    {
-      //var result = await DialogService.OpenAsync<Edit>(
-      //  "",
-      //  new Dictionary<string, object?> { { "Id", item.Id } },
-      //  new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" }
-      //);
-
-      //if (result != null)
-      //{
-      //  ShowSuccessNotification("Информация обновлена!");
-      //  await grid.Reload();
-      //}
-    }
-
-    protected async Task GridArchiveButtonClick(MouseEventArgs args, UserDto item)
-    {
-      if (await DialogService.Confirm("Вы действительно хотите поместить запись в архив?", "Архивирование", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
-      {
-        try
-        {
-          //await Security.ArchiveAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись помещена в архив!");
-          await grid.Reload();
-        }
-        catch (Exception ex)
-        {
-          ShowErrorNotification(ex.Message);
-        }
-      }
-    }
-
-    protected async Task GridUnarchiveButtonClick(MouseEventArgs args, UserDto item)
-    {
-      if (await DialogService.Confirm("Вы действительно хотите извлечь запись из архива?", "Извлечение из архива", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
-      {
-        try
-        {
-          //await Security.RestoreAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись извлечена из архива!");
-          await grid.Reload();
-        }
-        catch (Exception ex)
-        {
-          ShowErrorNotification(ex.Message);
-        }
-      }
-    }
-
-    protected async Task GridDeleteButtonClick(MouseEventArgs args, UserDto item)
-    {
-      if (await DialogService.Confirm("Вы действительно хотите удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
-      {
-        try
-        {
-          //await Security.SoftDeleteAsync(item.Id, ct: _cts.Token);
-          ShowSuccessNotification("Запись удалена!");
-          await grid.Reload();
-        }
-        catch (Exception ex)
-        {
-          ShowErrorNotification(ex.Message);
-        }
-      }
-    }
-
-    protected async Task ReloadAsync()
-    {
-      await grid.Reload();
-    }
-
-    private async Task OnExportClick()
-    {
-      // TODO: Реализовать экспорт
-      await Task.CompletedTask;
-    }
-
     async Task ApplyFilter()
     {
       await grid.Reload();

@@ -1,4 +1,4 @@
-﻿@using Guard.Core.Entities
+@using Guard.Core.Entities
 @using Guard.Core.Enums
 @attribute [Authorize]
 <PageTitle>АИС "Охрана"</PageTitle>
@@ -18,16 +18,16 @@
             <RadzenMenu>
               <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
                 <RadzenMenuItem Text="Экспорт" Icon="get_app" Click="@OnExportClick" Style="font-weight:500;" />
-                <RadzenMenuItem Text="Правка подчиненности" Icon="get_app" Click="@RebuildHierarchyAndPathsAsync" Style="font-weight:500;" />
+                <RadzenMenuItem Text="Правка подчиненности" Visible="@(Access?.IsRoot == true)" Icon="get_app" Click="@RebuildHierarchyAndPathsAsync" Style="font-weight:500;" />
               </RadzenMenuItem>
             </RadzenMenu>
           </RadzenStack>
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
             <RadzenSelectBar TValue="DataViewMode" Size="ButtonSize.Medium" @bind-Value="@currentMode" Change="() => ReloadAsunc()" Style="background-color: var(--rz-menu-top-item-background-color); border-radius: 0px;">
               <Items>
-                <RadzenSelectBarItem Value="@(DataViewMode.Archived)" Text="Архив" Style="border-radius:0px; width:105px; text-align:center;" />
+                <RadzenSelectBarItem Visible="@(Access?.Has(Permissions.Subdivisions.ReadArchive) == true)" Value="@(DataViewMode.Archived)" Text="Архив" Style="border-radius:0px; width:105px; text-align:center;" />
                 <RadzenSelectBarItem Value="@(DataViewMode.Active)" Text="Активные" Style="border-radius:0px; width:105px; text-align:center;" />
-                <RadzenSelectBarItem Value="@(DataViewMode.Deleted)" Text="Удаленные" Style="border-radius:0px; width:105px; text-align:center;" />
+                <RadzenSelectBarItem Visible="@(Access?.IsRoot == true)" Value="@(DataViewMode.Deleted)" Text="Удаленные" Style="border-radius:0px; width:105px; text-align:center;" />
               </Items>
             </RadzenSelectBar>
           </RadzenStack>

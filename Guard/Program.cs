@@ -182,6 +182,14 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider<ApplicationUser>>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IDataAccessScopeService, DataAccessScopeService>();
+builder.Services.AddAuthorization(options =>
+{
+  foreach (var permission in PermissionCatalog.All)
+    options.AddPolicy(permission.Code, policy => policy.RequireAuthenticatedUser()
+        .AddRequirements(new PermissionRequirement(permission.Code)));
+});
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 // =====================================================
 // === REPOSITORIES & SERVICES (Scrutor)
@@ -209,7 +217,8 @@ builder.Services.Scan(scan => scan
         !type.Name.Contains("ScopeService") &&
         !type.Name.Contains("CurrentUserService") &&
         !type.Name.Contains("AuditService") &&
-        !type.Name.Contains("LogService")))
+        !type.Name.Contains("LogService") &&
+        type != typeof(RemoteClassifierService)))
     .AsImplementedInterfaces()
     .WithScopedLifetime());
 

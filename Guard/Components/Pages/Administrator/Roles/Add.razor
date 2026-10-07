@@ -1,7 +1,7 @@
-﻿@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 @attribute [Authorize]
 
-<CreateEntity TItem="ApplicationRole" Data="@item" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading">
+<CreateEntity TItem="RoleEditDto" Data="@item" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading">
   <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
     <RadzenFormField Text="Наименование роли" Variant="Variant.Text" Style="width:100%;">
       <ChildContent>
@@ -11,5 +11,6 @@
         <RadzenRequiredValidator Component="RoleName" Text="Обязательно для заполнения!" />
       </Helper>
     </RadzenFormField>
+    <PermissionSelector Definitions="@PermissionCatalog.All" @bind-Selected="item.Permissions" Disabled="@isLoading" />
   </RadzenStack>
 </CreateEntity>

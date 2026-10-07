@@ -1,4 +1,4 @@
 @page "/classifiers"
-@attribute [Authorize]
+@attribute [Authorize(Policy = Permissions.Classifiers.Read)]
 
-<Guard.Components.Pages.Administrator.Classifiers.Index />
+<PermissionView Permission="@Permissions.Classifiers.Read"><ChildContent><Guard.Components.Pages.Administrator.Classifiers.Index /></ChildContent><NotAllowed><AccessDenied /></NotAllowed></PermissionView>

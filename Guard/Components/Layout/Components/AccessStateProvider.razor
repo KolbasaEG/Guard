@@ -1,0 +1,52 @@
+@using Guard.Core.Services.DTOs
+@implements IAsyncDisposable
+@inject IPermissionService Permissions
+@inject ILogger<AccessStateProvider> Logger
+@inject DialogService Dialogs
+<CascadingValue Value="@this" IsFixed="true">
+<CascadingValue Value="@snapshot">
+  @ChildContent
+</CascadingValue>
+</CascadingValue>
+@code {
+  [Parameter] public RenderFragment? ChildContent { get; set; }
+  private UserAccessSnapshot snapshot = new("", false, []);
+  private readonly CancellationTokenSource stop = new();
+  private Task? loop;
+  protected override async Task OnInitializedAsync()
+  {
+    await RefreshAsync();
+  }
+  protected override Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender) loop = WatchAsync();
+    return Task.CompletedTask;
+  }
+  public async Task RefreshAsync()
+  {
+    try {
+      var next = await Permissions.GetCurrentAsync(stop.Token);
+      if ((snapshot.IsRoot && !next.IsRoot) || PermissionCatalog.All.Any(p => snapshot.Has(p.Code) && !next.Has(p.Code))) CloseDialogs();
+      snapshot = next;
+    }
+    catch (UnauthorizedAccessException) { CloseDialogs(); snapshot = new("", false, []); }
+    catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
+    catch (Exception ex) { Logger.LogError(ex, "Не удалось обновить состояние доступа"); CloseDialogs(); snapshot = new("", false, []); }
+    StateHasChanged();
+  }
+  private void CloseDialogs() => Dialogs.Close(null);
+  private async Task WatchAsync()
+  {
+    using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+    try {
+      while (await timer.WaitForNextTickAsync(stop.Token))
+        await InvokeAsync(async () => { await RefreshAsync(); });
+    } catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
+  }
+  public async ValueTask DisposeAsync()
+  {
+    stop.Cancel();
+    if (loop != null) await loop;
+    stop.Dispose();
+  }
+}

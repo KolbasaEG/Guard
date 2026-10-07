@@ -40,6 +40,7 @@ internal static class PostgresTests
       db.AddRange(own, other, personal, foreignPersonal, user, root, role, adminRole);
       db.UserRoles.Add(new() { UserId = root.Id, RoleId = role.Id });
       db.UserRoles.Add(new() { UserId = user.Id, RoleId = adminRole.Id });
+      foreach (var permission in PermissionCatalog.All.Where(p => !p.RootOnly)) db.RoleClaims.Add(new() { RoleId = adminRole.Id, ClaimType = "Permission", ClaimValue = permission.Code });
       await db.SaveChangesAsync();
 
       var gate = new IpAccessService(factory);
@@ -47,8 +48,10 @@ internal static class PostgresTests
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "empty assignments denied");
       check(await gate.IsAllowedAsync(root.Id, null), "Root bypasses IP without Personal");
 
-      var rootAccess = new IpManagementAccessService(new Authentication(root.Id), factory);
-      var userAccess = new IpManagementAccessService(new Authentication(user.Id), factory);
+      var rootPermissions = new PermissionService(new Authentication(root.Id), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub());
+      var userPermissions = new PermissionService(new Authentication(user.Id), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub());
+      var rootAccess = new IpManagementAccessService(rootPermissions, new DataAccessScopeService(rootPermissions, factory));
+      var userAccess = new IpManagementAccessService(userPermissions, new DataAccessScopeService(userPermissions, factory));
       var rootService = new IpAddressService(factory, rootAccess, NullLogger<IpAddressService>.Instance);
       var service = new IpAddressService(factory, userAccess, NullLogger<IpAddressService>.Instance);
       var assignments = new PersonalIpService(factory, userAccess, NullLogger<PersonalIpService>.Instance);
@@ -98,6 +101,7 @@ internal static class PostgresTests
       }));
       check(concurrent.Count(v => v) == 1, "concurrent duplicate insertion has one winner");
       await SignInTests.RunAsync(factory, gate, check);
+      await AuthorizationTests.RunAsync(factory, check);
       Console.WriteLine("PostgreSQL integration checks passed in an isolated temporary database.");
     }
     finally

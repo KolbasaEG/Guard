@@ -1,297 +1,67 @@
-﻿using Guard.Components.Library.Loading;
-using Guard.Core.Entities;
+
 using Guard.Core.Enums;
-using Guard.Core.Extensions;
+using Guard.Core.Identity;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
-using System.Linq.Dynamic.Core;
-
-namespace Guard.Components.Pages.Administrator.Personals
+namespace Guard.Components.Pages.Administrator.Personals;
+public partial class Index : IDisposable
 {
-  public partial class Index
+  [Inject] public IPersonalService Service { get; set; } = default!;
+  [Inject] public DialogService Dialogs { get; set; } = default!;
+  [Inject] public IJSRuntime JS { get; set; } = default!;
+  [Inject] public ILogger<Index> Logger { get; set; } = default!;
+  [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
+  private readonly CancellationTokenSource cts = new();
+  protected RadzenDataGrid<PersonalListItemDto> grid = default!;
+  protected IReadOnlyList<PersonalListItemDto> items = [];
+  protected int count;
+  protected bool busy;
+  protected string? search, error, sort;
+  protected DataViewMode mode = DataViewMode.Active;
+  private PersonalSearchRequest Request(int skip = 0, int take = 20) => new(search, Mode: mode, Skip:skip, Take:take, OrderBy:sort);
+  protected bool CanWrite(PersonalListItemDto row) => Access?.Has(Permissions.Personals.Write) == true;
+  protected async Task LoadData(LoadDataArgs args)
   {
-    [Inject] protected IIpManagementAccessService IpAccess { get; set; } = default!;
-    protected bool canManageIps;
-    protected Task EditIpAssignments(Personal item) => DialogService.OpenAsync<IpAssignments>(
-        "Разрешённые IP", new Dictionary<string, object?> { ["PersonalId"] = item.Id },
-        new DialogOptions { Width = "650px" });
-    [Inject]
-    protected IJSRuntime JSRuntime { get; set; }
-    [Inject]
-    protected NotificationService NotificationService { get; set; }
-    [Inject]
-    protected DialogService DialogService { get; set; }
-    [Inject]
-    protected IPersonalService PersonalService { get; set; }
-    [Inject]
-    protected ILogger<Add> Logger { get; set; }
-
-    protected IEnumerable<Personal> data; 
-    protected IEnumerable<Personal> filteredData;
-    protected RadzenDataGrid<Personal> grid;
-
-    protected RadzenDataFilter<Personal> dataFilter;
-
-    private readonly CancellationTokenSource _cts = new();
-    int count;
-    protected bool isEditor = true;
-    protected bool isLoading = false;
-    protected string subdivisionPath = "";
-    protected DataViewMode currentMode = DataViewMode.Active;
-    protected SubdivisionHierarchyMode hierarchyMode = SubdivisionHierarchyMode.CurrentOnly;
-
-    string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
-
-
-    IEnumerable<string> itemsSubdivision;
-    IEnumerable<string> selectedItemsSubdivision;
-    IEnumerable<string> finalSelectedItemsSubdivision;
-    void OnSelectedSubdivisionChange(object value)
-    {
-      if (selectedItemsSubdivision != null && !selectedItemsSubdivision.Any())
-      {
-        selectedItemsSubdivision = null;
-      }
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-      try
-      {
-        isLoading = true;
-        Logger.LogDebug("");
-
-        // Имитация загрузки (например, справочников)
-        await Task.CompletedTask;
-        try { await IpAccess.GetScopeAsync(true, _cts.Token); canManageIps = true; }
-        catch (UnauthorizedAccessException) { canManageIps = false; }
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogInformation("");
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "");
-
-        NotificationService.Notify(new NotificationMessage
-        {
-          Severity = NotificationSeverity.Error,
-          Summary = "Внимание!",
-          Detail = ex.Message,
-          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-        });
-      }
-      finally
-      {
-        isLoading = false;
-      }
-    }
-
-    async Task LoadData(LoadDataArgs args)
-    {
-      isLoading = true;
-
-      try
-      {
-        if(dataFilter?.Filters != null) NormalizeFilterDatesToUtc(dataFilter.Filters);
-        var (items, totalCount) = await PersonalService.QueryPersonalsAsync(async query =>
-            {
-              query = query
-                .FilterByMode(currentMode)
-                .FilterBySubdivision(subdivisionPath, hierarchyMode)
-                .Include(p=>p.Subdivision);
-
-              if (dataFilter != null)
-              {
-                query = query.Where(dataFilter);
-              }
-
-              if (!string.IsNullOrEmpty(args.OrderBy))
-              {
-                query = query.OrderBy(args.OrderBy);
-              }
-              else
-              {
-                query = query.OrderByDescending(s => s.InsertedDate);
-              }
-
-              var total = await query.CountAsync();
-
-              var pageData = await query
-                  .Skip(args.Skip ?? 0)
-                  .Take(args.Top ?? 10)
-                  .ToListAsync();
-
-              return (pageData, total);
-            });
-
-        filteredData = items.ConvertDateTimesToLocal();
-        count = totalCount;
-      }
-      finally
-      {
-        isLoading = false;
-      }
-    }
-    protected async Task AddClick(MouseEventArgs args)
-    {
-      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      if (result != null)
-      {
-        NotificationService.Notify(new NotificationMessage
-        {
-          Severity = NotificationSeverity.Success,
-          Summary = $"Информационное",
-          Detail = $"Добавлена новая запись!",
-          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-        });
-        await grid.Reload();
-      }
-    }
-    protected async Task EditRow(Personal item)
-    {
-      var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      if (result != null)
-      {
-        NotificationService.Notify(new NotificationMessage
-        {
-          Severity = NotificationSeverity.Success,
-          Summary = $"Информационное",
-          Detail = $"Информация обновлена!",
-          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-        });
-        await grid.Reload();
-      }
-    }
-
-    protected async Task GridArchiveButtonClick(MouseEventArgs args, Personal item)
-    {
-      if (await DialogService.Confirm("Вы действительно хотите поместить запись в архив?", "Архивирование", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
-      {
-        try
-        {
-          await PersonalService.ArchiveAsync(item.Id, ct: CancellationToken.None);
-          NotificationService.Notify(new NotificationMessage
-          {
-            Severity = NotificationSeverity.Success,
-            Summary = $"Информационное",
-            Detail = $"Запись удалена!",
-            Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-          });
-          await grid.Reload();
-        }
-        catch (Exception ex)
-        {
-          NotificationService.Notify(new NotificationMessage
-          {
-            Severity = NotificationSeverity.Error,
-            Summary = $"Внимание!",
-            Detail = ex.Message,
-            Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-          });
-        }
-      }
-    }
-    protected async Task GridUnarchiveButtonClick(MouseEventArgs args, Personal item)
-    {
-      if (await DialogService.Confirm("Вы действительно хотите извлечь запись из архива?", "Извлечение из архива", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
-      {
-        try
-        {
-          await PersonalService.RestoreAsync(item.Id, ct: CancellationToken.None);
-          NotificationService.Notify(new NotificationMessage
-          {
-            Severity = NotificationSeverity.Success,
-            Summary = $"Информационное",
-            Detail = $"Запись удалена!",
-            Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-          });
-          await grid.Reload();
-        }
-        catch (Exception ex)
-        {
-          NotificationService.Notify(new NotificationMessage
-          {
-            Severity = NotificationSeverity.Error,
-            Summary = $"Внимание!",
-            Detail = ex.Message,
-            Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-          });
-        }
-      }
-    }
-    protected async Task GridDeleteButtonClick(MouseEventArgs args, Personal item)
-    {
-      if (await DialogService.Confirm("Вы действительно хотите удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
-      {
-        try
-        {
-          await PersonalService.SoftDeleteAsync(item.Id, ct: CancellationToken.None);
-          NotificationService.Notify(new NotificationMessage
-          {
-            Severity = NotificationSeverity.Success,
-            Summary = $"Информационное",
-            Detail = $"Запись удалена!",
-            Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-          });
-          await grid.Reload();
-        }
-        catch (Exception ex)
-        {
-          NotificationService.Notify(new NotificationMessage
-          {
-            Severity = NotificationSeverity.Error,
-            Summary = $"Внимание!",
-            Detail = ex.Message,
-            Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-          });
-        }
-      }
-    }
-    private async Task OnHierarchyModeChanged(bool isToggled)
-    {
-      hierarchyMode = isToggled
-          ? SubdivisionHierarchyMode.IncludeChildren
-          : SubdivisionHierarchyMode.CurrentOnly;
-
-      await ReloadAsunc();
-    }
-    protected async Task ReloadAsunc()
-    {
-      await grid.Reload();
-    }
-
-    private async Task OnExportClick()
-    {
-    }
-    async Task ApplyFilter()
-    {
-
-    }
-    private void NormalizeFilterDatesToUtc(IEnumerable<CompositeFilterDescriptor> filters)
-    {
-      if (filters == null) return;
-
-      foreach (var filter in filters)
-      {
-        if (filter.FilterValue is DateTime dt && dt.Kind != DateTimeKind.Utc)
-        {
-          // Перевод даты в UTC
-          filter.FilterValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-        }
-
-        if (filter.Filters != null && filter.Filters.Any())
-        {
-          NormalizeFilterDatesToUtc(filter.Filters);
-        }
-      }
-    }
-
+    busy = true; error = null; sort = args.OrderBy;
+    try { var result = await Service.SearchAsync(Request(args.Skip ?? 0, args.Top ?? 20), cts.Token); items = result.Items; count = result.Count; }
+    catch (OperationCanceledException) { }
+    catch (Exception ex) { items = []; count = 0; Logger.LogWarning(ex, "Загрузка списка сотрудников"); error = "Не удалось загрузить список. Проверьте доступ."; }
+    finally { busy = false; }
   }
+  protected Task ReloadAsync() => grid.Reload();
+  private async Task OpenDialog<T>(Guid? id = null) where T : IComponent
+  {
+    var args = id.HasValue ? new Dictionary<string,object> { ["Id"] = id.Value } : null;
+    var result = await Dialogs.OpenAsync<T>("", args, new DialogOptions { Width="850px", ShowTitle=false });
+    if (result != null) await ReloadAsync();
+  }
+  protected Task OpenRow(PersonalListItemDto row) => Access?.Has(Permissions.Personals.ReadDetails) == true ? DetailsAsync(row) : Task.CompletedTask;
+  protected Task DetailsAsync(PersonalListItemDto row) => OpenDialog<Details>(row.Id);
+  protected Task EditAsync(PersonalListItemDto row) => OpenDialog<Edit>(row.Id);
+  protected Task AddAsync() => OpenDialog<Add>();
+  protected Task IpsAsync(PersonalListItemDto row) => Dialogs.OpenAsync<IpAssignments>("Разрешённые IP",
+    new Dictionary<string,object> { ["PersonalId"]=row.Id }, new DialogOptions { Width="650px" });
+  protected async Task ChangeStatusAsync(PersonalListItemDto row, bool restore)
+  {
+    if (await Dialogs.Confirm(restore ? "Извлечь запись из архива?" : "Поместить запись в архив?", "Изменение статуса",
+      new ConfirmOptions { OkButtonText="Да", CancelButtonText="Отмена" }) != true) return;
+    try { if (restore) await Service.RestoreAsync(row.Id, cts.Token); else await Service.ArchiveAsync(row.Id, cts.Token); await ReloadAsync(); }
+    catch (Exception ex) { Logger.LogWarning(ex, "Изменение статуса сотрудника"); error = "Не удалось изменить статус записи."; }
+  }
+  protected async Task ExportAsync()
+  {
+    try {
+      var bytes = await Service.ExportAsync(Request(), cts.Token);
+      await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/download.js");
+      using var stream = new MemoryStream(bytes);
+      using var reference = new DotNetStreamReference(stream);
+      await module.InvokeVoidAsync("downloadFile", "Сотрудники.csv", reference);
+    }
+    catch (Exception ex) { Logger.LogWarning(ex, "Экспорт сотрудников"); error = "Экспорт недоступен."; }
+  }
+  public void Dispose() { cts.Cancel(); cts.Dispose(); }
 }

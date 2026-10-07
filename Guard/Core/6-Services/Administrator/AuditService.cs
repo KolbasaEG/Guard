@@ -1,4 +1,4 @@
-﻿using Guard.Core.Enums;
+using Guard.Core.Enums;
 
 namespace Guard.Core.Services;
 
@@ -36,11 +36,12 @@ public sealed class AuditService(Serilog.ILogger auditLogger) : IAuditService
     {
       AuditEventType.LoginFailed => 8,
       AuditEventType.PasswordChanged => 7,
-      AuditEventType.RoleAssigned or AuditEventType.RoleRemoved => 7,
+      AuditEventType.RoleAssigned or AuditEventType.RoleRemoved or AuditEventType.RolePermissionsChanged or AuditEventType.UserRolesChanged => 7,
+      AuditEventType.AccessDenied => 8,
       _ => 5
     };
 
-    var outcome = eventType.ToString().Contains("Failed") ? "failure" : "success";
+    var outcome = (eventType == AuditEventType.AccessDenied || eventType.ToString().Contains("Failed")) ? "failure" : "success";
 
     return $"CEF:0|Guard|IdentityAudit|1.0|{eventType}|{eventType}|{severity}|" +
            $"src={ipAddress ?? "-"} " +

@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Logging;
 using Guard.Core.Services;
@@ -15,6 +15,7 @@ namespace Guard.Components.Pages.Root.LogInfo
 {
   public partial class Index : IDisposable
   {
+    [Inject] protected IPermissionService Permissions { get; set; } = default!;
     [Inject]
     protected IJSRuntime JSRuntime { get; set; }
     [Inject]
@@ -271,8 +272,9 @@ namespace Guard.Components.Pages.Root.LogInfo
     /// <summary>
     /// Единый метод сохранения и применения настроек логирования
     /// </summary>
-    protected void SaveLoggerSettings()
+    protected async Task SaveLoggerSettings()
     {
+      await Permissions.RequireAsync(Guard.Core.Identity.Permissions.Logs.Configure, _cts.Token);
       if (maxSessions < 1)
       {
         NotificationService.Notify(new NotificationMessage

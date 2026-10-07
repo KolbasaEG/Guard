@@ -1,7 +1,7 @@
-﻿@using Guard.Core.Entities
+@using Guard.Core.Entities
 @using Serilog.Events
 @attribute [Authorize]
-@attribute [Authorize(Roles = "Root")]
+@attribute [Authorize(Policy = Guard.Core.Identity.Permissions.Logs.Read)]
 
 <TableWrapperWithFilterAndAnalytics>
   <Table>

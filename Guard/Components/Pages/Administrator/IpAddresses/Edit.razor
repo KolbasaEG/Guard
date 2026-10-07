@@ -1,7 +1,7 @@
-﻿@using Guard.Core.Entities
+@using Guard.Core.Entities
 @attribute [Authorize]
 
-<EditEntity TItem="IpAddress" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="true"  OnInfoClick="InfoButtonClick" IsLoading="isLoading">
+<EditEntity ReadOnly="@(AccessSnapshot?.Has(Permissions.IpAddresses.Manage) != true)" TItem="IpAddress" Data="@item" ShowSaveButton="@(AccessSnapshot?.Has(Permissions.IpAddresses.Manage) == true)" Submit="@FormSubmit" ShowInfoButton="true"  OnInfoClick="InfoButtonClick" IsLoading="isLoading">
   <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
     <RadzenFormField Text="Подразделение" Variant="Variant.Text" Style="width:100%;">
       <ChildContent>
@@ -32,3 +32,4 @@
 
   </RadzenStack>
 </EditEntity>
+@code { [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? AccessSnapshot { get; set; } }

@@ -1,4 +1,4 @@
 @page "/OrganTypes"
-@attribute [Authorize]
+@attribute [Authorize(Policy = Permissions.OrganTypes.Read)]
 
-<Guard.Components.Pages.Administrator.OrganTypes.Index />
+<PermissionView Permission="@Permissions.OrganTypes.Read"><ChildContent><Guard.Components.Pages.Administrator.OrganTypes.Index /></ChildContent><NotAllowed><AccessDenied /></NotAllowed></PermissionView>

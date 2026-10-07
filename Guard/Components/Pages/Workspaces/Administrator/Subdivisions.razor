@@ -1,3 +1,3 @@
 @page "/subdivisions"
-@attribute [Authorize]
-<Guard.Components.Pages.Administrator.Subdivisions.Index/>
+@attribute [Authorize(Policy = Permissions.Subdivisions.Read)]
+<PermissionView Permission="@Permissions.Subdivisions.Read"><ChildContent><Guard.Components.Pages.Administrator.Subdivisions.Index/></ChildContent><NotAllowed><AccessDenied /></NotAllowed></PermissionView>

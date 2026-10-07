@@ -1,0 +1,29 @@
+@using Guard.Core.Services.DTOs
+@inject IRoleAccessService Roles
+<RadzenCard>
+  <RadzenText Text="Переход на права через роли" TextStyle="TextStyle.H6" />
+  @if (report != null)
+  {
+    <p>Индивидуальных permission claims: @report.IndividualPermissionCount. Они сохранены в БД и не учитываются.</p>
+    <p>Роли без настроенных разрешений: @string.Join(", ", report.UnconfiguredRoles)</p>
+    @if (report.UnconfiguredRoles.Contains("Администратор"))
+    {
+      <RadzenButton Text="Назначить начальные права администратору" Click="InitializeAsync" Disabled="@busy" />
+      <p>Будут добавлены все несистемные permissions. Уже настроенная роль не перезаписывается.</p>
+    }
+  }
+  @if (message != null) { <RadzenAlert>@message</RadzenAlert> }
+</RadzenCard>
+@code {
+  private PermissionTransitionReport? report;
+  private bool busy;
+  private string? message;
+  protected override async Task OnInitializedAsync() => report = await Roles.GetTransitionReportAsync();
+  private async Task InitializeAsync()
+  {
+    busy = true;
+    try { await Roles.InitializeAdministratorAsync(); report = await Roles.GetTransitionReportAsync(); }
+    catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException) { message = ex.Message; }
+    finally { busy = false; }
+  }
+}

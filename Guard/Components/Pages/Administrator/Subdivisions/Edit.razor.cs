@@ -1,4 +1,4 @@
-﻿using Guard.Components.Library.Loading;
+using Guard.Components.Library.Loading;
 using Guard.Components.Pages.Workspaces.Administrator;
 using Guard.Core.Entities;
 using Guard.Core.Services;
@@ -50,6 +50,14 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         var entity = await SubdivisionService.GetByIdAsync(Id, _cts.Token);
         if (entity != null)
         {
+          item = entity;
+          if (Access?.Has(Guard.Core.Identity.Permissions.Subdivisions.Write) != true) {
+            organTypes = entity.OrganType == null ? [] : [entity.OrganType];
+            statusClassifiers = entity.StatusClassifier == null ? [] : [entity.StatusClassifier];
+            selectedOrganType = entity.OrganType;
+            selectedStatusClassifier = entity.StatusClassifier;
+            return;
+          }
           // Параллельная загрузка справочников и списка подразделений
           var organTypesTask = SubdivisionService.GetOrganTypesAsync(_cts.Token);
           var statusClassifiersTask = SubdivisionService.GetClassifiersByTypeAsync(Core.Enums.ClassifierType.СтатусПодразделения, _cts.Token);

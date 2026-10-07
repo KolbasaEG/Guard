@@ -5,11 +5,11 @@
   <RadzenTemplateForm Submit="FormSubmit" TItem="TItem" Data="@Data" Visible="@(Data != null)" Style="width:100%;height:100%; padding:0px; margin:0px;">
     <RadzenStack Style="width:100%;height:100%;" Gap="0px">
       <Guard.Components.Library.Cards.CardHeader
-        Icon="@Icon" 
-        Name="@Name" 
-        ShowSaveButton="ShowSaveButton" 
+        Icon="@Icon"
+        Name="@Name"
+        ShowSaveButton="@(ShowSaveButton && !ReadOnly)"
         ShowInfoButton="ShowInfoButton"
-        OnInfoClick="InfoButtonClick" 
+        OnInfoClick="InfoButtonClick"
         OnCancelButtonClick="CancelButtonClick" />
 
       <RadzenStack Orientation="Orientation.Horizontal" Gap="5px;" Style="flex: 1; min-height: 0; width:100%; margin-top:5px;">
@@ -17,7 +17,9 @@
           <LoadingContainer IsLoading="IsLoading">
             <RadzenCard Variant="Variant.Outlined" Style="padding:5px; border-radius:0px;height:100%;display:flex; flex-direction:column;">
               <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;">
-                @ChildContent
+                @if (ReadOnly) {
+                  <fieldset disabled style="border:0;margin:0;padding:0;width:100%;pointer-events:none;">@ChildContent</fieldset>
+                } else { @ChildContent }
               </RadzenStack>
             </RadzenCard>
           </LoadingContainer>
@@ -28,6 +30,7 @@
 </RadzenStack>
 
 @code {
+  [Parameter] public bool ReadOnly { get; set; }
   [Parameter] public bool ShowSaveButton { get; set; } = true;
   [Parameter] public bool ShowInfoButton { get; set; } = false;
 
@@ -51,7 +54,7 @@
 
   protected async Task FormSubmit()
   {
-    await Submit.InvokeAsync();
+    if (!ReadOnly) await Submit.InvokeAsync();
   }
 
   protected async Task CancelButtonClick()

@@ -1,7 +1,7 @@
-﻿@using Guard.Core.Entities
+@using Guard.Core.Entities
 @attribute [Authorize]
 
-<EditEntity TItem="OrganType" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="false" IsLoading="isLoading" OnCancelButtonClick="HandleCancelButtonClick">
+<EditEntity ReadOnly="@(Access?.Has(Permissions.OrganTypes.Manage) != true)" TItem="OrganType" Data="@item" ShowSaveButton="@(Access?.Has(Permissions.OrganTypes.Manage) == true)" Submit="@FormSubmit" ShowInfoButton="false" IsLoading="isLoading" OnCancelButtonClick="HandleCancelButtonClick">
   <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
 
     <RadzenFormField Text="Код типа органа" Variant="Variant.Text" Style="width:100%;">
@@ -25,3 +25,4 @@
 
   </RadzenStack>
 </EditEntity>
+@code { [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; } }

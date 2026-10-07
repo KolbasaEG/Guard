@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Guard.Core.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Http.Headers;
@@ -9,6 +9,7 @@ namespace Guard.Core.Services;
 
 public class RemoteClassifierService : IRemoteClassifierService
 {
+  private readonly IPermissionService _permissions;
   private readonly HttpClient _httpClient;
   private readonly IUnitOfWork _uow;
   private readonly ILogger<RemoteClassifierService> _logger;
@@ -21,8 +22,9 @@ public class RemoteClassifierService : IRemoteClassifierService
   public RemoteClassifierService(
       HttpClient httpClient,
       IUnitOfWork uow,
-      ILogger<RemoteClassifierService> logger)
+      ILogger<RemoteClassifierService> logger, IPermissionService permissions)
   {
+    _permissions = permissions;
     _httpClient = httpClient;
     if (_httpClient.BaseAddress == null)
     {
@@ -42,6 +44,7 @@ public class RemoteClassifierService : IRemoteClassifierService
 
   public async Task<IReadOnlyList<RemoteClassifierDto>> FetchClassifiersAsync(CancellationToken ct = default)
   {
+    await _permissions.RequireAsync(Guard.Core.Identity.Permissions.Classifiers.Manage, ct);
     var allClassifiers = new List<RemoteClassifierDto>();
     int currentPage = 1;
     int totalPages = 1;
@@ -101,6 +104,7 @@ public class RemoteClassifierService : IRemoteClassifierService
 
   public async Task SyncClassifiersAsync(CancellationToken ct = default)
   {
+    await _permissions.RequireAsync(Guard.Core.Identity.Permissions.Classifiers.Manage, ct);
     var remoteItems = await FetchClassifiersAsync(ct);
 
     if (!remoteItems.Any())

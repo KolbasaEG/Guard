@@ -1,5 +1,5 @@
 @page "/personal"
 @using Guard.Components.Pages.Administrator.Personals
-@attribute [Authorize]
+@attribute [Authorize(Policy = Permissions.Personals.Read)]
 
-<Index/>
+<PermissionView Permission="@Permissions.Personals.Read"><ChildContent><Index/></ChildContent><NotAllowed><AccessDenied /></NotAllowed></PermissionView>

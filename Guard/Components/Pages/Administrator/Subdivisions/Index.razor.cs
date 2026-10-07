@@ -1,4 +1,4 @@
-﻿using Guard.Components.Library.Loading;
+using Guard.Components.Library.Loading;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
@@ -36,7 +36,8 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     private CancellationTokenSource? _loadDataCts;
 
     int count;
-    protected bool isEditor = true;
+    [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; }
+    protected bool isEditor => Access?.Has(Guard.Core.Identity.Permissions.Subdivisions.Write) == true;
     protected bool isLoading = false;
     protected DataViewMode currentMode = DataViewMode.Active; 
     string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";

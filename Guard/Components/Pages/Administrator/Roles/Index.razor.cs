@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Guard.Core.Extensions;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -28,7 +28,8 @@ namespace Guard.Components.Pages.Administrator.Roles
     private CancellationTokenSource? _loadDataCts;
 
     int count;
-    protected bool isEditor = true;
+    [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; }
+    protected bool isEditor => Access?.Has(Guard.Core.Identity.Permissions.Roles.Manage) == true;
     protected bool isLoading = false;
     string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
 

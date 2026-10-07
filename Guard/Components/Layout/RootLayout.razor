@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 <Guard.Components.Layout.Components.MainTemplate Icon="admin_panel_settings" Name="Рабочее место администратора">
   <ChildContent>
     <div style="background-color: var(--rz-body-background-color); width:100%; height:100%; padding:2px;">
@@ -7,10 +7,11 @@
   </ChildContent>
   <MenueContent>
     <RadzenPanelMenu>
-      <RadzenPanelMenuItem Text="Классификаторы" Icon="library_books" Path="/classifiers" />
-      <RadzenPanelMenuItem Text="Типы органов" Icon="library_books" Path="/OrganTypes" />
-      <RadzenPanelMenuItem Text="Логгирование" Icon="admin_panel_settings" Path="/Logs" />
-      <RadzenPanelMenuItem Text="Роли" Icon="domino_mask" Path="/roles" />
+      <RadzenPanelMenuItem Text="Классификаторы" Icon="library_books" Path="/classifiers" Visible="@(Access?.Has(Permissions.Classifiers.Read) == true)" />
+      <RadzenPanelMenuItem Text="Типы органов" Icon="library_books" Path="/OrganTypes" Visible="@(Access?.Has(Permissions.OrganTypes.Read) == true)" />
+      <RadzenPanelMenuItem Text="Логгирование" Icon="admin_panel_settings" Path="/Logs" Visible="@(Access?.Has(Permissions.Logs.Read) == true)" />
+      <RadzenPanelMenuItem Text="Роли" Icon="domino_mask" Path="/roles" Visible="@(Access?.Has(Permissions.Roles.Read) == true)" />
     </RadzenPanelMenu>
   </MenueContent>
 </Guard.Components.Layout.Components.MainTemplate>
+@code { [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; } }

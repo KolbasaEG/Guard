@@ -1,7 +1,7 @@
-﻿@using Guard.Core.Entities
+@using Guard.Core.Entities
 @attribute [Authorize]
 
-<EditEntity TItem="Classifier" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="false" IsLoading="isLoading" OnCancelButtonClick="HandleCancelButtonClick">
+<EditEntity ReadOnly="@(Access?.Has(Permissions.Classifiers.Manage) != true)" TItem="Classifier" Data="@item" ShowSaveButton="@(Access?.Has(Permissions.Classifiers.Manage) == true)" Submit="@FormSubmit" ShowInfoButton="false" IsLoading="isLoading" OnCancelButtonClick="HandleCancelButtonClick">
   <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
     <RadzenFormField Text="Наименование справочника" Variant="Variant.Text" Style="width:100%;">
       <ChildContent>
@@ -45,3 +45,4 @@
     </RadzenStack>
   </RadzenStack>
 </EditEntity>
+@code { [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; } }

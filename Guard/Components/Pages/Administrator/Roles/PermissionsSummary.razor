@@ -1,0 +1,9 @@
+@using Guard.Core.Identity
+@foreach (var group in PermissionCatalog.All.Where(p => IsRoot || new Guard.Core.Services.DTOs.UserAccessSnapshot("", false, Values.ToHashSet()).Has(p.Code)).GroupBy(p => p.Group))
+{
+  <p><strong>@group.Key:</strong> @string.Join(", ", group.Select(p => p.Name))</p>
+}
+@code {
+  [Parameter] public IEnumerable<string> Values { get; set; } = [];
+  [Parameter] public bool IsRoot { get; set; }
+}

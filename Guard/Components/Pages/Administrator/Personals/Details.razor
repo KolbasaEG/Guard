@@ -1,0 +1,42 @@
+@using Guard.Core.Services.DTOs
+<ViewEntity TItem="PersonalDetailsDto" Data="@item" Name="Карточка сотрудника" IsLoading="@isLoading" OnCancelButtonClick="@(() => Dialogs.Close(null))">
+  @if (item != null)
+  {
+    <RadzenStack Gap="8px" Style="overflow:auto">
+      @foreach (var field in item.Fields)
+      {
+        <RadzenText><strong>@Label(field.Key):</strong> @Display(field.Value)</RadzenText>
+      }
+    </RadzenStack>
+  }
+</ViewEntity>
+@code {
+  [Inject] public IPersonalService Service { get; set; } = default!;
+  [Inject] public DialogService Dialogs { get; set; } = default!;
+  [Inject] public ILogger<Details> Logger { get; set; } = default!;
+  [Parameter] public Guid Id { get; set; }
+  private PersonalDetailsDto? item;
+  private bool isLoading;
+  private static string Display(object? value) => value is DateTime date ? date.ToLocalTime().ToString("g") : value?.ToString() ?? "—";
+  private static readonly Dictionary<string,string> labels = new() {
+    ["Id"]="Идентификатор", ["PersonalId"]="Идентификатор во внешней системе", ["SubdivisionId"]="Подразделение",
+    ["PersonalSubdivisionId"]="Подразделение во внешней системе", ["LastName"]="Фамилия", ["FirstName"]="Имя",
+    ["MiddleName"]="Отчество", ["FullName"]="Фамилия и инициалы", ["EnlistmentYear"]="Год принятия на службу",
+    ["PersonalNumber"]="Личный номер", ["LastNameGen"]="Фамилия (род. падеж)", ["FirstNameGen"]="Имя (род. падеж)",
+    ["MiddleNameGen"]="Отчество (род. падеж)", ["PersonnelCategoryType"]="Тип категории персонала", ["PersonnelCategoryCode"]="Код категории персонала",
+    ["SpecialRankType"]="Тип звания", ["SpecialRankCode"]="Код звания", ["PositionType"]="Тип должности", ["PositionCode"]="Код должности",
+    ["WorkerCategoryType"]="Тип категории работника", ["WorkerCategoryCode"]="Код категории работника", ["StatusType"]="Тип статуса во внешней системе",
+    ["StatusCode"]="Код статуса во внешней системе", ["Status"]="Состояние", ["UpdatedAt"]="Дата сверки",
+    ["InsertedDate"]="Создан", ["LastModifiedDate"]="Изменён", ["CreatedBy"]="Создал", ["ModifiedBy"]="Изменил", ["SubdivisionName"]="Название подразделения", ["PersonnelCategoryName"]="Категория персонала",
+    ["SpecialRankName"]="Специальное звание", ["PositionName"]="Должность", ["WorkerCategoryName"]="Категория работника",
+    ["StatusClassifierName"]="Статус во внешней системе", ["IpAddresses"]="Назначенные IP", ["UserId"]="Учётная запись", ["UserName"]="Имя пользователя"
+  };
+  private static string Label(string name) => labels.GetValueOrDefault(name, name);
+  protected override async Task OnInitializedAsync()
+  {
+    isLoading = true;
+    try { item = await Service.GetDetailsAsync(Id); if (item == null) Dialogs.Close(null); }
+    catch (Exception ex) { Logger.LogWarning(ex, "Карточка сотрудника недоступна"); Dialogs.Close(null); }
+    finally { isLoading = false; }
+  }
+}

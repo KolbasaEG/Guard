@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Identity;
+using Guard.Core.Entities;
 using Guard.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,15 +10,17 @@ public class OrganTypeService : IOrganTypeService
   private readonly IReadRepository<OrganType> _readOrganTypeRepository;
   private readonly IUnitOfWork _uow;
   private readonly ILogger<OrganTypeService> _logger;
+  private readonly IPermissionService _permissions;
 
   public OrganTypeService(
       IReadRepository<OrganType> readOrganTypeRepository,
       IUnitOfWork unitOfWork,
-      ILogger<OrganTypeService> logger)
+      ILogger<OrganTypeService> logger, IPermissionService permissions)
   {
     _readOrganTypeRepository = readOrganTypeRepository;
     _uow = unitOfWork;
     _logger = logger;
+    _permissions = permissions;
   }
 
   // ==================== Read (Изолированный IReadRepository) ====================
@@ -63,6 +66,7 @@ public class OrganTypeService : IOrganTypeService
 
   public async Task<int> CreateAsync(OrganType organType, CancellationToken ct = default)
   {
+    await _permissions.RequireAsync(Permissions.OrganTypes.Manage, ct);
     ArgumentNullException.ThrowIfNull(organType);
 
     return await _uow.ExecuteInTransactionAsync(async () =>
@@ -89,6 +93,7 @@ public class OrganTypeService : IOrganTypeService
 
   public async Task UpdateAsync(OrganType organType, CancellationToken ct = default)
   {
+    await _permissions.RequireAsync(Permissions.OrganTypes.Manage, ct);
     ArgumentNullException.ThrowIfNull(organType);
 
     if (!string.IsNullOrWhiteSpace(organType.Name))
@@ -105,6 +110,7 @@ public class OrganTypeService : IOrganTypeService
 
   public async Task DeleteAsync(int id, CancellationToken ct = default)
   {
+    await _permissions.RequireAsync(Permissions.OrganTypes.Manage, ct);
     var organType = await GetRequiredForWriteAsync(id, ct);
 
     await _uow.BasicRepository<OrganType>().DeleteAsync(organType, ct);

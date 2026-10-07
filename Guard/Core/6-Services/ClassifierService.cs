@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Identity;
+using Guard.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services;
@@ -8,15 +9,17 @@ public class ClassifierService : IClassifierService
   private readonly IReadRepository<Classifier> _readClassifierRepository;
   private readonly IUnitOfWork _uow;
   private readonly ILogger<ClassifierService> _logger;
+  private readonly IPermissionService _permissions;
 
   public ClassifierService(
       IReadRepository<Classifier> readClassifierRepository,
       IUnitOfWork unitOfWork,
-      ILogger<ClassifierService> logger)
+      ILogger<ClassifierService> logger, IPermissionService permissions)
   {
     _readClassifierRepository = readClassifierRepository;
     _uow = unitOfWork;
     _logger = logger;
+    _permissions = permissions;
   }
 
   // ==================== Read (Изолированный IReadRepository) ====================
@@ -81,6 +84,7 @@ public class ClassifierService : IClassifierService
 
   public async Task<int> CreateAsync(Classifier classifier, CancellationToken ct = default)
   {
+    await _permissions.RequireAsync(Permissions.Classifiers.Manage, ct);
     ArgumentNullException.ThrowIfNull(classifier);
 
     return await _uow.ExecuteInTransactionAsync(async () =>
@@ -101,6 +105,7 @@ public class ClassifierService : IClassifierService
 
   public async Task UpdateAsync(Classifier classifier, CancellationToken ct = default)
   {
+    await _permissions.RequireAsync(Permissions.Classifiers.Manage, ct);
     ArgumentNullException.ThrowIfNull(classifier);
 
     classifier.ClassifierName = classifier.ClassifierName?.Trim() ?? string.Empty;
@@ -116,6 +121,7 @@ public class ClassifierService : IClassifierService
 
   public async Task SetActiveStatusAsync(int id, bool isActive, CancellationToken ct = default)
   {
+    await _permissions.RequireAsync(Permissions.Classifiers.Manage, ct);
     var classifier = await GetRequiredForWriteAsync(id, ct);
 
     classifier.IsActive = isActive;
@@ -129,6 +135,7 @@ public class ClassifierService : IClassifierService
 
   public async Task DeleteAsync(int id, CancellationToken ct = default)
   {
+    await _permissions.RequireAsync(Permissions.Classifiers.Manage, ct);
     var classifier = await GetRequiredForWriteAsync(id, ct);
 
     await _uow.BasicRepository<Classifier>().DeleteAsync(classifier, ct);

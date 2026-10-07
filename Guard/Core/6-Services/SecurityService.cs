@@ -1,228 +1,111 @@
-﻿using System.Security.Claims;
+
+using Guard.Core.Contexts;
 using Guard.Core.Entities;
-using Guard.Core.Repositories;
+using Guard.Core.Enums;
+using Guard.Core.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-
 namespace Guard.Core.Services;
-
-public class SecurityService : ISecurityService
+public class SecurityService(
+  IReadRepository<ApplicationUser> userReads, IReadRepository<ApplicationRole> roleReads, IReadRepository<Personal> personalReads,
+  IIpAddressService ips, IPersonalIpService assignments, IIpAccessService ipGate, IPermissionService permissions,
+  IDataAccessScopeService accessScopes, IRoleAccessService roles, IServiceScopeFactory scopes) : ISecurityService
 {
-  private readonly UserManager<ApplicationUser> _userManager;
-  private readonly RoleManager<ApplicationRole> _roleManager;
-  private readonly IReadRepository<ApplicationUser> _userReadRepository;
-  private readonly IReadRepository<ApplicationRole> _roleReadRepository;
-  private readonly IReadRepository<Personal> _personalReadRepository;
-  private readonly ILogger<SecurityService> _logger;
-  private readonly IPersonalIpService _personalIpService;
-  private readonly IIpAccessService _ipAccessService;
-  private readonly IIpAddressService _ipService;
-
-  public SecurityService(
-      UserManager<ApplicationUser> userManager,
-      RoleManager<ApplicationRole> roleManager,
-      IReadRepository<ApplicationUser> userReadRepository,
-      IReadRepository<ApplicationRole> roleReadRepository,
-      IReadRepository<Personal> personalReadRepository,
-      ILogger<SecurityService> logger, IPersonalIpService personalIpService,
-      IIpAccessService ipAccessService, IIpAddressService ipService)
-  {
-    _userManager = userManager;
-    _roleManager = roleManager;
-    _userReadRepository = userReadRepository;
-    _roleReadRepository = roleReadRepository;
-    _personalReadRepository = personalReadRepository;
-    _logger = logger;
-    _personalIpService = personalIpService;
-    _ipAccessService = ipAccessService;
-    _ipService = ipService;
+  public Task<TResult> QueryUsersAsync<TResult>(Func<IQueryable<ApplicationUser>,Task<TResult>> query, CancellationToken ct=default) => userReads.QueryAsync(query,ct);
+  public Task<TResult> QueryRolesAsync<TResult>(Func<IQueryable<ApplicationRole>,Task<TResult>> query, CancellationToken ct=default) => roleReads.QueryAsync(query,ct);
+  public Task<TResult> QueryPersonalsAsync<TResult>(Func<IQueryable<Personal>,Task<TResult>> query, CancellationToken ct=default) => personalReads.QueryAsync(query,ct);
+  public Task<TResult> QueryIpAddressesAsync<TResult>(Func<IQueryable<IpAddress>,Task<TResult>> query, CancellationToken ct=default) => ips.QueryIpAddressesAsync(query,ct);
+  public Task<ApplicationUser?> GetUserByIdAsync(string id, CancellationToken ct=default) => userReads.GetByIdAsync(id,ct);
+  private static void Check(IdentityResult result) {
+    if (!result.Succeeded) throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e=>e.Description)));
   }
-
-  #region Гибкие методы чтения (Querying)
-
-  public async Task<TResult> QueryUsersAsync<TResult>(
-      Func<IQueryable<ApplicationUser>, Task<TResult>> query,
-      CancellationToken ct = default)
+  private async Task CheckPersonalAsync(ApplicationDbContext db, Guid? id, CancellationToken ct)
   {
-    return await _userReadRepository.QueryAsync(query, ct);
+    var access = await accessScopes.GetAsync(ct);
+    if (id == null) { if (!access.IsRoot) throw new UnauthorizedAccessException("Необходимо доступное подразделение сотрудника."); return; }
+    var subdivision = await db.Set<Personal>().Where(p=>p.Id==id && (p.Status==Status.Inserted || p.Status==Status.Modified))
+      .Select(p=>p.SubdivisionId).SingleOrDefaultAsync(ct);
+    if (!access.Allows(subdivision) || !await db.Set<Personal>().AnyAsync(p=>p.Id==id,ct))
+      throw new UnauthorizedAccessException("Сотрудник недоступен.");
   }
-
-  public async Task<TResult> QueryRolesAsync<TResult>(
-      Func<IQueryable<ApplicationRole>, Task<TResult>> query,
-      CancellationToken ct = default)
+  private async Task CheckTargetAsync(ApplicationDbContext db, ApplicationUser user, CancellationToken ct)
   {
-    return await _roleReadRepository.QueryAsync(query, ct);
-  }
-
-  public async Task<TResult> QueryIpAddressesAsync<TResult>(
-      Func<IQueryable<IpAddress>, Task<TResult>> query,
-      CancellationToken ct = default)
-  {
-    return await _ipService.QueryIpAddressesAsync(query, ct);
-  }
-
-  public async Task<TResult> QueryPersonalsAsync<TResult>(
-      Func<IQueryable<Personal>, Task<TResult>> query,
-      CancellationToken ct = default)
-  {
-    return await _personalReadRepository.QueryAsync(query, ct);
-  }
-
-  #endregion
-
-  #region Операции с пользователями
-
-  public async Task<ApplicationUser?> GetUserByIdAsync(string id, CancellationToken ct = default)
-  {
-    return await QueryUsersAsync(async query =>
-        await query
-            .AsNoTracking()
-            .Include(u => u.Personal)
-            .FirstOrDefaultAsync(u => u.Id == id, ct), ct);
-  }
-
-  public async Task<IdentityResult> CreateUserAsync(ApplicationUser user, string password, IEnumerable<string>? roles = null, CancellationToken ct = default)
-  {
-    var result = await _userManager.CreateAsync(user, password);
-    if (!result.Succeeded) return result;
-
-    if (roles != null && roles.Any())
-    {
-      result = await _userManager.AddToRolesAsync(user, roles);
+    var current = await permissions.GetCurrentAsync(ct);
+    if (!current.IsRoot) {
+      if (await (from ur in db.UserRoles join r in db.Roles on ur.RoleId equals r.Id where ur.UserId==user.Id && r.NormalizedName=="ROOT" select ur).AnyAsync(ct))
+        throw new UnauthorizedAccessException("Изменение Root доступно только Root.");
+      await CheckPersonalAsync(db,user.PersonalId,ct);
     }
-
-    _logger.LogInformation("Создан пользователь {UserName} (ID: {UserId})", user.UserName, user.Id);
-    return result;
   }
-
-  public async Task<IdentityResult> UpdateUserAsync(ApplicationUser user, IEnumerable<string> roles, CancellationToken ct = default)
+  private async Task<IdentityResult> WriteAsync(Func<ApplicationDbContext,UserManager<ApplicationUser>,Task> write, CancellationToken ct)
   {
-    var existingUser = await _userManager.FindByIdAsync(user.Id);
-    if (existingUser == null)
-      return IdentityResult.Failed(new IdentityError { Description = $"Пользователь с ID {user.Id} не найден." });
-
-    existingUser.Email = user.Email;
-    existingUser.UserName = user.UserName;
-    existingUser.PersonalId = user.PersonalId;
-
-    var result = await _userManager.UpdateAsync(existingUser);
-    if (!result.Succeeded) return result;
-
-    var currentRoles = await _userManager.GetRolesAsync(existingUser);
-    var rolesToAdd = roles.Except(currentRoles);
-    var rolesToRemove = currentRoles.Except(roles);
-
-    await _userManager.AddToRolesAsync(existingUser, rolesToAdd);
-    await _userManager.RemoveFromRolesAsync(existingUser, rolesToRemove);
-
+    await permissions.RequireAsync(Permissions.Users.Manage,ct);
+    await using var scope = scopes.CreateAsyncScope();
+    var db=scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var manager=scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    await using var tx=await db.Database.BeginTransactionAsync(ct);
+    await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)",ct);
+    await permissions.RequireAsync(Permissions.Users.Manage,ct);
+    await write(db,manager);
+    await tx.CommitAsync(ct);
     return IdentityResult.Success;
   }
-
-  public async Task<IdentityResult> ToggleUserLockoutAsync(string userId, bool lockout, CancellationToken ct = default)
-  {
-    var user = await _userManager.FindByIdAsync(userId);
-    if (user == null)
-      return IdentityResult.Failed(new IdentityError { Description = $"Пользователь с ID {userId} не найден." });
-
-    var lockoutEnd = lockout ? DateTimeOffset.UtcNow.AddYears(100) : (DateTimeOffset?)null;
-    return await _userManager.SetLockoutEndDateAsync(user, lockoutEnd);
+  public Task<IdentityResult> CreateUserAsync(ApplicationUser user,string password,IEnumerable<string>? roles=null,CancellationToken ct=default) =>
+    WriteAsync(async (db,manager)=>{
+      await CheckPersonalAsync(db,user.PersonalId,ct);
+      var selected=(roles??[]).Distinct().ToArray();
+      if(selected.Length>0 && !(await permissions.GetCurrentAsync(ct)).IsRoot) throw new UnauthorizedAccessException("Роли назначает только Root.");
+      // Входные флаги безопасности не позволяют создавать привилегированную учётную запись.
+      var created=new ApplicationUser { UserName=user.UserName, Email=user.Email, PersonalId=user.PersonalId };
+      Check(await manager.CreateAsync(created,password));
+      if(selected.Length>0) Check(await manager.AddToRolesAsync(created,selected));
+      user.Id=created.Id;
+    },ct);
+  public Task<IdentityResult> UpdateUserAsync(ApplicationUser user,IEnumerable<string> roles,CancellationToken ct=default) =>
+    WriteAsync(async(db,manager)=>{
+      var current=await manager.FindByIdAsync(user.Id)??throw new KeyNotFoundException("Пользователь не найден.");
+      await CheckTargetAsync(db,current,ct);
+      await CheckPersonalAsync(db,user.PersonalId,ct);
+      var old=await manager.GetRolesAsync(current);
+      var selected=roles.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+      if(!old.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(selected))
+        throw new InvalidOperationException("Назначайте роли в отдельной форме с проверкой версии.");
+      current.Email=user.Email; current.UserName=user.UserName; current.PersonalId=user.PersonalId;
+      Check(await manager.UpdateAsync(current));
+    },ct);
+  public Task<IdentityResult> ToggleUserLockoutAsync(string userId,bool lockout,CancellationToken ct=default) =>
+    WriteAsync(async(db,manager)=>{
+      var user=await manager.FindByIdAsync(userId)??throw new KeyNotFoundException("Пользователь не найден.");
+      await CheckTargetAsync(db,user,ct);
+      if(lockout && await (from ur in db.UserRoles join r in db.Roles on ur.RoleId equals r.Id where ur.UserId==userId && r.NormalizedName=="ROOT" select ur).AnyAsync(ct))
+        throw new InvalidOperationException("Системную учётную запись Root нельзя блокировать.");
+      Check(await manager.SetLockoutEndDateAsync(user,lockout?DateTimeOffset.UtcNow.AddYears(100):null));
+    },ct);
+  public Task<IdentityResult> ResetPasswordAsync(string userId,string newPassword,CancellationToken ct=default) =>
+    WriteAsync(async(db,manager)=>{
+      var user=await manager.FindByIdAsync(userId)??throw new KeyNotFoundException("Пользователь не найден.");
+      await CheckTargetAsync(db,user,ct);
+      Check(await manager.ResetPasswordAsync(user,await manager.GeneratePasswordResetTokenAsync(user),newPassword));
+    },ct);
+  public async Task<List<string>> GetUserRolesAsync(string userId,CancellationToken ct=default) {
+    if(await userReads.GetByIdAsync(userId,ct)==null) throw new KeyNotFoundException("Пользователь недоступен.");
+    await using var scope=scopes.CreateAsyncScope();
+    var manager=scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    return (await manager.GetRolesAsync((await manager.FindByIdAsync(userId))!)).ToList();
   }
-
-  public async Task<IdentityResult> ResetPasswordAsync(string userId, string newPassword, CancellationToken ct = default)
-  {
-    var user = await _userManager.FindByIdAsync(userId);
-    if (user == null)
-      return IdentityResult.Failed(new IdentityError { Description = $"Пользователь с ID {userId} не найден." });
-
-    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-    return await _userManager.ResetPasswordAsync(user, token, newPassword);
+  public async Task<List<string>> GetRoleClaimsAsync(string roleId,CancellationToken ct=default) => (await roles.GetAsync(roleId,ct)).Permissions.ToList();
+  public async Task<IdentityResult> UpdateRoleClaimsAsync(string roleId,IEnumerable<string> values,CancellationToken ct=default) {
+    var role=await roles.GetAsync(roleId,ct); role.Permissions=values.ToHashSet(StringComparer.Ordinal);
+    await roles.SaveAsync(role,ct); return IdentityResult.Success;
   }
-
-  #endregion
-
-  #region Роли и Права (Claims)
-
-  public async Task<List<string>> GetUserRolesAsync(string userId, CancellationToken ct = default)
-  {
-    var user = await _userManager.FindByIdAsync(userId);
-    if (user == null) return new();
-
-    var roles = await _userManager.GetRolesAsync(user);
-    return roles.ToList();
+  public async Task<List<string>> GetUserClaimsAsync(string userId,CancellationToken ct=default) {
+    await permissions.RequireAsync(Permissions.Roles.Read,ct);
+    await using var scope=scopes.CreateAsyncScope();
+    var db=scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    return await db.UserClaims.Where(c=>c.UserId==userId && c.ClaimType=="Permission").Select(c=>c.ClaimValue!).ToListAsync(ct);
   }
-
-  public async Task<List<string>> GetRoleClaimsAsync(string roleId, CancellationToken ct = default)
-  {
-    var role = await _roleManager.FindByIdAsync(roleId);
-    if (role == null) return new();
-
-    var claims = await _roleManager.GetClaimsAsync(role);
-    return claims.Where(c => c.Type == "Permission").Select(c => c.Value).ToList();
-  }
-
-  public async Task<IdentityResult> UpdateRoleClaimsAsync(string roleId, IEnumerable<string> permissions, CancellationToken ct = default)
-  {
-    var role = await _roleManager.FindByIdAsync(roleId);
-    if (role == null)
-      return IdentityResult.Failed(new IdentityError { Description = $"Роль с ID {roleId} не найдена." });
-
-    var currentClaims = await _roleManager.GetClaimsAsync(role);
-    var currentPermissions = currentClaims.Where(c => c.Type == "Permission").ToList();
-
-    foreach (var claim in currentPermissions)
-    {
-      await _roleManager.RemoveClaimAsync(role, claim);
-    }
-
-    foreach (var perm in permissions)
-    {
-      await _roleManager.AddClaimAsync(role, new Claim("Permission", perm));
-    }
-
-    return IdentityResult.Success;
-  }
-
-  public async Task<List<string>> GetUserClaimsAsync(string userId, CancellationToken ct = default)
-  {
-    var user = await _userManager.FindByIdAsync(userId);
-    if (user == null) return new();
-
-    var claims = await _userManager.GetClaimsAsync(user);
-    return claims.Where(c => c.Type == "Permission").Select(c => c.Value).ToList();
-  }
-
-  public async Task<IdentityResult> UpdateUserClaimsAsync(string userId, IEnumerable<string> permissions, CancellationToken ct = default)
-  {
-    var user = await _userManager.FindByIdAsync(userId);
-    if (user == null)
-      return IdentityResult.Failed(new IdentityError { Description = $"Пользователь с ID {userId} не найден." });
-
-    var currentClaims = await _userManager.GetClaimsAsync(user);
-    var currentPermissions = currentClaims.Where(c => c.Type == "Permission").ToList();
-
-    foreach (var claim in currentPermissions)
-    {
-      await _userManager.RemoveClaimAsync(user, claim);
-    }
-
-    foreach (var perm in permissions)
-    {
-      await _userManager.AddClaimAsync(user, new Claim("Permission", perm));
-    }
-
-    return IdentityResult.Success;
-  }
-
-  #endregion
-
-  #region IP-Адреса и Доступ
-
-  public Task UpdatePersonalIpAddressesAsync(Guid personalId, IEnumerable<Guid> ipAddressIds, CancellationToken ct = default)
-      => _personalIpService.UpdateAsync(personalId, ipAddressIds, ct);
-
-  public Task<bool> IsIpAllowedForUserAsync(string userId, string clientIp, CancellationToken ct = default)
-      => _ipAccessService.IsAllowedAsync(userId, clientIp, ct);
-
-  #endregion
+  public Task<IdentityResult> UpdateUserClaimsAsync(string userId,IEnumerable<string> values,CancellationToken ct=default) =>
+    throw new NotSupportedException("Индивидуальные permissions сохранены для истории. Настраивайте права через роли.");
+  public Task UpdatePersonalIpAddressesAsync(Guid personalId,IEnumerable<Guid> ids,CancellationToken ct=default) => assignments.UpdateAsync(personalId,ids,ct);
+  public Task<bool> IsIpAllowedForUserAsync(string userId,string clientIp,CancellationToken ct=default) => ipGate.IsAllowedAsync(userId,clientIp,ct);
 }

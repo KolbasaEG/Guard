@@ -1,0 +1,46 @@
+@using Guard.Core.Services.DTOs
+@inject IRoleAccessService Roles
+@inject DialogService Dialogs
+@inject IPermissionService Permissions
+<EditEntity TItem="string" Data="@UserId" Name="Роли пользователя" Submit="SaveAsync" IsLoading="@busy" ShowSaveButton="@(version != null)" OnCancelButtonClick="@(() => Dialogs.Close(null))">
+<RadzenStack Gap="12px">
+  <RadzenText Text="Роли пользователя" TextStyle="TextStyle.H6" />
+  @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
+  <RadzenDropDown TValue="IEnumerable<string>" Data="@available" TextProperty="Name" ValueProperty="Id"
+                  Multiple="true" AllowClear="true" @bind-Value="selected" Style="width:100%" Disabled="@busy" />
+  @if (effective != null)
+  {
+    <RadzenText Text="Текущие итоговые права" TextStyle="TextStyle.H6" />
+    <Guard.Components.Pages.Administrator.Roles.PermissionsSummary Values="@effective.Permissions" IsRoot="@effective.IsRoot" />
+  }
+
+</RadzenStack>
+</EditEntity>
+@code {
+  [CascadingParameter] public Guard.Components.Layout.Components.AccessStateProvider? AccessState { get; set; }
+  [Parameter] public string UserId { get; set; } = "";
+  private IReadOnlyList<RoleOptionDto> available = [];
+  private IEnumerable<string> selected = [];
+  private string? version, error;
+  private UserAccessSnapshot? effective;
+  private bool busy;
+  protected override async Task OnInitializedAsync()
+  {
+    busy = true;
+    try
+    {
+      var data = await Roles.GetUserRolesAsync(UserId);
+      available = data.Available; selected = data.Selected; version = data.Version;
+      effective = await Permissions.GetForUserAsync(UserId);
+    }
+    catch (Exception ex) when (ex is UnauthorizedAccessException or KeyNotFoundException) { error = ex.Message; }
+    finally { busy = false; }
+  }
+  private async Task SaveAsync()
+  {
+    busy = true;
+    try { await Roles.SetUserRolesAsync(UserId, selected ?? [], version!); if (AccessState != null) await AccessState.RefreshAsync(); Dialogs.Close(true); }
+    catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException or ArgumentException) { error = ex.Message; }
+    finally { busy = false; }
+  }
+}

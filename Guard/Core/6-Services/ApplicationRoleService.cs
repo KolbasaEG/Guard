@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services;
@@ -6,17 +6,16 @@ namespace Guard.Core.Services;
 public class ApplicationRoleService : IApplicationRoleService
 {
   private readonly IReadRepository<ApplicationRole> _readRoleRepository;
-  private readonly IUnitOfWork _uow;
   private readonly ILogger<ApplicationRoleService> _logger;
+  private readonly IRoleAccessService _access;
 
   public ApplicationRoleService(
       IReadRepository<ApplicationRole> readRoleRepository,
-      IUnitOfWork unitOfWork,
-      ILogger<ApplicationRoleService> logger)
+      ILogger<ApplicationRoleService> logger, IRoleAccessService access)
   {
     _readRoleRepository = readRoleRepository;
-    _uow = unitOfWork;
     _logger = logger;
+    _access = access;
   }
 
   // ==================== Read (Изолированный IReadRepository) ====================
@@ -72,69 +71,20 @@ public class ApplicationRoleService : IApplicationRoleService
 
   public async Task<string> CreateAsync(ApplicationRole role, CancellationToken ct = default)
   {
-    ArgumentNullException.ThrowIfNull(role);
-
-    return await _uow.ExecuteInTransactionAsync(async () =>
-    {
-      if (string.IsNullOrWhiteSpace(role.Id))
-      {
-        role.Id = Guid.NewGuid().ToString();
-      }
-
-      if (!string.IsNullOrWhiteSpace(role.Name))
-      {
-        role.Name = role.Name.Trim();
-        role.NormalizedName = role.Name.ToUpperInvariant();
-      }
-
-      // Так как ApplicationRole не наследуется от BaseEntity, используем BasicRepository
-      await _uow.BasicRepository<ApplicationRole>().AddAsync(role, ct);
-      await _uow.SaveChangesAsync(ct);
-
-      _logger.LogInformation("Создана новая роль '{RoleName}' (ID: {RoleId})", role.Name, role.Id);
-
-      return role.Id;
-    }, ct);
+    return await _access.SaveAsync(new Guard.Core.Services.DTOs.RoleEditDto { Name = role.Name ?? "" }, ct);
   }
 
   public async Task UpdateAsync(ApplicationRole role, CancellationToken ct = default)
   {
-    ArgumentNullException.ThrowIfNull(role);
-
-    if (!string.IsNullOrWhiteSpace(role.Name))
-    {
-      role.Name = role.Name.Trim();
-      role.NormalizedName = role.Name.ToUpperInvariant();
-    }
-
-    await _uow.BasicRepository<ApplicationRole>().UpdateAsync(role, ct);
-    await _uow.SaveChangesAsync(ct);
-
-    _logger.LogInformation("Обновлены данные роли '{RoleName}' (ID: {RoleId})", role.Name, role.Id);
+    var input = await _access.GetAsync(role.Id, ct);
+    input.Name = role.Name ?? "";
+    input.Version = role.ConcurrencyStamp;
+    await _access.SaveAsync(input, ct);
   }
 
   public async Task DeleteAsync(string id, CancellationToken ct = default)
   {
-    var role = await GetRequiredForWriteAsync(id, ct);
-
-    await _uow.BasicRepository<ApplicationRole>().DeleteAsync(role, ct);
-    await _uow.SaveChangesAsync(ct);
-
-    _logger.LogWarning("Роль '{RoleName}' (ID: {RoleId}) была удалена из системы", role.Name, id);
+    await _access.DeleteAsync(id, ct);
   }
 
-  // ==================== Private Helpers ====================
-
-  private async Task<ApplicationRole> GetRequiredForWriteAsync(string id, CancellationToken ct)
-  {
-    var role = await _uow.BasicRepository<ApplicationRole>().GetByIdAsync([id], ct);
-
-    if (role == null)
-    {
-      _logger.LogWarning("Попытка выполнения операции над несуществующей ролью (ID: {RoleId})", id);
-      throw new KeyNotFoundException($"Роль с ID '{id}' не найдена.");
-    }
-
-    return role;
-  }
 }

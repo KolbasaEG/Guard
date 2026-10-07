@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
 using Guard.Core.Identity;
@@ -24,7 +24,8 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
     [CascadingParameter] protected UserContext? UserContext { get; set; }
 
     int count;
-    protected bool isEditor = false;
+    [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? AccessSnapshot { get; set; }
+    protected bool isEditor => AccessSnapshot?.Has(Permissions.IpAddresses.Manage) == true;
     [Inject] protected IIpManagementAccessService Access { get; set; } = default!;
     protected bool isLoading = false;
     protected string subdivisionPath = "-";
@@ -60,8 +61,6 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
         Logger.LogDebug("Инициализация страницы IP-адресов");
         itemsSubdivision = UserContext?.SubordinateSubdivisions.Select(p => p.Name) ?? [];
         subdivisionPath = UserContext?.Subdivision?.Path ?? "-";
-        try { await Access.GetScopeAsync(true, _cts.Token); isEditor = true; }
-        catch (UnauthorizedAccessException) { isEditor = false; }
         await Task.CompletedTask;
       }
       catch (OperationCanceledException)

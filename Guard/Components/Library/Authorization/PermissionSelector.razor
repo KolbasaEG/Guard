@@ -1,0 +1,62 @@
+@using Guard.Core.Identity
+<RadzenStack Gap="12px">
+  <RadzenTextBox @bind-Value="search" Placeholder="Поиск разрешений" Style="width:100%" />
+  @foreach (var group in Definitions.Where(p => !p.RootOnly &&
+      (string.IsNullOrWhiteSpace(search) || (p.Name + p.Group + p.Description).Contains(search, StringComparison.OrdinalIgnoreCase))).GroupBy(p => p.Group))
+  {
+    <RadzenCard>
+      <RadzenText Text="@group.Key" TextStyle="TextStyle.H6" />
+      <RadzenButton Text="Выбрать группу" Size="ButtonSize.Small" Disabled="@Disabled" Click="@(() => SelectGroup(group))" />
+      @foreach (var definition in group)
+      {
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px">
+          <RadzenCheckBox TValue="bool" Value="@Selected.Contains(definition.Code)" Disabled="@Disabled"
+                          Change="@(value => Toggle(definition.Code, value))" />
+          <span title="@definition.Description">@definition.Name</span>
+        </RadzenStack>
+      }
+    </RadzenCard>
+  }
+  @foreach (var unsupported in Selected.Where(code => !Definitions.Any(p => p.Code == code && !p.RootOnly)).ToArray())
+  {
+    <RadzenAlert AlertStyle="AlertStyle.Warning">
+      Неиспользуемое или системное разрешение: @unsupported
+      <RadzenButton Text="Убрать из роли" Disabled="@Disabled" Click="@(() => Toggle(unsupported, false))" />
+    </RadzenAlert>
+  }
+</RadzenStack>
+@code {
+  [Parameter, EditorRequired] public IReadOnlyList<PermissionDefinition> Definitions { get; set; } = [];
+  [Parameter] public HashSet<string> Selected { get; set; } = [];
+  [Parameter] public EventCallback<HashSet<string>> SelectedChanged { get; set; }
+  [Parameter] public bool Disabled { get; set; }
+  private string search = "";
+  private void AddWithDependencies(HashSet<string> values, string code)
+  {
+    values.Add(code);
+    var required = Definitions.Single(p => p.Code == code).Requires;
+    if (required != null) AddWithDependencies(values, required);
+  }
+  private async Task Toggle(string code, bool enabled)
+  {
+    var values = Selected.ToHashSet();
+    if (enabled) AddWithDependencies(values, code);
+    else
+    {
+      values.Remove(code);
+      bool changed;
+      do {
+        changed = false;
+        foreach (var dependent in Definitions.Where(p => values.Contains(p.Code) && p.Requires != null && !values.Contains(p.Requires)).ToArray())
+          changed |= values.Remove(dependent.Code);
+      } while (changed);
+    }
+    await SelectedChanged.InvokeAsync(values);
+  }
+  private async Task SelectGroup(IEnumerable<PermissionDefinition> group)
+  {
+    var values = Selected.ToHashSet();
+    foreach (var definition in group) AddWithDependencies(values, definition.Code);
+    await SelectedChanged.InvokeAsync(values);
+  }
+}

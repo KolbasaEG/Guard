@@ -1,8 +1,8 @@
-﻿@using Guard.Core.Entities
+@using Guard.Core.Entities
 @using Guard.Core.Enums
 @attribute [Authorize]
 
-<EditEntity TItem="Subdivision" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="true" OnInfoClick="InfoButtonClick" IsLoading="isLoading" OnCancelButtonClick="HandleCancelButtonClick" >
+<EditEntity ReadOnly="@(Access?.Has(Permissions.Subdivisions.Write) != true)" TItem="Subdivision" Data="@item" ShowSaveButton="@(Access?.Has(Permissions.Subdivisions.Write) == true)" Submit="@FormSubmit" ShowInfoButton="true" OnInfoClick="InfoButtonClick" IsLoading="isLoading" OnCancelButtonClick="HandleCancelButtonClick" >
   <RadzenStack Gap="0px" Orientation="Orientation.Vertical">
     <RadzenStack Orientation="Orientation.Horizontal" Style="width:100%;" Gap="5px">
 
@@ -103,3 +103,4 @@
     </RadzenFormField>
   </RadzenStack>
 </EditEntity>
+@code { [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; } }

@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 <Guard.Components.Layout.Components.MainTemplate Icon="admin_panel_settings" Name="Рабочее место администратора">
   <ChildContent>
     <div style="background-color: var(--rz-body-background-color); width:100%; height:100%; padding:2px;">
@@ -8,12 +8,13 @@
   <MenueContent>
     <RadzenPanelMenu>
       <RadzenPanelMenuItem Text="Мониторинг состояния" Icon="dvr" Path="/adminpannel" />
-      <RadzenPanelMenuItem Text="Подразделения" Icon="domain" Path="/subdivisions" />
-      <RadzenPanelMenuItem Text="Пользователи" Icon="contacts" Path="/users" />
-      <RadzenPanelMenuItem Text="Персонал" Icon="group" Path="/personal" />
-      <RadzenPanelMenuItem Text="Ip-адреса" Icon="bring_your_own_ip" Path="/ip" />
+      <RadzenPanelMenuItem Text="Подразделения" Icon="domain" Path="/subdivisions" Visible="@(Access?.Has(Permissions.Subdivisions.Read) == true)" />
+      <RadzenPanelMenuItem Text="Пользователи" Icon="contacts" Path="/users" Visible="@(Access?.Has(Permissions.Users.Read) == true)" />
+      <RadzenPanelMenuItem Text="Персонал" Icon="group" Path="/personal" Visible="@(Access?.Has(Permissions.Personals.Read) == true)" />
+      <RadzenPanelMenuItem Text="Ip-адреса" Icon="bring_your_own_ip" Path="/ip" Visible="@(Access?.Has(Permissions.IpAddresses.Read) == true)" />
       <RadzenPanelMenuItem Text="Участки" Icon="bring_your_own_ip" Path="/MaintenanceSectors" />
       <RadzenPanelMenuItem Text="Участки" Icon="bring_your_own_ip" Path="/administrator/maintenance-sectors/schedule" />
     </RadzenPanelMenu>
   </MenueContent>
 </Guard.Components.Layout.Components.MainTemplate>
+@code { [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; } }

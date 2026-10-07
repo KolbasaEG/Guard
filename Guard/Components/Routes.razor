@@ -1,11 +1,13 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Guard.Components.Account.Shared
 
+<Guard.Components.Layout.Components.AccessStateProvider>
 <Router AppAssembly="@typeof(Program).Assembly">
   <Found Context="routeData">
     <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
       <NotAuthorized>
-        <RedirectToLogin />
+        @if (context.User.Identity?.IsAuthenticated == true) { <AccessDenied /> }
+        else { <RedirectToLogin /> }
       </NotAuthorized>
     </AuthorizeRouteView>
     <FocusOnNavigate RouteData="@routeData" Selector="h1" />
@@ -18,3 +20,4 @@
     </LayoutView>
   </NotFound>
 </Router>
+</Guard.Components.Layout.Components.AccessStateProvider>

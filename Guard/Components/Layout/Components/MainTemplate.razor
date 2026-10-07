@@ -1,4 +1,4 @@
-﻿
+
 <CascadingValue Value="@UserContext">
   <RadzenComponents />
   <RadzenLayout Style="background-image: url('images/backg.jpg');background-repeat: no-repeat; background-attachment: fixed; background-size: cover; background-position: center; grid-template-columns: auto 1fr auto; grid-template-areas: 'rz-sidebar rz-header rz-header' 'rz-sidebar rz-body rz-right-sidebar'">
@@ -32,8 +32,8 @@
       </RadzenStack>
       <RadzenPanelMenu Style="font-weight: 500; font-size: 15px">
         <RadzenPanelMenuItem Text="Рабочие места" Expanded="true" Icon="desktop_windows">
-          <RadzenPanelMenuItem Text="Root" Path="/Logs" Icon="admin_panel_settings" />
-          <RadzenPanelMenuItem Text="Администратор" Path="/AdminPannel" Icon="admin_panel_settings" />
+          <RadzenPanelMenuItem Text="Справочники и безопасность" Path="@(Access?.Has(Permissions.Classifiers.Read) == true ? "/classifiers" : Access?.Has(Permissions.OrganTypes.Read) == true ? "/OrganTypes" : "/roles")" Visible="@(Access?.Has(Permissions.Classifiers.Read) == true || Access?.Has(Permissions.OrganTypes.Read) == true || Access?.IsRoot == true)" Icon="admin_panel_settings" />
+          <RadzenPanelMenuItem Text="Администратор" Path="/AdminPannel" Visible="@(Access?.Has(Permissions.Personals.Read) == true || Access?.Has(Permissions.Subdivisions.Read) == true || Access?.Has(Permissions.Users.Read) == true || Access?.Has(Permissions.IpAddresses.Read) == true)" Icon="admin_panel_settings" />
         </RadzenPanelMenuItem>
       </RadzenPanelMenu>
       <RadzenStack AlignItems="Radzen.AlignItems.Center" Gap="0" class="rz-py-4 rz-py-lg-6" Style="padding: var(--rz-panel-menu-item-padding);">
@@ -49,3 +49,4 @@
     </RadzenSidebar>
   </RadzenLayout>
 </CascadingValue>
+@code { [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; } }

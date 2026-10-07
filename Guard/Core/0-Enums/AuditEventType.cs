@@ -17,5 +17,8 @@ public enum AuditEventType
   ExternalLoginAdded = 10,
   ExternalLoginRemoved = 11,
   RoleAssigned = 12,
-  RoleRemoved = 13
+  RoleRemoved = 13,
+  RolePermissionsChanged = 14,
+  UserRolesChanged = 15,
+  AccessDenied = 16
 }
