@@ -15,9 +15,7 @@ public class UserContextLoggingMiddleware
   public async Task InvokeAsync(HttpContext context)
   {
     // 1. Получаем IP-адрес клиента (с учетом работы за прокси Nginx / IIS)
-    var ipAddress = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
-                    ?? context.Connection.RemoteIpAddress?.ToString()
-                    ?? "unknown";
+    var ipAddress = Guard.Core.Identity.ClientIpAddress.Get(context) ?? "unknown";
 
     // 2. Получаем ID текущего пользователя из Claim (ASP.NET Core Identity)
     var userId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value

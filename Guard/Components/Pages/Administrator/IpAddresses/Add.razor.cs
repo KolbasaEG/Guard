@@ -42,7 +42,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации диалогового окна создания IP-адреса");
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification("Не удалось загрузить форму IP-адреса.");
       }
       finally
       {
@@ -69,7 +69,8 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при создании IP-адреса '{IpAddress}'", item.Address);
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(ex is ArgumentException or UnauthorizedAccessException or InvalidOperationException
+            ? ex.Message : "Не удалось сохранить IP-адрес. Попробуйте ещё раз.");
       }
       finally
       {

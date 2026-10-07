@@ -1,0 +1,66 @@
+@using Guard.Core.Services
+@using Guard.Core.Services.DTOs
+@implements IDisposable
+@inject IPersonalIpService Assignments
+@inject DialogService Dialogs
+@inject ILogger<IpAssignments> Logger
+
+<RadzenStack Gap="12px">
+  <RadzenText Text="Разрешённые IP-адреса сотрудника" TextStyle="TextStyle.H6" />
+  <RadzenText Text="Пустой список запрещает вход. Изменения применяются при следующем входе или новом соединении. Root освобождён от проверки IP." />
+  @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
+  <RadzenDropDown TValue="IEnumerable<Guid>" Data="@available" TextProperty="Address" ValueProperty="Id"
+                  @bind-Value="selected" Multiple="true" AllowClear="true" AllowFiltering="true"
+                  Disabled="@loading" Style="width:100%" Placeholder="Выберите IP-адреса или подсети" />
+  <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+    <RadzenButton Text="Сохранить" Click="SaveAsync" Disabled="@(loading || !loaded)" />
+    <RadzenButton Text="Отмена" Click="@(() => Dialogs.Close(null))" ButtonStyle="ButtonStyle.Light" />
+  </RadzenStack>
+</RadzenStack>
+
+@code {
+  [Parameter] public Guid PersonalId { get; set; }
+  private IReadOnlyList<IpOptionDto> available = [];
+  private IEnumerable<Guid> selected = [];
+  private readonly CancellationTokenSource cts = new();
+  private bool loading, loaded;
+  private string? error;
+
+  protected override async Task OnInitializedAsync()
+  {
+    loading = true;
+    try
+    {
+      var data = await Assignments.GetAsync(PersonalId, cts.Token);
+      available = data.Available;
+      selected = data.Selected;
+      loaded = true;
+    }
+    catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
+    catch (Exception ex) { ShowError(ex); }
+    finally { loading = false; }
+  }
+
+  private async Task SaveAsync()
+  {
+    loading = true;
+    error = null;
+    try
+    {
+      await Assignments.UpdateAsync(PersonalId, selected ?? [], cts.Token);
+      Dialogs.Close(true);
+    }
+    catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
+    catch (Exception ex) { ShowError(ex); }
+    finally { loading = false; }
+  }
+
+  private void ShowError(Exception ex)
+  {
+    Logger.LogError(ex, "Ошибка назначения IP сотруднику {PersonalId}", PersonalId);
+    error = ex is UnauthorizedAccessException or InvalidOperationException or KeyNotFoundException
+        ? ex.Message : "Не удалось сохранить назначения. Попробуйте ещё раз.";
+  }
+
+  public void Dispose() { cts.Cancel(); cts.Dispose(); }
+}

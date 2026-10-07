@@ -15,6 +15,11 @@ namespace Guard.Components.Pages.Administrator.Personals
 {
   public partial class Index
   {
+    [Inject] protected IIpManagementAccessService IpAccess { get; set; } = default!;
+    protected bool canManageIps;
+    protected Task EditIpAssignments(Personal item) => DialogService.OpenAsync<IpAssignments>(
+        "Разрешённые IP", new Dictionary<string, object?> { ["PersonalId"] = item.Id },
+        new DialogOptions { Width = "650px" });
     [Inject]
     protected IJSRuntime JSRuntime { get; set; }
     [Inject]
@@ -63,6 +68,8 @@ namespace Guard.Components.Pages.Administrator.Personals
 
         // Имитация загрузки (например, справочников)
         await Task.CompletedTask;
+        try { await IpAccess.GetScopeAsync(true, _cts.Token); canManageIps = true; }
+        catch (UnauthorizedAccessException) { canManageIps = false; }
       }
       catch (OperationCanceledException)
       {

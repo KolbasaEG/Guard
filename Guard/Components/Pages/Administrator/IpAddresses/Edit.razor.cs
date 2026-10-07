@@ -61,7 +61,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации диалогового окна редактирования IP-адреса {IpAddressId}", Id);
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(ex is UnauthorizedAccessException ? ex.Message : "Не удалось загрузить IP-адрес.");
       }
       finally
       {
@@ -88,7 +88,8 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при обновлении IP-адреса '{IpAddress}'", item.Address);
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(ex is ArgumentException or UnauthorizedAccessException or InvalidOperationException
+            ? ex.Message : "Не удалось сохранить IP-адрес. Попробуйте ещё раз.");
       }
       finally
       {

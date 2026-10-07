@@ -6,7 +6,7 @@ namespace Guard.Core.Configurations;
 
 /// <summary>
 /// Конфигурация ApplicationUser.
-/// Настраивает many-to-many связь с IpAddress через явную join-сущность UserIpAddress.
+/// Пользователь связан с одним сотрудником; IP назначаются сотруднику через PersonalIpAddresses.
 /// </summary>
 public class ApplicationUserConfiguration : IEntityTypeConfiguration<ApplicationUser>
 {

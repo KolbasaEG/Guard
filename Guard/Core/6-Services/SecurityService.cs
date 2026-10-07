@@ -14,10 +14,10 @@ public class SecurityService : ISecurityService
   private readonly IReadRepository<ApplicationUser> _userReadRepository;
   private readonly IReadRepository<ApplicationRole> _roleReadRepository;
   private readonly IReadRepository<Personal> _personalReadRepository;
-  private readonly IReadRepository<IpAddress> _ipAddressReadRepository;
-  private readonly IReadRepository<Personal> _personalRepository;
-  private readonly IReadRepository<IpAddress> _ipAddressRepository;
   private readonly ILogger<SecurityService> _logger;
+  private readonly IPersonalIpService _personalIpService;
+  private readonly IIpAccessService _ipAccessService;
+  private readonly IIpAddressService _ipService;
 
   public SecurityService(
       UserManager<ApplicationUser> userManager,
@@ -25,20 +25,18 @@ public class SecurityService : ISecurityService
       IReadRepository<ApplicationUser> userReadRepository,
       IReadRepository<ApplicationRole> roleReadRepository,
       IReadRepository<Personal> personalReadRepository,
-      IReadRepository<IpAddress> ipAddressReadRepository,
-      IReadRepository<Personal> personalRepository,
-      IReadRepository<IpAddress> ipAddressRepository,
-      ILogger<SecurityService> logger)
+      ILogger<SecurityService> logger, IPersonalIpService personalIpService,
+      IIpAccessService ipAccessService, IIpAddressService ipService)
   {
     _userManager = userManager;
     _roleManager = roleManager;
     _userReadRepository = userReadRepository;
     _roleReadRepository = roleReadRepository;
     _personalReadRepository = personalReadRepository;
-    _ipAddressReadRepository = ipAddressReadRepository;
-    _personalRepository = personalRepository;
-    _ipAddressRepository = ipAddressRepository;
     _logger = logger;
+    _personalIpService = personalIpService;
+    _ipAccessService = ipAccessService;
+    _ipService = ipService;
   }
 
   #region Гибкие методы чтения (Querying)
@@ -61,7 +59,7 @@ public class SecurityService : ISecurityService
       Func<IQueryable<IpAddress>, Task<TResult>> query,
       CancellationToken ct = default)
   {
-    return await _ipAddressReadRepository.QueryAsync(query, ct);
+    return await _ipService.QueryIpAddressesAsync(query, ct);
   }
 
   public async Task<TResult> QueryPersonalsAsync<TResult>(
@@ -220,46 +218,11 @@ public class SecurityService : ISecurityService
 
   #region IP-Адреса и Доступ
 
-  public async Task UpdatePersonalIpAddressesAsync(Guid personalId, IEnumerable<Guid> ipAddressIds, CancellationToken ct = default)
-  {
-    //var personal = await _personalRepository.QueryAsync(async personals =>
-    //    await personals
-    //        .Include(p => p.IpAddresses)
-    //        .FirstOrDefaultAsync(p => p.Id == personalId, ct), ct);
+  public Task UpdatePersonalIpAddressesAsync(Guid personalId, IEnumerable<Guid> ipAddressIds, CancellationToken ct = default)
+      => _personalIpService.UpdateAsync(personalId, ipAddressIds, ct);
 
-    //if (personal == null)
-    //  throw new KeyNotFoundException($"Сотрудник с ID {personalId} не найден.");
-
-    //var selectedIps = await _ipAddressRepository.QueryAsync(async ips =>
-    //    await ips
-    //        .Where(i => ipAddressIds.Contains(i.Id))
-    //        .ToListAsync(ct), ct);
-
-    //personal.IpAddresses.Clear();
-    //foreach (var ip in selectedIps)
-    //{
-    //  personal.IpAddresses.Add(ip);
-    //}
-
-    //await _personalRepository.SaveChangesAsync(ct);
-  }
-
-  public async Task<bool> IsIpAllowedForUserAsync(string userId, string clientIp, CancellationToken ct = default)
-  {
-    return await QueryUsersAsync(async users =>
-    {
-      var user = await users
-          .AsNoTracking()
-          .Include(u => u.Personal)
-              .ThenInclude(p => p!.IpAddresses)
-          .FirstOrDefaultAsync(u => u.Id == userId, ct);
-
-      if (user?.Personal == null || !user.Personal.IpAddresses.Any())
-        return true;
-
-      return user.Personal.IpAddresses.Any(i => i.Address == clientIp);
-    }, ct);
-  }
+  public Task<bool> IsIpAllowedForUserAsync(string userId, string clientIp, CancellationToken ct = default)
+      => _ipAccessService.IsAllowedAsync(userId, clientIp, ct);
 
   #endregion
 }

@@ -7,6 +7,8 @@ using Guard.Core.Logging;
 using Guard.Core.Repositories;
 using Guard.Core.Services;
 using Guard.Middlewares;
+using Guard.Core.Identity;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -160,7 +162,20 @@ builder.Services.AddDbContextFactory<LogsDbContext>(options =>
 // =====================================================
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddSignInManager<IpRestrictedSignInManager>();
+
+// Заголовки принимает только от явно настроенных доверенных прокси (по умолчанию — loopback).
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+  options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+  foreach (var value in builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [])
+  {
+    if (!System.Net.IPAddress.TryParse(value, out var proxy))
+      throw new InvalidOperationException("ReverseProxy:KnownProxies содержит некорректный IP-адрес.");
+    options.KnownProxies.Add(proxy);
+  }
+});
 
 builder.Services.AddScoped<RoleManager<ApplicationRole>>();
 builder.Services.AddCascadingAuthenticationState();
@@ -222,12 +237,14 @@ var app = builder.Build();
 // =====================================================
 // === MIDDLEWARE PIPELINE
 // =====================================================
+app.UseForwardedHeaders();
 app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseUserContextLogging();
+app.UseMiddleware<IpCheckMiddleware>();
 app.UseAntiforgery();
 app.MapRazorPages();
 app.MapRazorComponents<Guard.Components.App>()

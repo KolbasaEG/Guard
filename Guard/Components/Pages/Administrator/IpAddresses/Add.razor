@@ -11,6 +11,7 @@
                         style="display: block; width: 100%"
                         @bind-Value="@item.SubdivisionId" Name="SubdivisionId" />
       </ChildContent>
+      <Helper><RadzenCustomValidator Component="SubdivisionId" Validator="@(() => UserContext?.IsRoot == true || item.SubdivisionId.HasValue)" Text="Выберите подразделение" /></Helper>
     </RadzenFormField>
     <RadzenFormField Text="IP-адрес" Variant="Variant.Text" Style="width:100%;">
       <ChildContent>
@@ -18,7 +19,7 @@
       </ChildContent>
       <Helper>
         <RadzenRequiredValidator Component="IpAddress" Text="Обязательно для заполнения!" />
-        <RadzenRegexValidator Component="IpAddress" Text="Некорректный формат IP-адреса"/>
+        <RadzenCustomValidator Component="IpAddress" Validator="@(() => Guard.Core.Identity.IpAddressRule.TryParse(item.Address, out _))" Text="Введите IPv4, IPv6 или CIDR-подсеть" />
       </Helper>
     </RadzenFormField>
     <RadzenFormField Text="Описание / Назначение" Variant="Variant.Text" Style="width:100%">

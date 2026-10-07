@@ -27,7 +27,7 @@ public class IpAddress : BaseEntity, IHasSubdivision
   public Subdivision? Subdivision { get; set; }
 
   /// <summary>
-  /// Пользователи, которым назначен данный IP (прямая навигация).
+  /// Сотрудники, которым назначен данный IP. Пользователь связан через Personal.
   /// </summary>
   public virtual ICollection<Personal> Personals { get; set; } = new List<Personal>();
 }

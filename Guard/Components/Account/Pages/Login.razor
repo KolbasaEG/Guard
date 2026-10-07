@@ -107,7 +107,7 @@
       result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
     }
 
-    var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+    var ipAddress = Guard.Core.Identity.ClientIpAddress.Get(HttpContext);
 
     if (result.Succeeded)
     {
@@ -120,6 +120,10 @@
                     : "Successful login with password");
 
       RedirectManager.RedirectTo(ReturnUrl);
+    }
+    else if (result.IsNotAllowed)
+    {
+      errorMessage = "Вход не разрешён. Проверьте назначение IP-адресов у администратора и подтверждение учётной записи.";
     }
     else if (result.RequiresTwoFactor)
     {

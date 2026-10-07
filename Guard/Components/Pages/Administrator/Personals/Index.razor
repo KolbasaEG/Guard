@@ -47,6 +47,8 @@
         <RadzenDataGridColumn TItem="Personal" Filterable="false" Sortable="false" Width="60px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
             <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
+              <RadzenButton Icon="lan" Title="Разрешённые IP" Visible="@canManageIps" Size="Radzen.ButtonSize.ExtraSmall"
+                            Click="@(() => EditIpAssignments(item))" @onclick:stopPropagation="true" />
               @if (item.Status < Status.Blocked)
               {
                 <RadzenButton Icon="archive" Size="Radzen.ButtonSize.ExtraSmall"

@@ -24,7 +24,8 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
     [CascadingParameter] protected UserContext? UserContext { get; set; }
 
     int count;
-    protected bool isEditor = true;
+    protected bool isEditor = false;
+    [Inject] protected IIpManagementAccessService Access { get; set; } = default!;
     protected bool isLoading = false;
     protected string subdivisionPath = "-";
     protected DataViewMode currentMode = DataViewMode.Active;
@@ -59,6 +60,8 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
         Logger.LogDebug("Инициализация страницы IP-адресов");
         itemsSubdivision = UserContext?.SubordinateSubdivisions.Select(p => p.Name) ?? [];
         subdivisionPath = UserContext?.Subdivision?.Path ?? "-";
+        try { await Access.GetScopeAsync(true, _cts.Token); isEditor = true; }
+        catch (UnauthorizedAccessException) { isEditor = false; }
         await Task.CompletedTask;
       }
       catch (OperationCanceledException)
@@ -90,8 +93,10 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
         {
           query = query
             .FilterByMode(currentMode)
-            .FilterBySubdivision(subdivisionPath, hierarchyMode)
             .Include(p=>p.Subdivision);
+          // Область доступа уже ограничена сервисом. Root видит и общие адреса.
+          if (UserContext?.IsRoot != true)
+            query = query.FilterBySubdivision(subdivisionPath, hierarchyMode);
           if (dataFilter != null)
           {
             query = query.Where(dataFilter);
@@ -149,6 +154,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
 
     protected async Task EditRow(IpAddress item)
     {
+      if (!isEditor) return;
       var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
 
       if (result != null)

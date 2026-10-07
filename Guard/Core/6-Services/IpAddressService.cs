@@ -1,183 +1,115 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Contexts;
+using Guard.Core.Entities;
 using Guard.Core.Enums;
+using Guard.Core.Identity;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Guard.Core.Services;
 
-public class IpAddressService : IIpAddressService
+public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
+    IIpManagementAccessService access, ILogger<IpAddressService> logger) : IIpAddressService
 {
-  private readonly IReadRepository<IpAddress> _readIpAddressRepository;
-  private readonly IUnitOfWork _uow;
-  private readonly ILogger<IpAddressService> _logger;
+  private static IQueryable<IpAddress> Accessible(IQueryable<IpAddress> q, IpManagementScope scope) =>
+      scope.IsRoot ? q : q.Where(ip => ip.SubdivisionId.HasValue && scope.SubdivisionIds.Contains(ip.SubdivisionId.Value));
 
-  public IpAddressService(
-      IReadRepository<IpAddress> readIpAddressRepository,
-      IUnitOfWork unitOfWork,
-      ILogger<IpAddressService> logger)
+  public async Task<TResult> QueryIpAddressesAsync<TResult>(Func<IQueryable<IpAddress>, Task<TResult>> query, CancellationToken ct = default)
   {
-    _readIpAddressRepository = readIpAddressRepository;
-    _uow = unitOfWork;
-    _logger = logger;
+    var scope = await access.GetScopeAsync(false, ct);
+    await using var db = await factory.CreateDbContextAsync(ct);
+    return await query(Accessible(db.IpAddresses.AsNoTracking(), scope));
   }
 
-  // ==================== Read (Изолированный IReadRepository) ====================
+  public Task<IpAddress?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+      QueryIpAddressesAsync(q => q.SingleOrDefaultAsync(ip => ip.Id == id, ct), ct);
 
-  public async Task<TResult> QueryIpAddressesAsync<TResult>(
-      Func<IQueryable<IpAddress>, Task<TResult>> query,
-      CancellationToken ct = default)
-  {
-    return await _readIpAddressRepository.QueryAsync(query, ct);
-  }
+  public async Task<IReadOnlyList<IpAddress>> GetAllActiveAsync(CancellationToken ct = default) =>
+      await QueryIpAddressesAsync(q => q.Where(ip => ip.Status == Status.Inserted || ip.Status == Status.Modified)
+          .OrderBy(ip => ip.Address).ToListAsync(ct), ct);
 
-  public async Task<IpAddress?> GetByIdAsync(Guid id, CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос IP-адреса по ID: {IpAddressId}", id);
-    return await _readIpAddressRepository.GetByIdAsync(id, ct);
-  }
-
-  public async Task<IReadOnlyList<IpAddress>> GetAllActiveAsync(CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос всех активных IP-адресов");
-    return await _readIpAddressRepository.QueryAsync(query =>
-        query.Where(ip => ip.Status <= Status.Archived)
-             .OrderBy(ip => ip.Address)
-             .ToListAsync(ct),
-        ct);
-  }
-
-  public async Task<IReadOnlyList<IpAddress>> GetBySubdivisionIdAsync(Guid subdivisionId, CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос IP-адресов для подразделения ID: {SubdivisionId}", subdivisionId);
-    return await _readIpAddressRepository.QueryAsync(query =>
-        query.Where(ip => ip.SubdivisionId == subdivisionId && ip.Status <= Status.Archived)
-             .OrderBy(ip => ip.Address)
-             .ToListAsync(ct),
-        ct);
-  }
+  public async Task<IReadOnlyList<IpAddress>> GetBySubdivisionIdAsync(Guid subdivisionId, CancellationToken ct = default) =>
+      await QueryIpAddressesAsync(q => q.Where(ip => ip.SubdivisionId == subdivisionId &&
+          (ip.Status == Status.Inserted || ip.Status == Status.Modified)).OrderBy(ip => ip.Address).ToListAsync(ct), ct);
 
   public async Task<bool> IsIpUniqueAsync(string address, Guid? excludeId = null, CancellationToken ct = default)
   {
-    if (string.IsNullOrWhiteSpace(address))
-      return true;
-
-    var normalizedAddress = address.Trim();
-
-    return await _readIpAddressRepository.QueryAsync(query =>
-        query.AllAsync(ip => ip.Address != normalizedAddress || (excludeId.HasValue && ip.Id == excludeId.Value), ct),
-        ct);
+    await access.GetScopeAsync(true, ct);
+    if (!IpAddressRule.TryParse(address, out var rule)) return false;
+    await using var db = await factory.CreateDbContextAsync(ct);
+    return await IsUniqueAsync(db, rule!.CanonicalAddress, excludeId, ct);
   }
 
-  // ==================== Write (IUnitOfWork & ChangeTracker) ====================
-
-  public async Task<Guid> CreateAsync(IpAddress ipAddress, CancellationToken ct = default)
+  private static async Task<bool> IsUniqueAsync(ApplicationDbContext db, string address, Guid? excludeId, CancellationToken ct)
   {
-    ArgumentNullException.ThrowIfNull(ipAddress);
-
-    return await _uow.ExecuteInTransactionAsync(async () =>
-    {
-      ipAddress.Status = Status.Inserted;
-
-      // Очищаем адрес от лишних пробелов
-      if (!string.IsNullOrWhiteSpace(ipAddress.Address))
-      {
-        ipAddress.Address = ipAddress.Address.Trim();
-      }
-
-      await _uow.BaseEntityRepository<IpAddress>().AddAsync(ipAddress, ct);
-      await _uow.SaveChangesAsync(ct);
-
-      _logger.LogInformation("Создана новая запись IP-адреса '{IpAddress}' (ID: {IpAddressId})",
-          ipAddress.Address, ipAddress.Id);
-
-      return ipAddress.Id;
-    }, ct);
+    var values = await db.IpAddresses.AsNoTracking().Where(ip => !excludeId.HasValue || ip.Id != excludeId.Value)
+        .Select(ip => ip.Address).ToListAsync(ct);
+    return !values.Any(value => IpAddressRule.TryParse(value, out var rule) && rule!.CanonicalAddress == address);
   }
 
+  public Task<Guid> CreateAsync(IpAddress ipAddress, CancellationToken ct = default) =>
+      WriteAsync(null, ipAddress, null, ct);
   public async Task UpdateAsync(IpAddress ipAddress, CancellationToken ct = default)
   {
     ArgumentNullException.ThrowIfNull(ipAddress);
+    await WriteAsync(ipAddress.Id, ipAddress, null, ct);
+  }
+  public async Task SoftDeleteAsync(Guid id, CancellationToken ct = default) => await WriteAsync(id, null, "delete", ct);
+  public async Task ArchiveAsync(Guid id, CancellationToken ct = default) => await WriteAsync(id, null, "archive", ct);
+  public async Task RestoreAsync(Guid id, CancellationToken ct = default) => await WriteAsync(id, null, "restore", ct);
+  public async Task BlockAsync(Guid id, CancellationToken ct = default) => await WriteAsync(id, null, "block", ct);
+  public async Task UnblockAsync(Guid id, CancellationToken ct = default) => await WriteAsync(id, null, "unblock", ct);
 
-    if (!string.IsNullOrWhiteSpace(ipAddress.Address))
+  private async Task<Guid> WriteAsync(Guid? id, IpAddress? input, string? operation, CancellationToken ct)
+  {
+    var scope = await access.GetScopeAsync(true, ct);
+    await using var db = await factory.CreateDbContextAsync(ct);
+    await using var transaction = await db.Database.BeginTransactionAsync(ct);
+    await LockCatalogAsync(db, ct);
+    var entity = id.HasValue ? await Accessible(db.IpAddresses, scope).SingleOrDefaultAsync(ip => ip.Id == id.Value, ct)
+        ?? throw new KeyNotFoundException("IP-адрес не найден или недоступен.") : new IpAddress();
+    if (operation != null)
+      entity.Status = IpStatusTransitions.Apply(entity.Status, operation);
+    else
     {
-      ipAddress.Address = ipAddress.Address.Trim();
+      ArgumentNullException.ThrowIfNull(input);
+      if (id.HasValue && entity.Status is not (Status.Inserted or Status.Modified))
+        throw new InvalidOperationException("Редактировать можно только активный незаблокированный IP-адрес.");
+      if (!scope.IsRoot && (!input.SubdivisionId.HasValue || !scope.SubdivisionIds.Contains(input.SubdivisionId.Value)))
+        throw new UnauthorizedAccessException("Подразделение недоступно. Общими IP-адресами управляет Root.");
+      if (input.SubdivisionId.HasValue && !await db.Subdivisions.AnyAsync(s => s.Id == input.SubdivisionId &&
+          (s.Status == Status.Inserted || s.Status == Status.Modified), ct))
+        throw new InvalidOperationException("Выберите активное подразделение.");
+      if (!IpAddressRule.TryParse(input.Address, out var rule))
+        throw new ArgumentException("Введите корректный IPv4, IPv6 или CIDR-подсеть.");
+      if (input.Description?.Length > 1000) throw new ArgumentException("Описание не должно превышать 1000 символов.");
+      if (!await IsUniqueAsync(db, rule!.CanonicalAddress, id, ct))
+        throw new ArgumentException("Этот IP-адрес или подсеть уже есть в справочнике.");
+      entity.Address = rule.CanonicalAddress;
+      entity.Description = input.Description;
+      entity.SubdivisionId = input.SubdivisionId;
+      entity.Status = id.HasValue ? Status.Modified : Status.Inserted;
     }
-
-    await _uow.BaseEntityRepository<IpAddress>().UpdateAsync(ipAddress, ct);
-    await _uow.SaveChangesAsync(ct);
-
-    _logger.LogInformation("Обновлены данные IP-адреса '{IpAddress}' (ID: {IpAddressId})",
-        ipAddress.Address, ipAddress.Id);
-  }
-
-  // ==================== Status Management ====================
-
-  public async Task SoftDeleteAsync(Guid id, CancellationToken ct = default)
-  {
-    var ipAddress = await GetRequiredForWriteAsync(id, ct);
-
-    await _uow.BaseEntityRepository<IpAddress>().SoftDeleteAsync(ipAddress, ct);
-    await _uow.SaveChangesAsync(ct);
-
-    _logger.LogWarning("IP-адрес '{IpAddress}' (ID: {IpAddressId}) помечен как удаленный",
-        ipAddress.Address, id);
-  }
-
-  public async Task ArchiveAsync(Guid id, CancellationToken ct = default)
-  {
-    var ipAddress = await GetRequiredForWriteAsync(id, ct);
-
-    await _uow.BaseEntityRepository<IpAddress>().ArchiveAsync(ipAddress, ct);
-    await _uow.SaveChangesAsync(ct);
-
-    _logger.LogInformation("IP-адрес '{IpAddress}' (ID: {IpAddressId}) отправлен в архив",
-        ipAddress.Address, id);
-  }
-
-  public async Task BlockAsync(Guid id, CancellationToken ct = default)
-  {
-    var ipAddress = await GetRequiredForWriteAsync(id, ct);
-
-    await _uow.BaseEntityRepository<IpAddress>().BlockAsync(ipAddress, ct);
-    await _uow.SaveChangesAsync(ct);
-
-    _logger.LogWarning("IP-адрес '{IpAddress}' (ID: {IpAddressId}) заблокирован",
-        ipAddress.Address, id);
-  }
-
-  public async Task UnblockAsync(Guid id, CancellationToken ct = default)
-  {
-    var ipAddress = await GetRequiredForWriteAsync(id, ct);
-
-    await _uow.BaseEntityRepository<IpAddress>().UnblockAsync(ipAddress, ct);
-    await _uow.SaveChangesAsync(ct);
-
-    _logger.LogInformation("IP-адрес '{IpAddress}' (ID: {IpAddressId}) разблокирован",
-        ipAddress.Address, id);
-  }
-
-  public async Task RestoreAsync(Guid id, CancellationToken ct = default)
-  {
-    var ipAddress = await GetRequiredForWriteAsync(id, ct);
-
-    await _uow.BaseEntityRepository<IpAddress>().RestoreAsync(ipAddress, ct);
-    await _uow.SaveChangesAsync(ct);
-
-    _logger.LogInformation("IP-адрес '{IpAddress}' (ID: {IpAddressId}) восстановлен",
-        ipAddress.Address, id);
-  }
-
-  // ==================== Private Helpers ====================
-
-  private async Task<IpAddress> GetRequiredForWriteAsync(Guid id, CancellationToken ct)
-  {
-    var ipAddress = await _uow.BaseEntityRepository<IpAddress>().GetByIdAsync(id, ct);
-
-    if (ipAddress == null)
+    if (id.HasValue)
     {
-      _logger.LogWarning("Попытка выполнения операции над несуществующим IP-адресом (ID: {IpAddressId})", id);
-      throw new KeyNotFoundException($"IP-адрес с ID '{id}' не найден.");
+      entity.ModifiedBy = scope.UserId;
+      entity.LastModifiedDate = DateTime.UtcNow;
     }
-
-    return ipAddress;
+    else
+    {
+      entity.CreatedBy = scope.UserId;
+      entity.InsertedDate = DateTime.UtcNow;
+      db.IpAddresses.Add(entity);
+    }
+    // Фабрика не подключает scoped-интерцептор: метаданные задаются явно.
+    try { await db.SaveChangesAsync(ct); }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+    { throw new ArgumentException("Этот IP-адрес или подсеть уже есть в справочнике.", ex); }
+    await transaction.CommitAsync(ct);
+    logger.LogInformation("Сохранён IP {IpAddressId}, статус {Status}, пользователь {UserId}", entity.Id, entity.Status, scope.UserId);
+    return entity.Id;
   }
+
+  // Сериализуем запись каталога и назначения, включая проверку эквивалентных старых строк.
+  internal static Task<int> LockCatalogAsync(ApplicationDbContext db, CancellationToken ct) =>
+      db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162001)", ct);
 }

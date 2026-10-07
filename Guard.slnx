@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="Guard/Guard.csproj" />
+  <Project Path="Guard.IpRules.Tests/Guard.IpRules.Tests.csproj" />
 </Solution>

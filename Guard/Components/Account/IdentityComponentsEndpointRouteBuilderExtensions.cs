@@ -52,7 +52,7 @@ namespace Microsoft.AspNetCore.Routing
         [FromForm] string? returnUrl) =>
       {
         var userName = user.Identity?.Name;
-        var ipAddress = context.Connection.RemoteIpAddress?.ToString();
+        var ipAddress = Guard.Core.Identity.ClientIpAddress.Get(context);
 
         await signInManager.SignOutAsync();
 
