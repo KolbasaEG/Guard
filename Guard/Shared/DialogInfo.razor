@@ -1,3 +1,4 @@
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@(BaseEntity switch { Guard.Core.Entities.Personal => Guard.Core.Identity.Permissions.Personals.ReadDetails, Guard.Core.Entities.Subdivision => Guard.Core.Identity.Permissions.Subdivisions.Read, Guard.Core.Entities.IpAddress => Guard.Core.Identity.Permissions.IpAddresses.Read, _ => "" })">
 @using Guard.Components.Library.Views
 @using Microsoft.AspNetCore.Authorization
 @using Radzen.Blazor
@@ -51,3 +52,4 @@
     </RadzenTableBody>
   </RadzenTable>
 </EntityInfo>
+</Guard.Components.Layout.Components.AccessDialog>

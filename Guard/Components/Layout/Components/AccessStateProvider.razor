@@ -1,52 +1,82 @@
+
 @using Guard.Core.Services.DTOs
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Authorization
 @implements IAsyncDisposable
 @inject IPermissionService Permissions
+@inject IAccessChangeNotifier Notifier
+@inject AccessRefreshCoordinator Coordinator
+@inject AuthenticationStateProvider Authentication
+@inject NavigationManager Navigation
 @inject ILogger<AccessStateProvider> Logger
-@inject DialogService Dialogs
 <CascadingValue Value="@this" IsFixed="true">
-<CascadingValue Value="@snapshot">
-  @ChildContent
-</CascadingValue>
+  <CascadingValue Value="@snapshot">@ChildContent</CascadingValue>
 </CascadingValue>
 @code {
   [Parameter] public RenderFragment? ChildContent { get; set; }
+  public UserAccessSnapshot Current => snapshot;
   private UserAccessSnapshot snapshot = new("", false, []);
   private readonly CancellationTokenSource stop = new();
-  private Task? loop;
+  private IDisposable? subscription;
+  private string? subscribedUser;
+  private Task? refreshTask;
+  private bool pending, disposed;
   protected override async Task OnInitializedAsync()
   {
+    Coordinator.RefreshRequested += RefreshAsync;
+    Navigation.LocationChanged += LocationChanged;
+    Authentication.AuthenticationStateChanged += AuthenticationChanged;
     await RefreshAsync();
   }
-  protected override Task OnAfterRenderAsync(bool firstRender)
+  public Task RefreshAsync() => InvokeAsync(QueueRefreshAsync);
+  private Task QueueRefreshAsync()
   {
-    if (firstRender) loop = WatchAsync();
-    return Task.CompletedTask;
+    if (disposed) return Task.CompletedTask;
+    pending = true;
+    if (refreshTask == null || refreshTask.IsCompleted) refreshTask = DrainAsync();
+    return refreshTask;
   }
-  public async Task RefreshAsync()
+  private async Task DrainAsync()
   {
-    try {
-      var next = await Permissions.GetCurrentAsync(stop.Token);
-      if ((snapshot.IsRoot && !next.IsRoot) || PermissionCatalog.All.Any(p => snapshot.Has(p.Code) && !next.Has(p.Code))) CloseDialogs();
-      snapshot = next;
+    await Task.Yield();
+    while (pending && !disposed)
+    {
+      pending = false;
+      try {
+        // Подписка до запроса исключает окно между первым чтением БД и подпиской.
+        var state = await Authentication.GetAuthenticationStateAsync();
+        var id = state.User.Identity?.IsAuthenticated == true
+          ? state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value : null;
+        if (id != subscribedUser) {
+          subscription?.Dispose();
+          subscribedUser = id;
+          subscription = string.IsNullOrWhiteSpace(id) ? null : Notifier.Subscribe(id, RefreshAsync);
+        }
+        snapshot = await Permissions.GetCurrentAsync(stop.Token);
+      }
+      catch (UnauthorizedAccessException) { snapshot = new("", false, []); }
+      catch (OperationCanceledException) when (stop.IsCancellationRequested) { return; }
+      catch (Exception ex) { Logger.LogError(ex, "Не удалось обновить состояние доступа"); snapshot = new("", false, []); }
+      if (!disposed) StateHasChanged();
     }
-    catch (UnauthorizedAccessException) { CloseDialogs(); snapshot = new("", false, []); }
-    catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
-    catch (Exception ex) { Logger.LogError(ex, "Не удалось обновить состояние доступа"); CloseDialogs(); snapshot = new("", false, []); }
-    StateHasChanged();
   }
-  private void CloseDialogs() => Dialogs.Close(null);
-  private async Task WatchAsync()
+  private async void LocationChanged(object? sender, LocationChangedEventArgs args) => await RefreshSafelyAsync();
+  private async void AuthenticationChanged(Task<AuthenticationState> state) => await RefreshSafelyAsync();
+  private async Task RefreshSafelyAsync()
   {
-    using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
-    try {
-      while (await timer.WaitForNextTickAsync(stop.Token))
-        await InvokeAsync(async () => { await RefreshAsync(); });
-    } catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
+    try { await RefreshAsync(); }
+    catch (Exception ex) when (disposed || ex is OperationCanceledException) { }
+    catch (Exception ex) { Logger.LogWarning(ex, "Обновление доступа сессии"); }
   }
   public async ValueTask DisposeAsync()
   {
+    disposed = true;
+    Coordinator.RefreshRequested -= RefreshAsync;
+    Navigation.LocationChanged -= LocationChanged;
+    Authentication.AuthenticationStateChanged -= AuthenticationChanged;
+    subscription?.Dispose();
     stop.Cancel();
-    if (loop != null) await loop;
+    if (refreshTask != null) await refreshTask;
     stop.Dispose();
   }
 }

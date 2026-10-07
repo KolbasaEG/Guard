@@ -1,4 +1,5 @@
-﻿@using Guard.Core.Entities
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Subdivisions.Read" WritePermission="@Guard.Core.Identity.Permissions.Subdivisions.Write">
+@using Guard.Core.Entities
 @attribute [Authorize]
 
 <CreateEntity TItem="Subdivision" Data="@item" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading">
@@ -103,3 +104,4 @@
 
   </RadzenStack>
 </CreateEntity>
+</Guard.Components.Layout.Components.AccessDialog>

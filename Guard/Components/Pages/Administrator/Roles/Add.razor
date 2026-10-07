@@ -1,3 +1,4 @@
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Roles.Manage" WritePermission="@Guard.Core.Identity.Permissions.Roles.Manage">
 @using Guard.Core.Services.DTOs
 @attribute [Authorize]
 
@@ -14,3 +15,4 @@
     <PermissionSelector Definitions="@PermissionCatalog.All" @bind-Selected="item.Permissions" Disabled="@isLoading" />
   </RadzenStack>
 </CreateEntity>
+</Guard.Components.Layout.Components.AccessDialog>

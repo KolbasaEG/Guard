@@ -8,7 +8,8 @@
       <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;min-height:0;">
         <RadzenCard Variant="Variant.Outlined" Style="padding:5px; border-radius:0px;height:100%;display:flex; flex-direction:column;">
           <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;">
-            @ChildContent
+            @if (AccessState?.Message != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@AccessState.Message</RadzenAlert> }
+            @if (AccessState?.CanView != false) { @ChildContent }
           </RadzenStack>
         </RadzenCard>
       </RadzenStack>
@@ -18,6 +19,7 @@
 
 
 @code {
+  [CascadingParameter] public Guard.Components.Library.Authorization.DialogAccessState? AccessState { get; set; }
   [Parameter] public string Name { get; set; } = "ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ";
   [Parameter] public string Icon { get; set; } = "info";
 

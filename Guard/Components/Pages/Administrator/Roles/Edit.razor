@@ -1,3 +1,4 @@
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Roles.Read" WritePermission="@Guard.Core.Identity.Permissions.Roles.Manage">
 @using Guard.Core.Services.DTOs
 @attribute [Authorize]
 
@@ -16,3 +17,4 @@
   </RadzenStack>
 </EditEntity>
 @code { [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; } }
+</Guard.Components.Layout.Components.AccessDialog>

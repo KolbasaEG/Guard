@@ -1,4 +1,5 @@
-﻿@using Guard.Core.Entities
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.IpAddresses.Read" WritePermission="@Guard.Core.Identity.Permissions.IpAddresses.Manage">
+@using Guard.Core.Entities
 @attribute [Authorize]
 
 <CreateEntity TItem="IpAddress" Data="@item" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading">
@@ -30,3 +31,4 @@
 
   </RadzenStack>
 </CreateEntity>
+</Guard.Components.Layout.Components.AccessDialog>

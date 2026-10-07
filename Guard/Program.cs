@@ -183,6 +183,9 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IDataAccessScopeService, DataAccessScopeService>();
+builder.Services.AddSingleton<IAccessChangeNotifier, AccessChangeNotifier>();
+builder.Services.AddScoped<AccessRefreshCoordinator>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, AccessCircuitHandler>();
 builder.Services.AddAuthorization(options =>
 {
   foreach (var permission in PermissionCatalog.All)

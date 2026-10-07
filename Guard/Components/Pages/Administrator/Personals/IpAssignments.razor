@@ -1,3 +1,4 @@
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.IpAddresses.Read" WritePermission="@Guard.Core.Identity.Permissions.IpAddresses.Manage">
 @using Guard.Core.Services
 @using Guard.Core.Services.DTOs
 @implements IDisposable
@@ -5,6 +6,7 @@
 @inject DialogService Dialogs
 @inject ILogger<IpAssignments> Logger
 
+<EditEntity TItem="Guid" Data="@PersonalId" Name="Разрешённые IP" Submit="SaveAsync" ShowSaveButton="@loaded" IsLoading="@loading" OnCancelButtonClick="@(() => Dialogs.Close(null))">
 <RadzenStack Gap="12px">
   <RadzenText Text="Разрешённые IP-адреса сотрудника" TextStyle="TextStyle.H6" />
   <RadzenText Text="Пустой список запрещает вход. Изменения применяются при следующем входе или новом соединении. Root освобождён от проверки IP." />
@@ -12,11 +14,9 @@
   <RadzenDropDown TValue="IEnumerable<Guid>" Data="@available" TextProperty="Address" ValueProperty="Id"
                   @bind-Value="selected" Multiple="true" AllowClear="true" AllowFiltering="true"
                   Disabled="@loading" Style="width:100%" Placeholder="Выберите IP-адреса или подсети" />
-  <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
-    <RadzenButton Text="Сохранить" Click="SaveAsync" Disabled="@(loading || !loaded)" />
-    <RadzenButton Text="Отмена" Click="@(() => Dialogs.Close(null))" ButtonStyle="ButtonStyle.Light" />
-  </RadzenStack>
+
 </RadzenStack>
+</EditEntity>
 
 @code {
   [Parameter] public Guid PersonalId { get; set; }
@@ -64,3 +64,4 @@
 
   public void Dispose() { cts.Cancel(); cts.Dispose(); }
 }
+</Guard.Components.Layout.Components.AccessDialog>

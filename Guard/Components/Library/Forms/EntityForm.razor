@@ -7,19 +7,20 @@
       <Guard.Components.Library.Cards.CardHeader
         Icon="@Icon"
         Name="@Name"
-        ShowSaveButton="@(ShowSaveButton && !ReadOnly)"
-        ShowInfoButton="ShowInfoButton"
+        ShowSaveButton="@(ShowSaveButton && !EffectiveReadOnly && CanView)"
+        ShowInfoButton="@(ShowInfoButton && CanView)"
         OnInfoClick="InfoButtonClick"
         OnCancelButtonClick="CancelButtonClick" />
 
+      @if (AccessState?.Message != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@AccessState.Message</RadzenAlert> }
       <RadzenStack Orientation="Orientation.Horizontal" Gap="5px;" Style="flex: 1; min-height: 0; width:100%; margin-top:5px;">
         <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;min-height:0;">
           <LoadingContainer IsLoading="IsLoading">
             <RadzenCard Variant="Variant.Outlined" Style="padding:5px; border-radius:0px;height:100%;display:flex; flex-direction:column;">
               <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;">
-                @if (ReadOnly) {
-                  <fieldset disabled style="border:0;margin:0;padding:0;width:100%;pointer-events:none;">@ChildContent</fieldset>
-                } else { @ChildContent }
+                @if (CanView) {
+                  <fieldset disabled="@EffectiveReadOnly" style="@FieldStyle">@ChildContent</fieldset>
+                }
               </RadzenStack>
             </RadzenCard>
           </LoadingContainer>
@@ -30,6 +31,10 @@
 </RadzenStack>
 
 @code {
+  [CascadingParameter] public Guard.Components.Library.Authorization.DialogAccessState? AccessState { get; set; }
+  private bool CanView => AccessState?.CanView != false;
+  private bool EffectiveReadOnly => ReadOnly || AccessState?.CanWrite == false;
+  private string FieldStyle => "border:0;margin:0;padding:0;width:100%;" + (EffectiveReadOnly ? "pointer-events:none;" : "");
   [Parameter] public bool ReadOnly { get; set; }
   [Parameter] public bool ShowSaveButton { get; set; } = true;
   [Parameter] public bool ShowInfoButton { get; set; } = false;
@@ -54,7 +59,10 @@
 
   protected async Task FormSubmit()
   {
-    if (!ReadOnly) await Submit.InvokeAsync();
+    if (AccessState != null) await AccessState.RefreshAsync();
+    if (!CanView || EffectiveReadOnly) return;
+    try { await Submit.InvokeAsync(); }
+    finally { if (AccessState != null) await AccessState.RefreshAsync(); }
   }
 
   protected async Task CancelButtonClick()

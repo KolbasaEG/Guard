@@ -1,6 +1,8 @@
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Personals.ReadDetails" WritePermission="@Guard.Core.Identity.Permissions.Personals.Write">
 @using Guard.Core.Entities
 @attribute [Authorize]
 
 <CreateEntity TItem="Personal" Data="@item" Submit="@FormSubmit"  OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading">
   <Guard.Components.Pages.Administrator.Personals.Components.PersonalFields Item="@item" Subdivisions="@subdivisions" />
 </CreateEntity>
+</Guard.Components.Layout.Components.AccessDialog>

@@ -1,4 +1,5 @@
-﻿@using Guard.Core.Entities
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Logs.Read">
+@using Guard.Core.Entities
 @using System.Text.Json
 @using System.Text.RegularExpressions
 @inject DialogService DialogService
@@ -161,3 +162,4 @@
     DialogService.Close(null);
   }
 }
+</Guard.Components.Layout.Components.AccessDialog>

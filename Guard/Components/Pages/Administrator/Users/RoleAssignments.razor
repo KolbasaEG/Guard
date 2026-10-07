@@ -1,3 +1,4 @@
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Roles.Read" WritePermission="@Guard.Core.Identity.Permissions.Roles.Manage">
 @using Guard.Core.Services.DTOs
 @inject IRoleAccessService Roles
 @inject DialogService Dialogs
@@ -44,3 +45,4 @@
     finally { busy = false; }
   }
 }
+</Guard.Components.Layout.Components.AccessDialog>

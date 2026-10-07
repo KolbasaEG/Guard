@@ -10,7 +10,7 @@ using System.Security.Claims;
 namespace Guard.Core.Services;
 
 // Менеджеры Identity разрешаются в отдельном scope: один контекст и транзакция на операцию.
-public class RoleAccessService(IPermissionService permissions, IServiceScopeFactory scopes, IAuditService audit)
+public class RoleAccessService(IPermissionService permissions, IServiceScopeFactory scopes, IAuditService audit, IAccessChangeNotifier notifier)
     : IRoleAccessService
 {
   private async Task<string> RequireRootAsync(CancellationToken ct)
@@ -60,9 +60,11 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     if (create) Check(await manager.CreateAsync(role)); else Check(await manager.UpdateAsync(role));
     foreach (var claim in old.Where(c => !selected.Contains(c.Value))) Check(await manager.RemoveClaimAsync(role, claim));
     foreach (var code in selected.Except(old.Select(c => c.Value))) Check(await manager.AddClaimAsync(role, new Claim("Permission", code)));
+    var affectedUsers = await db.UserRoles.Where(r => r.RoleId == role.Id).Select(r => r.UserId).ToListAsync(ct);
     // Обновление stamp фиксирует также изменения только набора claims.
     Check(await manager.UpdateAsync(role));
     await tx.CommitAsync(ct);
+    await notifier.PublishAsync(affectedUsers);
     audit.LogIdentityEvent(AuditEventType.RolePermissionsChanged, actor, details:
         $"RoleId={role.Id}; added={string.Join(",", selected.Except(old.Select(c => c.Value)))}; removed={string.Join(",", old.Select(c => c.Value).Except(selected))}");
     return role.Id;
@@ -79,8 +81,10 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     actor = await RequireRootAsync(ct);
     var role = await manager.FindByIdAsync(id) ?? throw new KeyNotFoundException("Роль не найдена.");
     if (role.NormalizedName == "ROOT") throw new InvalidOperationException("Нельзя удалить Root.");
+    var affectedUsers = await db.UserRoles.Where(r => r.RoleId == id).Select(r => r.UserId).ToListAsync(ct);
     Check(await manager.DeleteAsync(role));
     await tx.CommitAsync(ct);
+    await notifier.PublishAsync(affectedUsers);
     audit.LogIdentityEvent(AuditEventType.RolePermissionsChanged, actor, details: $"Deleted role {id}");
   }
 
@@ -123,6 +127,7 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     Check(await users.RemoveFromRolesAsync(user, removeNames));
     Check(await users.AddToRolesAsync(user, addNames));
     await tx.CommitAsync(ct);
+    await notifier.PublishAsync([userId]);
     audit.LogIdentityEvent(AuditEventType.UserRolesChanged, actor, details: $"UserId={userId}; added={string.Join(",", addNames)}; removed={string.Join(",", removeNames)}");
   }
 
@@ -149,10 +154,12 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     var role = await manager.FindByNameAsync("Администратор") ?? throw new KeyNotFoundException("Роль Администратор не найдена.");
     if ((await manager.GetClaimsAsync(role)).Any(c => c.Type == "Permission"))
       throw new InvalidOperationException("Роль уже настроена. Начальные права не перезаписывают существующие.");
+    var affectedUsers = await db.UserRoles.Where(r => r.RoleId == role.Id).Select(r => r.UserId).ToListAsync(ct);
     foreach (var p in PermissionCatalog.All.Where(p => !p.RootOnly))
       Check(await manager.AddClaimAsync(role, new Claim("Permission", p.Code)));
     Check(await manager.UpdateAsync(role));
     await tx.CommitAsync(ct);
+    await notifier.PublishAsync(affectedUsers);
     audit.LogIdentityEvent(AuditEventType.RolePermissionsChanged, actor, details: "Initialized Administrator permissions");
   }
 }

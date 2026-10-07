@@ -24,6 +24,7 @@ internal static class AuthorizationTests
     services.AddSingleton(factory); services.AddScoped(_ => factory.CreateDbContext());
     services.AddSingleton<AuthenticationStateProvider>(authentication);
     services.AddSingleton<IAuditService,AuditStub>();
+    services.AddSingleton<IAccessChangeNotifier,AccessChangeNotifier>();
     services.AddIdentity<ApplicationUser,ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
     services.AddScoped<IPermissionService,PermissionService>();
     services.AddScoped<IDataAccessScopeService,DataAccessScopeService>();
@@ -44,6 +45,13 @@ internal static class AuthorizationTests
     await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes=true, ValidateOnBuild=true });
     await using var scope = provider.CreateAsyncScope();
     var roles=scope.ServiceProvider.GetRequiredService<IRoleAccessService>();
+    var notifications = 0;
+    var committedAssignment = false;
+    using var subscription = provider.GetRequiredService<IAccessChangeNotifier>().Subscribe("user", async () => {
+      notifications++;
+      await using var committed = await factory.CreateDbContextAsync();
+      committedAssignment = await committed.UserRoles.AnyAsync(r => r.UserId == "user");
+    });
     var permissions=scope.ServiceProvider.GetRequiredService<IPermissionService>();
     var scopes=scope.ServiceProvider.GetRequiredService<IDataAccessScopeService>();
     var personals=scope.ServiceProvider.GetRequiredService<IPersonalService>();
@@ -73,6 +81,7 @@ internal static class AuthorizationTests
     var userRoles=await roles.GetUserRolesAsync("user");
     await roles.SetUserRolesAsync("user",[viewerId],userRoles.Version);
     await PostgresTests.ThrowsAsync<InvalidOperationException>(()=>roles.SetUserRolesAsync("user",[exporterId],userRoles.Version),check,"stale assignment version rejected");
+    check(notifications == 1 && committedAssignment, "assignment publishes after commit; rejected stale update publishes nothing");
     check((await roles.GetTransitionReportAsync()).IndividualPermissionCount==1,"ignored individual permissions reported");
     authentication.Id="user";
     var viewer=await permissions.GetCurrentAsync();
@@ -110,6 +119,7 @@ internal static class AuthorizationTests
     var oldVersion=editor.Version;
     editor.Permissions.Add(Permissions.Personals.ReadDetails);
     await roles.SaveAsync(editor);
+    check(notifications == 3, "role permission update notifies assigned user");
     editor.Version=oldVersion;
     await PostgresTests.ThrowsAsync<InvalidOperationException>(()=>roles.SaveAsync(editor),check,"stale role version rejected");
     authentication.Id="user";
@@ -119,6 +129,7 @@ internal static class AuthorizationTests
     authentication.Id="root";
     var revoke=await roles.GetAsync(viewerId); revoke.Permissions.Clear(); await roles.SaveAsync(revoke);
     await roles.DeleteAsync(exporterId);
+    check(notifications == 5, "permission revocation and role deletion notify former members");
     authentication.Id="user";
     check(!(await permissions.GetCurrentAsync()).Has(Permissions.Personals.Read),"revocation takes effect without new login");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>personals.SearchAsync(new()),check,"next read denied after revocation");

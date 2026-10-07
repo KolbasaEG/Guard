@@ -1,3 +1,4 @@
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Personals.ReadDetails">
 @using Guard.Core.Services.DTOs
 <ViewEntity TItem="PersonalDetailsDto" Data="@item" Name="Карточка сотрудника" IsLoading="@isLoading" OnCancelButtonClick="@(() => Dialogs.Close(null))">
   @if (item != null)
@@ -40,3 +41,4 @@
     finally { isLoading = false; }
   }
 }
+</Guard.Components.Layout.Components.AccessDialog>
