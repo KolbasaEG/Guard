@@ -106,6 +106,9 @@ permissions проходят через IAuditService; AccessDenied имеет o
 
 ## Проверки
 
+Пошаговые сценарии ручной проверки интерфейса, диалогов и нескольких сеансов:
+[Проверка через браузер](access-events-browser-testing.md).
+
 Из корня репозитория:
 
 ```powershell
