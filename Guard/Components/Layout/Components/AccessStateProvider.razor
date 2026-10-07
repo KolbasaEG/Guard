@@ -10,7 +10,7 @@
 @inject NavigationManager Navigation
 @inject ILogger<AccessStateProvider> Logger
 <CascadingValue Value="@this" IsFixed="true">
-  <CascadingValue Value="@snapshot">@ChildContent</CascadingValue>
+  <CascadingValue Value="@snapshot"><StableAccessContent>@ChildContent</StableAccessContent></CascadingValue>
 </CascadingValue>
 @code {
   [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -42,6 +42,7 @@
     while (pending && !disposed)
     {
       pending = false;
+      var previous = snapshot;
       try {
         // Подписка до запроса исключает окно между первым чтением БД и подпиской.
         var state = await Authentication.GetAuthenticationStateAsync();
@@ -57,7 +58,9 @@
       catch (UnauthorizedAccessException) { snapshot = new("", false, []); }
       catch (OperationCanceledException) when (stop.IsCancellationRequested) { return; }
       catch (Exception ex) { Logger.LogError(ex, "Не удалось обновить состояние доступа"); snapshot = new("", false, []); }
-      if (!disposed) StateHasChanged();
+      if (previous.UserId == snapshot.UserId && previous.IsRoot == snapshot.IsRoot &&
+          previous.Permissions.SetEquals(snapshot.Permissions)) snapshot = previous;
+      else if (!disposed) StateHasChanged();
     }
   }
   private async void LocationChanged(object? sender, LocationChangedEventArgs args) => await RefreshSafelyAsync();
