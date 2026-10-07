@@ -104,7 +104,10 @@
 
       // This doesn't count login failures towards account lockout
       // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-      result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+      // Строковая перегрузка ищет UserName, который может отличаться от email.
+      var user = await UserManager.FindByEmailAsync(Input.Email.Trim());
+      result = user == null ? SignInResult.Failed
+        : await SignInManager.PasswordSignInAsync(user, Input.Password, Input.RememberMe, lockoutOnFailure: false);
     }
 
     var ipAddress = Guard.Core.Identity.ClientIpAddress.Get(HttpContext);

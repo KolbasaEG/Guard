@@ -50,11 +50,23 @@ internal static class SignInTests
     await db.SaveChangesAsync();
     var success = await manager.PasswordSignInAsync("user", "TestPassword123!", false, false);
     check(success.Succeeded && authentication.Issued == 2, "allowed password login issues cookie");
+    user.Email = "different-email@example.test";
+    check((await users.UpdateAsync(user)).Succeeded, "email distinct from username is saved");
+    check((await manager.PasswordSignInAsync(user.Email, "TestPassword123!", false, false)).Succeeded == false,
+      "string login overload searches username rather than email");
+    var byEmail = await users.FindByEmailAsync("DIFFERENT-EMAIL@example.test");
+    check(byEmail?.Id == user.Id, "email lookup is case insensitive");
+    check((await manager.PasswordSignInAsync(byEmail!, "TestPassword123!", false, false)).Succeeded,
+      "email-resolved account signs in with its password");
+    check(!(await manager.PasswordSignInAsync(byEmail!, "incorrect", false, false)).Succeeded,
+      "email-resolved account still rejects incorrect password");
     context.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("203.0.113.1");
     await PostgresTests.ThrowsAsync<IpAccessDeniedException>(
         () => manager.SignInWithClaimsAsync(user, new AuthenticationProperties(), [new Claim("amr", "mfa")]),
         check, "final sign-in gate rejects foreign IP with MFA claims");
-    check(authentication.Issued == 2, "MFA claims cannot bypass IP gate");
+    check(authentication.Issued == 3, "MFA claims cannot bypass IP gate");
+    check((await manager.PasswordSignInAsync(byEmail!, "TestPassword123!", false, false)).IsNotAllowed,
+      "email login preserves IP restriction");
   }
 
   private sealed class AuthenticationRecorder : IAuthenticationService
