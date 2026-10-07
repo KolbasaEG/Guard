@@ -1,5 +1,6 @@
-﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
+<div class="table-template">
 <RadzenSplitter Orientation="Orientation.Vertical" style="height: 100%; background-color: var(--rz-tabs-background-color);">
   <RadzenSplitterPane Size="260px">
     <RadzenSplitter>
@@ -41,22 +42,9 @@
     </RadzenCard>
   </RadzenSplitterPane>
 </RadzenSplitter>
+</div>
 
 
-<style>
-  .rz-tabview-panels{
-    height:100%; 
-  }
-
-  .rz-tabview-panel{
-    height: 100%;
-    padding: 0px;
-  }
-
-  .rz-custom-header {
-    width: 100%;
-  }
-</style>
 @code {
   [Parameter] public RenderFragment Table { get; set; }
   [Parameter] public RenderFragment Filter { get; set; }
