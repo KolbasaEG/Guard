@@ -20,6 +20,7 @@
           </RadzenStack>
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
             <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+            <RadzenButton Icon="add_circle_outline" Text="Добавить" Visible="@(Access?.Has(Permissions.Users.Manage) == true)" Click="AddUserAsync" ButtonStyle="ButtonStyle.Success" />
 
           </RadzenStack>
         </RadzenStack>

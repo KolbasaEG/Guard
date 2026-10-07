@@ -5,7 +5,7 @@
             Name="@Name"
             Icon="@Icon"
             IsLoading="IsLoading"
-            ShowSaveButton="true"
+            ShowSaveButton="ShowSaveButton"
             ShowInfoButton="ShowInfoButton"
             Submit="Submit"
             OnInfoClick="OnInfoClick"
@@ -17,6 +17,7 @@
   [Parameter] public string Name { get; set; } = "ДОБАВЛЕНИЕ";
   [Parameter] public string Icon { get; set; } = "add_box";
   [Parameter] public bool IsLoading { get; set; }
+  [Parameter] public bool ShowSaveButton { get; set; } = true;
   [Parameter] public bool ShowInfoButton { get; set; } = false;
 
   [Parameter] public RenderFragment? ChildContent { get; set; }

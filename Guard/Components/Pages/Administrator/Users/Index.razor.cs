@@ -122,6 +122,11 @@ namespace Guard.Components.Pages.Administrator.Users
 
     protected Task EditRoles(UserDto item) => DialogService.OpenAsync<RoleAssignments>("Роли пользователя",
       new Dictionary<string, object> { ["UserId"] = item.Id }, new DialogOptions { Width = "800px" });
+    protected async Task AddUserAsync()
+    {
+      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions { Width = "650px", ShowTitle = false });
+      if (result is true) await grid.Reload();
+    }
     protected async Task ToggleLockout(UserDto item)
     {
       if (await DialogService.Confirm(item.IsLockedOut ? "Снять блокировку?" : "Заблокировать пользователя?", "Блокировка") != true) return;

@@ -16,6 +16,19 @@ public class SecurityService(
   public Task<TResult> QueryPersonalsAsync<TResult>(Func<IQueryable<Personal>,Task<TResult>> query, CancellationToken ct=default) => personalReads.QueryAsync(query,ct);
   public Task<TResult> QueryIpAddressesAsync<TResult>(Func<IQueryable<IpAddress>,Task<TResult>> query, CancellationToken ct=default) => ips.QueryIpAddressesAsync(query,ct);
   public Task<ApplicationUser?> GetUserByIdAsync(string id, CancellationToken ct=default) => userReads.GetByIdAsync(id,ct);
+  public async Task<IReadOnlyList<Guard.Core.Services.DTOs.UserPersonalOption>> GetUserPersonalOptionsAsync(CancellationToken ct=default)
+  {
+    await permissions.RequireAsync(Permissions.Users.Manage, ct);
+    var access = await accessScopes.GetAsync(ct);
+    await using var scope = scopes.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var query = db.Set<Personal>().AsNoTracking().Where(p =>
+      (p.Status == Status.Inserted || p.Status == Status.Modified) && !db.Users.Any(u => u.PersonalId == p.Id));
+    if (!access.IsRoot) query = query.Where(p => p.SubdivisionId.HasValue && access.SubdivisionIds.Contains(p.SubdivisionId.Value));
+    return await query.OrderBy(p => p.LastName).ThenBy(p => p.FirstName)
+      .Select(p => new Guard.Core.Services.DTOs.UserPersonalOption(p.Id,
+        p.LastName + " " + p.FirstName + " " + (p.MiddleName ?? ""))).ToListAsync(ct);
+  }
   private static void Check(IdentityResult result) {
     if (!result.Succeeded) throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e=>e.Description)));
   }
@@ -25,7 +38,7 @@ public class SecurityService(
     if (id == null) { if (!access.IsRoot) throw new UnauthorizedAccessException("Необходимо доступное подразделение сотрудника."); return; }
     var subdivision = await db.Set<Personal>().Where(p=>p.Id==id && (p.Status==Status.Inserted || p.Status==Status.Modified))
       .Select(p=>p.SubdivisionId).SingleOrDefaultAsync(ct);
-    if (!access.Allows(subdivision) || !await db.Set<Personal>().AnyAsync(p=>p.Id==id,ct))
+    if (!access.Allows(subdivision) || !await db.Set<Personal>().AnyAsync(p=>p.Id==id && (p.Status==Status.Inserted || p.Status==Status.Modified),ct))
       throw new UnauthorizedAccessException("Сотрудник недоступен.");
   }
   private async Task CheckTargetAsync(ApplicationDbContext db, ApplicationUser user, CancellationToken ct)
@@ -53,6 +66,8 @@ public class SecurityService(
   public Task<IdentityResult> CreateUserAsync(ApplicationUser user,string password,IEnumerable<string>? roles=null,CancellationToken ct=default) =>
     WriteAsync(async (db,manager)=>{
       await CheckPersonalAsync(db,user.PersonalId,ct);
+      if (user.PersonalId.HasValue && await db.Users.AnyAsync(u => u.PersonalId == user.PersonalId, ct))
+        throw new InvalidOperationException("У выбранного сотрудника уже есть учётная запись.");
       var selected=(roles??[]).Distinct().ToArray();
       if(selected.Length>0 && !(await permissions.GetCurrentAsync(ct)).IsRoot) throw new UnauthorizedAccessException("Роли назначает только Root.");
       // Входные флаги безопасности не позволяют создавать привилегированную учётную запись.
