@@ -37,6 +37,7 @@ public class RoleDto
 
 public class IpAddressDto
 {
+  public string? SubdivisionName { get; set; }
   public Guid Id { get; set; }
   public string Address { get; set; } = default!;
   public string? Description { get; set; }

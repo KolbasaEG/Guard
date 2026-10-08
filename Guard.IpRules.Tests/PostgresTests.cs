@@ -112,6 +112,7 @@ internal static class PostgresTests
       }));
       check(concurrent.Count(v => v) == 1, "concurrent duplicate insertion has one winner");
       await SignInTests.RunAsync(factory, gate, check);
+      await IpIndexTests.RunAsync(rootService, check);
       await AuthorizationTests.RunAsync(factory, check);
       Console.WriteLine("PostgreSQL integration checks passed in an isolated temporary database.");
     }

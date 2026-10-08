@@ -3,19 +3,20 @@ using Guard.Core.Enums;
 using Guard.Core.Extensions;
 using Guard.Core.Identity;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.JSInterop;
+
 using Radzen;
 using Radzen.Blazor;
-using System.Linq.Dynamic.Core;
+
 
 namespace Guard.Components.Pages.Administrator.IpAddresses
 {
   public partial class Index : IDisposable
   {
-    [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
+
     [Inject] protected NotificationService NotificationService { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!;
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
@@ -36,15 +37,26 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
     private CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
 
-    protected IEnumerable<IpAddress> data = default!;
-    protected IEnumerable<IpAddress> filteredData = default!;
-    protected RadzenDataGrid<IpAddress> grid = default!;
+    protected IEnumerable<IpAddress> data = [];
+    protected IEnumerable<IpAddressDto> filteredData = [];
+    protected RadzenDataGrid<IpAddressDto> grid = default!;
     protected RadzenDataFilter<IpAddress> dataFilter = default!;
     
 
     IEnumerable<string>? itemsSubdivision;
     IEnumerable<string>? selectedItemsSubdivision;
-    IEnumerable<string>? finalSelectedItemsSubdivision;
+    private Func<IQueryable<IpAddress>, IQueryable<IpAddress>> appliedFilter = query => query;
+    private bool disposed;
+    protected string? loadError;
+    private string? accessVersion;
+    protected override void OnParametersSet()
+    {
+      var version = AccessSnapshot == null ? "" : AccessSnapshot.UserId + ":" + AccessSnapshot.IsRoot + ":" + AccessSnapshot.Has(Permissions.IpAddresses.Read);
+      if (accessVersion != null && version != accessVersion) {
+        _loadDataCts?.Cancel(); filteredData = []; count = 0;
+      }
+      accessVersion = version;
+    }
     void OnSelectedSubdivisionChange(object value)
     {
       if (selectedItemsSubdivision != null && !selectedItemsSubdivision.Any())
@@ -70,7 +82,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации страницы IP-адресов");
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification("Не удалось выполнить операцию. Проверьте данные и права доступа.");
       }
       finally
       {
@@ -80,91 +92,97 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
 
     async Task LoadData(LoadDataArgs args)
     {
+      if (disposed) return;
       _loadDataCts?.Cancel();
-      _loadDataCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
-      var ct = _loadDataCts.Token;
-      isLoading = true;
-
+      var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+      _loadDataCts = request;
+      var ct = request.Token;
+      var filter = appliedFilter;
+      var mode = currentMode;
+      var hierarchy = hierarchyMode;
+      var path = UserContext?.Subdivision?.Path;
+      var skip = args.Skip ?? 0;
+      var take = args.Top ?? 20;
+      var orderBy = args.OrderBy;
+      isLoading = true; loadError = null;
       try
       {
-        if (dataFilter?.Filters != null) NormalizeFilterDatesToUtc(dataFilter.Filters);
+        if (skip < 0 || take is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
+        var initialAccess = await Access.GetScopeAsync(false, ct);
         var (items, totalCount) = await IpAddressService.QueryIpAddressesAsync(async query =>
         {
-          query = query
-            .FilterByMode(currentMode)
-            .Include(p=>p.Subdivision);
-          // Область доступа уже ограничена сервисом. Root видит и общие адреса.
-          if (UserContext?.IsRoot != true)
-            query = query.FilterBySubdivision(subdivisionPath, hierarchyMode);
-          if (dataFilter != null)
-          {
-            query = query.Where(dataFilter);
-          }
-
-          if (!string.IsNullOrEmpty(args.OrderBy))
-          {
-            query = query.OrderBy(args.OrderBy);
-          }
-          else
-          {
-            query = query.OrderByDescending(s => s.InsertedDate);
-          }
-
+          query = query.FilterByMode(mode);
+          if (AccessSnapshot?.IsRoot != true)
+            query = string.IsNullOrWhiteSpace(path) ? query.Where(p => false) : query.FilterBySubdivision(path, hierarchy);
+          query = filter(query);
           var total = await query.CountAsync(ct);
-
-          var pageData = await query
-              .Skip(args.Skip ?? 0)
-              .Take(args.Top ?? 10)
-              .ToListAsync(ct);
-
-          return (pageData, total);
+          var page = await IpListQuery.Sort(query, orderBy).Skip(skip).Take(take)
+            .Select(p => new IpAddressDto {
+              Id = p.Id, Address = p.Address, Description = p.Description, Status = (int)p.Status,
+              SubdivisionName = p.Subdivision != null ? p.Subdivision.Name : null
+            }).ToListAsync(ct);
+          return (page, total);
         }, ct);
-
-        filteredData = items.ConvertDateTimesToLocal();
-        count = totalCount;
+        ct.ThrowIfCancellationRequested();
+        // Повторная серверная проверка перед показом результата.
+        var finalAccess = await Access.GetScopeAsync(false, ct);
+        if (initialAccess.UserId != finalAccess.UserId || initialAccess.IsRoot != finalAccess.IsRoot ||
+            !initialAccess.SubdivisionIds.SetEquals(finalAccess.SubdivisionIds))
+          throw new UnauthorizedAccessException("Область доступа изменилась во время загрузки.");
+        if (disposed || !ReferenceEquals(_loadDataCts, request)) return;
+        filteredData = items; count = totalCount;
       }
-      catch (OperationCanceledException)
-      {
-        // Игнорируем отмененные запросы
-      }
+      catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка загрузки данных ip");
-        ShowErrorNotification("Не удалось загрузить данные");
+        if (!disposed && ReferenceEquals(_loadDataCts, request)) {
+          filteredData = []; count = 0;
+          loadError = "Не удалось загрузить IP-адреса. Проверьте доступ и повторите попытку.";
+          Logger.LogError(ex, "Ошибка загрузки IP-адресов");
+          ShowErrorNotification(loadError);
+        }
       }
       finally
       {
-        isLoading = false;
+        if (ReferenceEquals(_loadDataCts, request)) { _loadDataCts = null; if (!disposed) isLoading = false; }
+        request.Dispose();
       }
+    }
+
+    protected async Task ResetPageAsync()
+    {
+      if (!disposed) await grid.FirstPage(true);
     }
     protected async Task ReloadAsync()
     {
-      await grid.Reload();
+      if (!disposed) await grid.Reload();
     }
     protected async Task AddClick(MouseEventArgs args)
     {
+      if (!isEditor || disposed) return;
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      if (result != null)
+      if (result is true && !disposed)
       {
         ShowSuccessNotification("Добавлена новая запись!");
         await grid.Reload();
       }
     }
 
-    protected async Task EditRow(IpAddress item)
+    protected async Task EditRow(IpAddressDto item)
     {
-      if (!isEditor) return;
+      if (!isEditor || disposed || (Status)item.Status is not (Status.Inserted or Status.Modified)) return;
       var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
 
-      if (result != null)
+      if (result is true && !disposed)
       {
         ShowSuccessNotification("Информация обновлена!");
         await grid.Reload();
       }
     }
 
-    protected async Task GridArchiveButtonClick(MouseEventArgs args, IpAddress item)
+    protected async Task GridArchiveButtonClick(MouseEventArgs args, IpAddressDto item)
     {
+      if (!isEditor || disposed || (Status)item.Status is not (Status.Inserted or Status.Modified)) return;
       if (await DialogService.Confirm("Вы действительно хотите поместить запись в архив?", "Архивирование", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
@@ -177,13 +195,14 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
         catch (Exception ex)
         {
           Logger.LogError(ex, "Ошибка при архивировании IP-адреса ID: {IpAddressId}", item.Id);
-          ShowErrorNotification(ex.Message);
+          ShowErrorNotification("Не удалось выполнить операцию. Проверьте данные и права доступа.");
         }
       }
     }
 
-    protected async Task GridUnarchiveButtonClick(MouseEventArgs args, IpAddress item)
+    protected async Task GridUnarchiveButtonClick(MouseEventArgs args, IpAddressDto item)
     {
+      if (!isEditor || disposed || (Status)item.Status != Status.Archived) return;
       if (await DialogService.Confirm("Вы действительно хотите извлечь запись из архива?", "Извлечение из архива", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
@@ -196,13 +215,14 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
         catch (Exception ex)
         {
           Logger.LogError(ex, "Ошибка при извлечении из архива IP-адреса ID: {IpAddressId}", item.Id);
-          ShowErrorNotification(ex.Message);
+          ShowErrorNotification("Не удалось выполнить операцию. Проверьте данные и права доступа.");
         }
       }
     }
 
-    protected async Task GridDeleteButtonClick(MouseEventArgs args, IpAddress item)
+    protected async Task GridDeleteButtonClick(MouseEventArgs args, IpAddressDto item)
     {
+      if (!isEditor || disposed || (Status)item.Status is not (Status.Inserted or Status.Modified)) return;
       if (await DialogService.Confirm("Вы действительно хотите удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
@@ -215,21 +235,20 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
         catch (Exception ex)
         {
           Logger.LogError(ex, "Ошибка при удалении IP-адреса ID: {IpAddressId}", item.Id);
-          ShowErrorNotification(ex.Message);
+          ShowErrorNotification("Не удалось выполнить операцию. Проверьте данные и права доступа.");
         }
       }
     }
 
-    private async Task OnExportClick()
-    {
-      // TODO: Реализовать экспорт
-      await Task.CompletedTask;
-    }
-
     async Task ApplyFilter()
     {
-      finalSelectedItemsSubdivision = selectedItemsSubdivision;
-      await grid.Reload();
+      try {
+        appliedFilter = IpListQuery.Capture(dataFilter);
+        await ResetPageAsync();
+      } catch (ArgumentException ex) {
+        Logger.LogWarning(ex, "Некорректные условия фильтра IP");
+        ShowErrorNotification("Проверьте условия фильтра.");
+      }
     }
     private async Task OnHierarchyModeChanged(bool isToggled)
     {
@@ -237,29 +256,12 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
           ? SubdivisionHierarchyMode.IncludeChildren
           : SubdivisionHierarchyMode.CurrentOnly;
 
-      await grid.Reload();
-    }
-
-    private void NormalizeFilterDatesToUtc(IEnumerable<CompositeFilterDescriptor> filters)
-    {
-      if (filters == null) return;
-
-      foreach (var filter in filters)
-      {
-        if (filter.FilterValue is DateTime dt && dt.Kind != DateTimeKind.Utc)
-        {
-          filter.FilterValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-        }
-
-        if (filter.Filters != null && filter.Filters.Any())
-        {
-          NormalizeFilterDatesToUtc(filter.Filters);
-        }
-      }
+      await ResetPageAsync();
     }
 
     private void ShowSuccessNotification(string detail)
     {
+      if (disposed) return;
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Success,
@@ -271,6 +273,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
 
     private void ShowErrorNotification(string detail)
     {
+      if (disposed) return;
       NotificationService.Notify(new NotificationMessage
       {
         Severity = NotificationSeverity.Error,
@@ -282,10 +285,10 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
 
     public void Dispose()
     {
-      _loadDataCts?.Cancel();
-      _loadDataCts?.Dispose();
-      _cts?.Cancel();
-      _cts?.Dispose();
+      if (disposed) return;
+      disposed = true;
+      _cts.Cancel();
+      _cts.Dispose();
     }
   }
 }
