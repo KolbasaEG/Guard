@@ -1,0 +1,63 @@
+@page "/account-policy"
+@attribute [Authorize]
+@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
+@inject IAccountPolicyService Policies
+@inject IPermissionService PermissionsService
+@inject NavigationManager Navigation
+@inject ILogger<AccountPolicySettings> Logger
+@implements IDisposable
+<PageTitle>Политика паролей и аккаунтов</PageTitle>
+@if (Access?.IsRoot == true) {
+  <EditEntity TItem="AccountPolicy" Data="@model" Name="Политика паролей и аккаунтов" IsLoading="@busy" Submit="SaveAsync" OnCancelButtonClick="Cancel">
+    <RadzenStack Gap="12px">
+      @if (message != null) { <RadzenAlert AlertStyle="@(success ? AlertStyle.Success : AlertStyle.Danger)">@message</RadzenAlert> }
+      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.PasswordExpirationEnabled" /><RadzenLabel Text="Обязательная смена пароля" /></RadzenStack>
+      <RadzenLabel Text="Срок действия пароля N, дней (1–3650)" />
+      <RadzenNumeric TValue="int" @bind-Value="model.PasswordDays" Min="1" Max="3650" />
+      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.InactivityEnabled" /><RadzenLabel Text="Блокировка за неактивность (кроме Root)" /></RadzenStack>
+      <RadzenLabel Text="Период неактивности M, дней (1–3650)" />
+      <RadzenNumeric TValue="int" @bind-Value="model.InactivityDays" Min="1" Max="3650" />
+      <RadzenLabel Text="Минимальная длина пароля (6–100)" />
+      <RadzenNumeric TValue="int" @bind-Value="model.MinimumLength" Min="6" Max="100" />
+      <RadzenLabel Text="Минимальное число различных символов" />
+      <RadzenNumeric TValue="int" @bind-Value="model.UniqueCharacters" Min="1" Max="@model.MinimumLength" />
+      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.RequireDigit" /><RadzenLabel Text="Цифры" /></RadzenStack>
+      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.RequireLowercase" /><RadzenLabel Text="Строчные латинские буквы" /></RadzenStack>
+      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.RequireUppercase" /><RadzenLabel Text="Прописные латинские буквы" /></RadzenStack>
+      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.RequireSymbol" /><RadzenLabel Text="Специальные символы" /></RadzenStack>
+      <RadzenText Text="Сложность применяется при задании нового пароля. Сокращение N или M может немедленно ограничить доступ. При первом включении пользователям без истории предоставляется полный период. Повторное включение начинает новый период неактивности. Root подчиняется правилам пароля, но не блокируется за неактивность." />
+      <RadzenButton Text="Обновить настройки" Icon="refresh" Click="LoadAsync" Disabled="@busy" />
+    </RadzenStack>
+  </EditEntity>
+} else { <AccessDenied /> }
+@code {
+  [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
+  private AccountPolicy model = new();
+  private readonly CancellationTokenSource stop = new();
+  private bool busy, success;
+  private string? message;
+  protected override Task OnInitializedAsync() => LoadAsync();
+  private void Cancel() => Navigation.NavigateTo("/users");
+  private async Task LoadAsync()
+  {
+    busy = true;
+    try {
+      if (!(await PermissionsService.GetCurrentAsync(stop.Token)).IsRoot) throw new UnauthorizedAccessException();
+      model = await Policies.GetAsync(stop.Token); message = null;
+    }
+    catch (Exception ex) { Logger.LogWarning(ex, "Чтение политики"); success = false; message = "Не удалось получить настройки или недостаточно прав."; }
+    finally { busy = false; }
+  }
+  private async Task SaveAsync()
+  {
+    if (busy) return;
+    busy = true; success = false;
+    try { await Policies.SaveAsync(model, stop.Token); success = true; message = "Настройки сохранены."; }
+    catch (ArgumentException ex) { message = ex.Message; }
+    catch (AccountPolicyConflictException ex) { message = ex.Message; }
+    catch (Exception ex) { Logger.LogError(ex, "Сохранение политики"); message = "Не удалось сохранить настройки или недостаточно прав."; }
+    finally { busy = false; }
+  }
+  public void Dispose() { stop.Cancel(); stop.Dispose(); }
+}

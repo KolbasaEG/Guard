@@ -1,0 +1,6 @@
+<form method="post" action="Account/Logout" data-enhance="false" class="mt-2">
+  <AntiforgeryToken />
+  <input type="hidden" name="returnUrl" value="/Account/Login" />
+  <RadzenButton ButtonType="ButtonType.Submit" Text="Выйти из системы" Icon="logout"
+                ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Medium" class="w-100" />
+</form>

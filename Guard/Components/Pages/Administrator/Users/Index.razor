@@ -30,13 +30,25 @@
         <RadzenDataGridColumn TItem="UserDto" Property="UserName" Title="Имя пользователя" Width="200px" />
         <RadzenDataGridColumn TItem="UserDto" Property="Email" Title="Email" Width="200px" />
         <RadzenDataGridColumn TItem="UserDto" Property="PersonalId" Title="Id сотрудника" Width="200px" />
-        <RadzenDataGridColumn TItem="UserDto" Property="PersonalFullName" Title="ФИО" Width="100%" />
-        <RadzenDataGridColumn TItem="UserDto" Property="IsLockedOut" Title="Блокировка" Width="200px" />
-        <RadzenDataGridColumn TItem="UserDto" Filterable="false" Sortable="false" Width="90px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
+        <RadzenDataGridColumn TItem="UserDto" Property="PersonalFullName" Title="ФИО" Sortable="false" Width="100%" />
+        <RadzenDataGridColumn TItem="UserDto" Property="IsLockedOut" Title="Блокировка" Sortable="false" Width="200px">
+          <Template Context="item">@(item.IsLockedOut ? "Да" : "Нет")</Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="UserDto" Property="AccountBlockReason" SortProperty="AccountBlockReason" Title="Причина блокировки" Width="180px">
+          <Template Context="item">@(item.AccountBlockReason == "Inactivity" ? "Неактивность" : item.AccountBlockReason == "Administrator" ? "Администратор" : item.IsLockedOut ? "Временная блокировка" : "—")</Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="UserDto" Property="LastActivityAtUtc" SortProperty="LastActivityAtUtc" Title="Последняя активность" Width="180px">
+          <Template Context="item">@(item.LastActivityAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "—")</Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="UserDto" Property="PasswordChangeRequired" Sortable="false" Title="Требуется смена пароля" Width="180px">
+          <Template Context="item">@(item.PasswordChangeRequired ? "Да" : "Нет")</Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="UserDto" Filterable="false" Sortable="false" Width="135px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
             <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
               <RadzenButton Icon="domino_mask" Title="Роли и итоговые права" Visible="@(Access?.IsRoot == true)" Click="@(() => EditRoles(item))" @onclick:stopPropagation="true" />
               <RadzenButton Icon="lock" Title="Изменить блокировку" Visible="@(Access?.Has(Permissions.Users.Manage) == true)" Click="@(() => ToggleLockout(item))" @onclick:stopPropagation="true" />
+              <RadzenButton Icon="passkey" Title="Сбросить пароль" Visible="@(Access?.Has(Permissions.Users.Manage) == true && !item.IsLockedOut)" Click="@(() => ResetPasswordAsync(item))" @onclick:stopPropagation="true" />
             </RadzenStack>
           </Template>
         </RadzenDataGridColumn>
@@ -44,7 +56,7 @@
     </RadzenDataGrid>
   </Table>
   <Filter>
-    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="ApplicationUser" ViewChanged=@(view => grid.Reload())
+    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="ApplicationUser"
                       AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                       DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
                       AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">

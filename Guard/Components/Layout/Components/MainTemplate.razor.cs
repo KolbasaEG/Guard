@@ -11,6 +11,15 @@ namespace Guard.Components.Layout.Components
   {
     [Inject] protected NavigationManager NavigationManager { get; set; } = default!;
     [Inject] protected ICurrentUserService CurrentUserService { get; set; } = default!;
+    [Inject] protected DialogService DialogService { get; set; } = default!;
+
+    private async Task ChangePasswordAsync()
+    {
+      await DialogService.OpenAsync<Guard.Components.Account.Shared.ChangePasswordDialog>(
+        "", null, new DialogOptions {
+          Width = "600px", ShowTitle = false, ContentCssClass = "rz-p-1"
+        });
+    }
 
     [Parameter] public RenderFragment ChildContent { get; set; } = default!;
     [Parameter] public RenderFragment MenueContent { get; set; } = default!;

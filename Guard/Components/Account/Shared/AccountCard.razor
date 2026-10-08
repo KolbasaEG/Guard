@@ -1,0 +1,13 @@
+<section class="account-card" style="width:100%; max-width:480px; margin:.5rem 0; padding:1.25rem; background:#fff; color:#263238; border-radius:12px; box-shadow:0 10px 35px rgba(0,0,0,.3);">
+  <div class="account-card-heading" style="text-align:center; margin-bottom:1rem;">
+    <RadzenIcon Icon="@Icon" Style="font-size: 2rem;" />
+    <h2 style="margin:.5rem 0 0; font-size:1.4rem; font-weight:600;">@Title</h2>
+  </div>
+  @ChildContent
+</section>
+
+@code {
+  [Parameter] public string Title { get; set; } = "";
+  [Parameter] public string Icon { get; set; } = "login";
+  [Parameter] public RenderFragment? ChildContent { get; set; }
+}

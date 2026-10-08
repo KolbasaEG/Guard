@@ -22,7 +22,7 @@ public class IdentityRevalidatingAuthenticationStateProvider<TUser>
     _options = options;
   }
 
-  protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(30);
+  protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(1);
 
   protected override async Task<bool> ValidateAuthenticationStateAsync(
       AuthenticationState authenticationState, CancellationToken cancellationToken)
@@ -31,6 +31,7 @@ public class IdentityRevalidatingAuthenticationStateProvider<TUser>
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<TUser>>();
     var user = await userManager.GetUserAsync(authenticationState.User);
 
-    return user is not null && !await userManager.IsLockedOutAsync(user);
+    return user is not null && !await userManager.IsLockedOutAsync(user) &&
+      authenticationState.User.FindFirst(_options.Value.ClaimsIdentity.SecurityStampClaimType)?.Value == await userManager.GetSecurityStampAsync(user);
   }
 }

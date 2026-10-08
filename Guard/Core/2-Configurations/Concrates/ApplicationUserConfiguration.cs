@@ -12,6 +12,8 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 {
   public void Configure(EntityTypeBuilder<ApplicationUser> builder)
   {
+    builder.Property(u => u.AccountBlockReason).HasMaxLength(64);
+    builder.HasIndex(u => u.LastActivityAtUtc);
     // Настройка связи 1-к-1 с Personal
     builder.HasOne(u => u.Personal)
            .WithOne(p => p.User)

@@ -2,13 +2,34 @@
 @typeparam TItem
 
 <RadzenStack Style="width:100%;height:100%;" Gap="0px">
-  <RadzenTemplateForm Submit="FormSubmit" TItem="TItem" Data="@Data" Visible="@(Data != null)" Style="width:100%;height:100%; padding:0px; margin:0px;">
-    <RadzenStack Style="width:100%;height:100%;" Gap="0px">
+  @if (Data != null) {
+    @if (StaticFormName != null) {
+      <EditForm Model="@Data" FormName="@StaticFormName" OnValidSubmit="FormSubmit" method="post" Style="width:100%;">
+        @FormContent
+      </EditForm>
+    } else {
+      <RadzenTemplateForm Submit="FormSubmit" TItem="TItem" Data="@Data" Style="width:100%;height:100%; padding:0px; margin:0px;">
+        @FormContent
+      </RadzenTemplateForm>
+    }
+  }
+</RadzenStack>
+@code {
+  [Parameter] public string? StaticFormName { get; set; }
+  private RenderFragment FormContent => @<RadzenStack Style="width:100%;height:100%;" Gap="0px">
+      @if (ContentOnly) {
+        <LoadingContainer IsLoading="IsLoading">
+          @if (CanView) {
+            <fieldset disabled="@EffectiveReadOnly" style="@FieldStyle">@ChildContent</fieldset>
+          }
+        </LoadingContainer>
+      } else {
       <Guard.Components.Library.Cards.CardHeader
         Icon="@Icon"
         Name="@Name"
         ShowSaveButton="@(ShowSaveButton && !EffectiveReadOnly && CanView)"
         ShowInfoButton="@(ShowInfoButton && CanView)"
+        ShowCancelButton="@(StaticFormName == null)"
         OnInfoClick="InfoButtonClick"
         OnCancelButtonClick="CancelButtonClick" />
 
@@ -26,11 +47,9 @@
           </LoadingContainer>
         </RadzenStack>
       </RadzenStack>
-    </RadzenStack>
-  </RadzenTemplateForm>
-</RadzenStack>
-
-@code {
+      }
+    </RadzenStack>;
+  [Parameter] public bool ContentOnly { get; set; }
   [CascadingParameter] public Guard.Components.Library.Authorization.DialogAccessState? AccessState { get; set; }
   private bool CanView => AccessState?.CanView != false;
   private bool EffectiveReadOnly => ReadOnly || AccessState?.CanWrite == false;

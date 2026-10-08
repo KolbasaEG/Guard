@@ -9,6 +9,8 @@
 @inject AuthenticationStateProvider Authentication
 @inject NavigationManager Navigation
 @inject ILogger<AccessStateProvider> Logger
+@inject IAccountPolicyService Policies
+@inject IJSRuntime JS
 <CascadingValue Value="@this" IsFixed="true">
   <CascadingValue Value="@snapshot"><StableAccessContent>@ChildContent</StableAccessContent></CascadingValue>
 </CascadingValue>
@@ -20,6 +22,28 @@
   private IDisposable? subscription;
   private string? subscribedUser;
   private Task? refreshTask;
+  private IJSObjectReference? activityModule, activitySubscription;
+  private DotNetObjectReference<AccessStateProvider>? activityReference;
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender) return;
+    activityModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/account-activity.js");
+    activityReference = DotNetObjectReference.Create(this);
+    activitySubscription = await activityModule.InvokeAsync<IJSObjectReference>("subscribe", activityReference);
+  }
+  [JSInvokable]
+  public async Task RecordActivityAsync()
+  {
+    if (disposed) return;
+    var ct = stop.Token;
+    try {
+      var access = await Permissions.GetCurrentAsync(ct);
+      await Policies.RecordActivityAsync(access.UserId, ct);
+    }
+    catch (UnauthorizedAccessException) { await RefreshAsync(); }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (Exception ex) { Logger.LogWarning(ex, "Не удалось записать активность пользователя"); }
+  }
   private bool pending, disposed;
   protected override async Task OnInitializedAsync()
   {
@@ -55,7 +79,18 @@
         }
         snapshot = await Permissions.GetCurrentAsync(stop.Token);
       }
-      catch (UnauthorizedAccessException) { snapshot = new("", false, []); }
+      catch (UnauthorizedAccessException) {
+        snapshot = new("", false, []);
+        if (!string.IsNullOrEmpty(subscribedUser)) {
+          var account = await Policies.CheckAsync(subscribedUser, stop.Token);
+          var passwordRequired = account.PasswordExpired && !account.Blocked;
+          var path = new Uri(Navigation.Uri).AbsolutePath;
+          var passwordPage = path.Equals("/Account/Manage/ChangePassword", StringComparison.OrdinalIgnoreCase) ||
+            path.Equals("/Account/Manage/SetPassword", StringComparison.OrdinalIgnoreCase);
+          if (!passwordRequired || !passwordPage)
+            Navigation.NavigateTo(passwordRequired ? "/Account/Manage/ChangePassword" : "/Account/Login", forceLoad: true);
+        }
+      }
       catch (OperationCanceledException) when (stop.IsCancellationRequested) { return; }
       catch (Exception ex) { Logger.LogError(ex, "Не удалось обновить состояние доступа"); snapshot = new("", false, []); }
       if (previous.UserId == snapshot.UserId && previous.IsRoot == snapshot.IsRoot &&
@@ -78,6 +113,12 @@
     Navigation.LocationChanged -= LocationChanged;
     Authentication.AuthenticationStateChanged -= AuthenticationChanged;
     subscription?.Dispose();
+    try {
+      if (activitySubscription != null) { await activitySubscription.InvokeVoidAsync("dispose"); await activitySubscription.DisposeAsync(); }
+      if (activityModule != null) await activityModule.DisposeAsync();
+    }
+    catch (JSDisconnectedException) { }
+    activityReference?.Dispose();
     stop.Cancel();
     if (refreshTask != null) await refreshTask;
     stop.Dispose();

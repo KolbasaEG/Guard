@@ -163,7 +163,19 @@ builder.Services.AddDbContextFactory<LogsDbContext>(options =>
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders()
+    .AddUserManager<PolicyUserManager>()
     .AddSignInManager<IpRestrictedSignInManager>();
+
+builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, PolicyPasswordValidator>();
+builder.Services.Configure<IdentityOptions>(options => {
+  options.Password.RequiredLength = 6;
+  options.Password.RequiredUniqueChars = 1;
+  options.Password.RequireDigit = false;
+  options.Password.RequireLowercase = false;
+  options.Password.RequireUppercase = false;
+  options.Password.RequireNonAlphanumeric = false;
+});
+builder.Services.AddHostedService<AccountPolicyWorker>();
 
 // Заголовки принимает только от явно настроенных доверенных прокси (по умолчанию — loopback).
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -257,6 +269,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseUserContextLogging();
 app.UseMiddleware<IpCheckMiddleware>();
+app.UseMiddleware<AccountPolicyMiddleware>();
 app.UseAntiforgery();
 app.MapRazorPages();
 app.MapRazorComponents<Guard.Components.App>()

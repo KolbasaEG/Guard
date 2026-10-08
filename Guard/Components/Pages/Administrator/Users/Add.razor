@@ -24,6 +24,7 @@
       <RadzenPassword Name="Password" @bind-Value="model.Password" Style="width:100%" autocomplete="new-password" />
     </RadzenFormField>
     <RadzenRequiredValidator Component="Password" Text="Укажите пароль" />
+    <Guard.Components.Library.PasswordRequirements />
     <RadzenFormField Text="Повтор пароля" Style="width:100%">
       <RadzenPassword Name="Confirmation" @bind-Value="confirmation" Style="width:100%" autocomplete="new-password" />
     </RadzenFormField>

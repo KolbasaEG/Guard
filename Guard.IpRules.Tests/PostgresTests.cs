@@ -9,10 +9,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 
 internal static class PostgresTests
 {
-  public static async Task RunAsync(string settingsPath, Action<bool, string> check)
+  public static async Task RunAsync(string settingsPath, Action<bool, string> check, bool browser = false)
   {
     using var json = JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath));
     var cs = new NpgsqlConnectionStringBuilder(json.RootElement.GetProperty("ConnectionStrings").GetProperty("DefaultConnection").GetString());
@@ -29,12 +30,13 @@ internal static class PostgresTests
     {
       await using var db = factory.CreateDbContext();
       await db.Database.EnsureCreatedAsync();
+      await AccountPolicyMigrationTests.RunAsync(db, check);
       var own = new Subdivision { Name = "Own", Path = "/1/", CreatedBy = "test" };
       var other = new Subdivision { Name = "Other", Path = "/2/", CreatedBy = "test" };
       var personal = new Personal { FirstName = "Test", LastName = "User", Subdivision = own, CreatedBy = "test" };
       var foreignPersonal = new Personal { FirstName = "Other", LastName = "User", Subdivision = other, CreatedBy = "test" };
-      var user = new ApplicationUser { Id = "user", UserName = "user", NormalizedUserName = "USER", Personal = personal };
-      var root = new ApplicationUser { Id = "root", UserName = "root", NormalizedUserName = "ROOT" };
+      var user = new ApplicationUser { Id = "user", UserName = "user", NormalizedUserName = "USER", Personal = personal, SecurityStamp = "test", LockoutEnabled = true };
+      var root = new ApplicationUser { Id = "root", UserName = "root", NormalizedUserName = "ROOT", SecurityStamp = "test" };
       var role = new ApplicationRole { Id = "root-role", Name = "Root", NormalizedName = "ROOT" };
       var adminRole = new ApplicationRole { Id = "admin-role", Name = "Администратор", NormalizedName = "АДМИНИСТРАТОР" };
       db.AddRange(own, other, personal, foreignPersonal, user, root, role, adminRole);
@@ -48,8 +50,10 @@ internal static class PostgresTests
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "empty assignments denied");
       check(await gate.IsAllowedAsync(root.Id, null), "Root bypasses IP without Personal");
 
-      var rootPermissions = new PermissionService(new Authentication(root.Id), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub());
-      var userPermissions = new PermissionService(new Authentication(user.Id), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub());
+      await using var policyProvider = new ServiceCollection().AddLogging().BuildServiceProvider();
+      var policies = new AccountPolicyService(factory, policyProvider, new AuditStub(), new AccessChangeNotifier(NullLogger<AccessChangeNotifier>.Instance));
+      var rootPermissions = new PermissionService(new Authentication(root.Id, factory), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub(), policies);
+      var userPermissions = new PermissionService(new Authentication(user.Id, factory), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub(), policies);
       var rootAccess = new IpManagementAccessService(rootPermissions, new DataAccessScopeService(rootPermissions, factory));
       var userAccess = new IpManagementAccessService(userPermissions, new DataAccessScopeService(userPermissions, factory));
       var rootService = new IpAddressService(factory, rootAccess, NullLogger<IpAddressService>.Instance);
@@ -115,6 +119,7 @@ internal static class PostgresTests
       await IpIndexTests.RunAsync(rootService, check);
       await AuthorizationTests.RunAsync(factory, check);
       Console.WriteLine("PostgreSQL integration checks passed in an isolated temporary database.");
+      if (browser) await BrowserTestHost.RunAsync(factory, cs.ConnectionString);
     }
     finally
     {
@@ -137,9 +142,12 @@ internal static class PostgresTests
     public Task<ApplicationDbContext> CreateDbContextAsync(CancellationToken ct = default) => Task.FromResult(CreateDbContext());
   }
 
-  private sealed class Authentication(string userId) : AuthenticationStateProvider
+  private sealed class Authentication(string userId, IDbContextFactory<ApplicationDbContext> factory) : AuthenticationStateProvider
   {
-    public override Task<AuthenticationState> GetAuthenticationStateAsync() => Task.FromResult(new AuthenticationState(
-        new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId)], "test"))));
+    public override async Task<AuthenticationState> GetAuthenticationStateAsync() {
+      await using var db = await factory.CreateDbContextAsync();
+      var user = await db.Users.SingleAsync(u => u.Id == userId);
+      return new(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId), new Claim("AspNet.Identity.SecurityStamp", user.SecurityStamp ?? "test")], "test")));
+    }
   }
 }

@@ -19,6 +19,8 @@ internal static class SignInTests
     services.AddScoped(_ => factory.CreateDbContext());
     services.AddSingleton(access);
     services.AddSingleton<IAuditService, AuditStub>();
+    services.AddSingleton<IAccessChangeNotifier, AccessChangeNotifier>();
+    services.AddScoped<IAccountPolicyService, AccountPolicyService>();
     services.AddIdentity<ApplicationUser, ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>()
         .AddSignInManager<IpRestrictedSignInManager>();
     var authentication = new AuthenticationRecorder();

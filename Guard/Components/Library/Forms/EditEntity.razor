@@ -2,6 +2,8 @@
 
 <EntityForm TItem="TItem"
             Data="Data"
+            StaticFormName="@StaticFormName"
+            ContentOnly="ContentOnly"
             Name="@Name"
             Icon="@Icon"
             IsLoading="IsLoading"
@@ -14,6 +16,8 @@
   @ChildContent
 </EntityForm>
 @code {
+  [Parameter] public bool ContentOnly { get; set; }
+  [Parameter] public string? StaticFormName { get; set; }
   [Parameter] public bool ReadOnly { get; set; }
   [Parameter] public bool ShowSaveButton { get; set; } = true;
   [Parameter] public bool ShowInfoButton { get; set; } = false;

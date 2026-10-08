@@ -8,7 +8,7 @@ using System.Security.Claims;
 namespace Guard.Core.Services;
 
 public class PermissionService(AuthenticationStateProvider authentication, IHttpContextAccessor http,
-    IDbContextFactory<ApplicationDbContext> factory, IAuditService audit) : IPermissionService
+    IDbContextFactory<ApplicationDbContext> factory, IAuditService audit, IAccountPolicyService policies) : IPermissionService
 {
   public async Task<UserAccessSnapshot> GetCurrentAsync(CancellationToken ct = default)
   {
@@ -18,13 +18,20 @@ public class PermissionService(AuthenticationStateProvider authentication, IHttp
     var id = principal?.FindFirstValue(ClaimTypes.NameIdentifier);
     if (principal?.Identity?.IsAuthenticated != true || id == null)
       throw new UnauthorizedAccessException("Необходим вход в систему.");
+    await using var db = await factory.CreateDbContextAsync(ct);
+    var stamp = await db.Users.Where(u => u.Id == id).Select(u => u.SecurityStamp).SingleOrDefaultAsync(ct);
+    if (stamp == null || stamp != principal.FindFirstValue("AspNet.Identity.SecurityStamp"))
+      throw new UnauthorizedAccessException("Сессия завершена. Войдите заново.");
     return await GetForUserAsync(id, ct);
   }
 
   public async Task<UserAccessSnapshot> GetForUserAsync(string userId, CancellationToken ct = default)
   {
+    var state = await policies.CheckAsync(userId, ct);
+    if (state.Blocked || state.PasswordExpired) throw new UnauthorizedAccessException("Учётная запись требует смены пароля или заблокирована.");
     await using var db = await factory.CreateDbContextAsync(ct);
-    if (!await db.Users.AnyAsync(u => u.Id == userId && (u.LockoutEnd == null || u.LockoutEnd <= DateTimeOffset.UtcNow), ct))
+    if (!await db.Users.AnyAsync(u => u.Id == userId && u.AccountBlockReason == null &&
+        (!u.LockoutEnabled || u.LockoutEnd == null || u.LockoutEnd <= DateTimeOffset.UtcNow), ct))
       throw new UnauthorizedAccessException("Учётная запись недоступна.");
     var roles = await (from ur in db.UserRoles join r in db.Roles on ur.RoleId equals r.Id
                        where ur.UserId == userId select new { r.Id, r.NormalizedName }).ToListAsync(ct);

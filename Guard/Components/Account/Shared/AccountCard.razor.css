@@ -1,0 +1,18 @@
+.account-card {
+  width: 100%;
+  max-width: 480px;
+  margin: .5rem 0;
+  padding: 1.25rem;
+  background: #fff;
+  color: #263238;
+  border-radius: 12px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, .3);
+}
+.account-card-heading { text-align: center; margin-bottom: 1rem; }
+.account-card-heading h2 { margin: .5rem 0 0; font-size: 1.4rem; font-weight: 600; }
+.account-card ::deep form { width: 100%; }
+.account-card ::deep .form-control { background-color: #fff; color: #263238; }
+@media (max-width: 480px) { .account-card { padding: 1.25rem; } }
+
+.account-card ::deep .form-floating > .form-control { height: 48px; min-height: 48px; }
+.account-card ::deep p { font-size: .875rem; line-height: 1.4; margin-bottom: .75rem; }

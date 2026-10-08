@@ -25,6 +25,30 @@ namespace Microsoft.AspNetCore.Routing
 
       var accountGroup = endpoints.MapGroup("/Account");
 
+      accountGroup.MapPost("/ChangeOwnPassword", async (
+          HttpContext context,
+          [FromServices] UserManager<ApplicationUser> userManager,
+          [FromServices] SignInManager<ApplicationUser> signInManager,
+          [FromServices] IAntiforgery antiforgery) =>
+      {
+        await antiforgery.ValidateRequestAsync(context);
+        var user = await userManager.GetUserAsync(context.User);
+        if (user is null) return Results.Unauthorized();
+        var form = await context.Request.ReadFormAsync(context.RequestAborted);
+        var oldPassword = form["OldPassword"].ToString();
+        var newPassword = form["NewPassword"].ToString();
+        var confirmation = form["Confirmation"].ToString();
+        if (string.IsNullOrEmpty(oldPassword) || string.IsNullOrEmpty(newPassword))
+          return Results.BadRequest(new { error = "Заполните текущий и новый пароль." });
+        if (newPassword != confirmation)
+          return Results.BadRequest(new { error = "Пароли не совпадают." });
+        var result = await userManager.ChangePasswordAsync(user, oldPassword, newPassword);
+        if (!result.Succeeded)
+          return Results.BadRequest(new { error = string.Join(" ", result.Errors.Select(e => e.Description)) });
+        await signInManager.RefreshSignInAsync(user);
+        return Results.Ok();
+      }).RequireAuthorization();
+
       accountGroup.MapPost("/PerformExternalLogin", (
           HttpContext context,
           [FromServices] SignInManager<ApplicationUser> signInManager,

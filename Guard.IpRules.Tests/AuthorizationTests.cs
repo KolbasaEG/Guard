@@ -18,15 +18,17 @@ internal static class AuthorizationTests
 {
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory, Action<bool,string> check)
   {
-    var authentication = new Authentication { Id = "root" };
+    var authentication = new Authentication(factory) { Id = "root" };
     var services = new ServiceCollection();
     services.AddLogging(); services.AddHttpContextAccessor();
     services.AddSingleton(factory); services.AddScoped(_ => factory.CreateDbContext());
     services.AddSingleton<AuthenticationStateProvider>(authentication);
     services.AddSingleton<IAuditService,AuditStub>();
     services.AddSingleton<IAccessChangeNotifier,AccessChangeNotifier>();
-    services.AddIdentity<ApplicationUser,ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
+    services.AddIdentity<ApplicationUser,ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders().AddUserManager<PolicyUserManager>();
+    services.AddScoped<IPasswordValidator<ApplicationUser>,PolicyPasswordValidator>();
     services.AddScoped<IPermissionService,PermissionService>();
+    services.AddScoped<IAccountPolicyService,AccountPolicyService>();
     services.AddScoped<IDataAccessScopeService,DataAccessScopeService>();
     services.AddScoped<IRoleAccessService,RoleAccessService>();
     services.AddScoped(typeof(IReadRepository<>),typeof(ReadRepository<>));
@@ -207,10 +209,15 @@ internal static class AuthorizationTests
     authentication.Id="";
     var currentUser = new CurrentUserService(permissions, scopes, factory, new HttpContextAccessor());
     check(await currentUser.GetContextAsync()==null,"anonymous layout safely receives empty display context");
+    authentication.Id = "root";
+    await AccountPolicyIntegrationTests.RunAsync(scope.ServiceProvider, factory, check);
   }
-  private sealed class Authentication : AuthenticationStateProvider {
+  private sealed class Authentication(IDbContextFactory<ApplicationDbContext> factory) : AuthenticationStateProvider {
     public string Id {get;set;}="";
-    public override Task<AuthenticationState> GetAuthenticationStateAsync() => Task.FromResult(new AuthenticationState(
-      new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier,Id)],"test"))));
+    public override async Task<AuthenticationState> GetAuthenticationStateAsync() {
+      await using var db = await factory.CreateDbContextAsync();
+      var stamp = await db.Users.Where(u => u.Id == Id).Select(u => u.SecurityStamp).SingleOrDefaultAsync();
+      return new(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier,Id),new Claim("AspNet.Identity.SecurityStamp",stamp ?? "")],"test")));
+    }
   }
 }

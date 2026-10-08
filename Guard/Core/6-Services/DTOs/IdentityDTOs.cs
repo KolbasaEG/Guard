@@ -8,6 +8,11 @@ public class UserDto
   public Guid? PersonalId { get; set; }
   public string? PersonalFullName { get; set; }
   public bool IsLockedOut { get; set; }
+  public string? AccountBlockReason { get; set; }
+  public DateTimeOffset? LastActivityAtUtc { get; set; }
+  public DateTimeOffset? PasswordChangedAtUtc { get; set; }
+  public bool MustChangePassword { get; set; }
+  public bool PasswordChangeRequired { get; set; }
   public List<string> Roles { get; set; } = new();
 }
 

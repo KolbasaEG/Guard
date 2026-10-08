@@ -20,5 +20,8 @@ public enum AuditEventType
   RoleRemoved = 13,
   RolePermissionsChanged = 14,
   UserRolesChanged = 15,
-  AccessDenied = 16
+  AccessDenied = 16,
+  UserBlocked = 17,
+  UserUnblocked = 18,
+  AccountPolicyChanged = 19
 }

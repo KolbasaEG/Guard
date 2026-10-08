@@ -1,4 +1,4 @@
-﻿@page "/Account/Login"
+@page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
 @using Guard.Core.Entities;
@@ -17,42 +17,37 @@
 @layout AccountLayout
 
 <PageTitle>Вход в систему — АИС «Охрана»</PageTitle>
-<RadzenCard Style="max-width: 600px; margin: 1rem; padding: 2.5rem; text-align: center; box-shadow: var(--rz-card-shadow);">
-  <RadzenStack AlignItems="AlignItems.Center" Gap="1.75rem">
-    <RadzenIcon Icon="login" Style="font-size: 4.5rem;" class="rz-text-subtitle1" />
-
-    <RadzenText Text="Вход в систему" TextStyle="Radzen.Blazor.TextStyle.H4" class="rz-m-0" />
+<AccountCard Title="Вход в систему" Icon="login">
     <StatusMessage Message="@errorMessage" />
     <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
       <DataAnnotationsValidator />
       <RadzenText Text="Для входа в систему используйте локальную учетную запись." TextStyle="Radzen.Blazor.TextStyle.Subtitle1" />
-      <hr />
+
       <ValidationSummary class="text-danger" role="alert" />
-      <div class="form-floating mb-3">
-        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username webauthn" aria-required="true" placeholder="name@example.com" />
+      <div class="form-floating mb-2">
+        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" style="height:48px; min-height:48px;" autocomplete="username webauthn" aria-required="true" placeholder="name@example.com" />
         <label for="Input.Email" class="form-label">Email</label>
         <ValidationMessage For="() => Input.Email" class="text-danger" />
       </div>
-      <div class="form-floating mb-3">
-        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Пароль" />
+      <div class="form-floating mb-2">
+        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" style="height:48px; min-height:48px;" autocomplete="current-password" aria-required="true" placeholder="Пароль" />
         <label for="Input.Password" class="form-label">Пароль</label>
         <ValidationMessage For="() => Input.Password" class="text-danger" />
       </div>
 
-      <div class="checkbox mb-3">
+      <div class="checkbox mb-2">
         <label class="form-label rz-text-subtitle1">
           <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
           Запомнить меня
         </label>
       </div>
       <div>
-        <RadzenButton ButtonType="ButtonType.Submit" Text="Войти" ButtonStyle="ButtonStyle.Primary" class="w-100" Size="ButtonSize.Large" />
+          <RadzenButton ButtonType="ButtonType.Submit" Text="Войти" ButtonStyle="ButtonStyle.Primary" class="w-100" Size="ButtonSize.Medium" />
       </div>
-      <hr />
+
     </EditForm>
 
-  </RadzenStack>
-</RadzenCard>
+</AccountCard>
 
 
 @code {
@@ -126,7 +121,7 @@
     }
     else if (result.IsNotAllowed)
     {
-      errorMessage = "Вход не разрешён. Проверьте назначение IP-адресов у администратора и подтверждение учётной записи.";
+      errorMessage = "Вход не разрешён. Учётная запись может быть заблокирована, либо не выполнены условия IP-доступа и подтверждения. Обратитесь к администратору.";
     }
     else if (result.RequiresTwoFactor)
     {

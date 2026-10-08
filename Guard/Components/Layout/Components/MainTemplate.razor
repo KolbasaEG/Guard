@@ -32,6 +32,8 @@
       </RadzenStack>
       <RadzenPanelMenu Style="font-weight: 500; font-size: 15px">
         <RadzenPanelMenuItem Text="Рабочие места" Expanded="true" Icon="desktop_windows">
+          <RadzenPanelMenuItem Text="Политика паролей и аккаунтов" Path="/account-policy" Visible="@(Access?.IsRoot == true)" Icon="password" />
+          <RadzenPanelMenuItem Text="Сменить пароль" Click="@ChangePasswordAsync" Icon="passkey" />
           <RadzenPanelMenuItem Text="Справочники и безопасность" Path="@(Access?.Has(Permissions.Classifiers.Read) == true ? "/classifiers" : Access?.Has(Permissions.OrganTypes.Read) == true ? "/OrganTypes" : "/roles")" Visible="@(Access?.Has(Permissions.Classifiers.Read) == true || Access?.Has(Permissions.OrganTypes.Read) == true || Access?.IsRoot == true)" Icon="admin_panel_settings" />
           <RadzenPanelMenuItem Text="Администратор" Path="/AdminPannel" Visible="@(Access?.Has(Permissions.Personals.Read) == true || Access?.Has(Permissions.Subdivisions.Read) == true || Access?.Has(Permissions.Users.Read) == true || Access?.Has(Permissions.IpAddresses.Read) == true)" Icon="admin_panel_settings" />
         </RadzenPanelMenuItem>

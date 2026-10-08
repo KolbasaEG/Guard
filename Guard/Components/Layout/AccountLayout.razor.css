@@ -7,7 +7,7 @@
 
 /* === Основной контейнер страницы === */
 .auth-page {
-  height: 100vh;
+  min-height: 100vh;
   width: 100vw;
   background-image: url('images/backg.jpg');
   background-size: cover;
@@ -17,6 +17,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  padding: 2rem 0;
 }
 
   /* Полупрозрачный overlay */

@@ -9,7 +9,8 @@ namespace Guard.Core.Services;
 public class SecurityService(
   IReadRepository<ApplicationUser> userReads, IReadRepository<ApplicationRole> roleReads, IReadRepository<Personal> personalReads,
   IIpAddressService ips, IPersonalIpService assignments, IIpAccessService ipGate, IPermissionService permissions,
-  IDataAccessScopeService accessScopes, IRoleAccessService roles, IServiceScopeFactory scopes) : ISecurityService
+  IDataAccessScopeService accessScopes, IRoleAccessService roles, IServiceScopeFactory scopes,
+  IAuditService audit, IAccessChangeNotifier notifier) : ISecurityService
 {
   public Task<TResult> QueryUsersAsync<TResult>(Func<IQueryable<ApplicationUser>,Task<TResult>> query, CancellationToken ct=default) => userReads.QueryAsync(query,ct);
   public Task<TResult> QueryRolesAsync<TResult>(Func<IQueryable<ApplicationRole>,Task<TResult>> query, CancellationToken ct=default) => roleReads.QueryAsync(query,ct);
@@ -30,7 +31,7 @@ public class SecurityService(
         p.LastName + " " + p.FirstName + " " + (p.MiddleName ?? ""))).ToListAsync(ct);
   }
   private static void Check(IdentityResult result) {
-    if (!result.Succeeded) throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e=>e.Description)));
+    if (!result.Succeeded) throw new UserSecurityException(string.Join("; ", result.Errors.Select(e=>e.Description)));
   }
   private async Task CheckPersonalAsync(ApplicationDbContext db, Guid? id, CancellationToken ct)
   {
@@ -50,9 +51,11 @@ public class SecurityService(
       await CheckPersonalAsync(db,user.PersonalId,ct);
     }
   }
-  private async Task<IdentityResult> WriteAsync(Func<ApplicationDbContext,UserManager<ApplicationUser>,Task> write, CancellationToken ct)
+  private async Task<IdentityResult> WriteAsync(Func<ApplicationDbContext,UserManager<ApplicationUser>,Task> write, CancellationToken ct,
+    string? targetId = null, AuditEventType? eventType = null)
   {
     await permissions.RequireAsync(Permissions.Users.Manage,ct);
+    var actorId = (await permissions.GetCurrentAsync(ct)).UserId;
     await using var scope = scopes.CreateAsyncScope();
     var db=scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var manager=scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -61,6 +64,10 @@ public class SecurityService(
     await permissions.RequireAsync(Permissions.Users.Manage,ct);
     await write(db,manager);
     await tx.CommitAsync(ct);
+    if (targetId != null) {
+      if (eventType.HasValue) audit.LogIdentityEvent(eventType.Value, actorId, details: $"Target={targetId}");
+      await notifier.PublishAsync([targetId]);
+    }
     return IdentityResult.Success;
   }
   public Task<IdentityResult> CreateUserAsync(ApplicationUser user,string password,IEnumerable<string>? roles=null,CancellationToken ct=default) =>
@@ -94,14 +101,23 @@ public class SecurityService(
       await CheckTargetAsync(db,user,ct);
       if(lockout && await (from ur in db.UserRoles join r in db.Roles on ur.RoleId equals r.Id where ur.UserId==userId && r.NormalizedName=="ROOT" select ur).AnyAsync(ct))
         throw new InvalidOperationException("Системную учётную запись Root нельзя блокировать.");
-      Check(await manager.SetLockoutEndDateAsync(user,lockout?DateTimeOffset.UtcNow.AddYears(100):null));
-    },ct);
+      user.AccountBlockReason = lockout ? "Administrator" : null;
+      if (!lockout) user.UnblockedAtUtc = DateTimeOffset.UtcNow;
+      Check(await manager.SetLockoutEnabledAsync(user,true));
+      Check(await manager.SetLockoutEndDateAsync(user,lockout?DateTimeOffset.MaxValue:null));
+      if (!lockout) Check(await manager.ResetAccessFailedCountAsync(user));
+      Check(await manager.UpdateSecurityStampAsync(user));
+    },ct,userId,lockout ? AuditEventType.UserBlocked : AuditEventType.UserUnblocked);
   public Task<IdentityResult> ResetPasswordAsync(string userId,string newPassword,CancellationToken ct=default) =>
     WriteAsync(async(db,manager)=>{
       var user=await manager.FindByIdAsync(userId)??throw new KeyNotFoundException("Пользователь не найден.");
       await CheckTargetAsync(db,user,ct);
+      if (user.AccountBlockReason != null || await manager.IsLockedOutAsync(user))
+        throw new UserSecurityException("Сначала разблокируйте пользователя.");
       Check(await manager.ResetPasswordAsync(user,await manager.GeneratePasswordResetTokenAsync(user),newPassword));
-    },ct);
+      user.MustChangePassword = true;
+      Check(await manager.UpdateAsync(user));
+    },ct,userId,AuditEventType.PasswordChanged);
   public async Task<List<string>> GetUserRolesAsync(string userId,CancellationToken ct=default) {
     if(await userReads.GetByIdAsync(userId,ct)==null) throw new KeyNotFoundException("Пользователь недоступен.");
     await using var scope=scopes.CreateAsyncScope();

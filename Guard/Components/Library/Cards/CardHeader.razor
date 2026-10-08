@@ -8,12 +8,13 @@
       @Menue
       <RadzenButton Icon="info" Click="InfoButtonClick" Visible="ShowInfoButton" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
       <RadzenButton Icon="save" ButtonType="ButtonType.Submit" Visible="ShowSaveButton" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
-      <RadzenButton Icon="close" Click="CancelButtonClick" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+      <RadzenButton Icon="close" Click="CancelButtonClick" Visible="ShowCancelButton" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
     </RadzenStack>
   </RadzenStack>
 </RadzenCard>
 
 @code {
+  [Parameter] public bool ShowCancelButton { get; set; } = true;
   [Parameter] public RenderFragment? Menue { get; set; }
   [Parameter] public bool ShowSaveButton { get; set; } = true;
   [Parameter] public bool ShowInfoButton { get; set; } = false;
