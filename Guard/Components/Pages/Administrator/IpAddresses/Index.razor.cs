@@ -49,11 +49,17 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
     private bool disposed;
     protected string? loadError;
     private string? accessVersion;
+    private UserContext? loadedUserContext;
     private bool reloadPending = true;
     protected override void OnParametersSet()
     {
       var version = AccessSnapshot == null ? "" : AccessSnapshot.UserId + ":" + AccessSnapshot.IsRoot + ":" + AccessSnapshot.Has(Permissions.IpAddresses.Read);
       if (accessVersion != null && version != accessVersion) {
+        _loadDataCts?.Cancel(); filteredData = []; count = 0; reloadPending = true;
+      }
+      if (!ReferenceEquals(loadedUserContext, UserContext)) {
+        loadedUserContext = UserContext;
+        itemsSubdivision = UserContext?.SubordinateSubdivisions.Select(p => p.Name).Distinct().OrderBy(p => p).ToArray() ?? [];
         _loadDataCts?.Cancel(); filteredData = []; count = 0; reloadPending = true;
       }
       accessVersion = version;
@@ -80,7 +86,6 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       {
         isLoading = true;
         Logger.LogDebug("Инициализация страницы IP-адресов");
-        itemsSubdivision = UserContext?.SubordinateSubdivisions.Select(p => p.Name) ?? [];
         subdivisionPath = UserContext?.Subdivision?.Path ?? "-";
         await Task.CompletedTask;
       }
@@ -121,8 +126,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
         var (items, totalCount) = await IpAddressService.QueryIpAddressesAsync(async query =>
         {
           query = query.FilterByMode(mode);
-          if (AccessSnapshot?.IsRoot != true)
-            query = string.IsNullOrWhiteSpace(path) ? query.Where(p => false) : query.FilterBySubdivision(path, hierarchy);
+          query = string.IsNullOrWhiteSpace(path) ? query.Where(p => false) : query.FilterBySubdivision(path, hierarchy);
           query = filter(query);
           var total = await query.CountAsync(ct);
           var page = await IpListQuery.Sort(query, orderBy).Skip(skip).Take(take)
