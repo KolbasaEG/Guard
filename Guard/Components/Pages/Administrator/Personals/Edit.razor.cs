@@ -1,3 +1,4 @@
+using Guard.Core.Services.DTOs;
 using Guard.Core.Entities;
 using Guard.Core.Services;
 using Guard.Core.Identity;
@@ -25,15 +26,15 @@ public partial class Edit : IDisposable
       item = await Service.GetByIdAsync(Id, cts.Token) ?? throw new KeyNotFoundException("Сотрудник недоступен.");
       subdivisions = await Service.GetAllActiveSubdivisionsAsync(cts.Token);
     } catch (OperationCanceledException) { }
-    catch (Exception ex) { Logger.LogError(ex, "Загрузка формы сотрудника"); Notifications.Notify(NotificationSeverity.Error, "Сотрудник", "Не удалось открыть запись."); Dialogs.Close(null); }
+    catch (Exception ex) { Logger.LogError(ex, "Загрузка формы сотрудника"); ShowError(ex); Dialogs.Close(null); }
     finally { isLoading = false; }
   }
   protected async Task FormSubmit()
   {
     isLoading = true;
-    try { await Service.UpdateAsync(item, cts.Token); Dialogs.Close(true); }
+    try { await Service.UpdateFromDtoAsync(new EditPersonalDto(item.Id, item.Version, PersonalFieldsDto.From(item)), cts.Token); Dialogs.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true)); }
     catch (OperationCanceledException) { }
-    catch (Exception ex) { Logger.LogError(ex, "Сохранение сотрудника"); Notifications.Notify(NotificationSeverity.Error, "Сотрудник", "Не удалось сохранить запись. Проверьте данные и права."); }
+    catch (Exception ex) { Logger.LogError(ex, "Сохранение сотрудника"); ShowError(ex); }
     finally { isLoading = false; }
   }
   protected void HandleCancelButtonClick() { cts.Cancel(); Dialogs.Close(null); }
@@ -42,13 +43,17 @@ public partial class Edit : IDisposable
     try {
       await Permissions.RequireAsync(Guard.Core.Identity.Permissions.IpAddresses.Manage, cts.Token);
       await Dialogs.OpenAsync<IpAssignments>("", new Dictionary<string, object> { ["PersonalId"] = Id },
-        new DialogOptions { Width = "650px", ShowTitle = false });
+        new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
     }
     catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
     catch (Exception ex) {
       Logger.LogWarning(ex, "Открытие назначения IP сотруднику");
-      Notifications.Notify(NotificationSeverity.Error, "IP-адреса", "Не удалось открыть назначения. Проверьте права доступа.");
+      ShowError(ex);
     }
   }
   public void Dispose() { cts.Cancel(); cts.Dispose(); }
+  private void ShowError(Exception ex) => Notifications.Notify(new NotificationMessage {
+    Severity = NotificationSeverity.Error, Summary = "Сотрудник", Detail = UserOperationErrors.Message(ex),
+    Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+  });
 }

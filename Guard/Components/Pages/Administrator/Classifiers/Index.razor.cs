@@ -1,3 +1,5 @@
+using Guard.Components.Library;
+using Guard.Core.Services.DTOs;
 using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
@@ -13,6 +15,21 @@ namespace Guard.Components.Pages.Administrator.Classifiers
 {
   public partial class Index : IDisposable
   {
+    [Inject] protected IPermissionService PermissionService { get; set; } = default!;
+    [Inject] protected BrowserTimeService Time { get; set; } = default!;
+    private static readonly HashSet<string> supportedFields = ["ClassifierName", "Code", "Id", "IsActive", "Type", "UpdatedAt", "Value"];
+    private Func<IQueryable<Classifier>, IQueryable<Classifier>> appliedFilter = q => q;
+    private bool disposed, reloadPending = true;
+    private Guard.Core.Services.DTOs.UserAccessSnapshot? loadedAccess;
+    protected override void OnParametersSet() { if (!ReferenceEquals(loadedAccess, Access)) { loadedAccess = Access; _loadDataCts?.Cancel(); filteredData = []; count = 0; reloadPending = true; } }
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+      if (disposed || !reloadPending) return; reloadPending = false;
+      try { await Time.InitializeAsync(); await grid.Reload(); }
+      catch (Exception ex) { Logger.LogWarning(ex, "Загрузка часового пояса"); ShowErrorNotification("Не удалось определить часовой пояс браузера. Обновите страницу."); }
+      if (!disposed) StateHasChanged();
+    }
+    private async Task ResetPageAsync() { if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
+
     [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
     [Inject] protected NotificationService NotificationService { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!;
@@ -31,9 +48,9 @@ namespace Guard.Components.Pages.Administrator.Classifiers
     private readonly CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
 
-    protected IEnumerable<Classifier> data = default!;
-    protected IEnumerable<Classifier> filteredData = default!;
-    protected RadzenDataGrid<Classifier> grid = default!;
+    protected IEnumerable<Classifier> data = [];
+    protected IEnumerable<ClassifierListDto> filteredData = [];
+    protected RadzenDataGrid<ClassifierListDto> grid = default!;
     protected RadzenDataFilter<Classifier> dataFilter = default!;
 
     protected override async Task OnInitializedAsync()
@@ -51,7 +68,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации страницы классификаторов");
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {
@@ -61,59 +78,35 @@ namespace Guard.Components.Pages.Administrator.Classifiers
 
     async Task LoadData(LoadDataArgs args)
     {
+      if (disposed || Time.Zone == null) return;
       _loadDataCts?.Cancel();
-      _loadDataCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
-      var ct = _loadDataCts.Token;
+      var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+      _loadDataCts = request; var ct = request.Token;
+      var filter = appliedFilter;
       isLoading = true;
-
-      try
-      {
-        if (dataFilter?.Filters != null) NormalizeFilterDatesToUtc(dataFilter.Filters);
-
-        var (items, totalCount) = await ClassifierService.QueryClassifiersAsync(async query =>
-        {
-          if (dataFilter != null)
-          {
-            query = query.Where(dataFilter);
-          }
-
-          if (!string.IsNullOrEmpty(args.OrderBy))
-          {
-            query = query.OrderBy(args.OrderBy);
-          }
-          else
-          {
-            query = query.OrderBy(c => c.Type).ThenBy(c => c.Code);
-          }
-
+      try {
+        if ((args.Skip ?? 0) < 0 || (args.Top ?? 20) is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
+        var result = await ClassifierService.QueryClassifiersAsync(async query => {
+          query = filter(query);
           var total = await query.CountAsync(ct);
-
-          var pageData = await query
-              .Skip(args.Skip ?? 0)
-              .Take(args.Top ?? 10)
-              .ToListAsync(ct);
-
-          return (pageData, total);
+          query = EntityListQuery<Classifier>.Sort(query, args.OrderBy, supportedFields, "Type asc, Code asc");
+          var page = await query.Skip(args.Skip ?? 0).Take(args.Top ?? 20).Select(p => new ClassifierListDto(p.Id, p.Version, p.Type, p.Code, p.ClassifierName, p.Value, p.IsActive, p.UpdatedAt)).ToListAsync(ct);
+          return (page, total);
         }, ct);
-
-        filteredData = items;
-        count = totalCount;
+        ct.ThrowIfCancellationRequested();
+        await PermissionService.RequireAsync(Guard.Core.Identity.Permissions.Classifiers.Read, ct);
+        if (disposed || !ReferenceEquals(request, _loadDataCts)) return;
+        filteredData = result.page; count = result.total;
       }
-      catch (OperationCanceledException)
-      {
-        // Игнорируем отмененные запросы
+      catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+      catch (Exception ex) {
+        if (!disposed && ReferenceEquals(request, _loadDataCts)) {
+          filteredData = []; count = 0; Logger.LogError(ex, "Загрузка списка");
+          ShowErrorNotification("Не удалось загрузить данные. Проверьте доступ и повторите попытку.");
+        }
       }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка загрузки данных классификаторов");
-        ShowErrorNotification("Не удалось загрузить данные");
-      }
-      finally
-      {
-        isLoading = false;
-      }
+      finally { if (ReferenceEquals(request, _loadDataCts)) { isLoading = false; _loadDataCts = null; } request.Dispose(); }
     }
-
     protected async Task ReloadAsync()
     {
       await grid.Reload();
@@ -138,7 +131,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при синхронизации классификаторов с внешним API");
-        ShowErrorNotification($"Не удалось синхронизировать данные: {ex.Message}");
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {
@@ -148,32 +141,32 @@ namespace Guard.Components.Pages.Administrator.Classifiers
     protected async Task AddClick(MouseEventArgs args)
     {
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      if (result != null)
+      if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result))
       {
         ShowSuccessNotification("Добавлена новая запись!");
         await grid.Reload();
       }
     }
 
-    protected async Task EditRow(Classifier item)
+    protected async Task EditRow(ClassifierListDto item)
     {
       var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
 
-      if (result != null)
+      if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result))
       {
         ShowSuccessNotification("Информация обновлена!");
         await grid.Reload();
       }
     }
 
-    protected async Task ToggleActiveStatusClick(MouseEventArgs args, Classifier item)
+    protected async Task ToggleActiveStatusClick(MouseEventArgs args, ClassifierListDto item)
     {
       var actionText = item.IsActive ? "деактивировать" : "активировать";
       if (await DialogService.Confirm($"Вы действительно хотите {actionText} запись?", "Изменение статуса", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
         {
-          await ClassifierService.SetActiveStatusAsync(item.Id, !item.IsActive, _cts.Token);
+          await ClassifierService.SetActiveStatusAsync(item.Id, !item.IsActive, _cts.Token, expectedVersion: item.Version);
           ShowSuccessNotification($"Запись успешно {(item.IsActive ? "деактивирована" : "активирована")}!");
           await grid.Reload();
         }
@@ -181,18 +174,18 @@ namespace Guard.Components.Pages.Administrator.Classifiers
         catch (Exception ex)
         {
           Logger.LogError(ex, "Ошибка при изменении статуса классификатора ID: {ClassifierId}", item.Id);
-          ShowErrorNotification(ex.Message);
+          ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
         }
       }
     }
 
-    protected async Task GridDeleteButtonClick(MouseEventArgs args, Classifier item)
+    protected async Task GridDeleteButtonClick(MouseEventArgs args, ClassifierListDto item)
     {
       if (await DialogService.Confirm("Вы действительно хотите полностью удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
         {
-          await ClassifierService.DeleteAsync(item.Id, _cts.Token);
+          await ClassifierService.DeleteAsync(item.Id, _cts.Token, expectedVersion: item.Version);
           ShowSuccessNotification("Запись удалена!");
           await grid.Reload();
         }
@@ -200,39 +193,15 @@ namespace Guard.Components.Pages.Administrator.Classifiers
         catch (Exception ex)
         {
           Logger.LogError(ex, "Ошибка при удалении классификатора ID: {ClassifierId}", item.Id);
-          ShowErrorNotification(ex.Message);
+          ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
         }
       }
     }
 
-    private async Task OnExportClick()
-    {
-      // TODO: Реализовать экспорт
-      await Task.CompletedTask;
-    }
 
-    async Task ApplyFilter()
-    {
-      await grid.Reload();
-    }
 
-    private void NormalizeFilterDatesToUtc(IEnumerable<CompositeFilterDescriptor> filters)
-    {
-      if (filters == null) return;
+    async Task ApplyFilter() { try { appliedFilter = EntityListQuery<Classifier>.Capture(dataFilter, supportedFields, Time); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
 
-      foreach (var filter in filters)
-      {
-        if (filter.FilterValue is DateTime dt && dt.Kind != DateTimeKind.Utc)
-        {
-          filter.FilterValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-        }
-
-        if (filter.Filters != null && filter.Filters.Any())
-        {
-          NormalizeFilterDatesToUtc(filter.Filters);
-        }
-      }
-    }
 
     private void ShowSuccessNotification(string detail)
     {
@@ -258,8 +227,9 @@ namespace Guard.Components.Pages.Administrator.Classifiers
 
     public void Dispose()
     {
+      disposed = true;
       _loadDataCts?.Cancel();
-      _loadDataCts?.Dispose();
+
       _cts?.Cancel();
       _cts?.Dispose();
     }

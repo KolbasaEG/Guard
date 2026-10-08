@@ -52,7 +52,7 @@
     try
     {
       await Assignments.UpdateAsync(PersonalId, selected ?? [], cts.Token);
-      Dialogs.Close(true);
+      Dialogs.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
     }
     catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
     catch (Exception ex) { ShowError(ex); }

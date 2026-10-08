@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,6 +8,7 @@ public class ClassifierConfiguration : IEntityTypeConfiguration<Classifier>
 {
   public void Configure(EntityTypeBuilder<Classifier> builder)
   {
+    builder.Property(x => x.Version).IsConcurrencyToken();
     builder.ToTable("Classifiers", t => t.HasComment("Универсальный справочник классификаторов системы"));
 
     builder.HasKey(c => c.Id);

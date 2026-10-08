@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Guard.Shared;
@@ -79,7 +79,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
         await IpAddressService.UpdateAsync(item, _cts.Token);
 
         Logger.LogInformation("IP-адрес '{IpAddress}' (ID: {IpAddressId}) успешно обновлен", item.Address, item.Id);
-        DialogService.Close(true);
+        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
       }
       catch (OperationCanceledException)
       {

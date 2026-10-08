@@ -1,3 +1,4 @@
+using Guard.Core.Services.DTOs;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 
@@ -85,33 +86,35 @@ public interface IPersonalService
   /// </summary>
   /// <param name="id">Идентификатор сотрудника</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task SoftDeleteAsync(Guid id, CancellationToken ct = default);
+  Task SoftDeleteAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно переводит запись сотрудника в архив (Status = Archived).
   /// </summary>
   /// <param name="id">Идентификатор сотрудника</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task ArchiveAsync(Guid id, CancellationToken ct = default);
+  Task ArchiveAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно блокирует запись сотрудника от редактирования.
   /// </summary>
   /// <param name="id">Идентификатор сотрудника</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task BlockAsync(Guid id, CancellationToken ct = default);
+  Task BlockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно снимает блокировку с записи сотрудника.
   /// </summary>
   /// <param name="id">Идентификатор сотрудника</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task UnblockAsync(Guid id, CancellationToken ct = default);
+  Task UnblockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно восстанавливает запись сотрудника из удалённых или архива (Status = Modified).
   /// </summary>
   /// <param name="id">Идентификатор сотрудника</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task RestoreAsync(Guid id, CancellationToken ct = default);
+  Task RestoreAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
+  Task<Guid> CreateFromDtoAsync(CreatePersonalDto input, CancellationToken ct = default);
+  Task UpdateFromDtoAsync(EditPersonalDto input, CancellationToken ct = default);
 }

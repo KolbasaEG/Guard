@@ -6,38 +6,54 @@
 <RadzenDataGrid TItem="PersonalListItemDto" @ref="grid" Data="@items" Count="@count" LoadData="LoadData" RowSelect="OpenRow"
   IsLoading="@busy" AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new int[] {10,20,50,100})" EmptyText="Записи не найдены" Style="height:100%">
   <HeaderTemplate>
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="8px" AlignItems="AlignItems.Center">
-      <RadzenTextBox @bind-Value="search" Placeholder="Фамилия, имя, отчество" />
-      <RadzenButton Text="Поиск" Icon="search" Click="ReloadAsync" />
-      <RadzenSelectBar TValue="DataViewMode" @bind-Value="mode" Change="@(() => ReloadAsync())">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="8px" AlignItems="AlignItems.Center" Style="width:100%;position:relative;min-height:36px;">
+      <RadzenSelectBar Style="position:absolute;left:50%;transform:translateX(-50%);" TValue="DataViewMode" @bind-Value="mode" Change="@(() => ResetPageAsync())">
         <Items>
           <RadzenSelectBarItem Value="@DataViewMode.Active" Text="Активные" />
           @if (Access?.Has(Permissions.Personals.ReadArchive) == true) { <RadzenSelectBarItem Value="@DataViewMode.Archived" Text="Архив" /> }
           @if (Access?.IsRoot == true) { <RadzenSelectBarItem Value="@DataViewMode.Deleted" Text="Удалённые" /> }
         </Items>
       </RadzenSelectBar>
+      <RadzenStack Orientation="Orientation.Horizontal" Gap="0" Style="margin-left:auto;">
+      <RadzenButton Icon="account_tree" Click="ToggleHierarchyAsync" title="@(hierarchy == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")" />
       <RadzenButton Icon="refresh" Click="ReloadAsync" />
       <RadzenButton Icon="add_circle_outline" Text="Добавить" Visible="@(Access?.Has(Permissions.Personals.Write) == true)" Click="AddAsync" />
       <RadzenButton Icon="get_app" Text="Экспорт CSV" Visible="@(Access?.Has(Permissions.Personals.Export) == true)" Click="ExportAsync" />
+      </RadzenStack>
     </RadzenStack>
     @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
   </HeaderTemplate>
   <Columns>
-    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="SubdivisionName" Title="Подразделение" />
-    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="FullName" Title="Фамилия и инициалы" />
-    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="LastName" Title="Фамилия" />
-    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="FirstName" Title="Имя" />
-    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="MiddleName" Title="Отчество" />
+    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="SubdivisionName" SortProperty="SubdivisionName" Title="Подразделение" />
+    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="FullName" SortProperty="FullName" Title="Фамилия и инициалы" />
+    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="LastName" SortProperty="LastName" Title="Фамилия" />
+    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="FirstName" SortProperty="FirstName" Title="Имя" />
+    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="MiddleName" SortProperty="MiddleName" Title="Отчество" />
     <RadzenDataGridColumn TItem="PersonalListItemDto" Sortable="false" Title="Действия">
       <Template Context="row">
         <RadzenButton Icon="visibility" Title="Полная карточка" Visible="@(Access?.Has(Permissions.Personals.ReadDetails) == true)" Click="@(() => DetailsAsync(row))" @onclick:stopPropagation="true" />
         <RadzenButton Icon="edit" Visible="@(CanWrite(row) && row.Status is Status.Inserted or Status.Modified)" Click="@(() => EditAsync(row))" @onclick:stopPropagation="true" />
         <RadzenButton Icon="lan" Title="Разрешённые IP" Visible="@(Access?.Has(Permissions.IpAddresses.Manage) == true)" Click="@(() => IpsAsync(row))" @onclick:stopPropagation="true" />
-        <RadzenButton Icon="archive" Visible="@(CanWrite(row) && row.Status is Status.Inserted or Status.Modified)" Click="@(() => ChangeStatusAsync(row, false))" @onclick:stopPropagation="true" />
-        <RadzenButton Icon="unarchive" Visible="@(CanWrite(row) && row.Status is Status.Archived)" Click="@(() => ChangeStatusAsync(row, true))" @onclick:stopPropagation="true" />
+        <RadzenButton Icon="archive" Title="Архивировать" Visible="@(CanWrite(row) && EntityStatusTransitions.CanApply(row.Status, StatusOperation.Archive))" Click="@(() => ChangeStatusAsync(row, StatusOperation.Archive))" @onclick:stopPropagation="true" />
+        <RadzenButton Icon="unarchive" Title="Восстановить" Visible="@(CanWrite(row) && EntityStatusTransitions.CanApply(row.Status, StatusOperation.Restore, Access?.IsRoot == true))" Click="@(() => ChangeStatusAsync(row, StatusOperation.Restore))" @onclick:stopPropagation="true" />
+        <RadzenButton Icon="lock" Title="Заблокировать" Visible="@(CanWrite(row) && EntityStatusTransitions.CanApply(row.Status, StatusOperation.Block))" Click="@(() => ChangeStatusAsync(row, StatusOperation.Block))" @onclick:stopPropagation="true" />
+        <RadzenButton Icon="lock_open" Title="Разблокировать" Visible="@(CanWrite(row) && EntityStatusTransitions.CanApply(row.Status, StatusOperation.Unblock))" Click="@(() => ChangeStatusAsync(row, StatusOperation.Unblock))" @onclick:stopPropagation="true" />
+        <RadzenButton Icon="delete" Title="Удалить" Visible="@(CanWrite(row) && EntityStatusTransitions.CanApply(row.Status, StatusOperation.Delete))" Click="@(() => ChangeStatusAsync(row, StatusOperation.Delete))" @onclick:stopPropagation="true" />
       </Template>
     </RadzenDataGridColumn>
   </Columns>
 </RadzenDataGrid>
 </Table>
+<Filter>
+  <RadzenDataFilter @ref="dataFilter" Auto="false" Data="@data" TItem="Guard.Core.Entities.Personal" AndOperatorText="И" OrOperatorText="Или" AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" EqualsText="Равно" NotEqualsText="Не равно" ContainsText="Содержит" DoesNotContainText="Не содержит" StartsWithText="Начинается с" EndsWithText="Заканчивается на" IsNullText="Не задано" IsNotNullText="Задано" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
+    <Properties>
+      <RadzenDataFilterProperty TItem="Guard.Core.Entities.Personal" Property="LastName" Title="Фамилия" />
+      <RadzenDataFilterProperty TItem="Guard.Core.Entities.Personal" Property="FirstName" Title="Имя" />
+      <RadzenDataFilterProperty TItem="Guard.Core.Entities.Personal" Property="MiddleName" Title="Отчество" />
+      <RadzenDataFilterProperty TItem="Guard.Core.Entities.Personal" Property="FullName" Title="Фамилия и инициалы" />
+      <RadzenDataFilterProperty TItem="Guard.Core.Entities.Personal" Property="Subdivision.Name" Title="Подразделение" />
+    </Properties>
+  </RadzenDataFilter>
+</Filter>
+<FilterButtons><RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="ButtonStyle.Light" Variant="Variant.Text" /></FilterButtons>
 </TableWrapperWithFilterAndAnalytics>

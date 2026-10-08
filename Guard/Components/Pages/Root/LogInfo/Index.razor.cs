@@ -1,3 +1,4 @@
+using Guard.Components.Library;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Logging;
@@ -13,8 +14,18 @@ using System.Linq.Dynamic.Core;
 
 namespace Guard.Components.Pages.Root.LogInfo
 {
-  public partial class Index : IDisposable
+  public partial class Index : IAsyncDisposable
   {
+    [Inject] protected BrowserTimeService Time { get; set; } = default!;
+    private static readonly HashSet<string> supportedFields = ["Timestamp", "Level", "Layer", "Message", "Exception", "UserId", "ClientIp"];
+    private Func<IQueryable<LogEntry>, IQueryable<LogEntry>> appliedFilter = q => q;
+    private CancellationTokenSource? loading;
+    private Task? realtimeTask;
+    private readonly List<Task> realtimeTasks = [];
+    private bool disposed;
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+      if (firstRender) { try { await Time.InitializeAsync(); await grid.Reload(); StateHasChanged(); } catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс логов"); } }
+    }
     [Inject] protected IPermissionService Permissions { get; set; } = default!;
     [Inject]
     protected IJSRuntime JSRuntime { get; set; }
@@ -94,16 +105,20 @@ namespace Guard.Components.Pages.Root.LogInfo
     // Применение фильтра
     async Task ApplyFilter()
     {
-      finalSelectedItemsLevel = selectedItemsLevel;
-      finalSelectedItemsLayer = selectedItemsLayer;
-
-      // Принудительно запускаем перерисовку, чтобы FilterValue передался в RadzenDataFilterProperty
-      StateHasChanged();
-      await Task.Yield();
-
-      await dataFilter.Filter();
+      finalSelectedItemsLevel = selectedItemsLevel?.ToArray();
+      finalSelectedItemsLayer = selectedItemsLayer?.ToArray();
+      SetSelectionValues(dataFilter.Filters ?? []);
+      try { appliedFilter = EntityListQuery<LogEntry>.Capture(dataFilter, supportedFields, Time); if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
+      catch (Exception ex) { Logger.LogWarning(ex, "Фильтр логов"); NotificationService.Notify(new NotificationMessage { Severity=NotificationSeverity.Error, Summary="Фильтр", Detail=Guard.Core.Services.UserOperationErrors.Message(ex), Style="position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); }
     }
-
+    private void SetSelectionValues(IEnumerable<CompositeFilterDescriptor> filters)
+    {
+      foreach (var filter in filters) {
+        if (filter.Property == "Level") filter.FilterValue = finalSelectedItemsLevel;
+        if (filter.Property == "Layer") filter.FilterValue = finalSelectedItemsLayer;
+        if (filter.Filters != null) SetSelectionValues(filter.Filters);
+      }
+    }
     protected override async Task OnInitializedAsync()
     {
       try
@@ -140,62 +155,24 @@ namespace Guard.Components.Pages.Root.LogInfo
 
     async Task LoadData(LoadDataArgs args)
     {
-      isLoading = true;
-
-      try
-      {
-        var (items, totalCount) = await LogService.GetLogsAsync(async query =>
-        {
-          if (dataFilter != null)
-          {
-            query = query.Where(dataFilter);
-          }
-
-          if (!string.IsNullOrEmpty(args.OrderBy))
-          {
-            query = query.OrderBy(args.OrderBy);
-          }
-          else
-          {
-            query = query.OrderByDescending(s => s.Timestamp);
-          }
-
-          var total = await query.CountAsync(_cts.Token);
-
-          var pageData = await query
-              .Skip(args.Skip ?? 0)
-              .Take(args.Top ?? 10)
-              .ToListAsync(_cts.Token);
-
-          return (pageData, total);
-        }, _cts.Token);
-
-        filteredData = items;
-        count = totalCount;
+      if (disposed || Time.Zone == null) return;
+      loading?.Cancel(); var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token); loading = request;
+      var ct = request.Token; var filter = appliedFilter; isLoading = true;
+      try {
+        if ((args.Skip ?? 0) < 0 || (args.Top ?? 100) is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
+        var result = await LogService.GetLogsAsync(async query => {
+          query = filter(query); var total = await query.CountAsync(ct);
+          query = EntityListQuery<LogEntry>.Sort(query, args.OrderBy, supportedFields, "Timestamp desc", uniqueKey: null);
+          var page = await query.Skip(args.Skip ?? 0).Take(args.Top ?? 100).ToListAsync(ct);
+          return (page, total);
+        }, ct);
+        ct.ThrowIfCancellationRequested(); await Permissions.RequireAsync(Guard.Core.Identity.Permissions.Logs.Read, ct);
+        if (!disposed && ReferenceEquals(request, loading)) { filteredData = result.page; count = result.total; }
       }
-      catch (OperationCanceledException)
-      {
-        Logger.LogInformation("Выборка системных логов отменена пользователем");
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при загрузке системных логов");
-
-        NotificationService.Notify(new NotificationMessage
-        {
-          Severity = NotificationSeverity.Error,
-          Summary = "Внимание!",
-          Detail = ex.Message,
-          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-        });
-      }
-      finally
-      {
-        isLoading = false;
-      }
+      catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+      catch (Exception ex) { if (!disposed && ReferenceEquals(request, loading)) { filteredData = []; count = 0; Logger.LogError(ex, "Загрузка логов"); NotificationService.Notify(new NotificationMessage { Severity=NotificationSeverity.Error, Summary="Логи", Detail="Не удалось загрузить логи. Проверьте доступ и повторите попытку.", Style="position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); } }
+      finally { if (ReferenceEquals(request, loading)) { loading=null; isLoading=false; } request.Dispose(); }
     }
-
-
     /// <summary>
     /// Переключение между режимами "По запросу" и "Real-time"
     /// </summary>
@@ -225,8 +202,12 @@ namespace Guard.Components.Pages.Root.LogInfo
       _realtimeCts = new CancellationTokenSource();
       var token = _realtimeCts.Token;
 
-      _ = Task.Run(async () =>
-      {
+      realtimeTask = RunRealtimeAsync(token);
+      realtimeTasks.RemoveAll(task => task.IsCompleted);
+      realtimeTasks.Add(realtimeTask);
+    }
+    private async Task RunRealtimeAsync(CancellationToken token)
+    {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
 
         try
@@ -236,7 +217,7 @@ namespace Guard.Components.Pages.Root.LogInfo
             // RadzenDataGrid и UI обновляются только в потоке SynchronizationContext Blazor
             await InvokeAsync(async () =>
             {
-              if (grid != null && !isLoading)
+              if (!disposed && grid != null && !isLoading)
               {
                 await grid.Reload();
                 StateHasChanged();
@@ -248,7 +229,7 @@ namespace Guard.Components.Pages.Root.LogInfo
         {
           // Ожидаемая отмена при переключении режима или уничтожении компонента
         }
-      }, token);
+        catch (Exception ex) { Logger.LogError(ex, "Автообновление логов остановлено"); }
     }
 
     /// <summary>
@@ -272,53 +253,26 @@ namespace Guard.Components.Pages.Root.LogInfo
     /// <summary>
     /// Единый метод сохранения и применения настроек логирования
     /// </summary>
+    [Inject] protected ILogConfigurationService Configuration { get; set; } = default!;
     protected async Task SaveLoggerSettings()
     {
-      await Permissions.RequireAsync(Guard.Core.Identity.Permissions.Logs.Configure, _cts.Token);
-      if (maxSessions < 1)
-      {
-        NotificationService.Notify(new NotificationMessage
-        {
-          Severity = NotificationSeverity.Warning,
-          Summary = "Внимание",
-          Detail = "Количество подключений должно быть не менее 1",
-          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-        });
-        return;
+      try {
+        await Configuration.SaveAsync(maxSessions, selectedLogLevel, _cts.Token);
+        NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Успешно", Detail = "Настройки логирования сохранены.", Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" });
       }
-
-      var previousLevel = LevelSwitch.MinimumLevel;
-
-      // 1. Обновляем уровень в switch
-      LevelSwitch.MinimumLevel = selectedLogLevel;
-
-      // 2. Применяем новую конфигурацию Serilog (батчи + уровень)
-      LoggerManager.ApplyConfiguration(maxSessions, selectedLogLevel);
-
-      // 3. Сохраняем обновленные настройки в файл logsettings.json
-      LogLevelPersistenceService.SaveState(LevelSwitch, maxSessions);
-
-      // 4. Логируем действие администратора
-      Logger.LogWarning("Изменены настройки логгера: Уровень = {NewLevel} (был {PreviousLevel}), Макс. сессий = {MaxSessions}",
-          selectedLogLevel, previousLevel, maxSessions);
-
-      // 5. Показываем всплывающее уведомление
-      NotificationService.Notify(new NotificationMessage
-      {
-        Severity = NotificationSeverity.Success,
-        Summary = "Успешно",
-        Detail = $"Настройки применены: {selectedLogLevel}, {maxSessions} сессий",
-        Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-      });
+      catch (OperationCanceledException) when (_cts.IsCancellationRequested) { }
+      catch (Exception ex) { Logger.LogError(ex, "Настройки логирования"); NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Внимание", Detail = Guard.Core.Services.UserOperationErrors.Message(ex), Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); }
     }
-
     /// <summary>
     /// Освобождение ресурсов при закрытии страницы
     /// </summary>
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+      disposed = true;
+      loading?.Cancel();
       StopRealtimeLoop();
       _cts.Cancel();
+      await Task.WhenAll(realtimeTasks);
       _cts.Dispose();
     }
   }

@@ -1,3 +1,4 @@
+using Guard.Core.Services.DTOs;
 using Guard.Components.Library.Loading;
 using Guard.Components.Pages.Workspaces.Administrator;
 using Guard.Core.Entities;
@@ -97,7 +98,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         {
           Severity = NotificationSeverity.Error,
           Summary = "Внимание!",
-          Detail = ex.Message,
+          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
       }
@@ -115,10 +116,10 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         Logger.LogInformation("Запуск обновления подразделения '{SubdivisionName}' (ID: {Id})", item.Name, item.Id);
 
         // Асинхронное обновление сущности
-        await SubdivisionService.UpdateAsync(item, _cts.Token);
+        await SubdivisionService.UpdateFromDtoAsync(new EditSubdivisionDto(item.Id, item.Version, SubdivisionFieldsDto.From(item)), _cts.Token);
 
         Logger.LogInformation("Подразделение '{SubdivisionName}' с ID '{Id}' успешно обновлено", item.Name, item.Id);
-        DialogService.Close(true);
+        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
       }
       catch (OperationCanceledException)
       {
@@ -132,7 +133,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         {
           Severity = NotificationSeverity.Error,
           Summary = "Внимание!",
-          Detail = ex.Message,
+          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
       }

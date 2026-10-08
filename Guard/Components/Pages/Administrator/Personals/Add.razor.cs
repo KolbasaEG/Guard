@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
+using Guard.Core.Entities;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
 using Radzen;
@@ -47,7 +48,7 @@ namespace Guard.Components.Pages.Administrator.Personals
         {
           Severity = NotificationSeverity.Error,
           Summary = "Внимание!",
-          Detail = ex.Message,
+          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
       }
@@ -67,10 +68,10 @@ namespace Guard.Components.Pages.Administrator.Personals
         Logger.LogInformation("Запуск создания сотрудника '{PersonalName}'", displayName);
 
         // Асинхронное создание с передачей CancellationToken
-        await PersonalService.CreateAsync(item, _cts.Token);
+        await PersonalService.CreateFromDtoAsync(new CreatePersonalDto(PersonalFieldsDto.From(item)), _cts.Token);
 
         Logger.LogInformation("Сотрудник '{PersonalName}' успешно создан", displayName);
-        DialogService.Close(true);
+        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
       }
       catch (OperationCanceledException)
       {
@@ -84,7 +85,7 @@ namespace Guard.Components.Pages.Administrator.Personals
         {
           Severity = NotificationSeverity.Error,
           Summary = "Внимание!",
-          Detail = ex.Message,
+          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
       }

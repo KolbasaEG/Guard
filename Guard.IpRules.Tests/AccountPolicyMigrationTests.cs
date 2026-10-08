@@ -12,14 +12,19 @@ internal static class AccountPolicyMigrationTests
     db.ChangeTracker.Clear();
     await db.Database.ExecuteSqlRawAsync("""
       DROP TABLE "AccountPolicies";
+      ALTER TABLE "Personals" DROP COLUMN "Version";
+      ALTER TABLE "Subdivisions" DROP COLUMN "Version";
+      ALTER TABLE "Classifiers" DROP COLUMN "Version";
+      ALTER TABLE "OrganTypes" DROP COLUMN "Version";
+      ALTER TABLE "OrganTypes" ALTER COLUMN "Id" DROP IDENTITY IF EXISTS;
       ALTER TABLE "AspNetUsers"
         DROP COLUMN "AccountBlockReason", DROP COLUMN "CreatedAtUtc", DROP COLUMN "LastActivityAtUtc",
         DROP COLUMN "MustChangePassword", DROP COLUMN "PasswordChangedAtUtc", DROP COLUMN "UnblockedAtUtc";
       CREATE TABLE "__EFMigrationsHistory" ("MigrationId" varchar(150) PRIMARY KEY, "ProductVersion" varchar(32) NOT NULL);
       """);
     var migrations = db.Database.GetMigrations().ToArray();
-    check(migrations[^1].EndsWith("_AddAccountPolicy"), "account policy migration is latest");
-    foreach (var migration in migrations[..^1])
+    check(migrations.Any(m => m.EndsWith("_AddAccountPolicy")), "account policy migration exists");
+    foreach (var migration in migrations.TakeWhile(m => !m.EndsWith("_AddAccountPolicy")))
       await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") VALUES ({migration}, {"10.0.12"})");
     await db.Database.MigrateAsync();
     var legacy = await db.Users.SingleAsync(u => u.Id == "migration-legacy");

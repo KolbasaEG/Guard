@@ -1,10 +1,12 @@
+@using Guard.Core.Services.DTOs
+@using Guard.Components.Library
 @using Guard.Core.Entities
 @using Guard.Core.Enums
 @attribute [Authorize]
 <PageTitle>АИС "Охрана"</PageTitle>
 <TableWrapperWithFilterAndAnalytics >
   <Table>
-    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="Subdivision" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"
+    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="SubdivisionListDto" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"
                     AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                     DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
                     LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NotEqualsText="Не равно" OrOperatorText="Или"
@@ -13,17 +15,16 @@
                     PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" ShowPagingSummary="true" PagingSummaryFormat="@pagingSummaryFormat"
                     Style="height:100%;">
       <HeaderTemplate>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;position:relative;min-height:36px;">
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
             <RadzenMenu>
               <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
-                <RadzenMenuItem Text="Экспорт" Icon="get_app" Click="@OnExportClick" Style="font-weight:500;" />
                 <RadzenMenuItem Text="Правка подчиненности" Visible="@(Access?.IsRoot == true)" Icon="get_app" Click="@RebuildHierarchyAndPathsAsync" Style="font-weight:500;" />
               </RadzenMenuItem>
             </RadzenMenu>
           </RadzenStack>
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
-            <RadzenSelectBar TValue="DataViewMode" Size="ButtonSize.Medium" @bind-Value="@currentMode" Change="() => ReloadAsunc()" Style="background-color: var(--rz-menu-top-item-background-color); border-radius: 0px;">
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px" Style="position:absolute;left:50%;transform:translateX(-50%);">
+            <RadzenSelectBar TValue="DataViewMode" Size="ButtonSize.Medium" @bind-Value="@currentMode" Change="() => ResetPageAsync()" Style="background-color: var(--rz-menu-top-item-background-color); border-radius: 0px;">
               <Items>
                 <RadzenSelectBarItem Visible="@(Access?.Has(Permissions.Subdivisions.ReadArchive) == true)" Value="@(DataViewMode.Archived)" Text="Архив" Style="border-radius:0px; width:105px; text-align:center;" />
                 <RadzenSelectBarItem Value="@(DataViewMode.Active)" Text="Активные" Style="border-radius:0px; width:105px; text-align:center;" />
@@ -31,40 +32,51 @@
               </Items>
             </RadzenSelectBar>
           </RadzenStack>
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="margin-left:auto;background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
+            <RadzenButton Icon="account_tree" Click="ToggleHierarchyAsync" title="@(hierarchyMode == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
             <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
             <RadzenButton Icon="add_circle_outline" Visible="@(isEditor)" Click="@AddClick" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
           </RadzenStack>
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="Subdivision" Property="OrganType.Name" Title="Тип органа" Frozen="true" Width="200px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="StatusClassifier.Value" Title="Статус" Width="200px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="Name" Title="Наименование" Width="200px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="Parent.Name" Title="Родительское подразделение" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="PositionFormationName" Title="Наименование, используемое при формировании должности" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="PostalCode" Title="Почтовый индекс" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="Address" Title="Город / полный адрес" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="Phone" Title="Телефон" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="StaffCount" Title="Штатная численность" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="LevelOrder" Title="Порядковый номер внутри одного уровня иерархии" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Property="IsDepartment" Title="Признак: является ли подразделение отделом" Width="100px" />
-        <RadzenDataGridColumn TItem="Subdivision" Filterable="false" Sortable="false" Width="90px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="OrganTypeName" SortProperty="OrganType.Name" Title="Тип органа" Frozen="true" Width="200px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="StatusClassifierName" SortProperty="StatusClassifier.Value" Title="Статус" Width="200px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="Name" SortProperty="Name" Title="Наименование" Width="200px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="ParentName" SortProperty="Parent.Name" Title="Родительское подразделение" Width="100px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="PositionFormationName" SortProperty="PositionFormationName" Title="Наименование, используемое при формировании должности" Width="100px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="PostalCode" SortProperty="PostalCode" Title="Почтовый индекс" Width="100px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="Address" SortProperty="Address" Title="Город / полный адрес" Width="100px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="Phone" SortProperty="Phone" Title="Телефон" Width="100px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="StaffCount" SortProperty="StaffCount" Title="Штатная численность" Width="100px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="LevelOrder" SortProperty="LevelOrder" Title="Порядковый номер внутри одного уровня иерархии" Width="100px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="IsDepartment" SortProperty="IsDepartment" Title="Признак: является ли подразделение отделом" Width="100px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Filterable="false" Sortable="false" Width="150px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
             <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
               <RadzenButton ButtonStyle="ButtonStyle.Info" Icon="drive_file_move" Size="Radzen.ButtonSize.ExtraSmall"
-                            Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                            Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@(isEditor && item.Status is Status.Inserted or Status.Modified)"
                             Click=@(args => GridMoveButtonClick(args, item)) @onclick:stopPropagation="true" />
-              @if (item.Status < Status.Blocked)
+              @if (EntityStatusTransitions.CanApply(item.Status, StatusOperation.Archive))
               {
                 <RadzenButton Icon="archive" Size="Radzen.ButtonSize.ExtraSmall"
                               Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
                               Click=@(args => GridArchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
+              }
+              @if (EntityStatusTransitions.CanApply(item.Status, StatusOperation.Delete))
+              {
                 <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="Radzen.ButtonSize.ExtraSmall"
                               Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
                               Click=@(args => GridDeleteButtonClick(args, item)) @onclick:stopPropagation="true" />
               }
-              @if (item.Status == Status.Archived)
+              @if (EntityStatusTransitions.CanApply(item.Status, StatusOperation.Block) || EntityStatusTransitions.CanApply(item.Status, StatusOperation.Unblock))
+              {
+                <RadzenButton Icon="@(EntityStatusTransitions.CanApply(item.Status, StatusOperation.Unblock) ? "lock_open" : "lock")"
+                  ToolTip="@(EntityStatusTransitions.CanApply(item.Status, StatusOperation.Unblock) ? "Разблокировать" : "Заблокировать")"
+                  Size="Radzen.ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                  Click="@(() => ToggleBlockAsync(item))" @onclick:stopPropagation="true" />
+              }
+              @if (EntityStatusTransitions.CanApply(item.Status, StatusOperation.Restore, Access?.IsRoot == true))
               {
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="unarchive" Size="Radzen.ButtonSize.ExtraSmall"
                               Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
@@ -77,7 +89,7 @@
     </RadzenDataGrid>
   </Table>
   <Filter>
-    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="Subdivision" ViewChanged=@(view => grid.Reload())
+    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="Subdivision"
                       AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                       DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
                       AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
@@ -93,7 +105,7 @@
         <RadzenDataFilterProperty TItem="Subdivision" Property="LevelOrder" Title="Порядковый номер внутри одного уровня иерархии" />
         <RadzenDataFilterProperty TItem="Subdivision" Property="Path" Title="Путь подразделения" />
         <RadzenDataFilterProperty TItem="Subdivision" Property="StatusClassifier.Value" Title="Статус" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="OrganType.Value" Title="Тип органа" />
+        <RadzenDataFilterProperty TItem="Subdivision" Property="OrganType.Name" Title="Тип органа" />
       </Properties>
     </RadzenDataFilter>
   </Filter>

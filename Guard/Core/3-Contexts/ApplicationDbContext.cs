@@ -34,4 +34,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
   public DbSet<Classifier> Classifiers { get; set; } = null!;
   public DbSet<Personal> Personals { get; set; } = null!;
   public DbSet<OrganType> OrganTypes { get; set; } = null!;
+
+  public override int SaveChanges(bool acceptAllChangesOnSuccess)
+  {
+    PrepareVersions();
+    return base.SaveChanges(acceptAllChangesOnSuccess);
+  }
+
+  public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+  {
+    PrepareVersions();
+    return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+  }
+
+  private void PrepareVersions()
+  {
+    foreach (var entry in ChangeTracker.Entries().Where(e =>
+        e.State is EntityState.Added or EntityState.Modified &&
+        e.Entity is Personal or Subdivision or Classifier or OrganType))
+      entry.Property("Version").CurrentValue = Guid.NewGuid();
+  }
 }

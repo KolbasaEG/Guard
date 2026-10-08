@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
+using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -47,7 +48,7 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации диалогового окна создания типа органа");
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {
@@ -70,10 +71,10 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
           return;
         }
 
-        await OrganTypeService.CreateAsync(item, _cts.Token);
+        await OrganTypeService.CreateFromDtoAsync(new CreateOrganTypeDto(OrganTypeFieldsDto.From(item)), _cts.Token);
 
         Logger.LogInformation("Тип органа '{Name}' успешно создан", item.Name);
-        DialogService.Close(true);
+        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
       }
       catch (OperationCanceledException)
       {
@@ -82,7 +83,7 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при создании типа органа '{Name}'", item.Name);
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {

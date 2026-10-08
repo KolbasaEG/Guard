@@ -33,6 +33,7 @@ internal static class AuthorizationTests
     services.AddScoped<IRoleAccessService,RoleAccessService>();
     services.AddScoped(typeof(IReadRepository<>),typeof(ReadRepository<>));
     services.AddScoped<IUnitOfWork,UnitOfWork>();
+    services.AddScoped<IUnitOfWorkFactory,UnitOfWorkFactory>();
     services.AddScoped(typeof(IGenericRepository<>),typeof(Guard.Core.Repositories.GenericRepository<>));
     services.AddScoped<IPersonalService,PersonalService>();
     services.AddScoped(typeof(IBasicRepository<>),typeof(BasicRepository<>));
@@ -127,7 +128,7 @@ internal static class AuthorizationTests
     authentication.Id="user";
     check((await reads.GetAllAsync()).Count==2,"full-card entity access remains scoped");
     var card=await personals.GetDetailsAsync(list.Items[0].Id);
-    check(card!=null && card.Fields.ContainsKey("PersonalNumber") && !card.Fields.ContainsKey("PasswordHash"),"full-card DTO includes employee fields without Identity secrets");
+    check(card!=null && typeof(PersonalDetailsDto).GetProperty("PersonalNumber") != null && typeof(PersonalDetailsDto).GetProperty("PasswordHash") == null,"full-card DTO includes employee fields without Identity secrets");
     authentication.Id="root";
     var revoke=await roles.GetAsync(viewerId); revoke.Permissions.Clear(); await roles.SaveAsync(revoke);
     await roles.DeleteAsync(exporterId);

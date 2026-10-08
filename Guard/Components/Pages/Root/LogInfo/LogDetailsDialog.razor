@@ -3,6 +3,8 @@
 @using System.Text.Json
 @using System.Text.RegularExpressions
 @inject DialogService DialogService
+@inject Guard.Components.Library.BrowserTimeService Time
+@inject ILogger<LogDetailsDialog> Logger
 <ViewEntity TItem="LogEntry" Data="Log" OnCancelButtonClick="HandleCancelButtonClick">
   <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;height:100%;">
     <InfoBlock Title="Основные метаданные контекста">
@@ -14,7 +16,7 @@
 
         <RadzenText TextStyle="TextStyle.Caption" Style="color: var(--rz-text-secondary-color); font-size: 0.85rem;">
           <RadzenIcon Icon="schedule" Style="vertical-align: middle; font-size: 1.1rem;" />
-          @Log.Timestamp.ToString("dd.MM.yyyy HH:mm:ss.fff")
+          @Time.Format(Log.Timestamp, "dd.MM.yyyy HH:mm:ss.fff")
         </RadzenText>
       </RadzenStack>
       <RadzenStack Orientation="Orientation.Horizontal" Gap="5px;" style="width:100%; margin-top:10px;">
@@ -91,6 +93,12 @@
 
 
 @code {
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender) return;
+    try { await Time.InitializeAsync(); StateHasChanged(); }
+    catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс события журнала"); }
+  }
   [Parameter] public LogEntry Log { get; set; } = default!;
 
   private string? parsedJsonMessage;

@@ -28,7 +28,8 @@ public class LogLevelPersistenceService
     try
     {
       var json = File.ReadAllText(FilePath);
-      return JsonSerializer.Deserialize<LogLevelState>(json, JsonOptions) ?? new LogLevelState();
+      var state = JsonSerializer.Deserialize<LogLevelState>(json, JsonOptions);
+      return state != null && state.MaxSessions is >= 1 and <= 10000 && Enum.IsDefined(state.MinimumLevel) ? state : new LogLevelState();
     }
     catch
     {
@@ -44,7 +45,17 @@ public class LogLevelPersistenceService
       MaxSessions = maxSessions
     };
 
-    var json = JsonSerializer.Serialize(state, JsonOptions);
-    File.WriteAllText(FilePath, json);
+    SaveState(state);
+  }
+
+  public static void SaveState(LogLevelState state)
+  {
+    var path = Path.GetFullPath(FilePath);
+    var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+    try {
+      File.WriteAllText(temporary, JsonSerializer.Serialize(state, JsonOptions));
+      File.Move(temporary, path, overwrite: true);
+    }
+    finally { if (File.Exists(temporary)) File.Delete(temporary); }
   }
 }

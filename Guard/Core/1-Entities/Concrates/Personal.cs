@@ -5,6 +5,7 @@
 /// </summary>
 public class Personal : BaseEntity, IHasSubdivision
 {
+  public Guid Version { get; set; } = Guid.NewGuid();
 
   /// <summary>
   /// ������������� ���������� ��� ������ ����.

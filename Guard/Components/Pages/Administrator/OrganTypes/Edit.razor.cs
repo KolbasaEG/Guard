@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
+using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -56,7 +57,7 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации диалогового окна редактирования типа органа {OrganTypeId}", Id);
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {
@@ -79,10 +80,10 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
           return;
         }
 
-        await OrganTypeService.UpdateAsync(item, _cts.Token);
+        await OrganTypeService.UpdateFromDtoAsync(new EditOrganTypeDto(item.Id, item.Version, OrganTypeFieldsDto.From(item)), _cts.Token);
 
         Logger.LogInformation("Тип органа '{Name}' (ID: {OrganTypeId}) успешно обновлен", item.Name, item.Id);
-        DialogService.Close(true);
+        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
       }
       catch (OperationCanceledException)
       {
@@ -91,7 +92,7 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при обновлении типа органа '{Name}'", item.Name);
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {

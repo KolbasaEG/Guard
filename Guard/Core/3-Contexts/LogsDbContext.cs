@@ -17,7 +17,10 @@ public class LogsDbContext : DbContext
     {
       entity.ToTable("logs");
       entity.HasNoKey(); 
-      entity.Property(e => e.Timestamp).HasColumnName("timestamp");
+      entity.Property(e => e.Timestamp).HasColumnName("timestamp")
+        .HasColumnType("timestamp without time zone")
+        .HasConversion(value => DateTime.SpecifyKind(value.Kind == DateTimeKind.Unspecified ? value : value.ToUniversalTime(), DateTimeKind.Unspecified),
+          value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
       entity.Property(e => e.Level).HasColumnName("level");
       entity.Property(e => e.Layer).HasColumnName("layer");
       entity.Property(e => e.Message).HasColumnName("message");

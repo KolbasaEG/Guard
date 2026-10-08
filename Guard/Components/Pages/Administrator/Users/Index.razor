@@ -38,7 +38,7 @@
           <Template Context="item">@(item.AccountBlockReason == "Inactivity" ? "Неактивность" : item.AccountBlockReason == "Administrator" ? "Администратор" : item.IsLockedOut ? "Временная блокировка" : "—")</Template>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="UserDto" Property="LastActivityAtUtc" SortProperty="LastActivityAtUtc" Title="Последняя активность" Width="180px">
-          <Template Context="item">@(item.LastActivityAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "—")</Template>
+          <Template Context="item">@(Time.Format(item.LastActivityAtUtc?.UtcDateTime))</Template>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="UserDto" Property="PasswordChangeRequired" Sortable="false" Title="Требуется смена пароля" Width="180px">
           <Template Context="item">@(item.PasswordChangeRequired ? "Да" : "Нет")</Template>

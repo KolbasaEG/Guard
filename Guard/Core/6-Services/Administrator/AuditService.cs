@@ -6,8 +6,9 @@ namespace Guard.Core.Services;
 /// Реализация сервиса аудита Identity событий.
 /// Отправляет данные в RuSIEM по TcpSyslog + TLS в формате CEF.
 /// </summary>
-public sealed class AuditService(Serilog.ILogger auditLogger) : IAuditService
+public sealed class AuditService(Serilog.ILogger auditLogger) : IAuditService, IDisposable
 {
+  public void Dispose() => (auditLogger as IDisposable)?.Dispose();
   public void LogIdentityEvent(
       AuditEventType eventType,
       string? userName,

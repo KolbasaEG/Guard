@@ -23,7 +23,7 @@ public partial class Edit : IDisposable
   protected async Task FormSubmit()
   {
     isLoading = true;
-    try { await RoleService.SaveAsync(item, stop.Token); DialogService.Close(true); }
+    try { await RoleService.SaveAsync(item, stop.Token); DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true)); }
     catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
     catch (Exception ex) { ShowError(ex); }
     finally { isLoading = false; }
@@ -31,8 +31,8 @@ public partial class Edit : IDisposable
   private void ShowError(Exception ex)
   {
     Logger.LogError(ex, "Ошибка сохранения роли");
-    Notifications.Notify(NotificationSeverity.Error, "Роль не сохранена",
-        ex is ArgumentException or InvalidOperationException or UnauthorizedAccessException ? ex.Message : "Не удалось выполнить операцию.");
+    Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Роль не сохранена", Detail =
+        ex is ArgumentException or InvalidOperationException or UnauthorizedAccessException ? ex.Message : "Не удалось выполнить операцию.", Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" });
   }
   protected void HandleCancelButtonClick() { stop.Cancel(); DialogService.Close(null); }
   public void Dispose() { stop.Cancel(); stop.Dispose(); }

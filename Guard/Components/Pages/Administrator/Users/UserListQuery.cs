@@ -11,8 +11,9 @@ public static class UserListQuery
 {
   private static readonly HashSet<string> Fields = ["Id", "UserName", "Email", "PersonalId", "AccountBlockReason", "LastActivityAtUtc", "MustChangePassword"];
 
-  public static Func<IQueryable<ApplicationUser>, IQueryable<ApplicationUser>> Capture(RadzenDataFilter<ApplicationUser> filter)
+  public static Func<IQueryable<ApplicationUser>, IQueryable<ApplicationUser>> Capture(RadzenDataFilter<ApplicationUser> filter, Guard.Components.Library.BrowserTimeService? time = null)
   {
+    if (time != null) return Guard.Components.Library.EntityListQuery<ApplicationUser>.Capture(filter, Fields, time);
     var filters = (filter.Filters ?? []).Select(Clone).ToArray();
     Validate(filters);
     var source = Array.Empty<ApplicationUser>().AsQueryable();

@@ -11,7 +11,7 @@ public class RemoteClassifierService : IRemoteClassifierService
 {
   private readonly IPermissionService _permissions;
   private readonly HttpClient _httpClient;
-  private readonly IUnitOfWork _uow;
+  private readonly IUnitOfWorkFactory _writes;
   private readonly ILogger<RemoteClassifierService> _logger;
 
   private static readonly JsonSerializerOptions JsonOptions = new()
@@ -21,7 +21,7 @@ public class RemoteClassifierService : IRemoteClassifierService
 
   public RemoteClassifierService(
       HttpClient httpClient,
-      IUnitOfWork uow,
+      IUnitOfWorkFactory uow,
       ILogger<RemoteClassifierService> logger, IPermissionService permissions)
   {
     _permissions = permissions;
@@ -38,7 +38,7 @@ public class RemoteClassifierService : IRemoteClassifierService
           new AuthenticationHeaderValue("Basic", Convert.ToBase64String(authBytes));
     }
 
-    _uow = uow;
+    _writes = uow;
     _logger = logger;
   }
 
@@ -104,6 +104,7 @@ public class RemoteClassifierService : IRemoteClassifierService
 
   public async Task SyncClassifiersAsync(CancellationToken ct = default)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Guard.Core.Identity.Permissions.Classifiers.Manage, ct);
     var remoteItems = await FetchClassifiersAsync(ct);
 
@@ -117,7 +118,7 @@ public class RemoteClassifierService : IRemoteClassifierService
     // Сброс Sequence в PostgreSQL перед вставкой записей
     // Гарантирует, что следующий сгенерированный Id не будет конфликтовать с уже существующими в БД
     // -----------------------------------------------------------------
-    await FixSequenceAsync(ct);
+    await FixSequenceAsync(_uow, ct);
 
 
     await _uow.ExecuteInTransactionAsync(async () =>
@@ -219,7 +220,7 @@ public class RemoteClassifierService : IRemoteClassifierService
   /// <summary>
   /// Синхронизирует значение PostgreSQL Sequence с фактическим максимальным Id в таблице Classifiers.
   /// </summary>
-  private async Task FixSequenceAsync(CancellationToken ct)
+  private async Task FixSequenceAsync(IUnitOfWork _uow, CancellationToken ct)
   {
     const string sql = @"
       SELECT setval(

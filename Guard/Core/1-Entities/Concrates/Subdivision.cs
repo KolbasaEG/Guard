@@ -5,6 +5,7 @@
 /// </summary>
 public class Subdivision : BaseEntity
 {
+  public Guid Version { get; set; } = Guid.NewGuid();
   /// <summary>
   /// Идентификатор подразделения для Path.
   /// </summary>

@@ -52,7 +52,8 @@
   [Parameter] public bool ContentOnly { get; set; }
   [CascadingParameter] public Guard.Components.Library.Authorization.DialogAccessState? AccessState { get; set; }
   private bool CanView => AccessState?.CanView != false;
-  private bool EffectiveReadOnly => ReadOnly || AccessState?.CanWrite == false;
+  private bool EffectiveReadOnly => ReadOnly || IsLoading || submitting || AccessState?.CanWrite == false;
+  private bool submitting;
   private string FieldStyle => "border:0;margin:0;padding:0;width:100%;" + (EffectiveReadOnly ? "pointer-events:none;" : "");
   [Parameter] public bool ReadOnly { get; set; }
   [Parameter] public bool ShowSaveButton { get; set; } = true;
@@ -78,10 +79,14 @@
 
   protected async Task FormSubmit()
   {
-    if (AccessState != null) await AccessState.RefreshAsync();
-    if (!CanView || EffectiveReadOnly) return;
-    try { await Submit.InvokeAsync(); }
-    finally { if (AccessState != null) await AccessState.RefreshAsync(); }
+    if (submitting || IsLoading || ReadOnly) return;
+    submitting = true;
+    try {
+      if (AccessState != null) await AccessState.RefreshAsync();
+      if (!CanView || ReadOnly || IsLoading || AccessState?.CanWrite == false) return;
+      await Submit.InvokeAsync();
+    }
+    finally { submitting = false; if (AccessState != null) await AccessState.RefreshAsync(); }
   }
 
   protected async Task CancelButtonClick()

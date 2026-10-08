@@ -48,7 +48,7 @@ IDictionary<string, ColumnWriterBase> columnWriters = new Dictionary<string, Col
   { "message_template", new MessageTemplateColumnWriter() },
   { "level", new LevelColumnWriter(true, NpgsqlDbType.Varchar) },
   { "layer", new SinglePropertyColumnWriter("Layer", PropertyWriteMethod.Raw, NpgsqlDbType.Varchar) },
-  { "timestamp", new TimestampColumnWriter() },
+  { "timestamp", new UtcTimestampColumnWriter() },
   { "exception", new ExceptionColumnWriter() },
   { "properties", new LogEventSerializedColumnWriter() },
   { "user_id", new SinglePropertyColumnWriter("UserId", PropertyWriteMethod.Raw, NpgsqlDbType.Varchar) },
@@ -56,11 +56,14 @@ IDictionary<string, ColumnWriterBase> columnWriters = new Dictionary<string, Col
 };
 
 // 1. Включаем SelfLog (запись ошибок сети/БД в локальный файл, если PostgreSQL упадет)
+var selfLogGate = new object();
 Serilog.Debugging.SelfLog.Enable(msg =>
 {
+  lock (selfLogGate) {
   Console.Error.WriteLine($"[Serilog Error] {msg}");
   Directory.CreateDirectory("logs");
   File.AppendAllText("logs/serilog-internal-errors.log", $"{DateTime.UtcNow:o} {msg}{Environment.NewLine}");
+  }
 });
 
 // 2. Загружаем сохраненный уровень логирования
@@ -71,6 +74,7 @@ builder.Services.AddSingleton(levelSwitch);
 
 // 3. Создаем и регистрируем динамический менеджер логгера
 var loggerManager = new DynamicLoggerManager(logsConnectionString, levelSwitch);
+Log.Logger = loggerManager.Logger;
 builder.Services.AddSingleton(loggerManager);
 
 loggerManager.ApplyConfiguration(maxSessions: savedState.MaxSessions, newLevel: savedState.MinimumLevel);
@@ -211,6 +215,7 @@ builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHand
 // =====================================================
 builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
@@ -245,6 +250,7 @@ builder.Services.AddRazorPages();
 
 // AddRadzenComponents уже включает DialogService, NotificationService, TooltipService, ContextMenuService
 builder.Services.AddRadzenComponents();
+builder.Services.AddScoped<Guard.Components.Library.BrowserTimeService>();
 
 builder.Services.AddRadzenCookieThemeService(options =>
 {
@@ -257,6 +263,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
 var app = builder.Build();
+app.Lifetime.ApplicationStopped.Register(loggerManager.Dispose);
 
 // =====================================================
 // === MIDDLEWARE PIPELINE

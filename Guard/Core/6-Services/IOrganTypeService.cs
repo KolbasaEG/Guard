@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
+using Guard.Core.Entities;
 
 namespace Guard.Core.Services;
 
@@ -67,5 +68,7 @@ public interface IOrganTypeService
   /// </summary>
   /// <param name="id">Идентификатор типа органа</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task DeleteAsync(int id, CancellationToken ct = default);
+  Task DeleteAsync(int id, CancellationToken ct = default, Guid? expectedVersion = null);
+  Task<int> CreateFromDtoAsync(CreateOrganTypeDto input, CancellationToken ct = default);
+  Task UpdateFromDtoAsync(EditOrganTypeDto input, CancellationToken ct = default);
 }

@@ -4,7 +4,7 @@
   @if (item != null)
   {
     <RadzenStack Gap="8px" Style="overflow:auto">
-      @foreach (var field in item.Fields)
+      @foreach (var field in Fields(item))
       {
         <RadzenText><strong>@Label(field.Key):</strong> @Display(field.Value)</RadzenText>
       }
@@ -18,7 +18,49 @@
   [Parameter] public Guid Id { get; set; }
   private PersonalDetailsDto? item;
   private bool isLoading;
-  private static string Display(object? value) => value is DateTime date ? date.ToLocalTime().ToString("g") : value?.ToString() ?? "—";
+  private static IEnumerable<KeyValuePair<string, object?>> Fields(PersonalDetailsDto item) {
+    yield return new("Id", item.Id);
+    yield return new("Status", item.Status);
+    yield return new("InsertedDate", item.InsertedDate);
+    yield return new("LastModifiedDate", item.LastModifiedDate);
+    yield return new("CreatedBy", item.CreatedBy);
+    yield return new("ModifiedBy", item.ModifiedBy);
+    yield return new("PersonalId", item.PersonalId);
+    yield return new("SubdivisionId", item.SubdivisionId);
+    yield return new("PersonalSubdivisionId", item.PersonalSubdivisionId);
+    yield return new("PersonnelCategoryType", item.PersonnelCategoryType);
+    yield return new("PersonnelCategoryCode", item.PersonnelCategoryCode);
+    yield return new("SpecialRankType", item.SpecialRankType);
+    yield return new("SpecialRankCode", item.SpecialRankCode);
+    yield return new("PositionType", item.PositionType);
+    yield return new("PositionCode", item.PositionCode);
+    yield return new("WorkerCategoryType", item.WorkerCategoryType);
+    yield return new("WorkerCategoryCode", item.WorkerCategoryCode);
+    yield return new("LastName", item.LastName);
+    yield return new("FirstName", item.FirstName);
+    yield return new("MiddleName", item.MiddleName);
+    yield return new("FullName", item.FullName);
+    yield return new("EnlistmentYear", item.EnlistmentYear);
+    yield return new("PersonalNumber", item.PersonalNumber);
+    yield return new("LastNameGen", item.LastNameGen);
+    yield return new("FirstNameGen", item.FirstNameGen);
+    yield return new("MiddleNameGen", item.MiddleNameGen);
+    yield return new("StatusType", item.StatusType);
+    yield return new("StatusCode", item.StatusCode);
+    yield return new("UpdatedAt", item.UpdatedAt);
+    yield return new("SubdivisionName", item.SubdivisionName);
+    yield return new("PersonnelCategoryName", item.PersonnelCategoryName);
+    yield return new("SpecialRankName", item.SpecialRankName);
+    yield return new("PositionName", item.PositionName);
+    yield return new("WorkerCategoryName", item.WorkerCategoryName);
+    yield return new("StatusClassifierName", item.StatusClassifierName);
+    yield return new("UserId", item.UserId);
+    yield return new("UserName", item.UserName);
+    yield return new("IpAddresses", string.Join(", ", item.IpAddresses));
+  }
+  [Inject] private Guard.Components.Library.BrowserTimeService Time { get; set; } = default!;
+  protected override async Task OnAfterRenderAsync(bool firstRender) { if (firstRender) { try { await Time.InitializeAsync(); StateHasChanged(); } catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс карточки"); } } }
+  private string Display(object? value) => value is DateTime date ? Time.Format(date) : value?.ToString() ?? "—";
   private static readonly Dictionary<string,string> labels = new() {
     ["Id"]="Идентификатор", ["PersonalId"]="Идентификатор во внешней системе", ["SubdivisionId"]="Подразделение",
     ["PersonalSubdivisionId"]="Подразделение во внешней системе", ["LastName"]="Фамилия", ["FirstName"]="Имя",

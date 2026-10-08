@@ -33,10 +33,11 @@ public class AuditSaveChangesInterceptor : SaveChangesInterceptor
   }
 
   private void ApplyAudit(DbContext? context)
+    => ApplyAudit(context, _currentUserService.UserId ?? "system");
+
+  internal static void ApplyAudit(DbContext? context, string userId)
   {
     if (context is null) return;
-
-    var userId = _currentUserService.UserId ?? "system";
     var now = DateTime.UtcNow;
 
     foreach (var entry in context.ChangeTracker.Entries<BaseEntity>())

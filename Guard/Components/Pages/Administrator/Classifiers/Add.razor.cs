@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
+using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -40,7 +41,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации диалогового окна создания элемента классификатора");
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {
@@ -62,10 +63,10 @@ namespace Guard.Components.Pages.Administrator.Classifiers
           return;
         }
 
-        await ClassifierService.CreateAsync(item, _cts.Token);
+        await ClassifierService.CreateFromDtoAsync(new CreateClassifierDto(ClassifierFieldsDto.From(item)), _cts.Token);
 
         Logger.LogInformation("Элемент классификатора '{Value}' успешно создан", item.Value);
-        DialogService.Close(true);
+        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
       }
       catch (OperationCanceledException)
       {
@@ -74,7 +75,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при создании элемента классификатора '{Value}'", item.Value);
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {

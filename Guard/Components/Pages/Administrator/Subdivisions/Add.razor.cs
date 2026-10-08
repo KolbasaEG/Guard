@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
+using Guard.Core.Entities;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -63,7 +64,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         {
           Severity = NotificationSeverity.Error,
           Summary = "Внимание!",
-          Detail = ex.Message,
+          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
       }
@@ -80,10 +81,10 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         Logger.LogInformation("Запуск создания подразделения '{SubdivisionName}'", item.Name);
 
         // Асинхронное создание с передачей CancellationToken
-        await SubdivisionService.CreateAsync(item, _cts.Token);
+        await SubdivisionService.CreateFromDtoAsync(new CreateSubdivisionDto(SubdivisionFieldsDto.From(item), item.ParentId), _cts.Token);
 
         Logger.LogInformation("Подразделение '{SubdivisionName}' успешно создано", item.Name);
-        DialogService.Close(true);
+        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
       }
       catch (OperationCanceledException)
       {
@@ -97,7 +98,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         {
           Severity = NotificationSeverity.Error,
           Summary = "Внимание!",
-          Detail = ex.Message,
+          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
       }

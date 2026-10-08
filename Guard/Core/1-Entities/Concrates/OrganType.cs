@@ -5,6 +5,7 @@
 /// </summary>
 public class OrganType
 {
+  public Guid Version { get; set; } = Guid.NewGuid();
   /// <summary>
   /// Идентификатор типа органа.
   /// </summary>

@@ -70,7 +70,7 @@
       }, model.Password, ct: stop.Token);
       if (!result.Succeeded) { error = string.Join("; ", result.Errors.Select(e => e.Description)); return; }
       model.Password = ""; confirmation = "";
-      Dialogs.Close(true);
+      Dialogs.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
     }
     catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
     catch (InvalidOperationException ex) { error = ex.Message; }

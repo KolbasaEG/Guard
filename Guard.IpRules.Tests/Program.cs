@@ -28,6 +28,8 @@ Check(IpStatusTransitions.Apply(Guard.Core.Enums.Status.Archived, "block") == Gu
 Check(IpStatusTransitions.Apply(Guard.Core.Enums.Status.Deleted, "restore") == Guard.Core.Enums.Status.Modified, "restore deleted");
 await AccessEventTests.RunAsync(Check);
 AccountPolicyTests.Run(Check);
+EntityStatusTests.Run(Check);
+await RefactorTests.RunAsync(Check);
 await AccessRenderingTests.RunAsync(Check);
 await MiddlewareTests.RunAsync(Check);
 if (args.Length == 2 && args[0] == "--postgres") await PostgresTests.RunAsync(args[1], Check);

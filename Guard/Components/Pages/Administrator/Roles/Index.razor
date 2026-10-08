@@ -1,4 +1,6 @@
-﻿@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
+@using Guard.Components.Library
+@using Guard.Core.Entities
 @using Guard.Core.Services
 @attribute [Authorize]
 
@@ -13,7 +15,7 @@
                     RowSelect="@EditRow"
                     Count="@count"
                     Data="@filteredData"
-                    TItem="ApplicationRole"
+                    TItem="RoleListDto"
                     ColumnWidth="200px"
                     AllowPaging="true"
                     AllowSorting="true"
@@ -55,14 +57,7 @@
                     PagingSummaryFormat="@pagingSummaryFormat"
                     Style="height:100%;">
       <HeaderTemplate>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
-            <RadzenMenu>
-              <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
-                <RadzenMenuItem Text="Экспорт" Icon="get_app" Click="@OnExportClick" Style="font-weight:500;" />
-              </RadzenMenuItem>
-            </RadzenMenu>
-          </RadzenStack>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Style="width:100%;">
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
             <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
             <RadzenButton Icon="add_circle_outline" Visible="@isEditor" Click="@AddClick" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
@@ -70,8 +65,8 @@
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="ApplicationRole" Property="Name" Title="Наименование" Width="100%" />
-        <RadzenDataGridColumn TItem="ApplicationRole" Filterable="false" Sortable="false" Width="60px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
+        <RadzenDataGridColumn TItem="RoleListDto" Property="Name" SortProperty="Name" Title="Наименование" Width="100%" />
+        <RadzenDataGridColumn TItem="RoleListDto" Filterable="false" Sortable="false" Width="60px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
             <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
               <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="Radzen.ButtonSize.ExtraSmall"
@@ -84,7 +79,7 @@
     </RadzenDataGrid>
   </Table>
   <Filter>
-    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto="false" Data="@data" TItem="ApplicationRole" ViewChanged="@(view => grid.Reload())"
+    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto="false" Data="@data" TItem="ApplicationRole"
                       AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                       DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
                       AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
@@ -99,7 +94,7 @@
   <Analitycs>
     <AnalitycsWrapper>
       <RadzenCard Style="width:100%; height:36px; border-radius:0px; border:none; padding:0px; background-color:var(--rz-primary-darker);flex-shrink:0;">
-        <RadzenStack Gap="10px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
+        <RadzenStack Gap="10px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Style="width:100%;">
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="0px" Style="width:100%;">
             <RadzenIcon Icon="analytics" Style="margin:8px; color:var(--rz-on-primary-darker); margin-right:15px;margin-left:12px;" />
             <RadzenText TextStyle="TextStyle.Body1" Style="margin-right:15px; color:var(--rz-on-primary-darker);"><strong>Аналитическая информация</strong></RadzenText>

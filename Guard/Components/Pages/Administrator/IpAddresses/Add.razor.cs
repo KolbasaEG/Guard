@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -60,7 +60,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
         await IpAddressService.CreateAsync(item, _cts.Token);
 
         Logger.LogInformation("IP-адрес '{IpAddress}' успешно создан", item.Address);
-        DialogService.Close(true);
+        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
       }
       catch (OperationCanceledException)
       {

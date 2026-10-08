@@ -1,3 +1,5 @@
+using Guard.Components.Library;
+using Guard.Core.Services.DTOs;
 using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
@@ -13,6 +15,21 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
 {
   public partial class Index : IDisposable
   {
+    [Inject] protected IPermissionService PermissionService { get; set; } = default!;
+    [Inject] protected BrowserTimeService Time { get; set; } = default!;
+    private static readonly HashSet<string> supportedFields = ["Code", "Id", "Name"];
+    private Func<IQueryable<OrganType>, IQueryable<OrganType>> appliedFilter = q => q;
+    private bool disposed, reloadPending = true;
+    private Guard.Core.Services.DTOs.UserAccessSnapshot? loadedAccess;
+    protected override void OnParametersSet() { if (!ReferenceEquals(loadedAccess, Access)) { loadedAccess = Access; _loadDataCts?.Cancel(); filteredData = []; count = 0; reloadPending = true; } }
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+      if (disposed || !reloadPending) return; reloadPending = false;
+      try { await Time.InitializeAsync(); await grid.Reload(); }
+      catch (Exception ex) { Logger.LogWarning(ex, "Загрузка часового пояса"); ShowErrorNotification("Не удалось определить часовой пояс браузера. Обновите страницу."); }
+      if (!disposed) StateHasChanged();
+    }
+    private async Task ResetPageAsync() { if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
+
     [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
     [Inject] protected NotificationService NotificationService { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!;
@@ -30,9 +47,9 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
     private CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
 
-    protected IEnumerable<OrganType> data = default!;
-    protected IEnumerable<OrganType> filteredData = default!;
-    protected RadzenDataGrid<OrganType> grid = default!;
+    protected IEnumerable<OrganType> data = [];
+    protected IEnumerable<OrganTypeListDto> filteredData = [];
+    protected RadzenDataGrid<OrganTypeListDto> grid = default!;
     protected RadzenDataFilter<OrganType> dataFilter = default!;
 
     protected override async Task OnInitializedAsync()
@@ -50,7 +67,7 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации страницы типов органов");
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {
@@ -60,57 +77,35 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
 
     async Task LoadData(LoadDataArgs args)
     {
+      if (disposed || Time.Zone == null) return;
       _loadDataCts?.Cancel();
-      _loadDataCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
-      var ct = _loadDataCts.Token;
+      var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+      _loadDataCts = request; var ct = request.Token;
+      var filter = appliedFilter;
       isLoading = true;
-
-      try
-      {
-        var (items, totalCount) = await OrganTypeService.QueryOrganTypesAsync(async query =>
-        {
-          if (dataFilter != null)
-          {
-            query = query.Where(dataFilter);
-          }
-
-          if (!string.IsNullOrEmpty(args.OrderBy))
-          {
-            query = query.OrderBy(args.OrderBy);
-          }
-          else
-          {
-            query = query.OrderBy(s => s.Code);
-          }
-
+      try {
+        if ((args.Skip ?? 0) < 0 || (args.Top ?? 20) is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
+        var result = await OrganTypeService.QueryOrganTypesAsync(async query => {
+          query = filter(query);
           var total = await query.CountAsync(ct);
-
-          var pageData = await query
-              .Skip(args.Skip ?? 0)
-              .Take(args.Top ?? 10)
-              .ToListAsync(ct);
-
-          return (pageData, total);
+          query = EntityListQuery<OrganType>.Sort(query, args.OrderBy, supportedFields, "Code asc");
+          var page = await query.Skip(args.Skip ?? 0).Take(args.Top ?? 20).Select(p => new OrganTypeListDto(p.Id, p.Version, p.Code, p.Name)).ToListAsync(ct);
+          return (page, total);
         }, ct);
-
-        filteredData = items;
-        count = totalCount;
+        ct.ThrowIfCancellationRequested();
+        await PermissionService.RequireAsync(Guard.Core.Identity.Permissions.OrganTypes.Read, ct);
+        if (disposed || !ReferenceEquals(request, _loadDataCts)) return;
+        filteredData = result.page; count = result.total;
       }
-      catch (OperationCanceledException)
-      {
-        // Игнорируем отмененные запросы
+      catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+      catch (Exception ex) {
+        if (!disposed && ReferenceEquals(request, _loadDataCts)) {
+          filteredData = []; count = 0; Logger.LogError(ex, "Загрузка списка");
+          ShowErrorNotification("Не удалось загрузить данные. Проверьте доступ и повторите попытку.");
+        }
       }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка загрузки данных типов органов");
-        ShowErrorNotification("Не удалось загрузить данные");
-      }
-      finally
-      {
-        isLoading = false;
-      }
+      finally { if (ReferenceEquals(request, _loadDataCts)) { isLoading = false; _loadDataCts = null; } request.Dispose(); }
     }
-
     protected async Task ReloadAsync()
     {
       await grid.Reload();
@@ -119,31 +114,31 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
     protected async Task AddClick(MouseEventArgs args)
     {
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "600px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      if (result != null)
+      if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result))
       {
         ShowSuccessNotification("Добавлена новая запись!");
         await grid.Reload();
       }
     }
 
-    protected async Task EditRow(OrganType item)
+    protected async Task EditRow(OrganTypeListDto item)
     {
       var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "600px", ShowTitle = false, ContentCssClass = "rz-p-1" });
 
-      if (result != null)
+      if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result))
       {
         ShowSuccessNotification("Информация обновлена!");
         await grid.Reload();
       }
     }
 
-    protected async Task GridDeleteButtonClick(MouseEventArgs args, OrganType item)
+    protected async Task GridDeleteButtonClick(MouseEventArgs args, OrganTypeListDto item)
     {
       if (await DialogService.Confirm($"Вы действительно хотите удалить тип органа '{item.Name}'?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
         {
-          await OrganTypeService.DeleteAsync(item.Id, _cts.Token);
+          await OrganTypeService.DeleteAsync(item.Id, _cts.Token, expectedVersion: item.Version);
           ShowSuccessNotification("Запись удалена!");
           await grid.Reload();
         }
@@ -151,21 +146,14 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
         catch (Exception ex)
         {
           Logger.LogError(ex, "Ошибка при удалении типа органа ID: {OrganTypeId}", item.Id);
-          ShowErrorNotification(ex.Message);
+          ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
         }
       }
     }
 
-    private async Task OnExportClick()
-    {
-      // TODO: Реализовать экспорт
-      await Task.CompletedTask;
-    }
 
-    async Task ApplyFilter()
-    {
-      await grid.Reload();
-    }
+
+    async Task ApplyFilter() { try { appliedFilter = EntityListQuery<OrganType>.Capture(dataFilter, supportedFields, Time); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
 
     private void ShowSuccessNotification(string detail)
     {
@@ -191,8 +179,9 @@ namespace Guard.Components.Pages.Administrator.OrganTypes
 
     public void Dispose()
     {
+      disposed = true;
       _loadDataCts?.Cancel();
-      _loadDataCts?.Dispose();
+
       _cts?.Cancel();
       _cts?.Dispose();
     }

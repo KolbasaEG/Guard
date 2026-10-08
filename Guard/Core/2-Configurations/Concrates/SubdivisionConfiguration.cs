@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,6 +8,7 @@ public class SubdivisionConfiguration : BaseEntityConfiguration<Subdivision>
 {
   public override void Configure(EntityTypeBuilder<Subdivision> builder)
   {
+    builder.Property(x => x.Version).IsConcurrencyToken();
     base.Configure(builder);
 
     builder.ToTable("Subdivisions", t => t.HasComment("Иерархический справочник подразделений организационной структуры системы Guard."));

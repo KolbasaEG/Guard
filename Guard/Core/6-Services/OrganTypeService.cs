@@ -1,3 +1,4 @@
+using Guard.Core.Services.DTOs;
 using Guard.Core.Identity;
 using Guard.Core.Entities;
 using Guard.Core.Repositories;
@@ -8,17 +9,17 @@ namespace Guard.Core.Services;
 public class OrganTypeService : IOrganTypeService
 {
   private readonly IReadRepository<OrganType> _readOrganTypeRepository;
-  private readonly IUnitOfWork _uow;
+  private readonly IUnitOfWorkFactory _writes;
   private readonly ILogger<OrganTypeService> _logger;
   private readonly IPermissionService _permissions;
 
   public OrganTypeService(
       IReadRepository<OrganType> readOrganTypeRepository,
-      IUnitOfWork unitOfWork,
+      IUnitOfWorkFactory unitOfWork,
       ILogger<OrganTypeService> logger, IPermissionService permissions)
   {
     _readOrganTypeRepository = readOrganTypeRepository;
-    _uow = unitOfWork;
+    _writes = unitOfWork;
     _logger = logger;
     _permissions = permissions;
   }
@@ -66,8 +67,12 @@ public class OrganTypeService : IOrganTypeService
 
   public async Task<int> CreateAsync(OrganType organType, CancellationToken ct = default)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.OrganTypes.Manage, ct);
     ArgumentNullException.ThrowIfNull(organType);
+    var clean = new OrganType { Id = organType.Id };
+    OrganTypeFieldsDto.From(organType).ApplyTo(clean); organType = clean;
+    EntityInputValidation.Validate(organType);
 
     return await _uow.ExecuteInTransactionAsync(async () =>
     {
@@ -81,6 +86,7 @@ public class OrganTypeService : IOrganTypeService
         organType.Name = organType.Name.Trim();
       }
 
+      await EntityReferences.OrganTypeAsync(_uow, organType, null, ct);
       await _uow.BasicRepository<OrganType>().AddAsync(organType, ct);
       await _uow.SaveChangesAsync(ct);
 
@@ -93,25 +99,32 @@ public class OrganTypeService : IOrganTypeService
 
   public async Task UpdateAsync(OrganType organType, CancellationToken ct = default)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.OrganTypes.Manage, ct);
     ArgumentNullException.ThrowIfNull(organType);
+    EntityInputValidation.Validate(organType);
 
     if (!string.IsNullOrWhiteSpace(organType.Name))
     {
       organType.Name = organType.Name.Trim();
     }
 
-    await _uow.BasicRepository<OrganType>().UpdateAsync(organType, ct);
+    var current = await GetRequiredForWriteAsync(_uow, organType.Id, ct);
+    EntityInputValidation.CheckVersion(current.Version, organType.Version);
+    await EntityReferences.OrganTypeAsync(_uow, organType, current, ct);
+    OrganTypeFieldsDto.From(organType).ApplyTo(current);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Обновлен тип органа '{Name}' (ID: {OrganTypeId})",
         organType.Name, organType.Id);
   }
 
-  public async Task DeleteAsync(int id, CancellationToken ct = default)
+  public async Task DeleteAsync(int id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.OrganTypes.Manage, ct);
-    var organType = await GetRequiredForWriteAsync(id, ct);
+    var organType = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(organType.Version, expectedVersion.Value);
 
     await _uow.BasicRepository<OrganType>().DeleteAsync(organType, ct);
     await _uow.SaveChangesAsync(ct);
@@ -122,7 +135,7 @@ public class OrganTypeService : IOrganTypeService
 
   // ==================== Private Helpers ====================
 
-  private async Task<OrganType> GetRequiredForWriteAsync(int id, CancellationToken ct)
+  private async Task<OrganType> GetRequiredForWriteAsync(IUnitOfWork _uow, int id, CancellationToken ct)
   {
     var organType = await _uow.BasicRepository<OrganType>().GetByIdAsync(new object[] { id }, ct);
 
@@ -133,5 +146,17 @@ public class OrganTypeService : IOrganTypeService
     }
 
     return organType;
+  }
+
+  public Task<int> CreateFromDtoAsync(CreateOrganTypeDto input, CancellationToken ct = default) {
+    ArgumentNullException.ThrowIfNull(input); ArgumentNullException.ThrowIfNull(input.Fields);
+    var entity = new OrganType(); input.Fields.ApplyTo(entity);
+    return CreateAsync(entity, ct);
+  }
+  public async Task UpdateFromDtoAsync(EditOrganTypeDto input, CancellationToken ct = default) {
+    ArgumentNullException.ThrowIfNull(input); ArgumentNullException.ThrowIfNull(input.Fields);
+    var entity = new OrganType { Id = input.Id };
+    input.Fields.ApplyTo(entity); entity.Version = input.Version;
+    await UpdateAsync(entity, ct);
   }
 }

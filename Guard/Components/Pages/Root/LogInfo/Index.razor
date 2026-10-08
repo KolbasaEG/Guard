@@ -35,7 +35,7 @@
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="LogEntry" Property="Timestamp" Title="Дата и время" FormatString="{0:dd.MM.yyyy HH:mm:ss}" Width="160px" Frozen="true" />
+        <RadzenDataGridColumn TItem="LogEntry" Property="Timestamp" Title="Дата и время" FormatString="{0:dd.MM.yyyy HH:mm:ss}" Width="160px" Frozen="true" ><Template Context="log">@Time.Format(log.Timestamp)</Template></RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="LogEntry" Property="Level" Title="Уровень" Width="120px">
           <Template Context="log">
             <RadzenBadge BadgeStyle="@GetBadgeStyle(log.Level)" Text="@log.Level" IsPill="true" />
@@ -68,7 +68,7 @@
 
   </Table>
   <Filter>
-    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="LogEntry" ViewChanged=@(view => grid.Reload())
+    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="LogEntry"
                       AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                       DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
                       AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">

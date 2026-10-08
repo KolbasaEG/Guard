@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,6 +11,7 @@ public class PersonalConfiguration : BaseEntityConfiguration<Personal>
 {
   public override void Configure(EntityTypeBuilder<Personal> builder)
   {
+    builder.Property(x => x.Version).IsConcurrencyToken();
     base.Configure(builder);
 
     builder.ToTable("Personals", t =>

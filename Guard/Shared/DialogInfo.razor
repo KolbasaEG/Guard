@@ -20,7 +20,7 @@
           Дата создания
         </RadzenTableCell>
         <RadzenTableCell>
-          @(DateTime.SpecifyKind(BaseEntity.InsertedDate, DateTimeKind.Utc).ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss"))
+          @(Time.Format(BaseEntity.InsertedDate, "dd.MM.yyyy HH:mm:ss"))
          </RadzenTableCell>
       </RadzenTableRow>
       <RadzenTableRow>
@@ -37,7 +37,7 @@
         </RadzenTableCell>
         <RadzenTableCell>
           @(BaseEntity?.LastModifiedDate.HasValue == true
-            ? DateTime.SpecifyKind(BaseEntity.LastModifiedDate.Value, DateTimeKind.Utc).ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")
+            ? Time.Format(BaseEntity.LastModifiedDate.Value, "dd.MM.yyyy HH:mm:ss")
             : "—")
         </RadzenTableCell>
       </RadzenTableRow>

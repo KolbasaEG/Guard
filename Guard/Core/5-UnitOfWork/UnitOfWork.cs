@@ -1,13 +1,14 @@
-﻿using Guard.Core.Contexts;
+using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Guard.Core.Services;
+using Npgsql;
 
 public class UnitOfWork : IUnitOfWork
 {
   private readonly ApplicationDbContext _context;
-  private readonly IServiceProvider _serviceProvider;
   private readonly ILogger<UnitOfWork> _logger;
   private readonly Dictionary<Type, object> _repositories = [];
   private readonly Dictionary<Type, object> _basicRepositories = [];
@@ -17,7 +18,6 @@ public class UnitOfWork : IUnitOfWork
   public UnitOfWork(ApplicationDbContext context, IServiceProvider serviceProvider, ILogger<UnitOfWork> logger)
   {
     _context = context;
-    _serviceProvider = serviceProvider;
     _logger = logger;
   }
 
@@ -32,7 +32,7 @@ public class UnitOfWork : IUnitOfWork
     if (!_repositories.TryGetValue(type, out var repo))
     {
       _logger.LogDebug("Инициализация IGenericRepository для '{EntityType}'", type.Name);
-      repo = _serviceProvider.GetRequiredService<IGenericRepository<T>>();
+      repo = new GenericRepository<T>(_context);
       _repositories[type] = repo;
     }
 
@@ -49,7 +49,7 @@ public class UnitOfWork : IUnitOfWork
     if (!_basicRepositories.TryGetValue(type, out var repo))
     {
       _logger.LogDebug("Инициализация IBasicRepository для '{EntityType}'", type.Name);
-      repo = _serviceProvider.GetRequiredService<IBasicRepository<T>>();
+      repo = new BasicRepository<T>(_context);
       _basicRepositories[type] = repo;
     }
 
@@ -66,6 +66,11 @@ public class UnitOfWork : IUnitOfWork
       _logger.LogDebug("Успешно сохранено сущностей в БД: {Count}", result);
       return result;
     }
+    catch (DbUpdateConcurrencyException) { throw new EntityConflictException(); }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+    { throw new ArgumentException("Запись с такими ключевыми значениями уже существует.", ex); }
+    catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
+    { throw new ArgumentException("Связанная запись недоступна или используется другими записями. Обновите данные.", ex); }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Ошибка при асинхронном сохранении изменений в БД");
@@ -81,6 +86,7 @@ public class UnitOfWork : IUnitOfWork
       _logger.LogDebug("Успешно сохранено сущностей в БД: {Count}", result);
       return result;
     }
+    catch (DbUpdateConcurrencyException) { throw new EntityConflictException(); }
     catch (Exception ex)
     {
       _logger.LogError(ex, "Ошибка при синхронном сохранении изменений в БД");
@@ -122,7 +128,7 @@ public class UnitOfWork : IUnitOfWork
     try
     {
       _logger.LogDebug("Сохранение изменений перед фиксацией транзакции...");
-      await _context.SaveChangesAsync(ct);
+      await SaveChangesAsync(ct);
 
       _logger.LogInformation("Фиксация асинхронной транзакции...");
       await _currentTransaction.CommitAsync(ct);
@@ -182,7 +188,7 @@ public class UnitOfWork : IUnitOfWork
     try
     {
       _logger.LogDebug("Сохранение изменений перед фиксацией транзакции...");
-      _context.SaveChanges();
+      SaveChanges();
 
       _logger.LogInformation("Фиксация синхронной транзакции...");
       _currentTransaction.Commit();
@@ -222,49 +228,40 @@ public class UnitOfWork : IUnitOfWork
   // ==================== Удобные обёртки ====================
   public async Task ExecuteInTransactionAsync(Func<Task> action, CancellationToken ct = default)
   {
-    var strategy = _context.Database.CreateExecutionStrategy();
-
-    await strategy.ExecuteAsync(async () =>
+    // Retry the whole application operation with a new unit of work, never this tracked context.
+    ct.ThrowIfCancellationRequested();
+    await BeginTransactionAsync(ct);
+    try
     {
-      _logger.LogDebug("Запуск выполнения асинхронной операции в транзакции с ретрай-стратегией EF Core");
-      await BeginTransactionAsync(ct);
-      try
-      {
-        await action();
-        await CommitTransactionAsync(ct);
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Сбой при выполнении действия в транзакции ExecuteInTransactionAsync");
-        await RollbackTransactionAsync(CancellationToken.None);
-        throw;
-      }
-    });
+      await action();
+      await CommitTransactionAsync(ct);
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Сбой при выполнении действия в транзакции ExecuteInTransactionAsync");
+      await RollbackTransactionAsync(CancellationToken.None);
+      throw;
+    }
   }
 
   public async Task<TResult> ExecuteInTransactionAsync<TResult>(
-      Func<Task<TResult>> action,
-      CancellationToken ct = default)
+    Func<Task<TResult>> action,
+    CancellationToken ct = default)
   {
-    var strategy = _context.Database.CreateExecutionStrategy();
-
-    return await strategy.ExecuteAsync(async () =>
+    ct.ThrowIfCancellationRequested();
+    await BeginTransactionAsync(ct);
+    try
     {
-      _logger.LogDebug("Запуск выполнения асинхронной операции (с результатом) в транзакции с ретрай-стратегией EF Core");
-      await BeginTransactionAsync(ct);
-      try
-      {
-        var result = await action();
-        await CommitTransactionAsync(ct);
-        return result;
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Сбой при выполнении действия с результатом в транзакции ExecuteInTransactionAsync");
-        await RollbackTransactionAsync(CancellationToken.None);
-        throw;
-      }
-    });
+      var result = await action();
+      await CommitTransactionAsync(ct);
+      return result;
+    }
+    catch (Exception ex)
+    {
+      _logger.LogError(ex, "Сбой при выполнении действия с результатом в транзакции ExecuteInTransactionAsync");
+      await RollbackTransactionAsync(CancellationToken.None);
+      throw;
+    }
   }
 
   // ==================== Dispose ====================

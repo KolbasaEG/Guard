@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -8,12 +8,13 @@ public class OrganTypeConfiguration : IEntityTypeConfiguration<OrganType>
 {
   public void Configure(EntityTypeBuilder<OrganType> builder)
   {
+    builder.Property(x => x.Version).IsConcurrencyToken();
     builder.ToTable("OrganTypes", t => t.HasComment("Справочник типов органов"));
 
     builder.HasKey(o => o.Id);
 
     builder.Property(o => o.Id)
-        .ValueGeneratedNever()
+        .UseIdentityByDefaultColumn()
         .HasComment("Идентификатор типа органа");
 
     builder.Property(o => o.ClassifierType)

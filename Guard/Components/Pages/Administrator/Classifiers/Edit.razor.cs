@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
+using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Guard.Shared;
@@ -57,7 +58,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации диалогового окна редактирования элемента классификатора {ClassifierId}", Id);
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {
@@ -79,10 +80,10 @@ namespace Guard.Components.Pages.Administrator.Classifiers
           return;
         }
 
-        await ClassifierService.UpdateAsync(item, _cts.Token);
+        await ClassifierService.UpdateFromDtoAsync(new EditClassifierDto(item.Id, item.Version, ClassifierFieldsDto.From(item)), _cts.Token);
 
         Logger.LogInformation("Элемент классификатора '{Value}' (ID: {ClassifierId}) успешно обновлен", item.Value, item.Id);
-        DialogService.Close(true);
+        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
       }
       catch (OperationCanceledException)
       {
@@ -91,7 +92,7 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при обновлении элемента классификатора '{Value}'", item.Value);
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {

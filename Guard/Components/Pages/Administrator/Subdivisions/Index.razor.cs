@@ -1,5 +1,8 @@
+using Guard.Components.Library;
+using Guard.Core.Services.DTOs;
 using Guard.Components.Library.Loading;
 using Guard.Core.Entities;
+using Guard.Core.Identity;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
 using Guard.Core.Services;
@@ -15,6 +18,23 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 {
   public partial class Index : IDisposable
   {
+    [Inject] protected IPermissionService PermissionService { get; set; } = default!;
+    [Inject] protected BrowserTimeService Time { get; set; } = default!;
+    private static readonly HashSet<string> supportedFields = ["Address", "Fax", "Id", "InsertedDate", "IsDepartment", "LevelOrder", "Name", "OrganType.Name",  "Parent.Name", "Path", "Phone", "PositionFormationName", "PostalCode", "StaffCount", "StatusClassifier.Value", "StatusClassifier.Value"];
+    private Func<IQueryable<Subdivision>, IQueryable<Subdivision>> appliedFilter = q => q;
+    private bool disposed, reloadPending = true;
+    private Guard.Core.Identity.UserContext? loadedContext;
+    private Guard.Core.Services.DTOs.UserAccessSnapshot? loadedAccess;
+    protected override void OnParametersSet() { if (!ReferenceEquals(loadedAccess, Access) || !ReferenceEquals(loadedContext, UserContext)) { loadedAccess = Access; loadedContext = UserContext; _loadDataCts?.Cancel(); filteredData = []; count = 0; reloadPending = true; } }
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+      if (disposed || !reloadPending) return; reloadPending = false;
+      try { await Time.InitializeAsync(); await grid.Reload(); }
+      catch (Exception ex) { Logger.LogWarning(ex, "Загрузка часового пояса"); ShowErrorNotification("Не удалось определить часовой пояс браузера. Обновите страницу."); }
+      if (!disposed) StateHasChanged();
+    }
+    private async Task ToggleHierarchyAsync() { hierarchyMode = hierarchyMode == SubdivisionHierarchyMode.CurrentOnly ? SubdivisionHierarchyMode.IncludeChildren : SubdivisionHierarchyMode.CurrentOnly; await ResetPageAsync(); }
+    private async Task ResetPageAsync() { if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
+
     [Inject]
     protected IJSRuntime JSRuntime { get; set; } = default!;
     [Inject]
@@ -26,15 +46,17 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     [Inject]
     protected ILogger<Index> Logger { get; set; } = default!;
 
-    protected IEnumerable<Subdivision> data = default!;
-    protected IEnumerable<Subdivision> filteredData = default!;
-    protected RadzenDataGrid<Subdivision> grid = default!;
+    protected IEnumerable<Subdivision> data = [];
+    protected IEnumerable<SubdivisionListDto> filteredData = [];
+    protected RadzenDataGrid<SubdivisionListDto> grid = default!;
 
     protected RadzenDataFilter<Subdivision> dataFilter = default!;
 
     private CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
 
+    [CascadingParameter] protected Guard.Core.Identity.UserContext? UserContext { get; set; }
+    protected SubdivisionHierarchyMode hierarchyMode = SubdivisionHierarchyMode.CurrentOnly;
     int count;
     [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; }
     protected bool isEditor => Access?.Has(Guard.Core.Identity.Permissions.Subdivisions.Write) == true;
@@ -52,7 +74,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации страницы подразделений");
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {
@@ -62,133 +84,125 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 
     async Task LoadData(LoadDataArgs args)
     {
+      if (disposed || Time.Zone == null) return;
       _loadDataCts?.Cancel();
-      _loadDataCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
-      var ct = _loadDataCts.Token;
+      var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+      _loadDataCts = request; var ct = request.Token;
+      var filter = appliedFilter;
       isLoading = true;
-
-      try
-      {
-        if(dataFilter?.Filters != null) NormalizeFilterDatesToUtc(dataFilter.Filters);
-        var (items, totalCount) = await SubdivisionService.QuerySubdivisionsAsync(async query =>
-            {
-              query = query.FilterByMode(currentMode);
-              query = query.Include(p => p.Parent);
-              query = query.Include(p => p.OrganType);
-              query = query.Include(p => p.StatusClassifier);
-              if (dataFilter != null)
-              {
-                query = query.Where(dataFilter);
-              }
-
-              if (!string.IsNullOrEmpty(args.OrderBy))
-              {
-                query = query.OrderBy(args.OrderBy);
-              }
-              else
-              {
-                query = query.OrderByDescending(s => s.InsertedDate);
-              }
-
-              var total = await query.CountAsync();
-
-              var pageData = await query
-                  .Skip(args.Skip ?? 0)
-                  .Take(args.Top ?? 10)
-                  .ToListAsync();
-
-              return (pageData, total);
-            }, ct);
-
-        filteredData = items.ConvertDateTimesToLocal();
-        count = totalCount;
+      try {
+        if ((args.Skip ?? 0) < 0 || (args.Top ?? 20) is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
+        var result = await SubdivisionService.QuerySubdivisionsAsync(async query => {
+          query = query.FilterByMode(currentMode);
+          var path = UserContext?.Subdivision?.Path;
+          var validPath = path != null && path.StartsWith('/') && path.EndsWith('/') &&
+            path.Split('/', StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } segments &&
+            segments.All(s => long.TryParse(s, out var id) && id > 0);
+          query = !validPath ? query.Where(p => false) : hierarchyMode == SubdivisionHierarchyMode.CurrentOnly ? query.Where(p => p.Path == path) : query.Where(p => p.Path.StartsWith(path!));
+          query = filter(query);
+          var total = await query.CountAsync(ct);
+          query = EntityListQuery<Subdivision>.Sort(query, args.OrderBy, supportedFields, "InsertedDate desc");
+          var page = await query.Skip(args.Skip ?? 0).Take(args.Top ?? 20).Select(p => new SubdivisionListDto { Id=p.Id, Version=p.Version, Status=p.Status, Name=p.Name, OrganTypeName=p.OrganType == null ? null : p.OrganType.Name, StatusClassifierName=p.StatusClassifier == null ? null : p.StatusClassifier.Value, ParentName=p.Parent == null ? null : p.Parent.Name, PositionFormationName=p.PositionFormationName, PostalCode=p.PostalCode, Address=p.Address, Phone=p.Phone, StaffCount=p.StaffCount, LevelOrder=p.LevelOrder, IsDepartment=p.IsDepartment }).ToListAsync(ct);
+          return (page, total);
+        }, ct);
+        ct.ThrowIfCancellationRequested();
+        await PermissionService.RequireAsync(Guard.Core.Identity.Permissions.Subdivisions.Read, ct);
+        if (disposed || !ReferenceEquals(request, _loadDataCts)) return;
+        filteredData = result.page; count = result.total;
       }
-      catch (OperationCanceledException)
-      {
-        // Игнорируем отмененные запросы
+      catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+      catch (Exception ex) {
+        if (!disposed && ReferenceEquals(request, _loadDataCts)) {
+          filteredData = []; count = 0; Logger.LogError(ex, "Загрузка списка");
+          ShowErrorNotification("Не удалось загрузить данные. Проверьте доступ и повторите попытку.");
+        }
       }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка загрузки данных подразделений");
-        ShowErrorNotification("Не удалось загрузить данные");
-      }
-      finally
-      {
-        isLoading = false;
-      }
+      finally { if (ReferenceEquals(request, _loadDataCts)) { isLoading = false; _loadDataCts = null; } request.Dispose(); }
     }
     protected async Task AddClick(MouseEventArgs args)
     {
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      if (result != null)
+      if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result))
       {
         ShowSuccessNotification("Добавлена новая запись!"); 
         await grid.Reload();
       }
     }
-    protected async Task EditRow(Subdivision item)
+    protected async Task EditRow(SubdivisionListDto item)
     {
       var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      if (result != null)
+      if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result))
       {
         ShowSuccessNotification("Информация обновлена!");
         await grid.Reload();
       }
     }
-    protected async Task GridMoveButtonClick(MouseEventArgs args, Subdivision item)
+    protected async Task GridMoveButtonClick(MouseEventArgs args, SubdivisionListDto item)
     {
       var result = await DialogService.OpenAsync<Move>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      if (result != null)
+      if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result))
       {
         ShowSuccessNotification("Информация обновлена!");
         await grid.Reload();
       }
     }
-    protected async Task GridArchiveButtonClick(MouseEventArgs args, Subdivision item)
+    protected async Task GridArchiveButtonClick(MouseEventArgs args, SubdivisionListDto item)
     {
       if (await DialogService.Confirm("Вы действительно хотите поместить запись в архив?", "Архивирование", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
         {
-          await SubdivisionService.ArchiveAsync(item.Id, ct: CancellationToken.None);
+          await SubdivisionService.ArchiveAsync(item.Id, ct: _cts.Token, expectedVersion: item.Version);
           ShowSuccessNotification("Запись помещена в архив!");
           await grid.Reload();
         }
         catch (Exception ex)
         {
-          ShowErrorNotification(ex.Message);
+          ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
         }
       }
     }
-    protected async Task GridUnarchiveButtonClick(MouseEventArgs args, Subdivision item)
+    private async Task ToggleBlockAsync(SubdivisionListDto item)
+    {
+      var unblock = EntityStatusTransitions.CanApply(item.Status, StatusOperation.Unblock);
+      if (await DialogService.Confirm(unblock ? "Разблокировать выбранную запись?" : "Заблокировать выбранную запись?", "Изменение статуса",
+        new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) != true) return;
+      try {
+        if (unblock) await SubdivisionService.UnblockAsync(item.Id, _cts.Token, item.Version);
+        else await SubdivisionService.BlockAsync(item.Id, _cts.Token, item.Version);
+        ShowSuccessNotification("Статус записи изменён."); await grid.Reload();
+      }
+      catch (Exception ex) { Logger.LogWarning(ex, "Блокировка подразделения"); ShowErrorNotification(UserOperationErrors.Message(ex)); }
+    }
+    protected async Task GridUnarchiveButtonClick(MouseEventArgs args, SubdivisionListDto item)
     {
       if (await DialogService.Confirm("Вы действительно хотите извлечь запись из архива?", "Извлечение из архива", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
         {
-          await SubdivisionService.RestoreAsync(item.Id, ct: _cts.Token);
+          await SubdivisionService.RestoreAsync(item.Id, ct: _cts.Token, expectedVersion: item.Version);
           ShowSuccessNotification("Запись извлечена из архива!");
           await grid.Reload();
         }
         catch (Exception ex)
         {
-          ShowErrorNotification(ex.Message);
+          ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
         }
       }
     }
-    protected async Task GridDeleteButtonClick(MouseEventArgs args, Subdivision item)
+    protected async Task GridDeleteButtonClick(MouseEventArgs args, SubdivisionListDto item)
     {
       if (await DialogService.Confirm("Вы действительно хотите удалить запись?", "Удаление", new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) == true)
       {
         try
         {
-          await SubdivisionService.SoftDeleteAsync(item.Id, ct: _cts.Token);
+          await SubdivisionService.SoftDeleteAsync(item.Id, ct: _cts.Token, expectedVersion: item.Version);
           ShowSuccessNotification("Запись удалена!");
           await grid.Reload();
         }
         catch (Exception ex)
         {
-          ShowErrorNotification(ex.Message);
+          ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
         }
       }
     }
@@ -223,33 +237,9 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       }
     }
 
-    private async Task OnExportClick()
-    {
-      // TODO: Реализовать экспорт
-      await Task.CompletedTask;
-    }
-    async Task ApplyFilter()
-    {
-      await grid.Reload();
-    }
-    private void NormalizeFilterDatesToUtc(IEnumerable<CompositeFilterDescriptor> filters)
-    {
-      if (filters == null) return;
 
-      foreach (var filter in filters)
-      {
-        if (filter.FilterValue is DateTime dt && dt.Kind != DateTimeKind.Utc)
-        {
-          // Перевод даты в UTC
-          filter.FilterValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-        }
+    async Task ApplyFilter() { try { appliedFilter = EntityListQuery<Subdivision>.Capture(dataFilter, supportedFields, Time); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
 
-        if (filter.Filters != null && filter.Filters.Any())
-        {
-          NormalizeFilterDatesToUtc(filter.Filters);
-        }
-      }
-    }
     private void ShowSuccessNotification(string detail)
     {
       NotificationService.Notify(new NotificationMessage
@@ -273,8 +263,9 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     }
     public void Dispose()
     {
+      disposed = true;
       _loadDataCts?.Cancel();
-      _loadDataCts?.Dispose();
+
       _cts?.Cancel();
       _cts?.Dispose();
     }

@@ -40,7 +40,7 @@
   private async Task SaveAsync()
   {
     busy = true;
-    try { await Roles.SetUserRolesAsync(UserId, selected ?? [], version!); if (AccessState != null) await AccessState.RefreshAsync(); Dialogs.Close(true); }
+    try { await Roles.SetUserRolesAsync(UserId, selected ?? [], version!); if (AccessState != null) await AccessState.RefreshAsync(); Dialogs.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true)); }
     catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException or ArgumentException) { error = ex.Message; }
     finally { busy = false; }
   }

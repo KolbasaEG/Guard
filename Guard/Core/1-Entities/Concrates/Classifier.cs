@@ -13,6 +13,7 @@ namespace Guard.Core.Entities;
 
 public class Classifier
 {
+  public Guid Version { get; set; } = Guid.NewGuid();
   public int Id { get; set; }
   // Тип справочника
   public int Type { get; set; }

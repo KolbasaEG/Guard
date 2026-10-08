@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Guard.Core.Services;
 using Guard.Shared;
 using Microsoft.AspNetCore.Components;
@@ -82,7 +82,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         {
           Severity = NotificationSeverity.Error,
           Summary = "Внимание!",
-          Detail = ex.Message,
+          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
       }
@@ -101,10 +101,10 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
             item.Name, item.Id, selectedParentId);
 
         // Асинхронный вызов бизнес-логики перемещения и каскадного пересчета путей потомков
-        await SubdivisionService.MoveAsync(item.Id, selectedParentId, _cts.Token);
+        await SubdivisionService.MoveAsync(item.Id, selectedParentId, _cts.Token, item.Version);
 
         Logger.LogInformation("Подразделение '{SubdivisionName}' с ID '{Id}' успешно перемещено", item.Name, item.Id);
-        DialogService.Close(true);
+        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
       }
       catch (OperationCanceledException)
       {
@@ -118,7 +118,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
         {
           Severity = NotificationSeverity.Error,
           Summary = "Внимание!",
-          Detail = ex.Message,
+          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
       }

@@ -13,7 +13,7 @@ public class PersonalService : IPersonalService
 {
   private readonly IReadRepository<Personal> _readPersonalRepository;
   private readonly IReadRepository<Subdivision> _readSubdivisionRepository;
-  private readonly IUnitOfWork _uow;
+  private readonly IUnitOfWorkFactory _writes;
   private readonly ILogger<PersonalService> _logger;
   private readonly IDbContextFactory<ApplicationDbContext> _factory;
   private readonly IPermissionService _permissions;
@@ -21,13 +21,13 @@ public class PersonalService : IPersonalService
 
   public PersonalService(
       IReadRepository<Personal> readPersonalRepository,
-      IReadRepository<Subdivision> readSubdivisionRepository, IUnitOfWork unitOfWork,
+      IReadRepository<Subdivision> readSubdivisionRepository, IUnitOfWorkFactory unitOfWork,
       ILogger<PersonalService> logger, IPermissionService permissions, IDataAccessScopeService scopes, IDbContextFactory<ApplicationDbContext> factory)
   {
     _readPersonalRepository = readPersonalRepository;
     _readSubdivisionRepository = readSubdivisionRepository;
 
-    _uow = unitOfWork;
+    _writes = unitOfWork;
     _logger = logger;
     _factory = factory;
     _permissions = permissions;
@@ -66,7 +66,7 @@ public class PersonalService : IPersonalService
   {
     _logger.LogDebug("Запрос всех активных сотрудников");
     return await _readPersonalRepository.QueryAsync(query =>
-        query.Where(p => p.Status != Status.Deleted && p.Status != Status.Archived)
+        query.Where(p => p.Status == Status.Inserted || p.Status == Status.Modified)
              .OrderBy(p => p.LastName)
              .ThenBy(p => p.FirstName)
              .ToListAsync(ct),
@@ -91,7 +91,8 @@ public class PersonalService : IPersonalService
   {
     _logger.LogDebug("Запрос персонала для пути подразделения '{TargetPath}' с режимом {HierarchyMode}", targetPath, mode);
     return await _readPersonalRepository.QueryAsync(query =>
-        query.Where(p => p.Status != Status.Deleted && p.Status != Status.Archived)
+        query.Where(p => p.Status == Status.Inserted || p.Status == Status.Modified)
+             .Where(p => IsValidPath(targetPath))
              .FilterBySubdivision(targetPath, mode)
              .OrderBy(p => p.LastName)
              .ThenBy(p => p.FirstName)
@@ -103,11 +104,16 @@ public class PersonalService : IPersonalService
 
   public async Task<Guid> CreateAsync(Personal Personal, CancellationToken ct = default)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
     ArgumentNullException.ThrowIfNull(Personal);
+    var clean = new Personal { Id = Personal.Id };
+    PersonalFieldsDto.From(Personal).ApplyTo(clean); Personal = clean;
+    EntityInputValidation.Validate(Personal);
 
     if (!(await _scopes.GetAsync(ct)).Allows(Personal.SubdivisionId)) throw new UnauthorizedAccessException("Подразделение недоступно.");
     Personal.Status = Status.Inserted;
+    await EntityReferences.PersonalAsync(_uow, Personal, null, ct);
 
     await _uow.BaseEntityRepository<Personal>().AddAsync(Personal, ct);
     await _uow.SaveChangesAsync(ct);
@@ -120,16 +126,21 @@ public class PersonalService : IPersonalService
 
   public async Task UpdateAsync(Personal Personal, CancellationToken ct = default)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
     ArgumentNullException.ThrowIfNull(Personal);
+    EntityInputValidation.Validate(Personal);
 
-    var current = await _readPersonalRepository.GetByIdAsync(Personal.Id, ct) ?? throw new KeyNotFoundException("Сотрудник недоступен.");
-    if (current.Status is not (Status.Inserted or Status.Modified)) throw new InvalidOperationException("Сотрудник заблокирован или неактивен.");
+    var current = await GetRequiredForWriteAsync(_uow, Personal.Id, ct) ?? throw new KeyNotFoundException("Сотрудник недоступен.");
+    if (current.Status is not (Status.Inserted or Status.Modified)) throw new EntityRuleException("Сотрудник заблокирован или неактивен.");
     if (!(await _scopes.GetAsync(ct)).Allows(Personal.SubdivisionId)) throw new UnauthorizedAccessException("Подразделение недоступно.");
     Personal.Status = current.Status;
     Personal.UpdatedAt = DateTime.UtcNow;
 
-    await _uow.BaseEntityRepository<Personal>().UpdateAsync(Personal, ct);
+    EntityInputValidation.CheckVersion(current.Version, Personal.Version);
+    await EntityReferences.PersonalAsync(_uow, Personal, current, ct);
+    PersonalFieldsDto.From(Personal).ApplyTo(current);
+    current.UpdatedAt = DateTime.UtcNow;
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Обновлены данные сотрудника '{LastName} {FirstName}' (ID: {PersonalId})",
@@ -138,60 +149,70 @@ public class PersonalService : IPersonalService
 
   // ==================== Status Management ====================
 
-  public async Task SoftDeleteAsync(Guid id, CancellationToken ct = default)
+  public async Task SoftDeleteAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
-    var Personal = await GetRequiredForWriteAsync(id, ct);
+    var Personal = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(Personal.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Personal>().SoftDeleteAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.Apply(Personal.Status, StatusOperation.Delete, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) помечен как удаленный",
         Personal.LastName, Personal.FirstName, id);
   }
 
-  public async Task ArchiveAsync(Guid id, CancellationToken ct = default)
+  public async Task ArchiveAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
-    var Personal = await GetRequiredForWriteAsync(id, ct);
+    var Personal = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(Personal.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Personal>().ArchiveAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.Apply(Personal.Status, StatusOperation.Archive, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) отправлен в архив",
         Personal.LastName, Personal.FirstName, id);
   }
 
-  public async Task BlockAsync(Guid id, CancellationToken ct = default)
+  public async Task BlockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
-    var Personal = await GetRequiredForWriteAsync(id, ct);
+    var Personal = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(Personal.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Personal>().BlockAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.Apply(Personal.Status, StatusOperation.Block, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) заблокирован",
         Personal.LastName, Personal.FirstName, id);
   }
 
-  public async Task UnblockAsync(Guid id, CancellationToken ct = default)
+  public async Task UnblockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
-    var Personal = await GetRequiredForWriteAsync(id, ct);
+    var Personal = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(Personal.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Personal>().UnblockAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.Apply(Personal.Status, StatusOperation.Unblock, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) разблокирован",
         Personal.LastName, Personal.FirstName, id);
   }
 
-  public async Task RestoreAsync(Guid id, CancellationToken ct = default)
+  public async Task RestoreAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
-    var Personal = await GetRequiredForWriteAsync(id, ct);
+    var Personal = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(Personal.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Personal>().RestoreAsync(Personal, ct);
+    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.Apply(Personal.Status, StatusOperation.Restore, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) восстановлен",
@@ -200,17 +221,18 @@ public class PersonalService : IPersonalService
 
   // ==================== Private Helpers ====================
 
-  private async Task<Personal> GetRequiredForWriteAsync(Guid id, CancellationToken ct)
+  private async Task<Personal> GetRequiredForWriteAsync(IUnitOfWork _uow, Guid id, CancellationToken ct)
   {
-    var visible = await _readPersonalRepository.GetByIdAsync(id, ct) ?? throw new KeyNotFoundException("Сотрудник недоступен.");
     var Personal = await _uow.BaseEntityRepository<Personal>().GetByIdAsync(id, ct);
-
-    if (Personal == null)
+    var scope = await _scopes.GetAsync(ct);
+    if (Personal == null || !scope.Allows(Personal.SubdivisionId) || Personal.Status == Status.Deleted && !scope.IsRoot)
     {
       _logger.LogWarning("Попытка выполнения операции над несуществующей записью персонала (ID: {PersonalId})", id);
       throw new KeyNotFoundException($"Сотрудник с ID '{id}' не найден.");
     }
 
+    if (Personal.Status is Status.Archived or Status.ArchivedBlocked)
+      await _permissions.RequireAsync(Permissions.Personals.ReadArchive, ct);
     return Personal;
   }
 
@@ -220,6 +242,11 @@ public class PersonalService : IPersonalService
     var scope = await _scopes.GetAsync(ct);
     var q = db.Set<Personal>().AsNoTracking().AsQueryable();
     if (!scope.IsRoot) q = q.Where(p => p.SubdivisionId.HasValue && scope.SubdivisionIds.Contains(p.SubdivisionId.Value));
+    if (request.OwnSubdivision) {
+      var ownId = await db.Users.Where(u => u.Id == scope.UserId).Select(u => u.Personal == null ? null : u.Personal.SubdivisionId).SingleOrDefaultAsync(ct);
+      if (!ownId.HasValue) q = q.Where(p => false);
+      request = request with { SubdivisionId = ownId };
+    }
     switch (request.Mode)
     {
       case DataViewMode.Active: q = q.Where(p => p.Status == Status.Inserted || p.Status == Status.Modified || p.Status == Status.Blocked); break;
@@ -235,8 +262,8 @@ public class PersonalService : IPersonalService
     {
       if (!scope.Allows(id)) throw new UnauthorizedAccessException("Подразделение недоступно.");
       var path = await db.Set<Subdivision>().Where(s => s.Id == id).Select(s => s.Path).SingleOrDefaultAsync(ct);
-      if (string.IsNullOrEmpty(path)) return q.Where(p => false);
-      q = request.IncludeChildren ? q.Where(p => p.Subdivision != null && p.Subdivision.Path.StartsWith(path)) : q.Where(p => p.SubdivisionId == id);
+      if (!IsValidPath(path)) return q.Where(p => false);
+      q = request.IncludeChildren ? q.Where(p => p.Subdivision != null && p.Subdivision.Path.StartsWith(path!)) : q.Where(p => p.SubdivisionId == id);
     }
     if (!string.IsNullOrWhiteSpace(request.Search))
     {
@@ -244,10 +271,13 @@ public class PersonalService : IPersonalService
       q = q.Where(p => p.LastName.ToLower().Contains(term) || p.FirstName.ToLower().Contains(term) ||
         (p.MiddleName != null && p.MiddleName.ToLower().Contains(term)));
     }
-    // Сортировка только по полям безопасного списка, без Dynamic LINQ.
+    q = PersonalQueryFilter.Apply(q, request.Filter);
+    // Сортировка только по полям безопасного списка.
     return request.OrderBy switch {
       "FirstName" or "FirstName asc" => q.OrderBy(p => p.FirstName).ThenBy(p => p.Id),
       "FirstName desc" => q.OrderByDescending(p => p.FirstName).ThenBy(p => p.Id),
+      "MiddleName" or "MiddleName asc" => q.OrderBy(p => p.MiddleName).ThenBy(p => p.Id),
+      "MiddleName desc" => q.OrderByDescending(p => p.MiddleName).ThenBy(p => p.Id),
       "FullName" or "FullName asc" => q.OrderBy(p => p.FullName).ThenBy(p => p.Id),
       "FullName desc" => q.OrderByDescending(p => p.FullName).ThenBy(p => p.Id),
       "SubdivisionName" or "SubdivisionName asc" => q.OrderBy(p => p.Subdivision!.Name).ThenBy(p => p.Id),
@@ -258,7 +288,11 @@ public class PersonalService : IPersonalService
   }
   private static IQueryable<PersonalListItemDto> ProjectList(IQueryable<Personal> query) =>
     query.Select(p => new PersonalListItemDto(p.Id, p.LastName, p.FirstName, p.MiddleName, p.FullName,
-        p.Subdivision != null ? p.Subdivision.Name : null, p.Status));
+        p.Subdivision != null ? p.Subdivision.Name : null, p.Status, p.Version));
+
+  private static bool IsValidPath(string? path) => path != null && path.StartsWith('/') && path.EndsWith('/') &&
+    path.Split('/', StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } segments &&
+    segments.All(s => long.TryParse(s, out var id) && id > 0);
 
   public async Task<PersonalSearchResult> SearchAsync(PersonalSearchRequest request, CancellationToken ct = default)
   {
@@ -287,25 +321,56 @@ public class PersonalService : IPersonalService
   }
 
   public Task<PersonalDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default) =>
-    _readPersonalRepository.QueryAsync(async q =>
-    {
-      var row = await q.Include(p => p.Subdivision).Include(p => p.PersonnelCategory).Include(p => p.SpecialRank)
-        .Include(p => p.Position).Include(p => p.WorkerCategory).Include(p => p.StatusClassifier).Include(p => p.IpAddresses)
-        .Where(p => p.Id == id).Select(p => new { Personal = p, UserId = p.User == null ? null : p.User.Id,
-          UserName = p.User == null ? null : p.User.UserName }).SingleOrDefaultAsync(ct);
-      if (row == null) return null;
-      var personal = row.Personal;
-      var fields = typeof(Personal).GetProperties().Where(p => p.PropertyType == typeof(string) || p.PropertyType.IsValueType)
-        .ToDictionary(p => p.Name, p => p.GetValue(personal));
-      fields["SubdivisionName"] = personal.Subdivision?.Name;
-      fields["PersonnelCategoryName"] = personal.PersonnelCategory?.Value;
-      fields["SpecialRankName"] = personal.SpecialRank?.Value;
-      fields["PositionName"] = personal.Position?.Value;
-      fields["WorkerCategoryName"] = personal.WorkerCategory?.Value;
-      fields["StatusClassifierName"] = personal.StatusClassifier?.Value;
-      fields["IpAddresses"] = string.Join(", ", personal.IpAddresses.Select(ip => ip.Address));
-      fields["UserId"] = row.UserId;
-      fields["UserName"] = row.UserName;
-      return new PersonalDetailsDto(id, fields);
-    }, ct);
+    _readPersonalRepository.QueryAsync(q => q.Where(p => p.Id == id).Select(p => new PersonalDetailsDto {
+      Id = p.Id,
+      Status = p.Status,
+      InsertedDate = p.InsertedDate,
+      LastModifiedDate = p.LastModifiedDate,
+      CreatedBy = p.CreatedBy,
+      ModifiedBy = p.ModifiedBy,
+      PersonalId = p.PersonalId,
+      SubdivisionId = p.SubdivisionId,
+      PersonalSubdivisionId = p.PersonalSubdivisionId,
+      PersonnelCategoryType = p.PersonnelCategoryType,
+      PersonnelCategoryCode = p.PersonnelCategoryCode,
+      SpecialRankType = p.SpecialRankType,
+      SpecialRankCode = p.SpecialRankCode,
+      PositionType = p.PositionType,
+      PositionCode = p.PositionCode,
+      WorkerCategoryType = p.WorkerCategoryType,
+      WorkerCategoryCode = p.WorkerCategoryCode,
+      LastName = p.LastName,
+      FirstName = p.FirstName,
+      MiddleName = p.MiddleName,
+      FullName = p.FullName,
+      EnlistmentYear = p.EnlistmentYear,
+      PersonalNumber = p.PersonalNumber,
+      LastNameGen = p.LastNameGen,
+      FirstNameGen = p.FirstNameGen,
+      MiddleNameGen = p.MiddleNameGen,
+      StatusType = p.StatusType,
+      StatusCode = p.StatusCode,
+      UpdatedAt = p.UpdatedAt,
+      SubdivisionName = p.Subdivision == null ? null : p.Subdivision.Name,
+      PersonnelCategoryName = p.PersonnelCategory == null ? null : p.PersonnelCategory.Value,
+      SpecialRankName = p.SpecialRank == null ? null : p.SpecialRank.Value,
+      PositionName = p.Position == null ? null : p.Position.Value,
+      WorkerCategoryName = p.WorkerCategory == null ? null : p.WorkerCategory.Value,
+      StatusClassifierName = p.StatusClassifier == null ? null : p.StatusClassifier.Value,
+      UserId = p.User == null ? null : p.User.Id,
+      UserName = p.User == null ? null : p.User.UserName,
+      IpAddresses = p.IpAddresses.Select(ip => ip.Address).ToArray()
+    }).SingleOrDefaultAsync(ct), ct);
+
+  public Task<Guid> CreateFromDtoAsync(CreatePersonalDto input, CancellationToken ct = default) {
+    ArgumentNullException.ThrowIfNull(input); ArgumentNullException.ThrowIfNull(input.Fields);
+    var entity = new Personal(); input.Fields.ApplyTo(entity);
+    return CreateAsync(entity, ct);
+  }
+  public async Task UpdateFromDtoAsync(EditPersonalDto input, CancellationToken ct = default) {
+    ArgumentNullException.ThrowIfNull(input); ArgumentNullException.ThrowIfNull(input.Fields);
+    var entity = new Personal { Id = input.Id };
+    input.Fields.ApplyTo(entity); entity.Version = input.Version;
+    await UpdateAsync(entity, ct);
+  }
 }

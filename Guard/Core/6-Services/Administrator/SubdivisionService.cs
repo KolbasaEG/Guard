@@ -1,3 +1,4 @@
+using Guard.Core.Services.DTOs;
 using Guard.Core.Identity;
 using Guard.Core.Contexts;
 using Guard.Core.Entities;
@@ -11,7 +12,7 @@ public class SubdivisionService : ISubdivisionService
   private readonly IReadRepository<Subdivision> _readSubdivisionRepository;
   private readonly IReadRepository<OrganType> _readOrganTypeRepository;
   private readonly IReadRepository<Classifier> _readClassifierRepository;
-  private readonly IUnitOfWork _uow;
+  private readonly IUnitOfWorkFactory _writes;
   private readonly ILogger<SubdivisionService> _logger;
   private readonly IDbContextFactory<ApplicationDbContext> _factory;
   private readonly IPermissionService _permissions;
@@ -21,13 +22,13 @@ public class SubdivisionService : ISubdivisionService
       IReadRepository<Subdivision> readSubdivisionRepository,
       IReadRepository<OrganType> readOrganTypeRepository,
       IReadRepository<Classifier> readClassifierRepository,
-      IUnitOfWork unitOfWork,
+      IUnitOfWorkFactory unitOfWork,
       ILogger<SubdivisionService> logger, IPermissionService permissions, IDataAccessScopeService scopes, IDbContextFactory<ApplicationDbContext> factory)
   {
     _readSubdivisionRepository = readSubdivisionRepository;
     _readOrganTypeRepository = readOrganTypeRepository;
     _readClassifierRepository = readClassifierRepository;
-    _uow = unitOfWork;
+    _writes = unitOfWork;
     _logger = logger;
     _factory = factory;
     _permissions = permissions;
@@ -63,7 +64,7 @@ public class SubdivisionService : ISubdivisionService
   {
     _logger.LogDebug("Запрос дочерних подразделений для ParentId: {ParentId}", parentId);
     return await _readSubdivisionRepository.QueryAsync(query =>
-        query.Where(s => s.ParentId == parentId && s.Status <= Status.Archived)
+        query.Where(s => s.ParentId == parentId && (s.Status == Status.Inserted || s.Status == Status.Modified))
              .ToListAsync(ct),
         ct);
   }
@@ -72,13 +73,18 @@ public class SubdivisionService : ISubdivisionService
 
   public async Task<Guid> CreateAsync(Subdivision subdivision, CancellationToken ct = default)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
     ArgumentNullException.ThrowIfNull(subdivision);
+    var clean = new Subdivision { Id = subdivision.Id, ParentId = subdivision.ParentId, SubdivisionId = subdivision.SubdivisionId, ParentSubdivisionId = subdivision.ParentSubdivisionId };
+    SubdivisionFieldsDto.From(subdivision).ApplyTo(clean); subdivision = clean;
+    EntityInputValidation.Validate(subdivision);
 
     return await _uow.ExecuteInTransactionAsync(async () =>
     {
       if (!(await _scopes.GetAsync(ct)).Allows(subdivision.ParentId)) throw new UnauthorizedAccessException("Родительское подразделение недоступно.");
       subdivision.Status = Status.Inserted;
+      await EntityReferences.SubdivisionAsync(_uow, subdivision, null, ct);
 
       // 1. Определение пути родителя
       string parentPath = "/";
@@ -88,6 +94,7 @@ public class SubdivisionService : ISubdivisionService
         if (parent == null)
           throw new KeyNotFoundException($"Родительское подразделение с ID '{subdivision.ParentId}' не найдено.");
 
+        if (parent.Status is not (Status.Inserted or Status.Modified)) throw new ArgumentException("Выберите активное родительское подразделение.");
         parentPath = parent.Path;
       }
 
@@ -136,43 +143,50 @@ public class SubdivisionService : ISubdivisionService
   }
   public async Task UpdateAsync(Subdivision subdivision, CancellationToken ct = default)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
     ArgumentNullException.ThrowIfNull(subdivision);
+    EntityInputValidation.Validate(subdivision);
 
-    var existing = await _readSubdivisionRepository.GetByIdAsync(subdivision.Id, ct) ?? throw new KeyNotFoundException("Подразделение недоступно.");
-    if (existing.Status is not (Status.Inserted or Status.Modified)) throw new InvalidOperationException("Подразделение неактивно или заблокировано.");
+    var existing = await GetRequiredForWriteAsync(_uow, subdivision.Id, ct) ?? throw new KeyNotFoundException("Подразделение недоступно.");
+    if (existing.Status is not (Status.Inserted or Status.Modified)) throw new EntityRuleException("Подразделение неактивно или заблокировано.");
     if (existing.ParentId != subdivision.ParentId || existing.Path != subdivision.Path || existing.SubdivisionId != subdivision.SubdivisionId)
-      throw new InvalidOperationException("Для изменения родителя используйте перемещение подразделения.");
+      throw new EntityRuleException("Для изменения родителя используйте перемещение подразделения.");
     subdivision.Status = existing.Status;
-    await _uow.BaseEntityRepository<Subdivision>().UpdateAsync(subdivision, ct);
+    EntityInputValidation.CheckVersion(existing.Version, subdivision.Version);
+    await EntityReferences.SubdivisionAsync(_uow, subdivision, existing, ct);
+    SubdivisionFieldsDto.From(subdivision).ApplyTo(existing);
+    existing.UpdatedAt = DateTime.UtcNow;
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Обновлены данные подразделения '{SubdivisionName}' (ID: {SubdivisionId})",
         subdivision.Name, subdivision.Id);
   }
 
-  public async Task MoveAsync(Guid id, Guid? newParentId, CancellationToken ct = default)
+  public async Task MoveAsync(Guid id, Guid? newParentId, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
     await _uow.ExecuteInTransactionAsync(async () =>
     {
-      var target = await GetRequiredForWriteAsync(id, ct);
+      var target = await GetRequiredForWriteAsync(_uow, id, ct);
+      if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(target.Version, expectedVersion.Value);
       if (!(await _scopes.GetAsync(ct)).Allows(newParentId)) throw new UnauthorizedAccessException("Новый родитель недоступен.");
 
       // Нет изменений родителя — выходим
       if (target.ParentId == newParentId)
         return;
 
-      if (target.Status is not (Status.Inserted or Status.Modified)) throw new InvalidOperationException("Подразделение заблокировано или неактивно.");
+      if (target.Status is not (Status.Inserted or Status.Modified)) throw new EntityRuleException("Подразделение заблокировано или неактивно.");
       string oldPath = target.Path;
-      if (string.IsNullOrWhiteSpace(oldPath)) throw new InvalidOperationException("Путь подразделения не настроен.");
+      if (string.IsNullOrWhiteSpace(oldPath)) throw new EntityRuleException("Путь подразделения не настроен.");
       string newParentPath = "/";
 
       if (newParentId.HasValue)
       {
         // 1. Проверка попытки назначить родителем самого себя
         if (newParentId.Value == target.Id)
-          throw new InvalidOperationException("Нельзя переместить подразделение в самого себя.");
+          throw new EntityRuleException("Нельзя переместить подразделение в самого себя.");
 
         var newParent = await _uow.BaseEntityRepository<Subdivision>().GetByIdAsync(newParentId.Value, ct);
         if (newParent == null)
@@ -180,7 +194,7 @@ public class SubdivisionService : ISubdivisionService
 
         // 2. Проверка циклической зависимости (нельзя переместить родителя в его потомка)
         if (!string.IsNullOrEmpty(oldPath) && newParent.Path.StartsWith(oldPath, StringComparison.OrdinalIgnoreCase))
-          throw new InvalidOperationException("Нельзя переместить подразделение в одного из его подчиненных узлов.");
+          throw new EntityRuleException("Нельзя переместить подразделение в одного из его подчиненных узлов.");
 
         newParentPath = newParent.Path;
       }
@@ -217,60 +231,70 @@ public class SubdivisionService : ISubdivisionService
 
   // ==================== Status Management ====================
 
-  public async Task SoftDeleteAsync(Guid id, CancellationToken ct = default)
+  public async Task SoftDeleteAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
-    var subdivision = await GetRequiredForWriteAsync(id, ct);
+    var subdivision = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(subdivision.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Subdivision>().SoftDeleteAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().ChangeStatusAsync(subdivision, EntityStatusTransitions.Apply(subdivision.Status, StatusOperation.Delete, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("Подразделение '{SubdivisionName}' (ID: {SubdivisionId}) помечено как удаленное",
         subdivision.Name, id);
   }
 
-  public async Task ArchiveAsync(Guid id, CancellationToken ct = default)
+  public async Task ArchiveAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
-    var subdivision = await GetRequiredForWriteAsync(id, ct);
+    var subdivision = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(subdivision.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Subdivision>().ArchiveAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().ChangeStatusAsync(subdivision, EntityStatusTransitions.Apply(subdivision.Status, StatusOperation.Archive, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Подразделение '{SubdivisionName}' (ID: {SubdivisionId}) отправлено в архив",
         subdivision.Name, id);
   }
 
-  public async Task BlockAsync(Guid id, CancellationToken ct = default)
+  public async Task BlockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
-    var subdivision = await GetRequiredForWriteAsync(id, ct);
+    var subdivision = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(subdivision.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Subdivision>().BlockAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().ChangeStatusAsync(subdivision, EntityStatusTransitions.Apply(subdivision.Status, StatusOperation.Block, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("Подразделение '{SubdivisionName}' (ID: {SubdivisionId}) заблокировано",
         subdivision.Name, id);
   }
 
-  public async Task UnblockAsync(Guid id, CancellationToken ct = default)
+  public async Task UnblockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
-    var subdivision = await GetRequiredForWriteAsync(id, ct);
+    var subdivision = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(subdivision.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Subdivision>().UnblockAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().ChangeStatusAsync(subdivision, EntityStatusTransitions.Apply(subdivision.Status, StatusOperation.Unblock, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Подразделение '{SubdivisionName}' (ID: {SubdivisionId}) разблокировано",
         subdivision.Name, id);
   }
 
-  public async Task RestoreAsync(Guid id, CancellationToken ct = default)
+  public async Task RestoreAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
-    var subdivision = await GetRequiredForWriteAsync(id, ct);
+    var subdivision = await GetRequiredForWriteAsync(_uow, id, ct);
+    if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(subdivision.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Subdivision>().RestoreAsync(subdivision, ct);
+    await _uow.BaseEntityRepository<Subdivision>().ChangeStatusAsync(subdivision, EntityStatusTransitions.Apply(subdivision.Status, StatusOperation.Restore, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Подразделение '{SubdivisionName}' (ID: {SubdivisionId}) восстановлено",
@@ -279,22 +303,24 @@ public class SubdivisionService : ISubdivisionService
 
   // ==================== Private Helpers ====================
 
-  private async Task<Subdivision> GetRequiredForWriteAsync(Guid id, CancellationToken ct)
+  private async Task<Subdivision> GetRequiredForWriteAsync(IUnitOfWork _uow, Guid id, CancellationToken ct)
   {
-    var visible = await _readSubdivisionRepository.GetByIdAsync(id, ct) ?? throw new KeyNotFoundException("Подразделение недоступно.");
     var subdivision = await _uow.BaseEntityRepository<Subdivision>().GetByIdAsync(id, ct);
-
-    if (subdivision == null)
+    var scope = await _scopes.GetAsync(ct);
+    if (subdivision == null || !scope.Allows(id) || subdivision.Status == Status.Deleted && !scope.IsRoot)
     {
       _logger.LogWarning("Попытка выполнения операции над несуществующим подразделением (ID: {SubdivisionId})", id);
       throw new KeyNotFoundException($"Подразделение с ID '{id}' не найдено.");
     }
 
+    if (subdivision.Status is Status.Archived or Status.ArchivedBlocked)
+      await _permissions.RequireAsync(Permissions.Subdivisions.ReadArchive, ct);
     return subdivision;
   }
 
   public async Task RebuildHierarchyAndPathsAsync(CancellationToken ct = default)
   {
+    await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
     if (!(await _permissions.GetCurrentAsync(ct)).IsRoot) throw new UnauthorizedAccessException("Перестроение доступно только Root.");
     await _uow.ExecuteInTransactionAsync(async () =>
@@ -390,5 +416,17 @@ public class SubdivisionService : ISubdivisionService
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
     await using var db = await _factory.CreateDbContextAsync(ct);
     return await db.Set<Classifier>().AsNoTracking().Where(c => c.Type == (int)type).OrderBy(c => c.Value).ToListAsync(ct);
+  }
+
+  public Task<Guid> CreateFromDtoAsync(CreateSubdivisionDto input, CancellationToken ct = default) {
+    ArgumentNullException.ThrowIfNull(input); ArgumentNullException.ThrowIfNull(input.Fields);
+    var entity = new Subdivision(); input.Fields.ApplyTo(entity); entity.ParentId = input.ParentId;
+    return CreateAsync(entity, ct);
+  }
+  public async Task UpdateFromDtoAsync(EditSubdivisionDto input, CancellationToken ct = default) {
+    ArgumentNullException.ThrowIfNull(input); ArgumentNullException.ThrowIfNull(input.Fields);
+    var entity = await GetByIdAsync(input.Id, ct) ?? throw new KeyNotFoundException("Подразделение недоступно.");
+    input.Fields.ApplyTo(entity); entity.Version = input.Version;
+    await UpdateAsync(entity, ct);
   }
 }

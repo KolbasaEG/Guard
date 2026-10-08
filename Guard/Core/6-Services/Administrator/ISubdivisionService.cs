@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
+using Guard.Core.Entities;
 using Guard.Core.Enums;
 
 namespace Guard.Core.Services;
@@ -26,7 +27,7 @@ public interface ISubdivisionService
   /// <param name="id">Идентификатор перемещаемого подразделения</param>
   /// <param name="newParentId">ID нового родителя (null, если узел становится корневым)</param>
   /// <param name="ct">Токен отмены</param>
-  Task MoveAsync(Guid id, Guid? newParentId, CancellationToken ct = default);
+  Task MoveAsync(Guid id, Guid? newParentId, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно получает список всех активных подразделений (исключая удалённые и архивированные).
@@ -69,35 +70,35 @@ public interface ISubdivisionService
   /// </summary>
   /// <param name="id">Идентификатор подразделения</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task SoftDeleteAsync(Guid id, CancellationToken ct = default);
+  Task SoftDeleteAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно переводит подразделение в архив (Status = Archived).
   /// </summary>
   /// <param name="id">Идентификатор подразделения</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task ArchiveAsync(Guid id, CancellationToken ct = default);
+  Task ArchiveAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно блокирует подразделение от редактирования.
   /// </summary>
   /// <param name="id">Идентификатор подразделения</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task BlockAsync(Guid id, CancellationToken ct = default);
+  Task BlockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно снимает блокировку с подразделения.
   /// </summary>
   /// <param name="id">Идентификатор подразделения</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task UnblockAsync(Guid id, CancellationToken ct = default);
+  Task UnblockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно восстанавливает подразделение из удалённых или архива (Status = Modified).
   /// </summary>
   /// <param name="id">Идентификатор подразделения</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task RestoreAsync(Guid id, CancellationToken ct = default);
+  Task RestoreAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Перестраивает связи иерархии (ParentId) и пересчитывает иерархический путь (Path)
@@ -118,4 +119,6 @@ public interface ISubdivisionService
   /// <param name="ct">Токен отмены операции</param>
   /// <param name="type">Тип классификатора</param>
   Task<IReadOnlyList<Classifier>> GetClassifiersByTypeAsync(ClassifierType type, CancellationToken ct = default);
+  Task<Guid> CreateFromDtoAsync(CreateSubdivisionDto input, CancellationToken ct = default);
+  Task UpdateFromDtoAsync(EditSubdivisionDto input, CancellationToken ct = default);
 }

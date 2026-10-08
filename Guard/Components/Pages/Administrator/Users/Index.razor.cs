@@ -1,3 +1,4 @@
+using Guard.Components.Library;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
@@ -16,6 +17,7 @@ namespace Guard.Components.Pages.Administrator.Users
 {
   public partial class Index : IDisposable
   {
+    [Inject] protected BrowserTimeService Time { get; set; } = default!;
     [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
     [Inject] protected NotificationService NotificationService { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!;
@@ -35,7 +37,7 @@ namespace Guard.Components.Pages.Administrator.Users
     private bool disposed;
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-      if (firstRender) await grid.Reload();
+      if (firstRender) { try { await Time.InitializeAsync(); await grid.Reload(); StateHasChanged(); } catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс пользователей"); ShowErrorNotification("Не удалось определить часовой пояс браузера."); } }
     }
 
     int count;
@@ -54,7 +56,7 @@ namespace Guard.Components.Pages.Administrator.Users
       catch (Exception ex)
       {
         Logger.LogError(ex, "Ошибка при инициализации страницы пользователей");
-        ShowErrorNotification(ex.Message);
+        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
       {
@@ -137,8 +139,8 @@ namespace Guard.Components.Pages.Administrator.Users
       new Dictionary<string, object> { ["UserId"] = item.Id }, new DialogOptions { Width = "800px" });
     protected async Task AddUserAsync()
     {
-      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions { Width = "650px", ShowTitle = false });
-      if (result is true) await grid.Reload();
+      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result)) await grid.Reload();
     }
     protected async Task ToggleLockout(UserDto item)
     {
@@ -156,31 +158,14 @@ namespace Guard.Components.Pages.Administrator.Users
       var result = await DialogService.OpenAsync<ResetPassword>("",
         new Dictionary<string, object> { ["UserId"] = item.Id },
         new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-      if (result is true) { ShowSuccessNotification("Пароль сброшен. При следующем входе потребуется его смена."); await grid.Reload(); }
+      if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result)) { ShowSuccessNotification("Пароль сброшен. При следующем входе потребуется его смена."); await grid.Reload(); }
     }
     async Task ApplyFilter()
     {
-      try { appliedFilter = UserListQuery.Capture(dataFilter); await grid.FirstPage(true); }
+      try { appliedFilter = UserListQuery.Capture(dataFilter, Time); await grid.FirstPage(true); }
       catch (ArgumentException) { ShowErrorNotification("Проверьте условия фильтра."); }
     }
 
-    private void NormalizeFilterDatesToUtc(IEnumerable<CompositeFilterDescriptor> filters)
-    {
-      if (filters == null) return;
-
-      foreach (var filter in filters)
-      {
-        if (filter.FilterValue is DateTime dt && dt.Kind != DateTimeKind.Utc)
-        {
-          filter.FilterValue = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-        }
-
-        if (filter.Filters != null && filter.Filters.Any())
-        {
-          NormalizeFilterDatesToUtc(filter.Filters);
-        }
-      }
-    }
 
     private void ShowSuccessNotification(string detail)
     {

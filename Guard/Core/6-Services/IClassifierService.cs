@@ -1,4 +1,5 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
+using Guard.Core.Entities;
 
 namespace Guard.Core.Services;
 
@@ -78,12 +79,14 @@ public interface IClassifierService
   /// <param name="id">Идентификатор классификатора</param>
   /// <param name="isActive">Новый статус активности</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task SetActiveStatusAsync(int id, bool isActive, CancellationToken ct = default);
+  Task SetActiveStatusAsync(int id, bool isActive, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно выполняет физическое удаление записи классификатора.
   /// </summary>
   /// <param name="id">Идентификатор записи</param>
   /// <param name="ct">Токен отмены операции</param>
-  Task DeleteAsync(int id, CancellationToken ct = default);
+  Task DeleteAsync(int id, CancellationToken ct = default, Guid? expectedVersion = null);
+  Task<int> CreateFromDtoAsync(CreateClassifierDto input, CancellationToken ct = default);
+  Task UpdateFromDtoAsync(EditClassifierDto input, CancellationToken ct = default);
 }
