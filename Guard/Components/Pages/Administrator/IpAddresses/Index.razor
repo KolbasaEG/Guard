@@ -15,9 +15,9 @@
                     PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" ShowPagingSummary="true" PagingSummaryFormat="@pagingSummaryFormat"
                     Style="height:100%;">
       <HeaderTemplate>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%; position:relative; min-height:36px;">
 
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="5px" Style="position:absolute; left:50%; transform:translateX(-50%);">
             <RadzenSelectBar TValue="DataViewMode" Size="ButtonSize.Medium" @bind-Value="@currentMode" Change="() => ResetPageAsync()" Style="background-color: var(--rz-menu-top-item-background-color); border-radius: 0px;">
               <Items>
                 <RadzenSelectBarItem Value="@(DataViewMode.Archived)" Text="Архив" Style="border-radius:0px; width:105px; text-align:center;" />
@@ -26,9 +26,9 @@
               </Items>
             </RadzenSelectBar>
           </RadzenStack>
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="margin-left:auto; background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
             <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
-                       <RadzenToggleButton Visible="@(AccessSnapshot?.IsRoot != true)" Value="@(hierarchyMode == SubdivisionHierarchyMode.IncludeChildren)" Change="@OnHierarchyModeChanged" ButtonStyle="ButtonStyle.Warning" ToggleButtonStyle="ButtonStyle.Primary" Variant="Variant.Text" Style="border-radius:0px;"
+                       <RadzenToggleButton Value="@(hierarchyMode == SubdivisionHierarchyMode.IncludeChildren)" Change="@OnHierarchyModeChanged" ButtonStyle="ButtonStyle.Warning" ToggleButtonStyle="ButtonStyle.Primary" Variant="Variant.Text" Style="border-radius:0px;"
                                 Size="Radzen.ButtonSize.Medium" Icon="account_tree" ToggleIcon="domain" Shade="Shade.Light" ToggleShade="Shade.Dark"
                                 InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Переключение режима отображения иерархии" }})" />
  

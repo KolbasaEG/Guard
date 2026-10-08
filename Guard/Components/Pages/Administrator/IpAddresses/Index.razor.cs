@@ -49,14 +49,23 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
     private bool disposed;
     protected string? loadError;
     private string? accessVersion;
+    private bool reloadPending = true;
     protected override void OnParametersSet()
     {
       var version = AccessSnapshot == null ? "" : AccessSnapshot.UserId + ":" + AccessSnapshot.IsRoot + ":" + AccessSnapshot.Has(Permissions.IpAddresses.Read);
       if (accessVersion != null && version != accessVersion) {
-        _loadDataCts?.Cancel(); filteredData = []; count = 0;
+        _loadDataCts?.Cancel(); filteredData = []; count = 0; reloadPending = true;
       }
       accessVersion = version;
     }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+      if (disposed || !reloadPending) return;
+      reloadPending = false;
+      await grid.Reload();
+      if (!disposed) StateHasChanged();
+    }
+
     void OnSelectedSubdivisionChange(object value)
     {
       if (selectedItemsSubdivision != null && !selectedItemsSubdivision.Any())
