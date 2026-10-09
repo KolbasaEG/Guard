@@ -17,6 +17,22 @@ public class IpRestrictedSignInManager(
     IUserConfirmation<ApplicationUser> confirmation, IIpAccessService access, IAuditService audit, IAccountPolicyService policies)
     : SignInManager<ApplicationUser>(userManager, contextAccessor, claimsFactory, options, logger, schemes, confirmation)
 {
+  protected override async Task<SignInResult?> PreSignInCheck(ApplicationUser user)
+  {
+    if (await UserManager.IsLockedOutAsync(user)) return SignInResult.LockedOut;
+    return await base.PreSignInCheck(user);
+  }
+
+  public override async Task<SignInResult> CheckPasswordSignInAsync(ApplicationUser user, string password, bool lockoutOnFailure)
+  {
+    if (!await UserManager.GetLockoutEnabledAsync(user)) {
+      var enabled = await UserManager.SetLockoutEnabledAsync(user, true);
+      if (!enabled.Succeeded) return SignInResult.Failed;
+    }
+    // Every password entry point must count failures, including callers using the legacy false flag.
+    return await base.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
+  }
+
   public override async Task<bool> CanSignInAsync(ApplicationUser user)
   {
     if (!await base.CanSignInAsync(user)) return false;

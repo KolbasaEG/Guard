@@ -39,6 +39,12 @@ namespace Guard.Migrations
                     b.Property<int>("MinimumLength")
                         .HasColumnType("integer");
 
+                    b.Property<int>("MaxFailedLoginAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LoginLockoutMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<int>("PasswordDays")
                         .HasColumnType("integer");
 
@@ -72,6 +78,8 @@ namespace Guard.Migrations
                     b.ToTable("AccountPolicies", null, t =>
                         {
                             t.HasCheckConstraint("CK_AccountPolicies_Id", "\"Id\" = 1");
+
+                            t.HasCheckConstraint("CK_AccountPolicies_LoginLockout", "\"MaxFailedLoginAttempts\" BETWEEN 1 AND 100 AND \"LoginLockoutMinutes\" BETWEEN 1 AND 10080");
 
                             t.HasCheckConstraint("CK_AccountPolicies_Ranges", "\"PasswordDays\" BETWEEN 1 AND 3650 AND \"InactivityDays\" BETWEEN 1 AND 3650 AND \"MinimumLength\" BETWEEN 6 AND 100 AND \"UniqueCharacters\" BETWEEN 1 AND \"MinimumLength\"");
                         });

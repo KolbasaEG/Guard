@@ -10,8 +10,32 @@ public class PolicyUserManager(IUserStore<ApplicationUser> store, IOptions<Ident
     IEnumerable<IPasswordValidator<ApplicationUser>> passwords, ILookupNormalizer normalizer,
     IdentityErrorDescriber errors, IServiceProvider services, ILogger<UserManager<ApplicationUser>> logger,
     IAuditService audit)
-    : UserManager<ApplicationUser>(store, options, hasher, users, passwords, normalizer, errors, services, logger)
+    : UserManager<ApplicationUser>(store, LocalOptions(options.Value), hasher, users, passwords, normalizer, errors, services, logger)
 {
+  // IOptions.Value is shared. Keep the dynamically changed Lockout options local to this manager.
+  private static IOptions<IdentityOptions> LocalOptions(IdentityOptions shared) => Microsoft.Extensions.Options.Options.Create(new IdentityOptions {
+    ClaimsIdentity = shared.ClaimsIdentity, User = shared.User, Password = shared.Password,
+    SignIn = shared.SignIn, Tokens = shared.Tokens, Stores = shared.Stores,
+    Lockout = new LockoutOptions {
+      AllowedForNewUsers = shared.Lockout.AllowedForNewUsers,
+      MaxFailedAccessAttempts = shared.Lockout.MaxFailedAccessAttempts,
+      DefaultLockoutTimeSpan = shared.Lockout.DefaultLockoutTimeSpan
+    }
+  });
+
+  public override async Task<IdentityResult> AccessFailedAsync(ApplicationUser user)
+  {
+    var ct = ServiceProvider.GetService<IHttpContextAccessor>()?.HttpContext?.RequestAborted ?? default;
+    var policy = await ServiceProvider.GetRequiredService<IAccountPolicyService>().GetAsync(ct);
+    if (!AccountPolicyRules.Valid(policy)) throw new InvalidOperationException("Некорректная политика блокировки входа.");
+    Options.Lockout.MaxFailedAccessAttempts = policy.MaxFailedLoginAttempts;
+    Options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(policy.LoginLockoutMinutes);
+    var result = await base.AccessFailedAsync(user);
+    if (result.Succeeded && user.LockoutEnd > DateTimeOffset.UtcNow)
+      audit.LogIdentityEvent(Core.Enums.AuditEventType.UserBlocked, user.Id, details: "Failed login attempts; temporary lockout");
+    return result;
+  }
+
   private async Task<IdentityResult> SetPasswordAsync(ApplicationUser user, string password, Func<Task<IdentityResult>> change)
   {
     if (user.AccountBlockReason != null || await IsLockedOutAsync(user))

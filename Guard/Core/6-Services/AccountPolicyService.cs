@@ -21,7 +21,7 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
     var permissions = services.GetRequiredService<IPermissionService>();
     var actor = await permissions.GetCurrentAsync(ct);
     if (!actor.IsRoot) throw new UnauthorizedAccessException("Политику изменяет только Root.");
-    if (!AccountPolicyRules.Valid(policy)) throw new ArgumentException("Проверьте периоды (1–3650 дней), длину (6–100) и число различных символов.");
+    if (!AccountPolicyRules.Valid(policy)) throw new ArgumentException("Проверьте число попыток входа (1–100), блокировку (1–10080 минут), периоды (1–3650 дней), длину пароля (6–100) и число различных символов.");
     await using var db = await factory.CreateDbContextAsync(ct);
     await using var tx = await db.Database.BeginTransactionAsync(ct);
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)", ct);

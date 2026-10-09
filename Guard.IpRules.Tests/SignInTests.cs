@@ -22,6 +22,7 @@ internal static class SignInTests
     services.AddSingleton<IAccessChangeNotifier, AccessChangeNotifier>();
     services.AddScoped<IAccountPolicyService, AccountPolicyService>();
     services.AddIdentity<ApplicationUser, ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddUserManager<PolicyUserManager>()
         .AddSignInManager<IpRestrictedSignInManager>();
     var authentication = new AuthenticationRecorder();
     services.AddSingleton<IAuthenticationService>(authentication);
@@ -69,6 +70,23 @@ internal static class SignInTests
     check(authentication.Issued == 3, "MFA claims cannot bypass IP gate");
     check((await manager.PasswordSignInAsync(byEmail!, "TestPassword123!", false, false)).IsNotAllowed,
       "email login preserves IP restriction");
+    context.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("192.168.1.10");
+    check((await users.ResetAccessFailedCountAsync(user)).Succeeded, "prepare persisted login counter");
+    var issuedBeforeFailures = authentication.Issued;
+    for (var attempt = 1; attempt <= 5; attempt++) {
+      var failure = await manager.PasswordSignInAsync(user, "incorrect", false, true);
+      check(attempt == 5 ? failure.IsLockedOut : !failure.Succeeded && !failure.IsLockedOut,
+        "persisted password failures reach lockout at configured threshold");
+    }
+    await using (var verify = await factory.CreateDbContextAsync()) {
+      var persisted = await verify.Users.AsNoTracking().SingleAsync(u => u.Id == user.Id);
+      check(persisted.LockoutEnd > DateTimeOffset.UtcNow.AddMinutes(14) && persisted.AccessFailedCount == 0,
+        "Identity stores temporary lockout and resets threshold counter in PostgreSQL");
+    }
+    check(authentication.Issued == issuedBeforeFailures, "password failures and lockout issue no cookie");
+    check((await users.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddSeconds(-1))).Succeeded, "simulate elapsed temporary lockout");
+    check((await manager.PasswordSignInAsync(user, "TestPassword123!", false, true)).Succeeded,
+      "persisted expired lockout allows password login again");
   }
 
   private sealed class AuthenticationRecorder : IAuthenticationService

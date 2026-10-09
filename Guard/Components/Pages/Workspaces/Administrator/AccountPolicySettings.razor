@@ -12,6 +12,11 @@
   <EditEntity TItem="AccountPolicy" Data="@model" Name="Политика паролей и аккаунтов" IsLoading="@busy" Submit="SaveAsync" OnCancelButtonClick="Cancel">
     <RadzenStack Gap="12px">
       @if (message != null) { <RadzenAlert AlertStyle="@(success ? AlertStyle.Success : AlertStyle.Danger)">@message</RadzenAlert> }
+      <RadzenLabel Text="Неверных попыток входа до блокировки Z (1–100)" />
+      <RadzenNumeric TValue="int" @bind-Value="model.MaxFailedLoginAttempts" Min="1" Max="100" />
+      <RadzenLabel Text="Временная блокировка входа, минут (1–10080)" />
+      <RadzenNumeric TValue="int" @bind-Value="model.LoginLockoutMinutes" Min="1" Max="10080" />
+      <RadzenText Text="По умолчанию: 5 неверных попыток, блокировка на 15 минут. Успешный вход сбрасывает счётчик. Новая настройка применяется при следующей неверной попытке и не меняет срок уже начавшейся блокировки. Ручная блокировка и блокировка за неактивность не снимаются автоматически." />
       <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.PasswordExpirationEnabled" /><RadzenLabel Text="Обязательная смена пароля" /></RadzenStack>
       <RadzenLabel Text="Срок действия пароля N, дней (1–3650)" />
       <RadzenNumeric TValue="int" @bind-Value="model.PasswordDays" Min="1" Max="3650" />

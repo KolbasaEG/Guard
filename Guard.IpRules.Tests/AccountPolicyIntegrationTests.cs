@@ -82,7 +82,11 @@ internal static class AccountPolicyIntegrationTests
       await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => fixedPermissions.GetCurrentAsync(), check, "revoked stamp cannot use application services");
     }
     updated = await policies.GetAsync(); updated.PasswordExpirationEnabled = false;
+    updated.MaxFailedLoginAttempts = 3; updated.LoginLockoutMinutes = 20;
     await policies.SaveAsync(updated);
+    var savedLoginPolicy = await policies.GetAsync();
+    check(savedLoginPolicy.MaxFailedLoginAttempts == 3 && savedLoginPolicy.LoginLockoutMinutes == 20,
+      "Root can persist changed login failure threshold and lockout duration");
     var currentTarget = await Read();
     var targetPrincipal = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, target.Id),
       new Claim("AspNet.Identity.SecurityStamp", currentTarget.SecurityStamp!)], "test"));

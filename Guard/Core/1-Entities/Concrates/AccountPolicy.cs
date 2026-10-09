@@ -4,6 +4,8 @@ public class AccountPolicy
 {
   public int Id { get; set; } = 1;
   public Guid Version { get; set; } = Guid.NewGuid();
+  public int MaxFailedLoginAttempts { get; set; } = 5;
+  public int LoginLockoutMinutes { get; set; } = 15;
   public bool PasswordExpirationEnabled { get; set; }
   public int PasswordDays { get; set; } = 90;
   public DateTimeOffset? PasswordEnabledAtUtc { get; set; }

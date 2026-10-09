@@ -16,6 +16,7 @@ public static class AccountPolicyRules
   private static DateTimeOffset Later(DateTimeOffset value, DateTimeOffset? other) => other > value ? other.Value : value;
 
   public static bool Valid(AccountPolicy policy) => policy.Id == 1 &&
+    policy.MaxFailedLoginAttempts is >= 1 and <= 100 && policy.LoginLockoutMinutes is >= 1 and <= 10080 &&
     policy.PasswordDays is >= 1 and <= 3650 && policy.InactivityDays is >= 1 and <= 3650 &&
     policy.MinimumLength is >= 6 and <= 100 && policy.UniqueCharacters >= 1 && policy.UniqueCharacters <= policy.MinimumLength;
 }

@@ -10,6 +10,7 @@ public class AccountPolicyConfiguration : IEntityTypeConfiguration<AccountPolicy
   {
     builder.ToTable("AccountPolicies", table => {
       table.HasCheckConstraint("CK_AccountPolicies_Id", "\"Id\" = 1");
+      table.HasCheckConstraint("CK_AccountPolicies_LoginLockout", "\"MaxFailedLoginAttempts\" BETWEEN 1 AND 100 AND \"LoginLockoutMinutes\" BETWEEN 1 AND 10080");
       table.HasCheckConstraint("CK_AccountPolicies_Ranges", "\"PasswordDays\" BETWEEN 1 AND 3650 AND \"InactivityDays\" BETWEEN 1 AND 3650 AND \"MinimumLength\" BETWEEN 6 AND 100 AND \"UniqueCharacters\" BETWEEN 1 AND \"MinimumLength\"");
     });
     builder.HasKey(p => p.Id);
