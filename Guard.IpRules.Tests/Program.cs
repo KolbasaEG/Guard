@@ -31,6 +31,7 @@ AccountPolicyTests.Run(Check);
 await LoginLockoutTests.RunAsync(Check);
 EntityStatusTests.Run(Check);
 await RefactorTests.RunAsync(Check);
+await PersonalPagesTests.RunAsync(Check);
 await AccessRenderingTests.RunAsync(Check);
 await MiddlewareTests.RunAsync(Check);
 if (args.Length == 2 && args[0] == "--postgres") await PostgresTests.RunAsync(args[1], Check);

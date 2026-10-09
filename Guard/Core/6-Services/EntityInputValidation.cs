@@ -23,6 +23,8 @@ internal static class EntityInputValidation
     foreach (var value in new[] { entity.MiddleName, entity.LastNameGen, entity.FirstNameGen, entity.MiddleNameGen }) Limit(value, 100, "ФИО");
     Limit(entity.FullName, 250, "Фамилия и инициалы");
     Limit(entity.PersonalNumber, 50, "Личный номер");
+    if (entity.EnlistmentYear is < 1900 or > 2100)
+      throw new ArgumentException("Год принятия на службу должен быть от 1900 до 2100.");
     ValidatePair(entity.PersonnelCategoryType, entity.PersonnelCategoryCode);
     ValidatePair(entity.SpecialRankType, entity.SpecialRankCode);
     ValidatePair(entity.PositionType, entity.PositionCode);

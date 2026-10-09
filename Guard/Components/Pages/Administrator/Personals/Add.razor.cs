@@ -1,120 +1,102 @@
-using Guard.Core.Services.DTOs;
 using Guard.Core.Entities;
+using Guard.Core.Identity;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Components;
 using Radzen;
 
-namespace Guard.Components.Pages.Administrator.Personals
+namespace Guard.Components.Pages.Administrator.Personals;
+
+public partial class Add : IDisposable
 {
-  public partial class Add : IDisposable
+  [Inject] protected DialogService DialogService { get; set; } = default!;
+  [Inject] protected NotificationService NotificationService { get; set; } = default!;
+  [Inject] protected IPersonalService PersonalService { get; set; } = default!;
+  [Inject] protected ILogger<Add> Logger { get; set; } = default!;
+  [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
+  [CascadingParameter] public UserContext? UserContext { get; set; }
+
+  private readonly CancellationTokenSource cts = new();
+  private CancellationTokenSource? loading;
+  private UserAccessSnapshot? loadedAccess;
+  private UserContext? loadedContext;
+  private bool disposed;
+  protected bool isLoading, loaded;
+  protected string? error;
+  protected Personal item = new();
+  protected IEnumerable<Subdivision> subdivisions = [];
+
+  protected override async Task OnParametersSetAsync()
   {
-    [Inject]
-    protected DialogService DialogService { get; set; } = default!;
-
-    [Inject]
-    protected NotificationService NotificationService { get; set; } = default!;
-
-    [Inject]
-    protected IPersonalService PersonalService { get; set; } = default!;
-
-    [Inject]
-    protected ILogger<Add> Logger { get; set; } = default!;
-
-    private readonly CancellationTokenSource _cts = new();
-
-    protected bool isLoading = false;
-    protected Personal item = new();
-    protected IEnumerable<Subdivision> subdivisions = [];
-
-    protected override async Task OnInitializedAsync()
+    if (disposed || Access == null ||
+        ReferenceEquals(loadedAccess, Access) && ReferenceEquals(loadedContext, UserContext)) return;
+    loadedAccess = Access;
+    loadedContext = UserContext;
+    loading?.Cancel();
+    var request = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+    loading = request;
+    isLoading = true;
+    loaded = false;
+    error = null;
+    try
     {
-      try
-      {
-        isLoading = true;
-        Logger.LogDebug("Инициализация диалогового окна создания сотрудника");
-        subdivisions = await PersonalService.GetAllActiveSubdivisionsAsync(_cts.Token);
-        // Имитация загрузки (например, справочников/классификаторов)
-        await Task.CompletedTask;
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogInformation("Инициализация диалогового окна создания сотрудника была отменена");
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при инициализации диалогового окна создания сотрудника");
-
-        NotificationService.Notify(new NotificationMessage
-        {
-          Severity = NotificationSeverity.Error,
-          Summary = "Внимание!",
-          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
-          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-        });
-      }
-      finally
-      {
-        isLoading = false;
-      }
+      var result = await PersonalService.GetAllActiveSubdivisionsAsync(request.Token);
+      request.Token.ThrowIfCancellationRequested();
+      if (disposed || !ReferenceEquals(loading, request)) return;
+      subdivisions = result;
+      loaded = true;
     }
-
-    protected async Task FormSubmit()
+    catch (OperationCanceledException) when (request.IsCancellationRequested) { }
+    catch (Exception ex)
     {
-      var displayName = GetDisplayName();
-
-      try
-      {
-        isLoading = true;
-        Logger.LogInformation("Запуск создания сотрудника '{PersonalName}'", displayName);
-
-        // Асинхронное создание с передачей CancellationToken
-        await PersonalService.CreateFromDtoAsync(new CreatePersonalDto(PersonalFieldsDto.From(item)), _cts.Token);
-
-        Logger.LogInformation("Сотрудник '{PersonalName}' успешно создан", displayName);
-        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogWarning("Операция создания сотрудника '{PersonalName}' была отменена пользователем", displayName);
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при создании сотрудника '{PersonalName}'", displayName);
-
-        NotificationService.Notify(new NotificationMessage
-        {
-          Severity = NotificationSeverity.Error,
-          Summary = "Внимание!",
-          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
-          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-        });
-      }
-      finally
-      {
-        isLoading = false;
-      }
+      if (!disposed && ReferenceEquals(loading, request)) ShowError(ex, "Загрузка подразделений для нового сотрудника");
     }
-
-    protected void HandleCancelButtonClick()
+    finally
     {
-      Logger.LogInformation("Пользователь отменил создание сотрудника через кнопку 'Отмена'");
-      _cts.Cancel();
-      DialogService.Close(null);
+      if (ReferenceEquals(loading, request)) { loading = null; isLoading = false; }
+      request.Dispose();
     }
+  }
 
-    private string GetDisplayName()
+  protected async Task FormSubmit()
+  {
+    if (disposed || !loaded || isLoading) return;
+    isLoading = true;
+    error = null;
+    try
     {
-      if (!string.IsNullOrWhiteSpace(item.FullName))
-        return item.FullName;
-
-      var name = $"{item.LastName} {item.FirstName} {item.MiddleName}".Trim();
-      return string.IsNullOrWhiteSpace(name) ? "Новый сотрудник" : name;
+      await PersonalService.CreateFromDtoAsync(new CreatePersonalDto(PersonalFieldsDto.From(item)), cts.Token);
+      if (!disposed) DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
     }
+    catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
+    catch (Exception ex) { ShowError(ex, "Создание сотрудника"); }
+    finally { if (!disposed) isLoading = false; }
+  }
 
-    public void Dispose()
+  protected void HandleCancelButtonClick()
+  {
+    if (disposed) return;
+    cts.Cancel();
+    DialogService.Close(null);
+  }
+
+  private void ShowError(Exception ex, string operation)
+  {
+    if (disposed) return;
+    Logger.LogWarning(ex, "{Operation}", operation);
+    error = UserOperationErrors.Message(ex);
+    NotificationService.Notify(new NotificationMessage
     {
-      _cts.Cancel();
-      _cts.Dispose();
-    }
+      Severity = NotificationSeverity.Error, Summary = "Сотрудник", Detail = error,
+      Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+    });
+  }
+
+  public void Dispose()
+  {
+    if (disposed) return;
+    disposed = true;
+    cts.Cancel();
+    cts.Dispose();
   }
 }

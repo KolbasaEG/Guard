@@ -1,8 +1,9 @@
-<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Personals.ReadDetails" WritePermission="@Guard.Core.Identity.Permissions.Personals.Write">
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Personals.Write" WritePermission="@Guard.Core.Identity.Permissions.Personals.Write">
 @using Guard.Core.Entities
 @attribute [Authorize]
 
-<CreateEntity TItem="Personal" Data="@item" Submit="@FormSubmit"  OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading">
+<CreateEntity TItem="Personal" Data="@item" Name="Добавление сотрудника" Submit="@FormSubmit" ShowSaveButton="@loaded" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="@isLoading">
+  @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
   <Guard.Components.Pages.Administrator.Personals.Components.PersonalFields Item="@item" Subdivisions="@subdivisions" />
 </CreateEntity>
 </Guard.Components.Layout.Components.AccessDialog>

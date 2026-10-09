@@ -1,0 +1,21 @@
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Personals.ReadDetails">
+@using Guard.Core.Services.DTOs
+<EntityInfo Name="Системные данные сотрудника">
+  <RadzenStack Gap="10px" Style="overflow:auto;">
+    @if (timeError != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@timeError</RadzenAlert> }
+    <InfoBlock Title="Аудит" Icon="history" Style="flex-shrink:0;">
+      <RadzenText><strong>Создан:</strong> @FormatDate(Item.InsertedDate)</RadzenText>
+      <RadzenText><strong>Создал:</strong> @Display(Item.CreatedBy)</RadzenText>
+      <RadzenText><strong>Изменён:</strong> @FormatDate(Item.LastModifiedDate)</RadzenText>
+      <RadzenText><strong>Изменил:</strong> @Display(Item.ModifiedBy)</RadzenText>
+      <RadzenText><strong>Дата сверки:</strong> @FormatDate(Item.UpdatedAt)</RadzenText>
+    </InfoBlock>
+    <InfoBlock Title="Идентификаторы и коды" Icon="info" Style="flex-shrink:0;">
+      @foreach (var field in Identifiers())
+      {
+        <RadzenText><strong>@field.Key:</strong> @Display(field.Value)</RadzenText>
+      }
+    </InfoBlock>
+  </RadzenStack>
+</EntityInfo>
+</Guard.Components.Layout.Components.AccessDialog>

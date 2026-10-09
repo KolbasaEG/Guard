@@ -272,19 +272,7 @@ public class PersonalService : IPersonalService
         (p.MiddleName != null && p.MiddleName.ToLower().Contains(term)));
     }
     q = PersonalQueryFilter.Apply(q, request.Filter);
-    // Сортировка только по полям безопасного списка.
-    return request.OrderBy switch {
-      "FirstName" or "FirstName asc" => q.OrderBy(p => p.FirstName).ThenBy(p => p.Id),
-      "FirstName desc" => q.OrderByDescending(p => p.FirstName).ThenBy(p => p.Id),
-      "MiddleName" or "MiddleName asc" => q.OrderBy(p => p.MiddleName).ThenBy(p => p.Id),
-      "MiddleName desc" => q.OrderByDescending(p => p.MiddleName).ThenBy(p => p.Id),
-      "FullName" or "FullName asc" => q.OrderBy(p => p.FullName).ThenBy(p => p.Id),
-      "FullName desc" => q.OrderByDescending(p => p.FullName).ThenBy(p => p.Id),
-      "SubdivisionName" or "SubdivisionName asc" => q.OrderBy(p => p.Subdivision!.Name).ThenBy(p => p.Id),
-      "SubdivisionName desc" => q.OrderByDescending(p => p.Subdivision!.Name).ThenBy(p => p.Id),
-      "LastName desc" => q.OrderByDescending(p => p.LastName).ThenBy(p => p.FirstName).ThenBy(p => p.Id),
-      _ => q.OrderBy(p => p.LastName).ThenBy(p => p.FirstName).ThenBy(p => p.Id)
-    };
+    return PersonalListQuery.Sort(q, request.OrderBy);
   }
   private static IQueryable<PersonalListItemDto> ProjectList(IQueryable<Personal> query) =>
     query.Select(p => new PersonalListItemDto(p.Id, p.LastName, p.FirstName, p.MiddleName, p.FullName,

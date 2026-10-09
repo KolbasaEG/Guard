@@ -1,86 +1,34 @@
 <Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Personals.ReadDetails">
 @using Guard.Core.Services.DTOs
-<ViewEntity TItem="PersonalDetailsDto" Data="@item" Name="Карточка сотрудника" IsLoading="@isLoading" OnCancelButtonClick="@(() => Dialogs.Close(null))">
+<ViewEntity TItem="PersonalDetailsDto" Data="@item" Name="Карточка сотрудника" IsLoading="@isLoading"
+            ShowInfoButton="@(item != null)" OnInfoClick="OpenInfoAsync" OnCancelButtonClick="Close">
+  @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
   @if (item != null)
   {
-    <RadzenStack Gap="8px" Style="overflow:auto">
-      @foreach (var field in Fields(item))
-      {
-        <RadzenText><strong>@Label(field.Key):</strong> @Display(field.Value)</RadzenText>
-      }
+    <RadzenStack Gap="10px" Style="overflow:auto;">
+      <InfoBlock Title="Основные данные" Icon="person" Style="flex-shrink:0;">
+        <RadzenText><strong>Фамилия:</strong> @Display(item.LastName)</RadzenText>
+        <RadzenText><strong>Имя:</strong> @Display(item.FirstName)</RadzenText>
+        <RadzenText><strong>Отчество:</strong> @Display(item.MiddleName)</RadzenText>
+        <RadzenText><strong>Фамилия и инициалы:</strong> @Display(item.FullName)</RadzenText>
+        <RadzenText><strong>ФИО в родительном падеже:</strong> @Display(string.Join(" ", new[] { item.LastNameGen, item.FirstNameGen, item.MiddleNameGen }.Where(v => !string.IsNullOrWhiteSpace(v))))</RadzenText>
+        <RadzenText><strong>Состояние:</strong> @StatusName(item.Status)</RadzenText>
+      </InfoBlock>
+      <InfoBlock Title="Служба и подразделение" Icon="badge" Style="flex-shrink:0;">
+        <RadzenText><strong>Подразделение:</strong> @Display(item.SubdivisionName)</RadzenText>
+        <RadzenText><strong>Личный номер:</strong> @Display(item.PersonalNumber)</RadzenText>
+        <RadzenText><strong>Год принятия на службу:</strong> @Display(item.EnlistmentYear)</RadzenText>
+        <RadzenText><strong>Категория персонала:</strong> @Display(item.PersonnelCategoryName)</RadzenText>
+        <RadzenText><strong>Специальное звание:</strong> @Display(item.SpecialRankName)</RadzenText>
+        <RadzenText><strong>Должность:</strong> @Display(item.PositionName)</RadzenText>
+        <RadzenText><strong>Категория работника:</strong> @Display(item.WorkerCategoryName)</RadzenText>
+        <RadzenText><strong>Статус во внешней системе:</strong> @Display(item.StatusClassifierName)</RadzenText>
+      </InfoBlock>
+      <InfoBlock Title="Учётная запись и IP" Icon="lan" Style="flex-shrink:0;">
+        <RadzenText><strong>Имя пользователя:</strong> @Display(item.UserName)</RadzenText>
+        <RadzenText><strong>Назначенные IP:</strong> @Display(string.Join(", ", item.IpAddresses))</RadzenText>
+      </InfoBlock>
     </RadzenStack>
   }
 </ViewEntity>
-@code {
-  [Inject] public IPersonalService Service { get; set; } = default!;
-  [Inject] public DialogService Dialogs { get; set; } = default!;
-  [Inject] public ILogger<Details> Logger { get; set; } = default!;
-  [Parameter] public Guid Id { get; set; }
-  private PersonalDetailsDto? item;
-  private bool isLoading;
-  private static IEnumerable<KeyValuePair<string, object?>> Fields(PersonalDetailsDto item) {
-    yield return new("Id", item.Id);
-    yield return new("Status", item.Status);
-    yield return new("InsertedDate", item.InsertedDate);
-    yield return new("LastModifiedDate", item.LastModifiedDate);
-    yield return new("CreatedBy", item.CreatedBy);
-    yield return new("ModifiedBy", item.ModifiedBy);
-    yield return new("PersonalId", item.PersonalId);
-    yield return new("SubdivisionId", item.SubdivisionId);
-    yield return new("PersonalSubdivisionId", item.PersonalSubdivisionId);
-    yield return new("PersonnelCategoryType", item.PersonnelCategoryType);
-    yield return new("PersonnelCategoryCode", item.PersonnelCategoryCode);
-    yield return new("SpecialRankType", item.SpecialRankType);
-    yield return new("SpecialRankCode", item.SpecialRankCode);
-    yield return new("PositionType", item.PositionType);
-    yield return new("PositionCode", item.PositionCode);
-    yield return new("WorkerCategoryType", item.WorkerCategoryType);
-    yield return new("WorkerCategoryCode", item.WorkerCategoryCode);
-    yield return new("LastName", item.LastName);
-    yield return new("FirstName", item.FirstName);
-    yield return new("MiddleName", item.MiddleName);
-    yield return new("FullName", item.FullName);
-    yield return new("EnlistmentYear", item.EnlistmentYear);
-    yield return new("PersonalNumber", item.PersonalNumber);
-    yield return new("LastNameGen", item.LastNameGen);
-    yield return new("FirstNameGen", item.FirstNameGen);
-    yield return new("MiddleNameGen", item.MiddleNameGen);
-    yield return new("StatusType", item.StatusType);
-    yield return new("StatusCode", item.StatusCode);
-    yield return new("UpdatedAt", item.UpdatedAt);
-    yield return new("SubdivisionName", item.SubdivisionName);
-    yield return new("PersonnelCategoryName", item.PersonnelCategoryName);
-    yield return new("SpecialRankName", item.SpecialRankName);
-    yield return new("PositionName", item.PositionName);
-    yield return new("WorkerCategoryName", item.WorkerCategoryName);
-    yield return new("StatusClassifierName", item.StatusClassifierName);
-    yield return new("UserId", item.UserId);
-    yield return new("UserName", item.UserName);
-    yield return new("IpAddresses", string.Join(", ", item.IpAddresses));
-  }
-  [Inject] private Guard.Components.Library.BrowserTimeService Time { get; set; } = default!;
-  protected override async Task OnAfterRenderAsync(bool firstRender) { if (firstRender) { try { await Time.InitializeAsync(); StateHasChanged(); } catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс карточки"); } } }
-  private string Display(object? value) => value is DateTime date ? Time.Format(date) : value?.ToString() ?? "—";
-  private static readonly Dictionary<string,string> labels = new() {
-    ["Id"]="Идентификатор", ["PersonalId"]="Идентификатор во внешней системе", ["SubdivisionId"]="Подразделение",
-    ["PersonalSubdivisionId"]="Подразделение во внешней системе", ["LastName"]="Фамилия", ["FirstName"]="Имя",
-    ["MiddleName"]="Отчество", ["FullName"]="Фамилия и инициалы", ["EnlistmentYear"]="Год принятия на службу",
-    ["PersonalNumber"]="Личный номер", ["LastNameGen"]="Фамилия (род. падеж)", ["FirstNameGen"]="Имя (род. падеж)",
-    ["MiddleNameGen"]="Отчество (род. падеж)", ["PersonnelCategoryType"]="Тип категории персонала", ["PersonnelCategoryCode"]="Код категории персонала",
-    ["SpecialRankType"]="Тип звания", ["SpecialRankCode"]="Код звания", ["PositionType"]="Тип должности", ["PositionCode"]="Код должности",
-    ["WorkerCategoryType"]="Тип категории работника", ["WorkerCategoryCode"]="Код категории работника", ["StatusType"]="Тип статуса во внешней системе",
-    ["StatusCode"]="Код статуса во внешней системе", ["Status"]="Состояние", ["UpdatedAt"]="Дата сверки",
-    ["InsertedDate"]="Создан", ["LastModifiedDate"]="Изменён", ["CreatedBy"]="Создал", ["ModifiedBy"]="Изменил", ["SubdivisionName"]="Название подразделения", ["PersonnelCategoryName"]="Категория персонала",
-    ["SpecialRankName"]="Специальное звание", ["PositionName"]="Должность", ["WorkerCategoryName"]="Категория работника",
-    ["StatusClassifierName"]="Статус во внешней системе", ["IpAddresses"]="Назначенные IP", ["UserId"]="Учётная запись", ["UserName"]="Имя пользователя"
-  };
-  private static string Label(string name) => labels.GetValueOrDefault(name, name);
-  protected override async Task OnInitializedAsync()
-  {
-    isLoading = true;
-    try { item = await Service.GetDetailsAsync(Id); if (item == null) Dialogs.Close(null); }
-    catch (Exception ex) { Logger.LogWarning(ex, "Карточка сотрудника недоступна"); Dialogs.Close(null); }
-    finally { isLoading = false; }
-  }
-}
 </Guard.Components.Layout.Components.AccessDialog>

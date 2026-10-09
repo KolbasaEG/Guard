@@ -46,11 +46,11 @@ public class PersonalIpService(IDbContextFactory<ApplicationDbContext> factory,
         ?? throw new KeyNotFoundException("Сотрудник не найден.");
     RequireAccess(personal, scope);
     if (personal.Status is not (Status.Inserted or Status.Modified))
-      throw new InvalidOperationException("Назначения можно менять только у активного незаблокированного сотрудника.");
+      throw new EntityRuleException("Назначения можно менять только у активного незаблокированного сотрудника.");
     var selected = await db.IpAddresses.Where(ip => ids.Contains(ip.Id)).ToListAsync(ct);
     if (selected.Count != ids.Length || selected.Any(ip => ip.Status is not (Status.Inserted or Status.Modified) ||
         !personal.SubdivisionId.HasValue || ip.SubdivisionId != personal.SubdivisionId))
-      throw new InvalidOperationException("Выбраны недоступные или неактивные IP-адреса. Обновите список.");
+      throw new EntityRuleException("Выбраны недоступные или неактивные IP-адреса. Обновите список.");
     foreach (var old in personal.IpAddresses.ToList())
       if (personal.SubdivisionId.HasValue && old.SubdivisionId == personal.SubdivisionId)
         personal.IpAddresses.Remove(old);
