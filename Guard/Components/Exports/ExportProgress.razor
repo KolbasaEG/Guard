@@ -1,0 +1,68 @@
+@using Guard.Core.Enums
+@using Guard.Core.Services.Exports
+@implements IAsyncDisposable
+@inject IDataExportService Service
+@inject DialogService Dialogs
+@inject ILogger<ExportProgress> Logger
+
+<ViewEntity TItem="ExportJobDto" Data="job" Name="ЭКСПОРТ ДАННЫХ" Icon="download" IsLoading="@(job == null && error == null)" OnCancelButtonClick="@(() => Dialogs.Close(null))">
+  <RadzenStack Gap="12px">
+    @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
+    @if (job != null) {
+      <RadzenText>Выгрузка: @job.Id</RadzenText>
+      <RadzenText>@StateText(job.State)</RadzenText>
+      @if (job.State == ExportJobState.Queued || job.State == ExportJobState.Processing) {
+        @* Radzen uses Value for the animated container width even in indeterminate mode. *@
+        <RadzenProgressBar Mode="ProgressBarMode.Indeterminate" Value="100" ShowValue="false" />
+      }
+      @if (job.Error != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@job.Error</RadzenAlert> }
+      @if (job.State == ExportJobState.Ready) {
+        <RadzenText>Строк: @job.RowCount. Архивная копия сохранена. Доступна одна попытка скачивания.</RadzenText>
+        <form action="@($"exports/{job.Id}/download")" method="post" target="_blank" data-enhance="false">
+          <AntiforgeryToken />
+          <RadzenButton Text="Скачать" Icon="download" ButtonType="ButtonType.Submit" />
+        </form>
+      }
+      @if (job.State is ExportJobState.Queued or ExportJobState.Processing or ExportJobState.Ready) {
+        <RadzenButton Text="Отменить выгрузку" ButtonStyle="ButtonStyle.Light" Click="CancelAsync" />
+      }
+    }
+  </RadzenStack>
+</ViewEntity>
+
+@code {
+  [Parameter] public ExportRequest? Request { get; set; }
+  [Parameter] public Guid? JobId { get; set; }
+  private ExportJobDto? job; private string? error;
+  private readonly CancellationTokenSource cts = new(); private Task? polling;
+  protected override async Task OnInitializedAsync()
+  {
+    try {
+      var id = JobId ?? await Service.CreateAsync(Request ?? throw new ArgumentException("Не заданы параметры экспорта."), cts.Token);
+      JobId = id; job = await Service.GetAsync(id, cts.Token); polling = PollAsync(id);
+    } catch (Exception ex) { ShowError(ex); }
+  }
+  private async Task PollAsync(Guid id)
+  {
+    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+    try {
+      while (await timer.WaitForNextTickAsync(cts.Token)) {
+        await InvokeAsync(async () => { job = await Service.GetAsync(id, cts.Token); StateHasChanged(); });
+        if (job?.State is ExportJobState.Delivered or ExportJobState.Failed or ExportJobState.Cancelled or ExportJobState.Expired) break;
+      }
+    } catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
+    catch (Exception ex) { await InvokeAsync(() => { ShowError(ex); StateHasChanged(); }); }
+  }
+  private async Task CancelAsync()
+  {
+    try { if (JobId is Guid id) await Service.CancelAsync(id, cts.Token); }
+    catch (Exception ex) { ShowError(ex); }
+  }
+  private void ShowError(Exception ex) { Logger.LogWarning(ex, "Экспорт данных"); error = UserOperationErrors.Message(ex); }
+  public static string StateText(ExportJobState state) => state switch {
+    ExportJobState.Queued => "Ожидает формирования", ExportJobState.Processing => "Формирование документа", ExportJobState.Ready => "Готово к скачиванию",
+    ExportJobState.Delivering => "Передача файла", ExportJobState.Delivered => "Файл передан сервером", ExportJobState.Cancelled => "Отменено",
+    ExportJobState.Expired => "Срок хранения истёк", _ => "Не удалось завершить выгрузку"
+  };
+  public async ValueTask DisposeAsync() { cts.Cancel(); if (polling != null) await polling; cts.Dispose(); }
+}

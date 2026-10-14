@@ -1,0 +1,60 @@
+@using Guard.Core.Entities
+@using Guard.Components.Exports
+@attribute [Authorize(Policy = Permissions.Exports.ReadArchive)]
+
+<TableWrapperWithFilterAndAnalytics>
+  <Table>
+    <RadzenDataGrid TItem="ExportArchiveItem" @ref="grid" Data="filteredData" Count="count" IsLoading="isLoading" LoadData="LoadAsync"
+      AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new int[] { 10, 20, 50, 100 })" Density="Density.Compact"
+      AllowColumnResize="true" ColumnWidth="180px" Style="height:100%;" EmptyText="Выгрузки не найдены" ShowPagingSummary="true"
+      FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" PrevPageTitle="Предыдущая страница" PrevPageAriaLabel="К предыдущей странице"
+      NextPageTitle="Следующая страница" NextPageAriaLabel="К следующей странице" LastPageTitle="Последняя страница" LastPageAriaLabel="К последней странице" PageAriaLabelFormat="К странице {0}"
+      PagingSummaryFormat="Страница {0} из {1} (всего {2} записей)" PageSizeText="записей на странице" PagerPosition="PagerPosition.Top" PagerHorizontalAlign="HorizontalAlign.Right">
+      <HeaderTemplate>
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0px">
+          <RadzenButton Icon="refresh" Click="@(grid.Reload)" Variant="Variant.Text" Style="border-radius:0px;" />
+          <RadzenButton Icon="settings" Text="Срок хранения" Click="ConfigureAsync" Variant="Variant.Text" Style="border-radius:0px;" />
+        </RadzenStack>
+      </HeaderTemplate>
+      <Columns>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Id" SortProperty="Id" Title="Номер выгрузки" Width="250px" />
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Author" SortProperty="AuthorName" Title="Автор" />
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="ClientIp" SortProperty="ClientIp" Title="IP" />
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Area" SortProperty="Area" Title="Область"><Template Context="item">@ExportSchema.Title(item.Area)</Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Format" SortProperty="Format" Title="Формат"><Template Context="item">@(item.Format == ExportFormat.Excel ? "Excel" : "Word")</Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="State" SortProperty="State" Title="Состояние"><Template Context="item">@ExportProgress.StateText(item.State)</Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="CreatedAtUtc" SortProperty="CreatedAtUtc" Title="Создано"><Template Context="item">@FormatTime(item.CreatedAtUtc)</Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="ExpiresAtUtc" SortProperty="ExpiresAtUtc" Title="Хранить до"><Template Context="item">@FormatTime(item.ExpiresAtUtc)</Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="RowCount" SortProperty="RowCount" Title="Строк" />
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Title="Просмотр" Sortable="false" Width="75px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right"><Template Context="item">
+          <RadzenButton Icon="visibility" Size="ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat"
+            Disabled="@(item.Sha256 == null || item.State == ExportJobState.Expired)" Click="@(() => ViewAsync(item.Id))" />
+        </Template></RadzenDataGridColumn>
+      </Columns>
+    </RadzenDataGrid>
+  </Table>
+  <Filter>
+    <RadzenDataFilter TItem="ExportJob" @ref="dataFilter" Data="data" Auto="false" AndOperatorText="И" OrOperatorText="Или"
+      AddFilterText="Добавить условие" AddFilterGroupText="Добавить группу" FilterText="Фильтр" EqualsText="Равно" NotEqualsText="Не равно"
+      ContainsText="Содержит" DoesNotContainText="Не содержит" StartsWithText="Начинается с" EndsWithText="Заканчивается на"
+      GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" LessThanText="Меньше" LessThanOrEqualsText="Меньше или равно"
+      IsNullText="Пусто" IsNotNullText="Не пусто" ClearFilterText="Очистить" ApplyFilterText="Применить" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
+      <Properties>
+        <RadzenDataFilterProperty TItem="ExportJob" Property="AuthorName" Title="Автор" />
+        <RadzenDataFilterProperty TItem="ExportJob" Property="ClientIp" Title="IP" />
+        <RadzenDataFilterProperty TItem="ExportJob" Property="CreatedAtUtc" Title="Дата создания" />
+        <RadzenDataFilterProperty TItem="ExportJob" Property="Area" Title="Область"><FilterTemplate Context="filter">
+          <RadzenDropDown TValue="object" @bind-Value="filter.FilterValue" Data="@(Enum.GetValues<ExportArea>().Select(a => new { Value = a, Text = ExportSchema.Title(a) }))" TextProperty="Text" ValueProperty="Value" />
+        </FilterTemplate></RadzenDataFilterProperty>
+        <RadzenDataFilterProperty TItem="ExportJob" Property="Format" Title="Формат"><FilterTemplate Context="filter">
+          <RadzenDropDown TValue="object" @bind-Value="filter.FilterValue" Data="@(Enum.GetValues<ExportFormat>().Select(a => new { Value = a, Text = a == ExportFormat.Excel ? "Excel" : "Word" }))" TextProperty="Text" ValueProperty="Value" />
+        </FilterTemplate></RadzenDataFilterProperty>
+        <RadzenDataFilterProperty TItem="ExportJob" Property="State" Title="Состояние"><FilterTemplate Context="filter">
+          <RadzenDropDown TValue="object" @bind-Value="filter.FilterValue" Data="@(Enum.GetValues<ExportJobState>().Select(a => new { Value = a, Text = ExportProgress.StateText(a) }))" TextProperty="Text" ValueProperty="Value" />
+        </FilterTemplate></RadzenDataFilterProperty>
+      </Properties>
+    </RadzenDataFilter>
+  </Filter>
+  <FilterButtons><RadzenButton Text="Применить" Icon="filter_alt" Click="ApplyAsync" Variant="Variant.Text" /></FilterButtons>
+  <Analitycs><AnalitycsWrapper><RadzenText>Точные копии выгрузок для расследований. Скачивание из архива не предусмотрено.</RadzenText></AnalitycsWrapper></Analitycs>
+</TableWrapperWithFilterAndAnalytics>

@@ -11,7 +11,6 @@ public interface IPersonalService
 {
   Task<Guard.Core.Services.DTOs.PersonalSearchResult> SearchAsync(Guard.Core.Services.DTOs.PersonalSearchRequest request, CancellationToken ct = default);
   Task<Guard.Core.Services.DTOs.PersonalDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default);
-  Task<byte[]> ExportAsync(Guard.Core.Services.DTOs.PersonalSearchRequest request, CancellationToken ct = default);
   /// <summary>
   /// Асинхронно получает список всех активных подразделений (исключая удалённые и архивированные).
   /// </summary>

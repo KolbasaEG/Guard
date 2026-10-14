@@ -18,6 +18,14 @@
   PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" ShowPagingSummary="true" PagingSummaryFormat="@PagingSummaryFormat">
   <HeaderTemplate>
     <RadzenStack Orientation="Orientation.Horizontal" Gap="8px" AlignItems="AlignItems.Center" Style="width:100%;position:relative;min-height:36px;">
+          @if (Access?.Has(Permissions.Personals.Export) == true) {
+            <RadzenMenu>
+              <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
+                <Guard.Components.Exports.ExportActions Area="ExportArea.Personals" BuildRequest="BuildExportRequestAsync" Disabled="ActionsDisabled" />
+              </RadzenMenuItem>
+            </RadzenMenu>
+          }
+
       <RadzenSelectBar Size="ButtonSize.Medium" Style="position:absolute;left:50%;transform:translateX(-50%);background-color:var(--rz-menu-top-item-background-color);border-radius:0px;" TValue="DataViewMode" @bind-Value="mode" Change="@(() => ResetPageAsync())">
         <Items>
           <RadzenSelectBarItem Value="@DataViewMode.Active" Text="Активные" Style="border-radius:0px;width:105px;text-align:center;" />
@@ -38,7 +46,6 @@
         InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Переключение режима отображения иерархии" })" />
       <RadzenButton Icon="refresh" title="Обновить" Click="ReloadAsync" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" />
       <RadzenButton Icon="add_circle_outline" title="Добавить" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" Visible="@(!apiManaged && Access?.Has(Permissions.Personals.Write) == true)" Click="AddAsync" />
-      <RadzenButton Icon="get_app" title="Экспорт CSV" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" Visible="@(!apiManaged && Access?.Has(Permissions.Personals.Export) == true)" Click="ExportAsync" />
       </RadzenStack>
     </RadzenStack>
 

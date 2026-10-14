@@ -7,6 +7,8 @@ namespace Guard.Components.Library;
 
 public static class EntityListQuery<T>
 {
+  public static CompositeFilterDescriptor[] Snapshot(RadzenDataFilter<T> filter, IReadOnlySet<string> fields, BrowserTimeService time) =>
+    (filter.Filters ?? []).Select(f => Clone(f, fields, time)).ToArray();
   public static Func<IQueryable<T>, IQueryable<T>> Capture(RadzenDataFilter<T> filter,
       IReadOnlySet<string> fields, BrowserTimeService time)
   {

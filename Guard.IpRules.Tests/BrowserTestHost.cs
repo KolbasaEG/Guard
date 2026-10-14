@@ -39,6 +39,9 @@ internal static class BrowserTestHost
     start.Environment["ConnectionStrings__LogsConnection"] = isolatedConnection;
     start.Environment["Audit__Syslog__Host"] = "127.0.0.1";
     start.Environment["Audit__Syslog__Port"] = "9";
+    var exportDirectory = Path.Combine(Path.GetTempPath(), "guard-browser-export-" + Guid.NewGuid().ToString("N"));
+    start.Environment["Exports__Directory"] = exportDirectory;
+    start.Environment["DataProtection__KeyDirectory"] = Path.Combine(exportDirectory, "keys");
     using var process = Process.Start(start) ?? throw new InvalidOperationException("Не удалось запустить тестовый сервер.");
     var output = process.StandardOutput.ReadToEndAsync();
     var error = process.StandardError.ReadToEndAsync();
@@ -60,6 +63,7 @@ internal static class BrowserTestHost
       if (!process.HasExited) process.Kill(entireProcessTree: true);
       await process.WaitForExitAsync();
       await File.WriteAllTextAsync("Guard/obj/account-policy-browser.log", await output + await error);
+      if (Directory.Exists(exportDirectory)) Directory.Delete(exportDirectory, true);
     }
   }
 }

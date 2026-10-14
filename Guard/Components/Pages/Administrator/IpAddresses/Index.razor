@@ -16,6 +16,14 @@
                     Style="height:100%;">
       <HeaderTemplate>
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%; position:relative; min-height:36px;">
+          @if (AccessSnapshot?.Has(Permissions.IpAddresses.Export) == true) {
+            <RadzenMenu>
+              <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
+                <Guard.Components.Exports.ExportActions Area="ExportArea.IpAddresses" BuildRequest="BuildExportRequestAsync" Disabled="isLoading" />
+              </RadzenMenuItem>
+            </RadzenMenu>
+          }
+
 
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="5px" Style="position:absolute; left:50%; transform:translateX(-50%);">
             <RadzenSelectBar TValue="DataViewMode" Size="ButtonSize.Medium" @bind-Value="@currentMode" Change="() => ResetPageAsync()" Style="background-color: var(--rz-menu-top-item-background-color); border-radius: 0px;">

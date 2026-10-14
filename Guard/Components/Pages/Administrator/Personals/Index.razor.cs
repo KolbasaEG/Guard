@@ -1,3 +1,4 @@
+using Guard.Core.Services.Exports;
 using Guard.Components.Library.Dialogs;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
@@ -243,22 +244,12 @@ public partial class Index : IDisposable
     finally { operationPending = false; }
   }
 
-  protected async Task ExportAsync()
+  [Inject] protected Guard.Components.Library.BrowserTimeService ExportTime { get; set; } = default!;
+  protected async Task<ExportRequest> BuildExportRequestAsync(ExportFormat format)
   {
-    if (disposed || operationPending || Access?.Has(Permissions.Personals.Export) != true) return;
-    operationPending = true;
-    try
-    {
-      var bytes = await Service.ExportAsync(Request(), cts.Token);
-      if (disposed) return;
-      await using var module = await JS.InvokeAsync<IJSObjectReference>("import", cts.Token, "./js/download.js");
-      using var stream = new MemoryStream(bytes);
-      using var reference = new DotNetStreamReference(stream);
-      await module.InvokeVoidAsync("downloadFile", cts.Token, "Сотрудники.csv", reference);
-    }
-    catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
-    catch (Exception ex) { ShowError(ex, "Экспорт сотрудников"); }
-    finally { operationPending = false; }
+    await ExportTime.InitializeAsync();
+    return new(ExportArea.Personals, format, mode, hierarchy == SubdivisionHierarchyMode.IncludeChildren,
+      ShowAll, sort, PersonalFilter: appliedFilter, TimeZone: ExportTime.Zone!.Id);
   }
 
   private void ShowError(Exception ex, string operation)

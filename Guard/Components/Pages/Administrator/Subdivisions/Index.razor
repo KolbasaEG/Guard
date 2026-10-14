@@ -20,6 +20,9 @@
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
             <RadzenMenu>
               <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
+                @if (Access?.Has(Permissions.Subdivisions.Export) == true) {
+                <Guard.Components.Exports.ExportActions Area="ExportArea.Subdivisions" BuildRequest="BuildExportRequestAsync" Disabled="isLoading" />
+              }
                 <RadzenMenuItem Text="Правка подчиненности" Visible="@(Access?.IsRoot == true)" Icon="get_app" Click="@RebuildHierarchyAndPathsAsync" Style="font-weight:500;" />
               </RadzenMenuItem>
             </RadzenMenu>

@@ -33,6 +33,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
   public DbSet<Subdivision> Subdivisions { get; set; } = null!;
   public DbSet<Classifier> Classifiers { get; set; } = null!;
   public DbSet<Personal> Personals { get; set; } = null!;
+  public DbSet<ExportJob> ExportJobs { get; set; } = null!;
+  public DbSet<ExportArtifact> ExportArtifacts { get; set; } = null!;
+  public DbSet<ExportDeliveryAttempt> ExportDeliveryAttempts { get; set; } = null!;
+  public DbSet<ExportRetentionSettings> ExportRetentionSettings { get; set; } = null!;
   public DbSet<SynchronizationSettings> SynchronizationSettings { get; set; } = null!;
   public DbSet<SynchronizationRun> SynchronizationRuns { get; set; } = null!;
 

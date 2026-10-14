@@ -33,6 +33,7 @@ AccountPolicyTests.Run(Check);
 await LoginLockoutTests.RunAsync(Check);
 EntityStatusTests.Run(Check);
 await RefactorTests.RunAsync(Check);
+await ExportTests.RunAsync(Check);
 await ApiSynchronizationTests.RunAsync(Check);
 await ApiDependencyHttpTests.RunAsync(Check);
 ApiDiagnosticTests.Run(Check);

@@ -1,0 +1,23 @@
+@inject IDataExportService Service
+@inject ILogger<ArchiveInfo> Logger
+
+<EntityInfo Name="СВЕДЕНИЯ О ВЫГРУЗКЕ">
+  @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
+  @if (details != null) {
+    <RadzenText>Номер: @Id</RadzenText>
+    <RadzenText>@details.Conditions</RadzenText>
+    <RadzenText>Размер: @details.Size байт</RadzenText>
+    <RadzenText Style="overflow-wrap:anywhere;">SHA-256: @details.Sha256</RadzenText>
+    <RadzenText>Начало передачи UTC: @details.DeliveryStartedAtUtc</RadzenText>
+    <RadzenText>Завершение передачи UTC: @details.DeliveryCompletedAtUtc</RadzenText>
+    <RadzenText>Результат: @(details.DeliverySucceeded == true ? "Файл передан сервером" : details.DeliverySucceeded == false ? "Передача не завершена" : "Передача не начиналась")</RadzenText>
+  }
+</EntityInfo>
+@code {
+  [Parameter] public Guid Id { get; set; }
+  private ExportArchiveDetails? details; private string? error;
+  protected override async Task OnInitializedAsync() {
+    try { details = await Service.GetArchiveDetailsAsync(Id); }
+    catch (Exception ex) { Logger.LogWarning(ex, "Сведения архива {ExportId}", Id); error = UserOperationErrors.Message(ex); }
+  }
+}

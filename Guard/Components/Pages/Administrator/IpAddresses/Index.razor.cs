@@ -1,3 +1,4 @@
+using Guard.Core.Services.Exports;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
@@ -46,6 +47,15 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
     IEnumerable<string>? itemsSubdivision;
     IEnumerable<string>? selectedItemsSubdivision;
     private Func<IQueryable<IpAddress>, IQueryable<IpAddress>> appliedFilter = query => query;
+    private ExportFilter? exportFilter;
+    private string? exportSort;
+    [Inject] protected Guard.Components.Library.BrowserTimeService ExportTime { get; set; } = default!;
+    protected async Task<ExportRequest> BuildExportRequestAsync(ExportFormat format)
+    {
+      await ExportTime.InitializeAsync();
+      return new(ExportArea.IpAddresses, format, currentMode, hierarchyMode == SubdivisionHierarchyMode.IncludeChildren,
+        OrderBy: exportSort, Filter: exportFilter, TimeZone: ExportTime.Zone!.Id);
+    }
     private bool disposed;
     protected string? loadError;
     private string? accessVersion;
@@ -117,7 +127,7 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
       var path = UserContext?.Subdivision?.Path;
       var skip = args.Skip ?? 0;
       var take = args.Top ?? 20;
-      var orderBy = args.OrderBy;
+      var orderBy = args.OrderBy; exportSort = orderBy;
       isLoading = true; loadError = null;
       try
       {
@@ -256,7 +266,10 @@ namespace Guard.Components.Pages.Administrator.IpAddresses
     async Task ApplyFilter()
     {
       try {
-        appliedFilter = IpListQuery.Capture(dataFilter);
+        var candidate = IpListQuery.Capture(dataFilter);
+        var snapshot = ExportFilters.Capture(dataFilter.Filters ?? [], dataFilter.LogicalFilterOperator);
+        _ = ExportFilters.Apply(Array.Empty<IpAddress>().AsQueryable(), snapshot, ExportQueries.IpFields);
+        appliedFilter = candidate; exportFilter = snapshot;
         await ResetPageAsync();
       } catch (ArgumentException ex) {
         Logger.LogWarning(ex, "Некорректные условия фильтра IP");

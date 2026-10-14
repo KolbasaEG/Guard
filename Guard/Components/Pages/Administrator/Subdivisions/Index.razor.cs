@@ -1,3 +1,4 @@
+using Guard.Core.Services.Exports;
 using Guard.Components.Library;
 using Guard.Core.Services.DTOs;
 using Guard.Components.Library.Loading;
@@ -18,6 +19,12 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 {
   public partial class Index : IDisposable
   {
+    protected async Task<ExportRequest> BuildExportRequestAsync(ExportFormat format)
+    {
+      await Time.InitializeAsync();
+      return new(ExportArea.Subdivisions, format, currentMode, hierarchyMode == SubdivisionHierarchyMode.IncludeChildren,
+        ShowAll, exportSort, exportFilter, TimeZone: Time.Zone!.Id);
+    }
     protected bool apiManaged = true;
     private readonly Guard.Components.Library.Loading.ListLoadConfirmation synchronizationLoad = new();
     protected Task<bool> ReloadForSynchronizationAsync() => synchronizationLoad.ReloadAsync(ReloadGridForSynchronizationAsync);
@@ -28,6 +35,8 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     [Inject] protected BrowserTimeService Time { get; set; } = default!;
     private static readonly HashSet<string> supportedFields = ["Address", "Fax", "Id", "InsertedDate", "IsDepartment", "LevelOrder", "Name", "OrganType.Value",  "Parent.Name", "Path", "Phone", "PositionFormationName", "PostalCode", "StaffCount", "StatusClassifier.Value", "StatusClassifier.Value"];
     private Func<IQueryable<Subdivision>, IQueryable<Subdivision>> appliedFilter = q => q;
+    private ExportFilter? exportFilter;
+    private string? exportSort;
     private bool disposed, reloadPending = true;
     private Guard.Core.Identity.UserContext? loadedContext;
     private Guard.Core.Services.DTOs.UserAccessSnapshot? loadedAccess;
@@ -95,6 +104,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     protected async Task LoadData(LoadDataArgs args)
     {
       if (disposed || Time.Zone == null) return;
+      exportSort = args.OrderBy;
       var loadTicket = synchronizationLoad.Begin();
       _loadDataCts?.Cancel();
       var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
@@ -252,7 +262,10 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     }
 
 
-    async Task ApplyFilter() { try { appliedFilter = EntityListQuery<Subdivision>.Capture(dataFilter, supportedFields, Time); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
+    async Task ApplyFilter() { try { var candidate = EntityListQuery<Subdivision>.Capture(dataFilter, supportedFields, Time);
+        var snapshot = ExportFilters.Capture(EntityListQuery<Subdivision>.Snapshot(dataFilter, supportedFields, Time), dataFilter.LogicalFilterOperator);
+        _ = ExportFilters.Apply(Array.Empty<Subdivision>().AsQueryable(), snapshot, supportedFields);
+        appliedFilter = candidate; exportFilter = snapshot; await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
 
     private void ShowSuccessNotification(string detail)
     {

@@ -1,0 +1,35 @@
+@using Guard.Core.Enums
+@using Guard.Core.Services.Exports
+@inject DialogService Dialogs
+@inject IDataExportService Service
+@inject NotificationService Notifications
+@inject ILogger<ExportActions> Logger
+
+<RadzenMenuItem Text="Экспорт в Excel" Icon="table_view" Click="@(() => StartAsync(ExportFormat.Excel))" Disabled="@Disabled" />
+<RadzenMenuItem Text="Экспорт в Word" Icon="description" Click="@(() => StartAsync(ExportFormat.Word))" Disabled="@Disabled" />
+<RadzenMenuItem Text="Незавершённые выгрузки" Icon="download" Click="OpenActiveAsync" />
+@code {
+  [Parameter, EditorRequired] public Func<ExportFormat, Task<ExportRequest>> BuildRequest { get; set; } = default!;
+  [Parameter] public ExportArea Area { get; set; }
+  [Parameter] public bool Disabled { get; set; }
+  private async Task StartAsync(ExportFormat format)
+  {
+    try {
+      var request = await BuildRequest(format);
+      await Dialogs.OpenAsync<ExportProgress>("", new Dictionary<string, object?> { ["Request"] = request },
+        new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+    } catch (Exception ex) { ShowError(ex); }
+  }
+  private async Task OpenActiveAsync()
+  {
+    try {
+      var jobs = await Service.GetActiveAsync(Area);
+      if (jobs.Count == 0) { Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Выгрузки", Detail = "Незавершённых выгрузок нет.", Style = NotificationStyle }); return; }
+      foreach (var job in jobs) await Dialogs.OpenAsync<ExportProgress>("", new Dictionary<string, object?> { ["JobId"] = job.Id },
+        new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+    } catch (Exception ex) { ShowError(ex); }
+  }
+  private const string NotificationStyle = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;";
+  private void ShowError(Exception ex) { Logger.LogWarning(ex, "Открытие экспорта"); Notifications.Notify(new NotificationMessage {
+    Severity = NotificationSeverity.Error, Summary = "Экспорт", Detail = UserOperationErrors.Message(ex), Style = NotificationStyle }); }
+}

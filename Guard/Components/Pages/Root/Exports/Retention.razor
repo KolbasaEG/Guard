@@ -1,0 +1,16 @@
+@using Guard.Core.Entities
+@inject IDataExportService Service
+@inject DialogService Dialogs
+@inject ILogger<Retention> Logger
+
+<EditEntity TItem="ExportRetentionSettings" Data="setting" Name="СРОК ХРАНЕНИЯ ВЫГРУЗОК" IsLoading="loading" Submit="SaveAsync" OnCancelButtonClick="@(() => Dialogs.Close(null))">
+  @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
+  <RadzenFormField Text="Срок хранения, лет"><RadzenNumeric TValue="int" @bind-Value="setting.Years" Min="1" Max="30" /></RadzenFormField>
+  <RadzenText>По умолчанию — 3 года. Изменение применяется только к новым выгрузкам.</RadzenText>
+</EditEntity>
+@code {
+  private ExportRetentionSettings setting = new(); private bool loading = true; private string? error;
+  protected override async Task OnInitializedAsync() { try { setting = await Service.GetRetentionAsync(); } catch (Exception ex) { Error(ex); } finally { loading = false; } }
+  private async Task SaveAsync() { loading = true; try { await Service.SaveRetentionAsync(setting.Years, setting.Version); Dialogs.Close(true); } catch (Exception ex) { Error(ex); } finally { loading = false; } }
+  private void Error(Exception ex) { Logger.LogWarning(ex, "Настройка хранения"); error = UserOperationErrors.Message(ex); }
+}

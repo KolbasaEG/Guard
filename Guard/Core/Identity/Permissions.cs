@@ -16,6 +16,7 @@ public static class Permissions
   }
   public static class Subdivisions
   {
+    public const string Export = "Permissions.Subdivisions.Export";
     public const string Read = "Permissions.Subdivisions.Read";
     public const string ReadArchive = "Permissions.Subdivisions.ReadArchive";
     public const string Write = "Permissions.Subdivisions.Write";
@@ -27,6 +28,7 @@ public static class Permissions
   }
   public static class IpAddresses
   {
+    public const string Export = "Permissions.IpAddresses.Export";
     public const string Read = "Permissions.IpAddresses.Read";
     public const string Manage = "Permissions.IpAddresses.Manage";
   }
@@ -40,6 +42,11 @@ public static class Permissions
   {
     public const string Read = "Permissions.Logs.Read";
     public const string Configure = "Permissions.Logs.Configure";
+  }
+  public static class Exports
+  {
+    public const string ReadArchive = "Permissions.Exports.ReadArchive";
+    public const string Configure = "Permissions.Exports.Configure";
   }
   public static class Roles
   {

@@ -11,6 +11,7 @@
       <RadzenPanelMenuItem Text="Синхронизация" Icon="sync" Path="/synchronization" />
       <RadzenPanelMenuItem Text="Логгирование" Icon="admin_panel_settings" Path="/Logs" Visible="@(Access?.Has(Permissions.Logs.Read) == true)" />
       <RadzenPanelMenuItem Text="Роли" Icon="domino_mask" Path="/roles" Visible="@(Access?.Has(Permissions.Roles.Read) == true)" />
+      <RadzenPanelMenuItem Text="Архив выгрузок" Icon="inventory_2" Path="/export-archive" Visible="@(Access?.Has(Permissions.Exports.ReadArchive) == true)" />
     </RadzenPanelMenu>
   </MenueContent>
 </Guard.Components.Layout.Components.MainTemplate>

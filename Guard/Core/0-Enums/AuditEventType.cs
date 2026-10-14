@@ -25,5 +25,14 @@ public enum AuditEventType
   UserUnblocked = 18,
   AccountPolicyChanged = 19,
   SynchronizationSettingsChanged = 20,
-  SynchronizationCompleted = 21
+  SynchronizationCompleted = 21,
+  ExportRequested = 22,
+  ExportArchived = 23,
+  ExportDeliveryStarted = 24,
+  ExportDeliveryCompleted = 25,
+  ExportFailed = 26,
+  ExportCancelled = 27,
+  ExportArchiveViewed = 28,
+  ExportRetentionChanged = 29,
+  ExportExpired = 30
 }

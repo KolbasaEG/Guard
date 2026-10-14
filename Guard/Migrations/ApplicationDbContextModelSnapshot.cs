@@ -282,6 +282,173 @@ namespace Guard.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Guard.Core.Entities.ExportArtifact", b =>
+                {
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTimeOffset?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("IncludesUnassigned")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SubdivisionIdsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.HasKey("JobId");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
+                    b.ToTable("ExportArtifacts", (string)null);
+                });
+
+            modelBuilder.Entity("Guard.Core.Entities.ExportDeliveryAttempt", b =>
+                {
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("JobId");
+
+                    b.ToTable("ExportDeliveryAttempts", (string)null);
+                });
+
+            modelBuilder.Entity("Guard.Core.Entities.ExportJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Area")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AuthorId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("CancelRequested")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ClientIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Format")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RequestJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<long>("RowCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.HasIndex("AuthorId", "CreatedAtUtc");
+
+                    b.HasIndex("State", "CreatedAtUtc");
+
+                    b.ToTable("ExportJobs", (string)null);
+                });
+
+            modelBuilder.Entity("Guard.Core.Entities.ExportRetentionSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ModifiedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Years")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ExportRetentionSettings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ExportRetentionSettings_Id", "\"Id\" = 1");
+
+                            t.HasCheckConstraint("CK_ExportRetentionSettings_Years", "\"Years\" BETWEEN 1 AND 30");
+                        });
+                });
+
             modelBuilder.Entity("Guard.Core.Entities.IpAddress", b =>
                 {
                     b.Property<Guid>("Id")
@@ -950,6 +1117,28 @@ namespace Guard.Migrations
                     b.Navigation("Personal");
                 });
 
+            modelBuilder.Entity("Guard.Core.Entities.ExportArtifact", b =>
+                {
+                    b.HasOne("Guard.Core.Entities.ExportJob", "Job")
+                        .WithOne("Artifact")
+                        .HasForeignKey("Guard.Core.Entities.ExportArtifact", "JobId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+                });
+
+            modelBuilder.Entity("Guard.Core.Entities.ExportDeliveryAttempt", b =>
+                {
+                    b.HasOne("Guard.Core.Entities.ExportJob", "Job")
+                        .WithOne("Delivery")
+                        .HasForeignKey("Guard.Core.Entities.ExportDeliveryAttempt", "JobId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+                });
+
             modelBuilder.Entity("Guard.Core.Entities.IpAddress", b =>
                 {
                     b.HasOne("Guard.Core.Entities.Subdivision", "Subdivision")
@@ -1105,6 +1294,13 @@ namespace Guard.Migrations
             modelBuilder.Entity("Guard.Core.Entities.Classifier", b =>
                 {
                     b.Navigation("Subdivisions");
+                });
+
+            modelBuilder.Entity("Guard.Core.Entities.ExportJob", b =>
+                {
+                    b.Navigation("Artifact");
+
+                    b.Navigation("Delivery");
                 });
 
             modelBuilder.Entity("Guard.Core.Entities.Personal", b =>

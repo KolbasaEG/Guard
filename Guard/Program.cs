@@ -6,6 +6,7 @@ using Guard.Core.Interceptors;
 using Guard.Core.Logging;
 using Guard.Core.Repositories;
 using Guard.Core.Services;
+using Guard.Core.Services.Exports;
 using Guard.Middlewares;
 using Guard.Core.Identity;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -234,6 +235,15 @@ builder.Services.AddScoped(typeof(IBasicRepository<>), typeof(BasicRepository<>)
 builder.Services.AddHttpClient<IDirectoryApiClient, DirectoryApiClient>(client => client.Timeout = TimeSpan.FromSeconds(60));
 builder.Services.AddScoped<ApiSynchronizationRunner>();
 builder.Services.AddHostedService<ApiSynchronizationWorker>();
+builder.Services.AddOptions<ExportOptions>().Bind(builder.Configuration.GetSection("Exports"))
+  .Validate(o => o.RowsPerPart is >= 100 and <= 1000000 && o.MaxQueuedPerUser is >= 1 and <= 20 && o.TimeoutMinutes is >= 1 and <= 1440 && o.MinimumFreeBytes >= 0 && !string.IsNullOrWhiteSpace(o.Directory), "Некорректные настройки экспорта.")
+  .ValidateOnStart();
+builder.Services.AddSingleton<ExportStorage>();
+builder.Services.AddScoped<ExportAccess>();
+builder.Services.AddScoped<ExportSnapshot>();
+builder.Services.AddScoped<ExportDocumentWriter>();
+builder.Services.AddScoped<ExportProcessor>();
+builder.Services.AddHostedService<ExportWorker>();
 
 builder.Services.Scan(scan => scan
     .FromAssemblies(typeof(Program).Assembly)
@@ -290,6 +300,7 @@ app.MapRazorPages();
 app.MapRazorComponents<Guard.Components.App>()
     .AddInteractiveServerRenderMode();
 app.MapAdditionalIdentityEndpoints();
+app.MapExportEndpoints();
 
 // === SEEDING ===
 if (app.Environment.IsDevelopment())

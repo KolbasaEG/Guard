@@ -1,7 +1,6 @@
 using Guard.Core.Identity;
 using Guard.Core.Contexts;
 using Guard.Core.Services.DTOs;
-using System.Text;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Extensions;
@@ -246,45 +245,9 @@ public class PersonalService : IPersonalService
   private async Task<IQueryable<Personal>> ListQueryAsync(ApplicationDbContext db, PersonalSearchRequest request, CancellationToken ct)
   {
     await _permissions.RequireAsync(Permissions.Personals.Read, ct);
+    var actor = await _permissions.GetCurrentAsync(ct);
     var scope = await _scopes.GetAsync(ct);
-    var q = db.Set<Personal>().AsNoTracking().AsQueryable();
-    if (request.AllSubdivisions)
-    {
-      if (!scope.IsRoot) throw new UnauthorizedAccessException("Просмотр всего персонала доступен только Root.");
-      request = request with { OwnSubdivision = false, SubdivisionId = null };
-    }
-    if (!scope.IsRoot) q = q.Where(p => p.SubdivisionId.HasValue && scope.SubdivisionIds.Contains(p.SubdivisionId.Value));
-    if (request.OwnSubdivision) {
-      var ownId = await db.Users.Where(u => u.Id == scope.UserId).Select(u => u.Personal == null ? null : u.Personal.SubdivisionId).SingleOrDefaultAsync(ct);
-      if (!ownId.HasValue) q = q.Where(p => false);
-      request = request with { SubdivisionId = ownId };
-    }
-    switch (request.Mode)
-    {
-      case DataViewMode.Active: q = q.Where(p => p.Status == Status.Inserted || p.Status == Status.Modified || p.Status == Status.Blocked); break;
-      case DataViewMode.Archived:
-        await _permissions.RequireAsync(Permissions.Personals.ReadArchive, ct);
-        q = q.Where(p => p.Status == Status.Archived || p.Status == Status.ArchivedBlocked); break;
-      case DataViewMode.Deleted:
-        if (!scope.IsRoot) throw new UnauthorizedAccessException("Удалённые записи доступны только Root.");
-        q = q.Where(p => p.Status == Status.Deleted); break;
-      default: throw new ArgumentException("Неизвестный режим просмотра.");
-    }
-    if (request.SubdivisionId is Guid id)
-    {
-      if (!scope.Allows(id)) throw new UnauthorizedAccessException("Подразделение недоступно.");
-      var path = await db.Set<Subdivision>().Where(s => s.Id == id).Select(s => s.Path).SingleOrDefaultAsync(ct);
-      if (!IsValidPath(path)) return q.Where(p => false);
-      q = request.IncludeChildren ? q.Where(p => p.Subdivision != null && p.Subdivision.Path.StartsWith(path!)) : q.Where(p => p.SubdivisionId == id);
-    }
-    if (!string.IsNullOrWhiteSpace(request.Search))
-    {
-      var term = request.Search.Trim().ToLower();
-      q = q.Where(p => p.LastName.ToLower().Contains(term) || p.FirstName.ToLower().Contains(term) ||
-        (p.MiddleName != null && p.MiddleName.ToLower().Contains(term)));
-    }
-    q = PersonalQueryFilter.Apply(q, request.Filter);
-    return PersonalListQuery.Sort(q, request.OrderBy);
+    return await Guard.Core.Services.Exports.ExportQueries.PersonalsAsync(db, request, actor, scope, ct);
   }
   private static IQueryable<PersonalListItemDto> ProjectList(IQueryable<Personal> query) =>
     query.Select(p => new PersonalListItemDto(p.Id, p.LastName, p.FirstName, p.MiddleName, p.FullName,
@@ -303,25 +266,6 @@ public class PersonalService : IPersonalService
     var items = await ProjectList(q.Skip(request.Skip).Take(request.Take)).ToListAsync(ct);
     return new(items, count);
   }
-  public async Task<byte[]> ExportAsync(PersonalSearchRequest request, CancellationToken ct = default)
-  {
-    await _permissions.RequireAsync(Permissions.Personals.Export, ct);
-    await using var db = await _factory.CreateDbContextAsync(ct);
-    if (await db.SynchronizationSettings.AnyAsync(s => s.Id == 1 && s.Mode == DataManagementMode.Api, ct))
-      throw new EntityRuleException("Данными управляет API. Доступен только просмотр.");
-    var items = await ProjectList(await ListQueryAsync(db, request, ct)).ToListAsync(ct);
-    static string Cell(string? value)
-    {
-      value ??= "";
-      // Excel не должен исполнять пользовательское значение как формулу.
-      if (value.Length > 0 && "=+-@\t\r".Contains(value[0])) value = "'" + value;
-      return "\"" + value.Replace("\"", "\"\"") + "\"";
-    }
-    var csv = new StringBuilder("Фамилия;Имя;Отчество;Подразделение\r\n");
-    foreach (var item in items) csv.AppendLine(string.Join(";", Cell(item.LastName), Cell(item.FirstName), Cell(item.MiddleName), Cell(item.SubdivisionName)));
-    return Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv.ToString())).ToArray();
-  }
-
   public Task<PersonalDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default) =>
     _readPersonalRepository.QueryAsync(q => q.Where(p => p.Id == id).Select(p => new PersonalDetailsDto {
       Id = p.Id,

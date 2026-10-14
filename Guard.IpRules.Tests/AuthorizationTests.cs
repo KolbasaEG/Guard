@@ -1,3 +1,4 @@
+using Guard.Core.Services.Exports;
 using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
@@ -121,7 +122,7 @@ internal static class AuthorizationTests
     await using(var db=await factory.CreateDbContextAsync()) {foreignId=await db.Subdivisions.Where(s=>s.Name=="Other").Select(s=>s.Id).SingleAsync();}
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>personals.SearchAsync(new(SubdivisionId:foreignId)),check,"foreign filter rejected");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>reads.GetAllAsync(),check,"raw entity read requires full-card permission");
-    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>personals.ExportAsync(new()),check,"export needs explicit permission");
+    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>new ExportAccess(factory, permissions).ForUserAsync("user", new(Guard.Core.Enums.ExportArea.Personals, Guard.Core.Enums.ExportFormat.Excel), default),check,"export needs explicit permission");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>personals.CreateAsync(new(){FirstName="X",LastName="Y"}),check,"read-only employee write denied");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>usersReads.GetAllAsync(),check,"user module read needs permission");
     var handler=new PermissionAuthorizationHandler(permissions, new AuditStub());
@@ -135,8 +136,8 @@ internal static class AuthorizationTests
     await roles.SetUserRolesAsync("user",[viewerId,exporterId],assignment.Version);
     authentication.Id="user";
     check((await permissions.GetCurrentAsync()).Has(Permissions.Personals.Export),"permissions are union of current assigned roles");
-    var export=Encoding.UTF8.GetString(await personals.ExportAsync(new()));
-    check(export.Contains("Child") && !export.Contains("SECRET") && !export.Contains("Other"),"export respects scope and safe fields");
+    var exportAccess = await new ExportAccess(factory, permissions).ForUserAsync("user", new(Guard.Core.Enums.ExportArea.Personals, Guard.Core.Enums.ExportFormat.Excel), default);
+    check(exportAccess.AllowedIds.Count == 2 && !ExportSchema.Headers(Guard.Core.Enums.ExportArea.Personals).Contains("Личный номер"), "export respects scope and safe fields");
     authentication.Id="root";
     var editor=await roles.GetAsync(viewerId);
     var oldVersion=editor.Version;

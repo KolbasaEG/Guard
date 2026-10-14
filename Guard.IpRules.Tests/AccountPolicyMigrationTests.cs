@@ -14,6 +14,10 @@ internal static class AccountPolicyMigrationTests
     db.ChangeTracker.Clear();
     await db.Database.ExecuteSqlRawAsync("""
       DROP TABLE "AccountPolicies";
+      DROP TABLE "ExportDeliveryAttempts";
+      DROP TABLE "ExportArtifacts";
+      DROP TABLE "ExportJobs";
+      DROP TABLE "ExportRetentionSettings";
       ALTER TABLE "Personals" DROP COLUMN "Version";
       ALTER TABLE "Subdivisions" DROP COLUMN "Version";
       ALTER TABLE "Classifiers" DROP COLUMN "Version";
