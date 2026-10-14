@@ -10,7 +10,7 @@ public sealed class UnitOfWorkFactory(IDbContextFactory<ApplicationDbContext> co
   {
     var actor = await permissions.GetCurrentAsync(ct);
     var db = await contexts.CreateDbContextAsync(ct);
-    db.SavingChanges += (_, _) => AuditSaveChangesInterceptor.ApplyAudit(db, actor.UserId);
+    db.PrepareAudit = context => AuditSaveChangesInterceptor.ApplyAudit(context, actor.UserId);
     return new UnitOfWork(db, services, logger);
   }
 }

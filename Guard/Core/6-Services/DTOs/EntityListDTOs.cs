@@ -21,5 +21,4 @@ public sealed record SubdivisionListDto
 }
 public sealed record ClassifierListDto(int Id, Guid Version, int Type, int Code, string ClassifierName,
     string Value, bool IsActive, DateTime UpdatedAt);
-public sealed record OrganTypeListDto(int Id, Guid Version, int Code, string Name);
 public sealed record RoleListDto(string Id, string? Name, string? NormalizedName);

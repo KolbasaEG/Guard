@@ -1,4 +1,4 @@
-﻿using Guard.Components.Pages.Workspaces.Administrator;
+using Guard.Components.Pages.Workspaces.Administrator;
 using Guard.Core.Enums;
 
 namespace Guard.Core.Entities;
@@ -13,6 +13,8 @@ namespace Guard.Core.Entities;
 
 public class Classifier
 {
+  public bool ImportedFromApi { get; set; }
+  public DateTime? SourceUpdatedAt { get; set; }
   public Guid Version { get; set; } = Guid.NewGuid();
   public int Id { get; set; }
   // Тип справочника

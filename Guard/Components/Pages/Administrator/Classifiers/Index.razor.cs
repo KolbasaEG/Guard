@@ -15,6 +15,10 @@ namespace Guard.Components.Pages.Administrator.Classifiers
 {
   public partial class Index : IDisposable
   {
+    protected bool apiManaged = true;
+    private readonly Guard.Components.Library.Loading.ListLoadConfirmation synchronizationLoad = new();
+    protected Task<bool> ReloadForSynchronizationAsync() => synchronizationLoad.ReloadAsync(ReloadGridForSynchronizationAsync);
+    protected virtual Task ReloadGridForSynchronizationAsync() { if (disposed || grid == null) return Task.CompletedTask; grid.ResetLoadData(); return grid.Reload(); }
     [Inject] protected IPermissionService PermissionService { get; set; } = default!;
     [Inject] protected BrowserTimeService Time { get; set; } = default!;
     private static readonly HashSet<string> supportedFields = ["ClassifierName", "Code", "Id", "IsActive", "Type", "UpdatedAt", "Value"];
@@ -35,13 +39,12 @@ namespace Guard.Components.Pages.Administrator.Classifiers
     [Inject] protected DialogService DialogService { get; set; } = default!;
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
     [Inject] protected IClassifierService ClassifierService { get; set; } = default!;
-    [Inject] protected IRemoteClassifierService RemoteClassifierService { get; set; } = default!;
 
     [CascadingParameter] protected UserContext? UserContext { get; set; }
 
     int count;
     [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; }
-    protected bool isEditor => Access?.Has(Guard.Core.Identity.Permissions.Classifiers.Manage) == true;
+    protected bool isEditor => !apiManaged && Access?.Has(Guard.Core.Identity.Permissions.Classifiers.Manage) == true;
     protected bool isLoading = false;
     string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
 
@@ -76,9 +79,10 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       }
     }
 
-    async Task LoadData(LoadDataArgs args)
+    protected async Task LoadData(LoadDataArgs args)
     {
       if (disposed || Time.Zone == null) return;
+      var loadTicket = synchronizationLoad.Begin();
       _loadDataCts?.Cancel();
       var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
       _loadDataCts = request; var ct = request.Token;
@@ -95,8 +99,9 @@ namespace Guard.Components.Pages.Administrator.Classifiers
         }, ct);
         ct.ThrowIfCancellationRequested();
         await PermissionService.RequireAsync(Guard.Core.Identity.Permissions.Classifiers.Read, ct);
+        ct.ThrowIfCancellationRequested();
         if (disposed || !ReferenceEquals(request, _loadDataCts)) return;
-        filteredData = result.page; count = result.total;
+        filteredData = result.page; count = result.total; synchronizationLoad.Confirm(loadTicket);
       }
       catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
       catch (Exception ex) {
@@ -112,32 +117,6 @@ namespace Guard.Components.Pages.Administrator.Classifiers
       await grid.Reload();
     }
 
-    protected async Task OnSyncClick()
-    {
-      try
-      {
-        isLoading = true;
-        Logger.LogInformation("Запуск синхронизации классификаторов с внешним API...");
-
-        await RemoteClassifierService.SyncClassifiersAsync(_cts.Token);
-
-        ShowSuccessNotification("Синхронизация с API успешно завершена!");
-        await grid.Reload();
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogInformation("Синхронизация с API была отменена");
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при синхронизации классификаторов с внешним API");
-        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
-      }
-      finally
-      {
-        isLoading = false;
-      }
-    }
     protected async Task AddClick(MouseEventArgs args)
     {
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });

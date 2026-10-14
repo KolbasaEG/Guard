@@ -48,7 +48,6 @@ internal static class EntityInputValidation
     entity.ClassifierName = Required(entity.ClassifierName, 256, "Наименование справочника");
     entity.Value = Required(entity.Value, 500, "Значение");
   }
-  public static void Validate(OrganType entity) => entity.Name = Required(entity.Name, 500, "Наименование");
   private static void ValidatePair(int? type, int? code)
   {
     if (type.HasValue != code.HasValue) throw new ArgumentException("Выберите справочное значение целиком.");

@@ -141,21 +141,3 @@ public record ClassifierFieldsDto
 }
 public record CreateClassifierDto(ClassifierFieldsDto Fields);
 public record EditClassifierDto(int Id, Guid Version, ClassifierFieldsDto Fields);
-public record OrganTypeFieldsDto
-{
-  public int ClassifierType { get; init; }
-  public int Code { get; init; }
-  public string Name { get; init; } = "";
-  public static OrganTypeFieldsDto From(OrganType entity) => new() {
-    ClassifierType = entity.ClassifierType,
-    Code = entity.Code,
-    Name = entity.Name
-  };
-  public void ApplyTo(OrganType entity) {
-    entity.ClassifierType = ClassifierType;
-    entity.Code = Code;
-    entity.Name = Name;
-  }
-}
-public record CreateOrganTypeDto(OrganTypeFieldsDto Fields);
-public record EditOrganTypeDto(int Id, Guid Version, OrganTypeFieldsDto Fields);

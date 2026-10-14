@@ -19,7 +19,6 @@ internal static class RefactorIntegrationTests
     registrations.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
     registrations.AddScoped<IPersonalService, PersonalService>();
     registrations.AddScoped<ISubdivisionService, SubdivisionService>();
-    registrations.AddScoped<IOrganTypeService, OrganTypeService>();
     await using var provider = registrations.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     await using var scope = provider.CreateAsyncScope();
     var writes = scope.ServiceProvider.GetRequiredService<IUnitOfWorkFactory>();
@@ -71,11 +70,6 @@ internal static class RefactorIntegrationTests
     await PostgresTests.ThrowsAsync<EntityRuleException>(() => people.RestoreAsync(personal.Id), check, "archived blocked employee must be unblocked before restore");
     await people.UnblockAsync(personal.Id); await people.SoftDeleteAsync(personal.Id); await people.RestoreAsync(personal.Id);
     check((await people.GetByIdAsync(personal.Id))!.Status == Status.Modified, "Root restores deleted employee through server operation");
-    var organs = scope.ServiceProvider.GetRequiredService<IOrganTypeService>();
-    var firstId = await organs.CreateFromDtoAsync(new(new() { ClassifierType = 906, Code = 99001, Name = "First test organ" }));
-    var secondId = await organs.CreateFromDtoAsync(new(new() { ClassifierType = 906, Code = 99002, Name = "Second test organ" }));
-    check(firstId > 0 && secondId > firstId, "successive organ type creations receive generated IDs");
-    await organs.DeleteAsync(firstId); await organs.DeleteAsync(secondId);
     await using (var cleanup = await factory.CreateDbContextAsync()) {
       cleanup.Personals.Remove((await cleanup.Personals.FindAsync(personal.Id))!);
       cleanup.Subdivisions.Remove((await cleanup.Subdivisions.FindAsync(child.Id))!);

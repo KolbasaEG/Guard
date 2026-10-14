@@ -34,7 +34,7 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     var role = await manager.FindByIdAsync(id) ?? throw new KeyNotFoundException("Роль не найдена.");
     var claims = await manager.GetClaimsAsync(role);
     return new() { Id = role.Id, Name = role.Name ?? "", Version = role.ConcurrencyStamp,
-      IsSystem = role.NormalizedName == "ROOT", Permissions = claims.Where(c => c.Type == "Permission").Select(c => c.Value).ToHashSet() };
+      IsSystem = role.NormalizedName == "ROOT", Permissions = claims.Where(c => c.Type == "Permission" && c.Value != Permissions.Synchronization.Run).Select(c => c.Value).ToHashSet() };
   }
 
   public async Task<string> SaveAsync(RoleEditDto input, CancellationToken ct = default)

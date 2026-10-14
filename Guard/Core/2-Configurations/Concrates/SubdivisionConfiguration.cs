@@ -10,6 +10,7 @@ public class SubdivisionConfiguration : BaseEntityConfiguration<Subdivision>
   {
     builder.Property(x => x.Version).IsConcurrencyToken();
     base.Configure(builder);
+    builder.HasIndex(s => s.ExternalId).IsUnique();
 
     builder.ToTable("Subdivisions", t => t.HasComment("Иерархический справочник подразделений организационной структуры системы Guard."));
 
@@ -86,9 +87,9 @@ public class SubdivisionConfiguration : BaseEntityConfiguration<Subdivision>
 
     // Составной внешний ключ на OrganTypes: (OrganTypeId, OrganTypeCode) -> (Id, Code)
     builder.HasOne(s => s.OrganType)
-        .WithMany(p => p.Subdivisions)
+        .WithMany()
         .HasForeignKey(s => new { s.OrganTypeId, s.OrganTypeCode })
-        .HasPrincipalKey(o => new { o.Id, o.Code })
+        .HasPrincipalKey(o => new { o.Type, o.Code })
         .IsRequired(false)
         .OnDelete(DeleteBehavior.Restrict);
 

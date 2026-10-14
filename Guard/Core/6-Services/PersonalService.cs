@@ -110,6 +110,7 @@ public class PersonalService : IPersonalService
     var clean = new Personal { Id = Personal.Id };
     PersonalFieldsDto.From(Personal).ApplyTo(clean); Personal = clean;
     EntityInputValidation.Validate(Personal);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
 
     if (!(await _scopes.GetAsync(ct)).Allows(Personal.SubdivisionId)) throw new UnauthorizedAccessException("Подразделение недоступно.");
     Personal.Status = Status.Inserted;
@@ -130,6 +131,7 @@ public class PersonalService : IPersonalService
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
     ArgumentNullException.ThrowIfNull(Personal);
     EntityInputValidation.Validate(Personal);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
 
     var current = await GetRequiredForWriteAsync(_uow, Personal.Id, ct) ?? throw new KeyNotFoundException("Сотрудник недоступен.");
     if (current.Status is not (Status.Inserted or Status.Modified)) throw new EntityRuleException("Сотрудник заблокирован или неактивен.");
@@ -153,10 +155,11 @@ public class PersonalService : IPersonalService
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
     var Personal = await GetRequiredForWriteAsync(_uow, id, ct);
     if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(Personal.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.Apply(Personal.Status, StatusOperation.Delete, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
+    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.ApplyManual(Personal, StatusOperation.Delete, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) помечен как удаленный",
@@ -167,10 +170,11 @@ public class PersonalService : IPersonalService
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
     var Personal = await GetRequiredForWriteAsync(_uow, id, ct);
     if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(Personal.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.Apply(Personal.Status, StatusOperation.Archive, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
+    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.ApplyManual(Personal, StatusOperation.Archive, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) отправлен в архив",
@@ -181,10 +185,11 @@ public class PersonalService : IPersonalService
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
     var Personal = await GetRequiredForWriteAsync(_uow, id, ct);
     if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(Personal.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.Apply(Personal.Status, StatusOperation.Block, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
+    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.ApplyManual(Personal, StatusOperation.Block, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogWarning("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) заблокирован",
@@ -195,10 +200,11 @@ public class PersonalService : IPersonalService
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
     var Personal = await GetRequiredForWriteAsync(_uow, id, ct);
     if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(Personal.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.Apply(Personal.Status, StatusOperation.Unblock, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
+    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.ApplyManual(Personal, StatusOperation.Unblock, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) разблокирован",
@@ -209,10 +215,11 @@ public class PersonalService : IPersonalService
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
     var Personal = await GetRequiredForWriteAsync(_uow, id, ct);
     if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(Personal.Version, expectedVersion.Value);
 
-    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.Apply(Personal.Status, StatusOperation.Restore, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
+    await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.ApplyManual(Personal, StatusOperation.Restore, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
     _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) восстановлен",
@@ -241,6 +248,11 @@ public class PersonalService : IPersonalService
     await _permissions.RequireAsync(Permissions.Personals.Read, ct);
     var scope = await _scopes.GetAsync(ct);
     var q = db.Set<Personal>().AsNoTracking().AsQueryable();
+    if (request.AllSubdivisions)
+    {
+      if (!scope.IsRoot) throw new UnauthorizedAccessException("Просмотр всего персонала доступен только Root.");
+      request = request with { OwnSubdivision = false, SubdivisionId = null };
+    }
     if (!scope.IsRoot) q = q.Where(p => p.SubdivisionId.HasValue && scope.SubdivisionIds.Contains(p.SubdivisionId.Value));
     if (request.OwnSubdivision) {
       var ownId = await db.Users.Where(u => u.Id == scope.UserId).Select(u => u.Personal == null ? null : u.Personal.SubdivisionId).SingleOrDefaultAsync(ct);
@@ -295,6 +307,8 @@ public class PersonalService : IPersonalService
   {
     await _permissions.RequireAsync(Permissions.Personals.Export, ct);
     await using var db = await _factory.CreateDbContextAsync(ct);
+    if (await db.SynchronizationSettings.AnyAsync(s => s.Id == 1 && s.Mode == DataManagementMode.Api, ct))
+      throw new EntityRuleException("Данными управляет API. Доступен только просмотр.");
     var items = await ProjectList(await ListQueryAsync(db, request, ct)).ToListAsync(ct);
     static string Cell(string? value)
     {
@@ -317,6 +331,8 @@ public class PersonalService : IPersonalService
       CreatedBy = p.CreatedBy,
       ModifiedBy = p.ModifiedBy,
       PersonalId = p.PersonalId,
+      ExternalId = p.ExternalId,
+      SourceUpdatedAt = p.SourceUpdatedAt,
       SubdivisionId = p.SubdivisionId,
       PersonalSubdivisionId = p.PersonalSubdivisionId,
       PersonnelCategoryType = p.PersonnelCategoryType,

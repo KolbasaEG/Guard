@@ -1,0 +1,7 @@
+@using Guard.Core.Entities
+@if (actuality != null)
+{
+  <RadzenText>@(actuality.ActualAt.HasValue ? $"Актуально по состоянию на {StatusPanel.Format(actuality.ActualAt)}" : "Данные из API ещё не актуализированы")</RadzenText>
+  @if (actuality.Mode == DataManagementMode.Local) { <RadzenText>Синхронизация отключена</RadzenText> }
+}
+@if (error != null) { <RadzenText>@error</RadzenText> }

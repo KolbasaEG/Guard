@@ -13,6 +13,7 @@ public class PersonalConfiguration : BaseEntityConfiguration<Personal>
   {
     builder.Property(x => x.Version).IsConcurrencyToken();
     base.Configure(builder);
+    builder.HasIndex(p => p.ExternalId).IsUnique();
 
     builder.ToTable("Personals", t =>
     {
@@ -68,12 +69,10 @@ public class PersonalConfiguration : BaseEntityConfiguration<Personal>
         .HasComment("Идентификатор сотрудника АИС Личное дело");
 
     builder.Property(x => x.PersonalSubdivisionId)
-        .ValueGeneratedOnAdd()
-        .UseIdentityByDefaultColumn()
+        .ValueGeneratedNever()
         .HasComment("Уникальный автоинкрементный идентификатор подразделения сотрудника в АИС Личное дело");
 
     builder.HasIndex(x => x.PersonalSubdivisionId)
-        .IsUnique()
         .HasDatabaseName("UX_Subdivisions_PersonalSubdivisionId");
 
     // ============================================================

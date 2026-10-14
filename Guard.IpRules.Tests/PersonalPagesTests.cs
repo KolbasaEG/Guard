@@ -91,6 +91,23 @@ internal static class PersonalPagesTests
     }
 
     var proxy = DispatchProxy.Create<IPersonalService, ServiceProxy>();
+    var modeProxy = DispatchProxy.Create<IPersonalService, ServiceProxy>();
+    PersonalSearchRequest? requestedMode = null;
+    ((ServiceProxy)modeProxy).Handle = (method, args) => {
+      requestedMode = (PersonalSearchRequest)args[0]!;
+      return Task.FromResult(new PersonalSearchResult([], 0));
+    };
+    using (var modePage = new IndexHarness(modeProxy))
+    {
+      modePage.SetAccess(new("actor", true, []));
+      await modePage.Load();
+      check(requestedMode!.AllSubdivisions && !requestedMode.OwnSubdivision, "Root first opening defaults to all-personnel list request");
+      modePage.UseOwn(); await modePage.Load();
+      check(!requestedMode!.AllSubdivisions && requestedMode.OwnSubdivision, "Root own mode retains own-subdivision list request");
+      modePage.SetAccess(new("other", false, [Permissions.Personals.Read]));
+      await modePage.Load();
+      check(!requestedMode!.AllSubdivisions && requestedMode.OwnSubdivision, "non-Root list request stays restricted after access change");
+    }
     var fake = (ServiceProxy)proxy;
     var pending = new List<TaskCompletionSource<PersonalSearchResult>>();
     var tokens = new List<CancellationToken>();
@@ -192,6 +209,7 @@ internal static class PersonalPagesTests
       _ => throw new NotSupportedException(method.Name)
     };
     await using var renderServices = new ServiceCollection().AddLogging()
+      .AddSingleton<IDirectoryManagementService, LocalManagement>()
       .AddSingleton(proxy).AddSingleton<NotificationService>().AddScoped<DialogService>()
       .AddSingleton<IJSRuntime, NoJs>().AddSingleton<NavigationManager, TestNavigation>().BuildServiceProvider();
     await using var renderer = new HtmlRenderer(renderServices, renderServices.GetRequiredService<ILoggerFactory>());
@@ -222,6 +240,11 @@ internal static class PersonalPagesTests
   {
     public Func<MethodInfo, object?[], object?> Handle { get; set; } = default!;
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => Handle(targetMethod!, args ?? []);
+  }
+
+  private sealed class LocalManagement : IDirectoryManagementService
+  {
+    public Task<bool> IsApiManagedAsync(CancellationToken ct = default) => Task.FromResult(false);
   }
 
   public sealed class CardHost : ComponentBase
@@ -266,6 +289,8 @@ internal static class PersonalPagesTests
       Access = new("actor", true, []);
     }
     public static PersonalFilter Capture(IEnumerable<CompositeFilterDescriptor> conditions) => CaptureFilter(conditions, LogicalFilterOperator.And);
+    public void SetAccess(UserAccessSnapshot access) { Access = access; OnParametersSet(); }
+    public void UseOwn() => allRecords = false;
     public Task Load() => LoadData(new() { Skip = 0, Top = 20 });
     public IEnumerable<PersonalListItemDto> Rows => filteredData;
     public int Count => count;

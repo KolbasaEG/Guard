@@ -119,6 +119,8 @@ internal static class PostgresTests
       await IpIndexTests.RunAsync(rootService, check);
       await AuthorizationTests.RunAsync(factory, check);
       await RefactorIntegrationTests.RunAsync(factory, check);
+      await ApiSynchronizationIntegrationTests.RunAsync(factory, check);
+      await ApiLifecycleIntegrationTests.RunAsync(factory, check);
       Console.WriteLine("PostgreSQL integration checks passed in an isolated temporary database.");
       if (browser) await BrowserTestHost.RunAsync(factory, cs.ConnectionString);
     }

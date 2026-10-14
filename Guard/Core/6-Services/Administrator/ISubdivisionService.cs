@@ -9,6 +9,7 @@ namespace Guard.Core.Services;
 /// </summary>
 public interface ISubdivisionService
 {
+  Task<string?> GetOwnSubdivisionPathAsync(CancellationToken ct = default);
   // ==================== Read Operations ====================
 
   Task<TResult> QuerySubdivisionsAsync<TResult>(Func<IQueryable<Subdivision>, Task<TResult>> query, CancellationToken ct = default);
@@ -111,7 +112,7 @@ public interface ISubdivisionService
   /// Получение типов органа.
   /// </summary>
   /// <param name="ct">Токен отмены операции</param>
-  Task<IReadOnlyList<OrganType>> GetOrganTypesAsync(CancellationToken ct = default);
+  Task<IReadOnlyList<Classifier>> GetOrganTypesAsync(CancellationToken ct = default);
 
   /// <summary>
   /// Получение классификаторов по определенному типу.

@@ -6,6 +6,7 @@
 <PageTitle>АИС "Охрана"</PageTitle>
 <TableWrapperWithFilterAndAnalytics >
   <Table>
+
     <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="SubdivisionListDto" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"
                     AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                     DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
@@ -33,14 +34,18 @@
             </RadzenSelectBar>
           </RadzenStack>
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="margin-left:auto;background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
-            <RadzenButton Icon="account_tree" Click="ToggleHierarchyAsync" title="@(hierarchyMode == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+            @if (Access?.IsRoot == true)
+            {
+              <RadzenToggleButton Text="Все подразделения" Value="ShowAll" Change="OnAllRecordsChanged" Icon="domain" Variant="Variant.Text" Size="ButtonSize.Medium" Style="border-radius:0px;" />
+            }
+            <RadzenButton Icon="account_tree" Disabled="ShowAll" Click="ToggleHierarchyAsync" title="@(hierarchyMode == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
             <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
             <RadzenButton Icon="add_circle_outline" Visible="@(isEditor)" Click="@AddClick" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
           </RadzenStack>
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="OrganTypeName" SortProperty="OrganType.Name" Title="Тип органа" Frozen="true" Width="200px" />
+        <RadzenDataGridColumn TItem="SubdivisionListDto" Property="OrganTypeName" SortProperty="OrganType.Value" Title="Тип органа" Frozen="true" Width="200px" />
         <RadzenDataGridColumn TItem="SubdivisionListDto" Property="StatusClassifierName" SortProperty="StatusClassifier.Value" Title="Статус" Width="200px" />
         <RadzenDataGridColumn TItem="SubdivisionListDto" Property="Name" SortProperty="Name" Title="Наименование" Width="200px" />
         <RadzenDataGridColumn TItem="SubdivisionListDto" Property="ParentName" SortProperty="Parent.Name" Title="Родительское подразделение" Width="100px" />
@@ -105,7 +110,7 @@
         <RadzenDataFilterProperty TItem="Subdivision" Property="LevelOrder" Title="Порядковый номер внутри одного уровня иерархии" />
         <RadzenDataFilterProperty TItem="Subdivision" Property="Path" Title="Путь подразделения" />
         <RadzenDataFilterProperty TItem="Subdivision" Property="StatusClassifier.Value" Title="Статус" />
-        <RadzenDataFilterProperty TItem="Subdivision" Property="OrganType.Name" Title="Тип органа" />
+        <RadzenDataFilterProperty TItem="Subdivision" Property="OrganType.Value" Title="Тип органа" />
       </Properties>
     </RadzenDataFilter>
   </Filter>
@@ -114,6 +119,7 @@
   </FilterButtons>
   <Analitycs>
     <AnalitycsWrapper>
+      <Guard.Components.Pages.Administrator.Synchronization.ActualityPanel ReadPermission="@Permissions.Subdivisions.Read" ApiModeChanged="@((bool value) => apiManaged = value)" ReloadData="ReloadForSynchronizationAsync" />
       <RadzenCard Style="width:100%; height:36px; border-radius:0px; border:none; padding:0px; background-color:var(--rz-primary-darker);flex-shrink:0;">
         <RadzenStack Gap="10px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
           <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="0px" Style="width:100%;">

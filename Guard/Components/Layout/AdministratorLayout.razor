@@ -8,6 +8,7 @@
   <MenueContent>
     <RadzenPanelMenu>
       <RadzenPanelMenuItem Text="Мониторинг состояния" Icon="dvr" Path="/adminpannel" />
+      <RadzenPanelMenuItem Text="Синхронизация" Icon="sync" Path="/synchronization" Visible="@(Access?.IsRoot == true)" />
       <RadzenPanelMenuItem Text="Подразделения" Icon="domain" Path="/subdivisions" Visible="@(Access?.Has(Permissions.Subdivisions.Read) == true)" />
       <RadzenPanelMenuItem Text="Пользователи" Icon="contacts" Path="/users" Visible="@(Access?.Has(Permissions.Users.Read) == true)" />
       <RadzenPanelMenuItem Text="Персонал" Icon="group" Path="/personal" Visible="@(Access?.Has(Permissions.Personals.Read) == true)" />

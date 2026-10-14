@@ -10,6 +10,7 @@ using Guard.Middlewares;
 using Guard.Core.Identity;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -221,11 +222,18 @@ builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepositor
 builder.Services.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
 builder.Services.AddScoped(typeof(IBasicRepository<>), typeof(BasicRepository<>));
 
-builder.Services.AddHttpClient<IRemoteClassifierService, RemoteClassifierService>(client =>
-{
-  client.BaseAddress = new Uri("https://6ab65702c4c7bb67b918bcd6.mockapi.io/");
-  client.Timeout = TimeSpan.FromSeconds(30);
-});
+  builder.Services.Configure<DirectoryApiOptions>(builder.Configuration.GetSection("DirectoryApi"));
+  var dataProtection = builder.Services.AddDataProtection();
+  var keyDirectory = builder.Configuration["DataProtection:KeyDirectory"];
+  if (!string.IsNullOrWhiteSpace(keyDirectory)) dataProtection.PersistKeysToFileSystem(new DirectoryInfo(Path.GetFullPath(keyDirectory)));
+  var applicationName = builder.Configuration["DataProtection:ApplicationName"];
+  if (!string.IsNullOrWhiteSpace(applicationName)) dataProtection.SetApplicationName(applicationName);
+  var keyCertificate = builder.Configuration["DataProtection:CertificateThumbprint"];
+  if (!string.IsNullOrWhiteSpace(keyCertificate)) dataProtection.ProtectKeysWithCertificate(keyCertificate);
+  builder.Services.AddSingleton<ApiCredentialProtector>();
+builder.Services.AddHttpClient<IDirectoryApiClient, DirectoryApiClient>(client => client.Timeout = TimeSpan.FromSeconds(60));
+builder.Services.AddScoped<ApiSynchronizationRunner>();
+builder.Services.AddHostedService<ApiSynchronizationWorker>();
 
 builder.Services.Scan(scan => scan
     .FromAssemblies(typeof(Program).Assembly)
@@ -238,7 +246,7 @@ builder.Services.Scan(scan => scan
         !type.Name.Contains("CurrentUserService") &&
         !type.Name.Contains("AuditService") &&
         !type.Name.Contains("LogService") &&
-        type != typeof(RemoteClassifierService)))
+        type != typeof(DirectoryApiClient)))
     .AsImplementedInterfaces()
     .WithScopedLifetime());
 

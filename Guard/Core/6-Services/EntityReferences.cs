@@ -31,11 +31,7 @@ internal static class EntityReferences
   public static async Task SubdivisionAsync(IUnitOfWork work, Subdivision input, Subdivision? previous, CancellationToken ct)
   {
     await ClassifierAsync(work, input.StatusType, input.StatusCode, previous?.StatusType, previous?.StatusCode, ct);
-    if (input.OrganTypeId.HasValue && !await work.BasicRepository<OrganType>().Query()
-        .AnyAsync(o => o.Id == input.OrganTypeId && o.Code == input.OrganTypeCode, ct))
-      throw new ArgumentException("Выберите существующий тип органа.");
+    await ClassifierAsync(work, input.OrganTypeId, input.OrganTypeCode, previous?.OrganTypeId, previous?.OrganTypeCode, ct);
   }
 
-  public static Task OrganTypeAsync(IUnitOfWork work, OrganType input, OrganType? previous, CancellationToken ct) =>
-    ClassifierAsync(work, input.ClassifierType, input.Code, previous?.ClassifierType, previous?.Code, ct);
 }

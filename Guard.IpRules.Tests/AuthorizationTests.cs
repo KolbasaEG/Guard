@@ -39,7 +39,6 @@ internal static class AuthorizationTests
     services.AddScoped(typeof(IBasicRepository<>),typeof(BasicRepository<>));
     services.AddScoped<ISubdivisionService,SubdivisionService>();
     services.AddScoped<IClassifierService,ClassifierService>();
-    services.AddScoped<IOrganTypeService,OrganTypeService>();
     services.AddScoped<IIpManagementAccessService,IpManagementAccessService>();
     services.AddScoped<IIpAddressService,IpAddressService>();
     services.AddScoped<IPersonalIpService,PersonalIpService>();
@@ -81,6 +80,27 @@ internal static class AuthorizationTests
     await PostgresTests.ThrowsAsync<InvalidOperationException>(()=>roles.SetUserRolesAsync("root",[],rootAssignments.Version),check,"last Root cannot be removed");
     var viewerId=await roles.SaveAsync(new(){Name="Viewer",Permissions=[Permissions.Personals.Read]});
     var exporterId=await roles.SaveAsync(new(){Name="Exporter",Permissions=[Permissions.Personals.Read,Permissions.Personals.Export]});
+    var legacyRoleId = await roles.SaveAsync(new() { Name = "Legacy synchronization", Permissions = [Permissions.Subdivisions.Read] });
+    await using (var db = await factory.CreateDbContextAsync())
+    {
+      db.RoleClaims.Add(new() { RoleId = legacyRoleId, ClaimType = "Permission", ClaimValue = Permissions.Synchronization.Run });
+      await db.SaveChangesAsync();
+    }
+    var legacyRole = await roles.GetAsync(legacyRoleId);
+    check(legacyRole.Permissions.SetEquals([Permissions.Subdivisions.Read]), "role editor omits retired synchronization claim and preserves valid permissions");
+    var validVersion = legacyRole.Version;
+    legacyRole.Version = Guid.NewGuid().ToString();
+    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => roles.SaveAsync(legacyRole), check, "stale edit cannot clean legacy role claims");
+    await using (var db = await factory.CreateDbContextAsync())
+      check(await db.RoleClaims.AnyAsync(c => c.RoleId == legacyRoleId && c.ClaimValue == Permissions.Synchronization.Run), "failed role save leaves retired claim unchanged");
+    legacyRole.Version = validVersion;
+    await roles.SaveAsync(legacyRole);
+    await using (var db = await factory.CreateDbContextAsync())
+    {
+      var values = await db.RoleClaims.Where(c => c.RoleId == legacyRoleId && c.ClaimType == "Permission").Select(c => c.ClaimValue).ToListAsync();
+      check(values.Count == 1 && values[0] == Permissions.Subdivisions.Read, "successful role save removes retired claim and retains other rights");
+    }
+    await PostgresTests.ThrowsAsync<ArgumentException>(() => roles.SaveAsync(new() { Name = "Bad legacy", Permissions = [Permissions.Subdivisions.Read, Permissions.Synchronization.Run] }), check, "retired permission cannot be submitted as a new right");
     var userRoles=await roles.GetUserRolesAsync("user");
     await roles.SetUserRolesAsync("user",[viewerId],userRoles.Version);
     await PostgresTests.ThrowsAsync<InvalidOperationException>(()=>roles.SetUserRolesAsync("user",[exporterId],userRoles.Version),check,"stale assignment version rejected");

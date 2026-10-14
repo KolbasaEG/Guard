@@ -33,25 +33,58 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
   public DbSet<Subdivision> Subdivisions { get; set; } = null!;
   public DbSet<Classifier> Classifiers { get; set; } = null!;
   public DbSet<Personal> Personals { get; set; } = null!;
-  public DbSet<OrganType> OrganTypes { get; set; } = null!;
+  public DbSet<SynchronizationSettings> SynchronizationSettings { get; set; } = null!;
+  public DbSet<SynchronizationRun> SynchronizationRuns { get; set; } = null!;
+
+  // Только прикладная операция синхронизации может обходить режим просмотра.
+  internal bool IsSynchronization { get; set; }
+  internal Action<ApplicationDbContext>? PrepareAudit { get; set; }
+  internal const long ManagementLock = 73460219;
 
   public override int SaveChanges(bool acceptAllChangesOnSuccess)
   {
+    PrepareAudit?.Invoke(this);
+    if (!IsSynchronization && HasDirectoryChanges())
+      return SaveChangesAsync(acceptAllChangesOnSuccess).GetAwaiter().GetResult();
     PrepareVersions();
     return base.SaveChanges(acceptAllChangesOnSuccess);
   }
 
-  public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+  public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
   {
+    PrepareAudit?.Invoke(this);
+    if (IsSynchronization || !HasDirectoryChanges())
+    {
+      PrepareVersions();
+      return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+    // Общая блокировка режима удерживается до завершения ручной записи.
+    var ownTransaction = Database.IsRelational() && Database.CurrentTransaction == null;
+    await using var transaction = ownTransaction ? await Database.BeginTransactionAsync(cancellationToken) : null;
+    if (Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL")
+      await Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({ManagementLock})", cancellationToken);
+    var mode = await SynchronizationSettings.AsNoTracking().Where(s => s.Id == 1)
+      .Select(s => s.Mode).SingleOrDefaultAsync(cancellationToken);
+    if (mode == DataManagementMode.Api)
+      throw new Guard.Core.Services.EntityRuleException("Данными управляет API. Доступен только просмотр.");
     PrepareVersions();
-    return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    var count = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    if (transaction != null) await transaction.CommitAsync(cancellationToken);
+    return count;
   }
+
+  private bool HasDirectoryChanges() => ChangeTracker.Entries().Any(e =>
+    e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted &&
+    (e.Entity is Personal or Subdivision or Classifier || e.Metadata.GetTableName() == "PersonalIpAddresses" ||
+      e.Entity is ApplicationUser user && (e.State is EntityState.Added or EntityState.Deleted && user.PersonalId.HasValue ||
+        e.State == EntityState.Modified && !Equals(e.Property(nameof(ApplicationUser.PersonalId)).OriginalValue,
+          e.Property(nameof(ApplicationUser.PersonalId)).CurrentValue))));
 
   private void PrepareVersions()
   {
     foreach (var entry in ChangeTracker.Entries().Where(e =>
         e.State is EntityState.Added or EntityState.Modified &&
-        e.Entity is Personal or Subdivision or Classifier or OrganType))
+        e.Entity is Personal or Subdivision or Classifier or Guard.Core.Entities.SynchronizationSettings))
       entry.Property("Version").CurrentValue = Guid.NewGuid();
   }
 }

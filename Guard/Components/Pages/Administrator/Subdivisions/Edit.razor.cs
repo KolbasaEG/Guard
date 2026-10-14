@@ -29,9 +29,9 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 
     protected bool isLoading = false;
     protected Subdivision item = new();
-    protected OrganType? selectedOrganType;
+    protected Classifier? selectedOrganType;
     protected Classifier? selectedStatusClassifier;
-    protected IEnumerable<OrganType> organTypes = [];
+    protected IEnumerable<Classifier> organTypes = [];
     protected IEnumerable<Classifier> statusClassifiers = [];
 
     protected override async Task OnInitializedAsync()
@@ -71,7 +71,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
           item = entity;
 
           // Инициализация выбранных объектов для корректного отображения в DropDown
-          selectedOrganType = organTypes.FirstOrDefault(x => x.Id == item.OrganTypeId && x.Code == item.OrganTypeCode);
+          selectedOrganType = organTypes.FirstOrDefault(x => x.Type == item.OrganTypeId && x.Code == item.OrganTypeCode);
           selectedStatusClassifier = statusClassifiers.FirstOrDefault(x => x.Type == item.StatusType && x.Code == item.StatusCode);
         }
         else
@@ -158,10 +158,10 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 
     protected void OnOrganTypeChanged(object value)
     {
-      selectedOrganType = value as OrganType;
+      selectedOrganType = value as Classifier;
       if (selectedOrganType != null)
       {
-        item.OrganTypeId = selectedOrganType.Id;
+        item.OrganTypeId = selectedOrganType.Type;
         item.OrganTypeCode = selectedOrganType.Code;
       }
       else

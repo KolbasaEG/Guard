@@ -1,9 +1,18 @@
 using Guard.Core.Enums;
+using Guard.Core.Entities;
 
 namespace Guard.Core.Identity;
 
 public static class EntityStatusTransitions
 {
+  public static Status ApplyManual(BaseEntity entity, StatusOperation operation, bool isRoot = false)
+  {
+    var next = Apply(entity.Status, operation, isRoot);
+    // Ручное решение заменяет причину прежней автоматической архивации.
+    if (entity is Personal personal) personal.ArchivedBySynchronization = false;
+    if (entity is Subdivision subdivision) subdivision.ArchivedBySynchronization = false;
+    return next;
+  }
   public static bool CanApply(Status current, StatusOperation operation, bool isRoot = false) =>
     (operation, current) switch
     {

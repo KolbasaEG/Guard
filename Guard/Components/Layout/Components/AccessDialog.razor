@@ -1,32 +1,38 @@
 @implements IDisposable
+@inject IDirectoryManagementService Management
 @using Guard.Core.Services.DTOs
 <CascadingValue Value="@state">@ChildContent</CascadingValue>
 @code {
   [Parameter, EditorRequired] public string ReadPermission { get; set; } = "";
   [Parameter] public string? WritePermission { get; set; }
+  [Parameter] public bool ApiControlled { get; set; }
   [Parameter] public RenderFragment? ChildContent { get; set; }
   [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
   [CascadingParameter] public AccessStateProvider? Provider { get; set; }
   private bool disposed;
+  private bool apiManaged;
   public void Dispose() => disposed = true;
   private DialogAccessState state = new(false, false, null, () => Task.CompletedTask);
   protected override async Task OnInitializedAsync()
   {
     state = new(false, false, null, RefreshAsync);
+    apiManaged = await Management.IsApiManagedAsync();
     if (Provider != null) await Provider.RefreshAsync();
   }
   protected override void OnParametersSet() => UpdateState(Access);
   private void UpdateState(UserAccessSnapshot? access)
   {
     var view = access?.Has(ReadPermission) == true;
-    var write = WritePermission == null || access?.Has(WritePermission) == true;
+    var directoryWrite = ApiControlled || WritePermission is Permissions.Personals.Write or Permissions.Subdivisions.Write or Permissions.Classifiers.Manage;
+    var write = (WritePermission == null || access?.Has(WritePermission) == true) && !(directoryWrite && apiManaged);
     state.CanView = view;
     state.CanWrite = write;
     state.Message = !view ? "Просмотр недоступен: права доступа изменились."
-      : !write ? "Право редактирования отозвано. Введённые данные сохранены, отправка недоступна." : null;
+      : !write ? apiManaged && directoryWrite ? "Данными управляет API. Доступен только просмотр." : "Право редактирования отозвано. Введённые данные сохранены, отправка недоступна." : null;
   }
   private async Task RefreshAsync()
   {
+    apiManaged = await Management.IsApiManagedAsync();
     if (Provider != null) {
       await Provider.RefreshAsync();
       UpdateState(Provider.Current);

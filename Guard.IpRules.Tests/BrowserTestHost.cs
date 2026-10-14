@@ -9,15 +9,6 @@ internal static class BrowserTestHost
 {
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory, string isolatedConnection)
   {
-    await using (var db = await factory.CreateDbContextAsync()) {
-      // Development seeder пропускает справочники, если тестовые данные уже есть.
-      if (!await db.OrganTypes.AnyAsync()) {
-        var classifier = new Classifier { Type = 906, Code = 99991, Value = "Browser test", ClassifierName = "Browser test" };
-        db.Add(classifier);
-        db.Add(new OrganType { Id = 99991, Code = classifier.Code, Name = "Browser test", Classifier = classifier });
-        await db.SaveChangesAsync();
-      }
-    }
     var services = new ServiceCollection().AddLogging();
     services.AddScoped(_ => factory.CreateDbContext());
     services.AddIdentity<ApplicationUser, ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>();

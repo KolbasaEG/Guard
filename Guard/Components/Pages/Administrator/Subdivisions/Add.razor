@@ -7,11 +7,11 @@
     <RadzenStack Orientation="Orientation.Horizontal" Style="width:100%;" Gap="5px">
       <RadzenFormField Text="Тип органа" Variant="Variant.Text" Style="width:100%;">
         <ChildContent>
-          <RadzenDropDown Data="@organTypes" TextProperty="Name" AllowClear="true"
+          <RadzenDropDown Data="@organTypes" TextProperty="Value" AllowClear="true"
                           FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                           FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
                           style="display: block; width: 100%"
-                          TValue="OrganType" Change="@OnOrganTypeChanged" Name="OrganType" />
+                          TValue="Classifier" Change="@OnOrganTypeChanged" Name="OrganType" />
         </ChildContent>
       </RadzenFormField>
 

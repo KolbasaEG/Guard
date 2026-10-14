@@ -28,7 +28,7 @@ internal static class RefactorTests
     check(storedTime is DateTime storedDate && storedDate == logEvent.Timestamp.UtcDateTime && storedDate.Kind == DateTimeKind.Unspecified,
       "PostgreSQL timestamp without timezone receives UTC wall-clock value");
     using (var db = new ApplicationDbContext(options)) {
-      foreach (var type in new[] { typeof(Personal), typeof(Subdivision), typeof(Classifier), typeof(OrganType) })
+      foreach (var type in new[] { typeof(Personal), typeof(Subdivision), typeof(Classifier), typeof(SynchronizationSettings) })
         check(db.Model.FindEntityType(type)!.FindProperty("Version")!.IsConcurrencyToken, $"concurrency mapping {type.Name}");
       check(!db.Database.HasPendingModelChanges(), "migration snapshot matches runtime model");
       var migrationSql = db.GetService<IMigrator>().GenerateScript(db.Database.GetMigrations().Single(m => m.EndsWith("_AddAccountPolicy")), "20261008160000_AddEntityVersions");
@@ -36,7 +36,7 @@ internal static class RefactorTests
         "migration generates identity and advances sequence beyond existing organ type IDs");
       var projectionSql = db.Subdivisions.OrderBy(s => s.Name).ThenBy(s => s.Id).Take(20)
         .Select(s => new SubdivisionListDto { Id = s.Id, Name = s.Name, Version = s.Version,
-          ParentName = s.Parent == null ? null : s.Parent.Name, OrganTypeName = s.OrganType == null ? null : s.OrganType.Name }).ToQueryString();
+          ParentName = s.Parent == null ? null : s.Parent.Name, OrganTypeName = s.OrganType == null ? null : s.OrganType.Value }).ToQueryString();
       check(projectionSql.Contains("LIMIT") && !projectionSql.Contains("CreatedBy"), "list projection and related names translate without loading full audit entity");
     }
     var contexts = new Contexts(options);

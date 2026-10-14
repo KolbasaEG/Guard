@@ -39,6 +39,9 @@ public class PersonalIpService(IDbContextFactory<ApplicationDbContext> factory,
     var ids = ipIds.Distinct().ToArray();
     await using var db = await factory.CreateDbContextAsync(ct);
     await using var transaction = await db.Database.BeginTransactionAsync(ct);
+    await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({ApplicationDbContext.ManagementLock})", ct);
+    if (await db.SynchronizationSettings.AnyAsync(s => s.Id == 1 && s.Mode == DataManagementMode.Api, ct))
+      throw new EntityRuleException("Данными управляет API. Доступен только просмотр.");
     await IpAddressService.LockCatalogAsync(db, ct);
     // Сериализуем изменения назначений одного сотрудника.
     await db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM \"Personals\" WHERE \"Id\" = {personalId} FOR UPDATE", ct);

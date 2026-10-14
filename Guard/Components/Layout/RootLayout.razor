@@ -8,7 +8,7 @@
   <MenueContent>
     <RadzenPanelMenu>
       <RadzenPanelMenuItem Text="Классификаторы" Icon="library_books" Path="/classifiers" Visible="@(Access?.Has(Permissions.Classifiers.Read) == true)" />
-      <RadzenPanelMenuItem Text="Типы органов" Icon="library_books" Path="/OrganTypes" Visible="@(Access?.Has(Permissions.OrganTypes.Read) == true)" />
+      <RadzenPanelMenuItem Text="Синхронизация" Icon="sync" Path="/synchronization" />
       <RadzenPanelMenuItem Text="Логгирование" Icon="admin_panel_settings" Path="/Logs" Visible="@(Access?.Has(Permissions.Logs.Read) == true)" />
       <RadzenPanelMenuItem Text="Роли" Icon="domino_mask" Path="/roles" Visible="@(Access?.Has(Permissions.Roles.Read) == true)" />
     </RadzenPanelMenu>

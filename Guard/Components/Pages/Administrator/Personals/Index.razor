@@ -3,6 +3,7 @@
 @using Guard.Core.Enums
 <TableWrapperWithFilterAndAnalytics>
 <Table>
+
   @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
 <RadzenDataGrid TItem="PersonalListItemDto" @ref="grid" Data="@filteredData" Count="@count" LoadData="LoadData" RowSelect="OpenRow"
   IsLoading="@isLoading" AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new int[] {10,20,30,50,100})" EmptyText="Записи не найдены" Style="height:100%" ColumnWidth="200px" AllowColumnResize="true" Density="Density.Compact"
@@ -25,14 +26,19 @@
         </Items>
       </RadzenSelectBar>
       <RadzenStack Orientation="Orientation.Horizontal" Gap="0" Style="margin-left:auto;background-color:var(--rz-menu-top-item-background-color);border:var(--rz-selectbar-border);">
+      @if (Access?.IsRoot == true)
+      {
+        <RadzenToggleButton Text="Весь персонал" Value="ShowAll" Change="OnAllRecordsChanged" Icon="groups" Variant="Variant.Text" Size="ButtonSize.Medium" Style="border-radius:0px;" />
+      }
       <RadzenToggleButton Value="@(hierarchy == SubdivisionHierarchyMode.IncludeChildren)" Change="OnHierarchyModeChanged"
+        Disabled="ShowAll"
         ButtonStyle="ButtonStyle.Warning" ToggleButtonStyle="ButtonStyle.Primary" Variant="Variant.Text" Style="border-radius:0px;"
         Size="ButtonSize.Medium" Icon="account_tree" ToggleIcon="domain" Shade="Shade.Light" ToggleShade="Shade.Dark"
         title="@(hierarchy == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")"
         InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Переключение режима отображения иерархии" })" />
       <RadzenButton Icon="refresh" title="Обновить" Click="ReloadAsync" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" />
-      <RadzenButton Icon="add_circle_outline" title="Добавить" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" Visible="@(Access?.Has(Permissions.Personals.Write) == true)" Click="AddAsync" />
-      <RadzenButton Icon="get_app" title="Экспорт CSV" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" Visible="@(Access?.Has(Permissions.Personals.Export) == true)" Click="ExportAsync" />
+      <RadzenButton Icon="add_circle_outline" title="Добавить" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" Visible="@(!apiManaged && Access?.Has(Permissions.Personals.Write) == true)" Click="AddAsync" />
+      <RadzenButton Icon="get_app" title="Экспорт CSV" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" Visible="@(!apiManaged && Access?.Has(Permissions.Personals.Export) == true)" Click="ExportAsync" />
       </RadzenStack>
     </RadzenStack>
 
@@ -48,7 +54,7 @@
         <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
         <RadzenButton Icon="visibility" Title="Полная карточка" Visible="@(Access?.Has(Permissions.Personals.ReadDetails) == true)" Click="@(() => DetailsAsync(row))" Size="ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat" Disabled="@ActionsDisabled" @onclick:stopPropagation="true" />
         <RadzenButton Icon="edit" Title="Редактировать" Visible="@(CanWrite(row) && Access?.Has(Permissions.Personals.ReadDetails) == true && row.Status is Status.Inserted or Status.Modified)" Click="@(() => EditAsync(row))" Size="ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat" Disabled="@ActionsDisabled" @onclick:stopPropagation="true" />
-        <RadzenButton Icon="lan" Title="Разрешённые IP" Visible="@(Access?.Has(Permissions.IpAddresses.Manage) == true && row.Status is Status.Inserted or Status.Modified)" Click="@(() => IpsAsync(row))" Size="ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat" Disabled="@ActionsDisabled" @onclick:stopPropagation="true" />
+        <RadzenButton Icon="lan" Title="Разрешённые IP" Visible="@(!apiManaged && Access?.Has(Permissions.IpAddresses.Manage) == true && row.Status is Status.Inserted or Status.Modified)" Click="@(() => IpsAsync(row))" Size="ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat" Disabled="@ActionsDisabled" @onclick:stopPropagation="true" />
         <RadzenButton Icon="archive" Title="Архивировать" Visible="@(CanWrite(row) && EntityStatusTransitions.CanApply(row.Status, StatusOperation.Archive))" Click="@(() => ChangeStatusAsync(row, StatusOperation.Archive))" Size="ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat" Disabled="@ActionsDisabled" @onclick:stopPropagation="true" />
         <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="unarchive" Title="Восстановить" Visible="@(CanWrite(row) && EntityStatusTransitions.CanApply(row.Status, StatusOperation.Restore, Access?.IsRoot == true))" Click="@(() => ChangeStatusAsync(row, StatusOperation.Restore))" Size="ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat" Disabled="@ActionsDisabled" @onclick:stopPropagation="true" />
         <RadzenButton Icon="lock" Title="Заблокировать" Visible="@(CanWrite(row) && EntityStatusTransitions.CanApply(row.Status, StatusOperation.Block))" Click="@(() => ChangeStatusAsync(row, StatusOperation.Block))" Size="ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat" Disabled="@ActionsDisabled" @onclick:stopPropagation="true" />
@@ -75,6 +81,7 @@
 <Analitycs>
   <AnalitycsWrapper>
     <InfoBlock Title="Результат поиска" Icon="analytics" Style="width:100%;">
+      <Guard.Components.Pages.Administrator.Synchronization.ActualityPanel ReadPermission="@Permissions.Personals.Read" ApiModeChanged="@((bool value) => apiManaged = value)" ReloadData="ReloadForSynchronizationAsync" />
       <RadzenText>Найдено сотрудников: @count</RadzenText>
       <RadzenText>Режим отображения: @(hierarchy == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")</RadzenText>
     </InfoBlock>

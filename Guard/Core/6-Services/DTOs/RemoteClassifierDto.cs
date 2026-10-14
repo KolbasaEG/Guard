@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Guard.Core.Services.DTOs
 {
@@ -47,25 +47,31 @@ namespace Guard.Core.Services.DTOs
   public class RemoteClassifierDto
   {
     [JsonPropertyName("ClassifierName")]
+    [JsonRequired]
     public string ClassifierName { get; set; } = string.Empty;
 
     [JsonPropertyName("Code")]
+    [JsonRequired]
     public int Code { get; set; }
 
     [JsonPropertyName("Type")]
+    [JsonRequired]
     public int Type { get; set; }
 
     [JsonPropertyName("Value")]
+    [JsonRequired]
     public string Value { get; set; } = string.Empty;
 
     /// <summary>
     /// Поле IsActive в ответе передается как число (1 - активен, 0 - неактивен)
     /// </summary>
     [JsonPropertyName("IsActive")]
+    [JsonRequired]
     public int IsActive { get; set; }
 
     [JsonPropertyName("UpdatedAt")]
-    public DateTime UpdatedAt { get; set; }
+    [JsonRequired]
+    public DateTimeOffset UpdatedAt { get; set; }
 
     public bool IsActiveBool => IsActive == 1;
   }

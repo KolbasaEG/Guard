@@ -43,7 +43,6 @@ public class ReadRepository<T>(IDbContextFactory<ApplicationDbContext> factory,
     }
     else if (typeof(T) == typeof(ApplicationRole)) await permissions.RequireAsync(Permissions.Roles.Read, ct);
     else if (typeof(T) == typeof(Classifier)) await permissions.RequireAsync(Permissions.Classifiers.Read, ct);
-    else if (typeof(T) == typeof(OrganType)) await permissions.RequireAsync(Permissions.OrganTypes.Read, ct);
     else if (typeof(T) == typeof(IpAddress))
     {
       await permissions.RequireAsync(Permissions.IpAddresses.Read, ct);

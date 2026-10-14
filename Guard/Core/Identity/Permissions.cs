@@ -2,6 +2,10 @@ namespace Guard.Core.Identity;
 
 public static class Permissions
 {
+  public static class Synchronization
+  {
+    public const string Run = "Permissions.Synchronization.Run";
+  }
   public static class Personals
   {
     public const string Read = "Permissions.Personals.Read";
@@ -31,11 +35,7 @@ public static class Permissions
     public const string Read = "Permissions.Classifiers.Read";
     public const string Manage = "Permissions.Classifiers.Manage";
   }
-  public static class OrganTypes
-  {
-    public const string Read = "Permissions.OrganTypes.Read";
-    public const string Manage = "Permissions.OrganTypes.Manage";
-  }
+
   public static class Logs
   {
     public const string Read = "Permissions.Logs.Read";

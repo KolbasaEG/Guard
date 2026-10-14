@@ -1,0 +1,112 @@
+@page "/synchronization"
+@attribute [Authorize]
+@using Guard.Core.Entities
+@using SyncStatus = Guard.Components.Pages.Administrator.Synchronization.StatusPanel
+@layout AdministratorLayout
+
+@if (Access?.IsRoot == true)
+{
+  <div class="synchronization-page">
+    <InfoBlock Title="Состояние и ручной запуск" Icon="sync" Style="background:var(--rz-body-background-color);">
+      <Guard.Components.Pages.Administrator.Synchronization.StatusPanel Synchronized="ReloadAsync" />
+    </InfoBlock>
+    @if (Access.IsRoot && settings != null)
+    {
+      <EditEntity TItem="SettingsForm" Data="form" Name="Настройки синхронизации" ContentOnly="true" IsLoading="busy" Submit="SaveAsync">
+        <div class="settings-grid">
+          <InfoBlock Title="Подключение к API" Icon="settings_ethernet" Style="background:var(--rz-body-background-color);">
+            <div class="fields-grid">
+              <RadzenFormField Text="Источник данных (HTTPS-адрес API)" class="full-width">
+                <RadzenTextBox @bind-Value="form.ApiBaseUrl" MaxLength="2048" />
+              </RadzenFormField>
+              <RadzenFormField Text="Размер страницы запроса (1–500)">
+                <RadzenNumeric TValue="int" @bind-Value="form.ApiPageSize" Min="1" Max="500" />
+              </RadzenFormField>
+              <RadzenFormField Text="Внешний ID головного подразделения API">
+                <RadzenNumeric TValue="long?" @bind-Value="form.ApiHeadSubdivisionId" Min="1" />
+              </RadzenFormField>
+              <RadzenFormField Text="Логин Basic auth API">
+                <RadzenTextBox @bind-Value="form.ApiUsername" MaxLength="256" autocomplete="off" />
+              </RadzenFormField>
+              <RadzenFormField Text="Новый пароль Basic auth API">
+                <RadzenPassword @bind-Value="form.ApiPassword" autocomplete="new-password" />
+              </RadzenFormField>
+            </div>
+            <p class="sync-hint">@(settings.HasApiPassword ? "Пароль сохранён. Пустое поле сохраняет текущий пароль." : "Пароль API ещё не задан.")</p>
+            <details class="sync-help">
+              <summary>О размере страницы и головном подразделении</summary>
+              <p>Все страницы загружаются полностью. Размер страницы задаёт количество записей в одном запросе.</p>
+              <p>Головное подразделение — начало доступного дерева API. Его внешний родитель сохраняется, локальный отсутствует. Пустой ID отключает это правило.</p>
+            </details>
+          </InfoBlock>
+          <InfoBlock Title="Управление и расписание" Icon="schedule" Style="background:var(--rz-body-background-color);">
+            <div class="fields-grid">
+              <RadzenFormField Text="Режим управления" class="full-width">
+                <RadzenDropDown TValue="DataManagementMode" Data="modes" TextProperty="Text" ValueProperty="Value" @bind-Value="form.Mode" />
+              </RadzenFormField>
+              <div class="schedule-toggle">
+                <RadzenCheckBox TValue="bool" @bind-Value="form.Enabled" Name="DailySynchronization" />
+                <RadzenLabel Text="Ежедневная синхронизация" Component="DailySynchronization" />
+              </div>
+              <RadzenFormField Text="Время сервера (ЧЧ:ММ)">
+                <RadzenTextBox @bind-Value="form.Time" />
+              </RadzenFormField>
+            </div>
+            <p class="sync-hint">Часовой пояс сервера: @TimeZoneInfo.Local.DisplayName</p>
+            <p class="sync-hint">Автоматически загружаются изменения с даты начала запуска минус один день.</p>
+            <p class="sync-hint">В локальном режиме синхронизация отключена. В режиме API справочники доступны для просмотра.</p>
+          </InfoBlock>
+        </div>
+        <div class="settings-actions">
+          <RadzenButton Text="Сохранить настройки" Icon="save" ButtonType="ButtonType.Submit" Disabled="busy" />
+          <RadzenButton Text="Проверить подключение" Icon="network_check" ButtonType="ButtonType.Button" Click="CheckConnectionAsync" Disabled="busy" ButtonStyle="ButtonStyle.Secondary" />
+          <span class="sync-hint">Проверка использует сохранённые настройки.</span>
+        </div>
+        @if (connectionResult != null) { <RadzenAlert AlertStyle="AlertStyle.Success">@connectionResult</RadzenAlert> }
+      </EditEntity>
+    }
+    @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
+    <Guard.Components.Pages.Administrator.Synchronization.DiagnosticPanel />
+    @if (last != null)
+    {
+      <InfoBlock Title="Результат последнего запуска" Icon="task_alt" Style="background:var(--rz-body-background-color);">
+        <div class="run-summary">
+          <span><strong>@SyncStatus.StatusText(last.Status)</strong></span>
+          <span>Начало: @SyncStatus.Format(last.StartedAt)</span>
+          <span>Окончание: @SyncStatus.Format(last.CompletedAt)</span>
+        </div>
+        <div class="run-counters">
+          <span>Добавлено: <strong>@last.Added</strong></span>
+          <span>Изменено: <strong>@last.Updated</strong></span>
+          <span>Архивировано: <strong>@last.Archived</strong></span>
+          <span>Восстановлено: <strong>@last.Restored</strong></span>
+          <span>Деактивировано: <strong>@last.Deactivated</strong></span>
+          <span>Событий выхода: <strong>@last.ExitEvents</strong></span>
+          <span>Повторных: <strong>@last.RepeatedExitEvents</strong></span>
+          <span>Неизвестных сотрудников: <strong>@last.UnknownExitEmployees</strong></span>
+        </div>
+      </InfoBlock>
+    }
+    <InfoBlock Title="Последние 20 запусков" Icon="history" Style="background:var(--rz-body-background-color);">
+      <div class="history-scroll">
+        <table class="sync-history">
+          <thead><tr><th>Начало</th><th>Статус</th><th>Область</th><th>Запуск</th><th>Выборка</th></tr></thead>
+          <tbody>
+            @foreach (var run in history)
+            {
+              <tr>
+                <td>@SyncStatus.Format(run.StartedAt)</td>
+                <td>@SyncStatus.StatusText(run.Status)</td>
+                <td>@(run.PoolId.HasValue ? "Пул подразделения" : "Вся организация")</td>
+                <td>@(run.Scheduled ? "По расписанию" : "Вручную")</td>
+                <td>@(run.UpdatedSince.HasValue ? $"С {run.UpdatedSince:dd.MM.yyyy}" : "Полная выгрузка")</td>
+              </tr>
+            }
+            @if (history.Count == 0) { <tr><td colspan="5">Запусков пока нет.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </InfoBlock>
+  </div>
+}
+else { <AccessDenied /> }

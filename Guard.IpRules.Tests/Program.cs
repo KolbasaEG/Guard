@@ -26,14 +26,29 @@ foreach (var status in new[] { Guard.Core.Enums.Status.Deleted, Guard.Core.Enums
 }
 Check(IpStatusTransitions.Apply(Guard.Core.Enums.Status.Archived, "block") == Guard.Core.Enums.Status.ArchivedBlocked, "archive block");
 Check(IpStatusTransitions.Apply(Guard.Core.Enums.Status.Deleted, "restore") == Guard.Core.Enums.Status.Modified, "restore deleted");
+try
+{
 await AccessEventTests.RunAsync(Check);
 AccountPolicyTests.Run(Check);
 await LoginLockoutTests.RunAsync(Check);
 EntityStatusTests.Run(Check);
 await RefactorTests.RunAsync(Check);
+await ApiSynchronizationTests.RunAsync(Check);
+await ApiDependencyHttpTests.RunAsync(Check);
+ApiDiagnosticTests.Run(Check);
+ApiHeadSubdivisionTests.Run(Check);
+await ApiDiagnosticTests.CheckAccessAsync(Check);
+await SynchronizationUiTests.RunAsync(Check);
+await SynchronizationListLoadTests.RunAsync(Check);
 await PersonalPagesTests.RunAsync(Check);
 await AccessRenderingTests.RunAsync(Check);
 await MiddlewareTests.RunAsync(Check);
 if (args.Length == 2 && args[0] == "--postgres") await PostgresTests.RunAsync(args[1], Check);
 if (args.Length == 2 && args[0] == "--browser") await PostgresTests.RunAsync(args[1], Check, browser: true);
 Console.WriteLine($"Passed {checks} total checks.");
+}
+catch (Exception error)
+{
+  Console.Error.WriteLine(error);
+  Environment.ExitCode = 1;
+}

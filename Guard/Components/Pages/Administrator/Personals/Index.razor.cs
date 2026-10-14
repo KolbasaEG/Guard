@@ -13,6 +13,10 @@ namespace Guard.Components.Pages.Administrator.Personals;
 
 public partial class Index : IDisposable
 {
+  protected bool apiManaged = true;
+  private readonly Guard.Components.Library.Loading.ListLoadConfirmation synchronizationLoad = new();
+  protected Task<bool> ReloadForSynchronizationAsync() => synchronizationLoad.ReloadAsync(ReloadGridForSynchronizationAsync);
+  protected virtual Task ReloadGridForSynchronizationAsync() { if (disposed || grid == null) return Task.CompletedTask; grid.ResetLoadData(); return grid.Reload(); }
   [Inject] protected IPersonalService Service { get; set; } = default!;
   [Inject] protected DialogService Dialogs { get; set; } = default!;
   [Inject] protected IJSRuntime JS { get; set; } = default!;
@@ -31,6 +35,8 @@ public partial class Index : IDisposable
   protected string? error;
   protected DataViewMode mode = DataViewMode.Active;
   protected SubdivisionHierarchyMode hierarchy = SubdivisionHierarchyMode.CurrentOnly;
+  protected bool allRecords;
+  protected bool ShowAll => Access?.IsRoot == true && allRecords;
   protected const string PagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
 
   private readonly CancellationTokenSource cts = new();
@@ -45,6 +51,8 @@ public partial class Index : IDisposable
   protected override void OnParametersSet()
   {
     if (ReferenceEquals(loadedAccess, Access) && ReferenceEquals(loadedContext, UserContext)) return;
+    if (Access?.IsRoot != true) allRecords = false;
+    else if (loadedAccess?.IsRoot != true || loadedAccess.UserId != Access.UserId) allRecords = true;
     loadedAccess = Access;
     loadedContext = UserContext;
     loading?.Cancel();
@@ -66,14 +74,21 @@ public partial class Index : IDisposable
 
   private PersonalSearchRequest Request(int skip = 0, int take = 20) => new(
     Mode: mode, Skip: skip, Take: take, OrderBy: sort, Filter: appliedFilter,
-    OwnSubdivision: true, IncludeChildren: hierarchy == SubdivisionHierarchyMode.IncludeChildren);
+    OwnSubdivision: !ShowAll, IncludeChildren: hierarchy == SubdivisionHierarchyMode.IncludeChildren, AllSubdivisions: ShowAll);
 
-  protected bool CanWrite(PersonalListItemDto row) => Access?.Has(Permissions.Personals.Write) == true &&
+  protected async Task OnAllRecordsChanged(bool value)
+  {
+    allRecords = Access?.IsRoot == true && value;
+    await ResetPageAsync();
+  }
+
+  protected bool CanWrite(PersonalListItemDto row) => !apiManaged && Access?.Has(Permissions.Personals.Write) == true &&
     (row.Status is not (Status.Archived or Status.ArchivedBlocked) || Access.Has(Permissions.Personals.ReadArchive));
 
   protected async Task LoadData(LoadDataArgs args)
   {
     if (disposed || Access == null) return;
+    var loadTicket = synchronizationLoad.Begin();
     loading?.Cancel();
     var request = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
     loading = request;
@@ -89,10 +104,12 @@ public partial class Index : IDisposable
       var result = await Service.SearchAsync(search, ct);
       ct.ThrowIfCancellationRequested();
       await PermissionService.RequireAsync(Permissions.Personals.Read, ct);
+      ct.ThrowIfCancellationRequested();
       if (!disposed && ReferenceEquals(loading, request) && ReferenceEquals(initialAccess, Access))
       {
         filteredData = result.Items;
         count = result.Count;
+        synchronizationLoad.Confirm(loadTicket);
       }
     }
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { }

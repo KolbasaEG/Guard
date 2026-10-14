@@ -1,0 +1,17 @@
+.sync-status { padding: 4px 0; }
+.sync-status-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  align-items: center;
+  font-size: .85rem;
+}
+.sync-status-summary ::deep p { margin: 0; }
+.sync-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+.sync-status-hint { margin: 6px 0 0; font-size: .85rem; }

@@ -9,6 +9,7 @@
       <RadzenText><strong>Изменён:</strong> @FormatDate(Item.LastModifiedDate)</RadzenText>
       <RadzenText><strong>Изменил:</strong> @Display(Item.ModifiedBy)</RadzenText>
       <RadzenText><strong>Дата сверки:</strong> @FormatDate(Item.UpdatedAt)</RadzenText>
+      <RadzenText><strong>Изменён в источнике:</strong> @FormatDate(Item.SourceUpdatedAt)</RadzenText>
     </InfoBlock>
     <InfoBlock Title="Идентификаторы и коды" Icon="info" Style="flex-shrink:0;">
       @foreach (var field in Identifiers())

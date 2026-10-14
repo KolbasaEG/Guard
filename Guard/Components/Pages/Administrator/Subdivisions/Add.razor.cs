@@ -31,7 +31,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     protected bool isLoading = false;
     protected Subdivision item = new();
     protected IEnumerable<Subdivision> subdivisions = [];
-    protected IEnumerable<OrganType> organTypes = [];
+    protected IEnumerable<Classifier> organTypes = [];
     protected IEnumerable<Classifier> statusClassifiers = [];
 
     protected override async Task OnInitializedAsync()
@@ -116,9 +116,9 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     }
     protected void OnOrganTypeChanged(object value)
     {
-      if (value is OrganType selected)
+      if (value is Classifier selected)
       {
-        item.OrganTypeId = selected.Id;
+        item.OrganTypeId = selected.Type;
         item.OrganTypeCode = selected.Code;
       }
       else

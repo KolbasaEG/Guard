@@ -1,10 +1,14 @@
-﻿namespace Guard.Core.Entities;
+namespace Guard.Core.Entities;
 
 /// <summary>
 /// ���������� ��������� ������� Guard.
 /// </summary>
 public class Personal : BaseEntity, IHasSubdivision
 {
+  public long? ExternalId { get; set; }
+  public bool ImportedFromApi { get; set; }
+  public bool ArchivedBySynchronization { get; set; }
+  public DateTime? SourceUpdatedAt { get; set; }
   public Guid Version { get; set; } = Guid.NewGuid();
 
   /// <summary>

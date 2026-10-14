@@ -1,10 +1,15 @@
-﻿namespace Guard.Core.Entities;
+namespace Guard.Core.Entities;
 
 /// <summary>
 /// Подразделение / отдел / орган организационной структуры системы Guard.
 /// </summary>
 public class Subdivision : BaseEntity
 {
+  public long? ExternalParentId { get; set; }
+  public long? ExternalId { get; set; }
+  public bool ArchivedBySynchronization { get; set; }
+  public DateTime? SourceUpdatedAt { get; set; }
+  public DateTime? SynchronizedAt { get; set; }
   public Guid Version { get; set; } = Guid.NewGuid();
   /// <summary>
   /// Идентификатор подразделения для Path.
@@ -81,7 +86,7 @@ public class Subdivision : BaseEntity
   // --- Составной внешний ключ на OrganTypes (ID и Код органа) ---
   public int? OrganTypeId { get; set; }
   public int? OrganTypeCode { get; set; }
-  public OrganType? OrganType { get; set; }
+  public Classifier? OrganType { get; set; }
 
   public DateTime? UpdatedAt { get; set; }
 

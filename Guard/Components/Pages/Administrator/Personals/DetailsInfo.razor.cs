@@ -33,7 +33,8 @@ public partial class DetailsInfo : IDisposable
   {
     yield return new("Идентификатор сотрудника", Item.Id);
     yield return new("Подразделение", Item.SubdivisionId);
-    yield return new("Сотрудник во внешней системе", Item.PersonalId);
+    yield return new("Локальный номер сотрудника", Item.PersonalId);
+    yield return new("Сотрудник во внешней системе", Item.ExternalId);
     yield return new("Подразделение во внешней системе", Item.PersonalSubdivisionId);
     yield return new("Учётная запись", Item.UserId);
     yield return new("Тип категории персонала", Item.PersonnelCategoryType);

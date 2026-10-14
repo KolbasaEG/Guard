@@ -8,6 +8,8 @@ public sealed record PersonalDetailsDto
   public string CreatedBy { get; init; } = "";
   public string? ModifiedBy { get; init; }
   public long PersonalId { get; init; }
+  public long? ExternalId { get; init; }
+  public DateTime? SourceUpdatedAt { get; init; }
   public Guid? SubdivisionId { get; init; }
   public long PersonalSubdivisionId { get; init; }
   public int? PersonnelCategoryType { get; init; }

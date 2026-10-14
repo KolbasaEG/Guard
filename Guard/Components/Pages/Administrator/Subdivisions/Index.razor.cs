@@ -18,14 +18,24 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
 {
   public partial class Index : IDisposable
   {
+    protected bool apiManaged = true;
+    private readonly Guard.Components.Library.Loading.ListLoadConfirmation synchronizationLoad = new();
+    protected Task<bool> ReloadForSynchronizationAsync() => synchronizationLoad.ReloadAsync(ReloadGridForSynchronizationAsync);
+    protected virtual Task ReloadGridForSynchronizationAsync() { if (disposed || grid == null) return Task.CompletedTask; grid.ResetLoadData(); return grid.Reload(); }
+    protected bool allRecords;
+    protected bool ShowAll => Access?.IsRoot == true && allRecords;
     [Inject] protected IPermissionService PermissionService { get; set; } = default!;
     [Inject] protected BrowserTimeService Time { get; set; } = default!;
-    private static readonly HashSet<string> supportedFields = ["Address", "Fax", "Id", "InsertedDate", "IsDepartment", "LevelOrder", "Name", "OrganType.Name",  "Parent.Name", "Path", "Phone", "PositionFormationName", "PostalCode", "StaffCount", "StatusClassifier.Value", "StatusClassifier.Value"];
+    private static readonly HashSet<string> supportedFields = ["Address", "Fax", "Id", "InsertedDate", "IsDepartment", "LevelOrder", "Name", "OrganType.Value",  "Parent.Name", "Path", "Phone", "PositionFormationName", "PostalCode", "StaffCount", "StatusClassifier.Value", "StatusClassifier.Value"];
     private Func<IQueryable<Subdivision>, IQueryable<Subdivision>> appliedFilter = q => q;
     private bool disposed, reloadPending = true;
     private Guard.Core.Identity.UserContext? loadedContext;
     private Guard.Core.Services.DTOs.UserAccessSnapshot? loadedAccess;
-    protected override void OnParametersSet() { if (!ReferenceEquals(loadedAccess, Access) || !ReferenceEquals(loadedContext, UserContext)) { loadedAccess = Access; loadedContext = UserContext; _loadDataCts?.Cancel(); filteredData = []; count = 0; reloadPending = true; } }
+    protected override void OnParametersSet() { if (!ReferenceEquals(loadedAccess, Access) || !ReferenceEquals(loadedContext, UserContext)) {
+      if (Access?.IsRoot != true) allRecords = false;
+      else if (loadedAccess?.IsRoot != true || loadedAccess.UserId != Access.UserId) allRecords = true;
+      loadedAccess = Access; loadedContext = UserContext; _loadDataCts?.Cancel(); filteredData = []; count = 0; reloadPending = true; } }
+    protected async Task OnAllRecordsChanged(bool value) { allRecords = Access?.IsRoot == true && value; await ResetPageAsync(); }
     protected override async Task OnAfterRenderAsync(bool firstRender) {
       if (disposed || !reloadPending) return; reloadPending = false;
       try { await Time.InitializeAsync(); await grid.Reload(); }
@@ -59,7 +69,7 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
     protected SubdivisionHierarchyMode hierarchyMode = SubdivisionHierarchyMode.CurrentOnly;
     int count;
     [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; }
-    protected bool isEditor => Access?.Has(Guard.Core.Identity.Permissions.Subdivisions.Write) == true;
+    protected bool isEditor => !apiManaged && Access?.Has(Guard.Core.Identity.Permissions.Subdivisions.Write) == true;
     protected bool isLoading = false;
     protected DataViewMode currentMode = DataViewMode.Active; 
     string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
@@ -82,9 +92,10 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       }
     }
 
-    async Task LoadData(LoadDataArgs args)
+    protected async Task LoadData(LoadDataArgs args)
     {
       if (disposed || Time.Zone == null) return;
+      var loadTicket = synchronizationLoad.Begin();
       _loadDataCts?.Cancel();
       var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
       _loadDataCts = request; var ct = request.Token;
@@ -92,23 +103,26 @@ namespace Guard.Components.Pages.Administrator.Subdivisions
       isLoading = true;
       try {
         if ((args.Skip ?? 0) < 0 || (args.Top ?? 20) is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
+        var showAll = ShowAll;
+        var currentPath = showAll ? null : await SubdivisionService.GetOwnSubdivisionPathAsync(ct);
         var result = await SubdivisionService.QuerySubdivisionsAsync(async query => {
           query = query.FilterByMode(currentMode);
-          var path = UserContext?.Subdivision?.Path;
+          var path = currentPath;
           var validPath = path != null && path.StartsWith('/') && path.EndsWith('/') &&
             path.Split('/', StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } segments &&
             segments.All(s => long.TryParse(s, out var id) && id > 0);
-          query = !validPath ? query.Where(p => false) : hierarchyMode == SubdivisionHierarchyMode.CurrentOnly ? query.Where(p => p.Path == path) : query.Where(p => p.Path.StartsWith(path!));
+          if (!showAll) query = !validPath ? query.Where(p => false) : hierarchyMode == SubdivisionHierarchyMode.CurrentOnly ? query.Where(p => p.Path == path) : query.Where(p => p.Path.StartsWith(path!));
           query = filter(query);
           var total = await query.CountAsync(ct);
           query = EntityListQuery<Subdivision>.Sort(query, args.OrderBy, supportedFields, "InsertedDate desc");
-          var page = await query.Skip(args.Skip ?? 0).Take(args.Top ?? 20).Select(p => new SubdivisionListDto { Id=p.Id, Version=p.Version, Status=p.Status, Name=p.Name, OrganTypeName=p.OrganType == null ? null : p.OrganType.Name, StatusClassifierName=p.StatusClassifier == null ? null : p.StatusClassifier.Value, ParentName=p.Parent == null ? null : p.Parent.Name, PositionFormationName=p.PositionFormationName, PostalCode=p.PostalCode, Address=p.Address, Phone=p.Phone, StaffCount=p.StaffCount, LevelOrder=p.LevelOrder, IsDepartment=p.IsDepartment }).ToListAsync(ct);
+          var page = await query.Skip(args.Skip ?? 0).Take(args.Top ?? 20).Select(p => new SubdivisionListDto { Id=p.Id, Version=p.Version, Status=p.Status, Name=p.Name, OrganTypeName=p.OrganType == null ? null : p.OrganType.Value, StatusClassifierName=p.StatusClassifier == null ? null : p.StatusClassifier.Value, ParentName=p.Parent == null ? null : p.Parent.Name, PositionFormationName=p.PositionFormationName, PostalCode=p.PostalCode, Address=p.Address, Phone=p.Phone, StaffCount=p.StaffCount, LevelOrder=p.LevelOrder, IsDepartment=p.IsDepartment }).ToListAsync(ct);
           return (page, total);
         }, ct);
         ct.ThrowIfCancellationRequested();
         await PermissionService.RequireAsync(Guard.Core.Identity.Permissions.Subdivisions.Read, ct);
+        ct.ThrowIfCancellationRequested();
         if (disposed || !ReferenceEquals(request, _loadDataCts)) return;
-        filteredData = result.page; count = result.total;
+        filteredData = result.page; count = result.total; synchronizationLoad.Confirm(loadTicket);
       }
       catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
       catch (Exception ex) {

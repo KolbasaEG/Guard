@@ -91,6 +91,7 @@ public class ClassifierService : IClassifierService
     var clean = new Classifier { Id = classifier.Id };
     ClassifierFieldsDto.From(classifier).ApplyTo(clean); classifier = clean;
     EntityInputValidation.Validate(classifier);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
 
     return await _uow.ExecuteInTransactionAsync(async () =>
     {
@@ -114,6 +115,7 @@ public class ClassifierService : IClassifierService
     await _permissions.RequireAsync(Permissions.Classifiers.Manage, ct);
     ArgumentNullException.ThrowIfNull(classifier);
     EntityInputValidation.Validate(classifier);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
 
     classifier.ClassifierName = classifier.ClassifierName?.Trim() ?? string.Empty;
     classifier.Value = classifier.Value?.Trim() ?? string.Empty;
@@ -133,6 +135,7 @@ public class ClassifierService : IClassifierService
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Classifiers.Manage, ct);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
     var classifier = await GetRequiredForWriteAsync(_uow, id, ct);
     if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(classifier.Version, expectedVersion.Value);
 
@@ -149,6 +152,7 @@ public class ClassifierService : IClassifierService
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Classifiers.Manage, ct);
+    await DirectoryManagementService.RequireLocalAsync(_uow, ct);
     var classifier = await GetRequiredForWriteAsync(_uow, id, ct);
     if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(classifier.Version, expectedVersion.Value);
 

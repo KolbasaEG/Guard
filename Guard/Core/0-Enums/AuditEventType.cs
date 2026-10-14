@@ -23,5 +23,7 @@ public enum AuditEventType
   AccessDenied = 16,
   UserBlocked = 17,
   UserUnblocked = 18,
-  AccountPolicyChanged = 19
+  AccountPolicyChanged = 19,
+  SynchronizationSettingsChanged = 20,
+  SynchronizationCompleted = 21
 }
