@@ -62,7 +62,14 @@ internal static class AccountPolicyMigrationTests
       INSERT INTO "AccountPolicies" ("Id", "Version", "PasswordExpirationEnabled", "PasswordDays", "InactivityEnabled", "InactivityDays", "MinimumLength", "UniqueCharacters", "RequireDigit", "RequireLowercase", "RequireUppercase", "RequireSymbol")
       VALUES (1, '00000000-0000-0000-0000-000000000001', false, 45, false, 60, 12, 4, true, true, true, true);
       """);
+    await db.GetService<IMigrator>().MigrateAsync("20261014132937_AddDataExport");
+    await db.Database.ExecuteSqlRawAsync("""
+      UPDATE "SynchronizationSettings" SET "ApiBaseUrl" = 'https://migration.example.invalid/api', "ApiUsername" = 'migration-account';
+      """);
     await db.Database.MigrateAsync();
+    var migratedSettings = await db.SynchronizationSettings.AsNoTracking().SingleAsync();
+    check(!migratedSettings.CompleteSnapshotGuaranteed && migratedSettings.ApiBaseUrl == "https://migration.example.invalid/api" &&
+      migratedSettings.ApiUsername == "migration-account", "snapshot confirmation migration defaults to false and preserves existing source settings");
     var migratedPolicy = await db.Set<AccountPolicy>().SingleAsync();
     check(migratedPolicy.MaxFailedLoginAttempts == 5 && migratedPolicy.LoginLockoutMinutes == 15 && migratedPolicy.PasswordDays == 45 && migratedPolicy.MinimumLength == 12,
       "login policy migration initializes new defaults without changing existing password settings");

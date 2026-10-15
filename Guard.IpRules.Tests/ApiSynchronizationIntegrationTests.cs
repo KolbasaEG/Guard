@@ -6,6 +6,10 @@ using Guard.Core.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Guard.Core.Services.Exports;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 internal static class ApiSynchronizationIntegrationTests
 {
@@ -50,8 +54,10 @@ internal static class ApiSynchronizationIntegrationTests
         catch (ArgumentException) { check(true, "invalid source settings rejected"); }
       }
     }
+    await CheckSnapshotConfirmationAsync(factory, service, runner, permissions, api, audit, credentials, check);
     var first = await runner.RunAsync("test-api-root", null, false, CancellationToken.None, new DateOnly(2000, 8, 10));
     check(first.Status == SynchronizationStatus.Succeeded && first.UpdatedSince == new DateOnly(2000, 8, 10), "initial synchronization with date succeeds without prior full import");
+    await CheckExportWorkerIsolationAsync(factory, permissions, api, audit, credentials, runner, service, check);
     var listService = new PersonalService(null!, null!, null!, NullLogger<PersonalService>.Instance, permissions,
       new DataAccessScopeService(permissions, factory), factory);
     check((await listService.SearchAsync(new(OwnSubdivision: true))).Count == 0, "Root own-personnel mode stays empty without own employee binding");
@@ -170,9 +176,9 @@ internal static class ApiSynchronizationIntegrationTests
     await using (var lockDb = await factory.CreateDbContextAsync())
     {
       await lockDb.Database.OpenConnectionAsync();
-      await lockDb.Database.ExecuteSqlRawAsync("SELECT pg_advisory_lock(73460220)");
+      await lockDb.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_lock({PostgresAdvisoryLocks.ApiSynchronization})");
       try { await PostgresTests.ThrowsAsync<EntityRuleException>(() => runner.RunAsync("test-api-root", null, false, CancellationToken.None), check, "parallel synchronization is rejected across database connections"); }
-      finally { await lockDb.Database.ExecuteSqlRawAsync("SELECT pg_advisory_unlock(73460220)"); }
+      finally { await lockDb.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({PostgresAdvisoryLocks.ApiSynchronization})"); }
     }
     var overview = await service.GetOverviewAsync(classifiers: true);
     await service.SaveSettingsAsync(DataManagementMode.Local, true, new(2, 0), overview.Settings.Version);
@@ -311,6 +317,203 @@ internal static class ApiSynchronizationIntegrationTests
     permissions.Current = new("test-api-root", true, []);
   }
 
+  private static async Task CheckSnapshotConfirmationAsync(IDbContextFactory<ApplicationDbContext> factory,
+    SynchronizationService service, ApiSynchronizationRunner runner, PermissionsStub permissions, ClientStub api,
+    AuditStub audit, ApiCredentialProtector credentials, Action<bool, string> check)
+  {
+    using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    var ct = deadline.Token;
+    var settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+    check(!settings.CompleteSnapshotGuaranteed, "snapshot confirmation defaults to false in stored settings");
+    async Task<(int, int, int)> CountsAsync()
+    {
+      await using var db = await factory.CreateDbContextAsync(ct);
+      return (await db.Classifiers.CountAsync(ct), await db.Subdivisions.CountAsync(ct), await db.Personals.CountAsync(ct));
+    }
+    var counts = await CountsAsync();
+    var requests = api.FetchCalls;
+    settings.ScheduleEnabled = true;
+    settings.DailyTime = TimeOnly.MinValue;
+    check(!SynchronizationSchedule.IsDue(settings, DateTimeOffset.UtcNow), "scheduler waits for stored snapshot confirmation");
+    await service.SaveSettingsAsync(DataManagementMode.Api, true, TimeOnly.MinValue, settings.Version, ct);
+    await PostgresTests.ThrowsAsync<EntityRuleException>(() => runner.RunAsync("test-api-root", null, false, ct), check,
+      "unconfirmed stored snapshot blocks manual synchronization");
+    await PostgresTests.ThrowsAsync<EntityRuleException>(() => service.RunAsync(ct, enqueue: true), check,
+      "unconfirmed stored snapshot blocks queue submission");
+    await PostgresTests.ThrowsAsync<EntityRuleException>(() => runner.RunAsync("system:api-sync", null, true, ct), check,
+      "unconfirmed stored snapshot blocks due scheduled synchronization");
+    check(api.FetchCalls == requests && await CountsAsync() == counts, "unconfirmed synchronization neither fetches nor changes directory data");
+
+    using var logs = LoggerFactory.Create(builder => builder.AddProvider(new ProtocolLoggerProvider()));
+    var diagnostics = new ApiDiagnosticService(factory, permissions, api, credentials, logs.CreateLogger<ApiDiagnosticService>());
+    check((await diagnostics.RunAsync(new(2000, 8, 10), ct)).AnalysisComplete, "diagnostics remain available without stored snapshot confirmation");
+    settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+    var staleVersion = settings.Version;
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, completeSnapshotGuaranteed: true);
+    settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+    check(settings.CompleteSnapshotGuaranteed && settings.Version != staleVersion, "Root confirmation persists with a new concurrency version");
+    check(audit.Details.Any(d => d.Contains("CompleteSnapshotGuaranteed=True")), "confirmation change is included in security audit");
+    await PostgresTests.ThrowsAsync<EntityConflictException>(() => service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), staleVersion, ct, completeSnapshotGuaranteed: false),
+      check, "stale settings cannot revoke snapshot confirmation");
+    permissions.Current = new("test-api-operator", false, []);
+    try
+    {
+      await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, completeSnapshotGuaranteed: false),
+        check, "non-Root cannot change stored snapshot confirmation");
+    }
+    finally { permissions.Current = new("test-api-root", true, []); }
+    check((await service.GetOverviewAsync(ct: ct)).Settings.CompleteSnapshotGuaranteed, "rejected writes preserve snapshot confirmation");
+
+    var queued = await service.RunAsync(ct, enqueue: true);
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, completeSnapshotGuaranteed: false);
+    requests = api.FetchCalls;
+    var rejectedQueue = await runner.RunAsync("test-api-root", null, false, ct, queuedRunId: queued.Id);
+    check(rejectedQueue.Status == SynchronizationStatus.Failed && api.FetchCalls == requests,
+      "already queued synchronization cannot fetch after confirmation is revoked");
+    settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, completeSnapshotGuaranteed: true);
+    settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+
+    var originalUrl = settings.ApiBaseUrl;
+    var originalUsername = settings.ApiUsername;
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct,
+      apiBaseUrl: "https://changed.example.invalid/api", completeSnapshotGuaranteed: true);
+    settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+    check(!settings.CompleteSnapshotGuaranteed, "changing API address clears confirmation even when submitted as true");
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, apiBaseUrl: originalUrl);
+    settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, completeSnapshotGuaranteed: true);
+    settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, apiUsername: "changed-account", completeSnapshotGuaranteed: true);
+    settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+    check(!settings.CompleteSnapshotGuaranteed, "changing API account clears confirmation even when submitted as true");
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, apiUsername: originalUsername);
+    settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, completeSnapshotGuaranteed: true);
+
+    api.Pause = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    api.Started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    var pending = runner.RunAsync("test-api-root", null, false, ct);
+    try
+    {
+      await api.Started.Task.WaitAsync(ct);
+      settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+      await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, completeSnapshotGuaranteed: false);
+      var cancelled = await pending.WaitAsync(ct);
+      check(cancelled.Status == SynchronizationStatus.Cancelled && await CountsAsync() == counts,
+        "revoking confirmation cancels an active fetch and prevents directory changes");
+    }
+    finally { api.Pause.TrySetResult(); api.Pause = null; }
+    settings = (await service.GetOverviewAsync(ct: ct)).Settings;
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, ct, completeSnapshotGuaranteed: true);
+  }
+
+  private static async Task CheckExportWorkerIsolationAsync(IDbContextFactory<ApplicationDbContext> factory,
+    PermissionsStub permissions, ClientStub api, AuditStub audit, ApiCredentialProtector credentials,
+    ApiSynchronizationRunner runner, SynchronizationService service, Action<bool, string> check)
+  {
+    var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "guard-lock-tests-" + Guid.NewGuid().ToString("N")));
+    var options = Options.Create(new ExportOptions { Directory = "archive", MinimumFreeBytes = 0 });
+    var storage = new ExportStorage(new EphemeralDataProtectionProvider(), options, new ExportTests.EnvironmentStub(root));
+    var access = new ExportAccess(factory, permissions);
+    var processor = new ExportProcessor(factory, access, new ExportSnapshot(factory, storage),
+      new ExportDocumentWriter(storage, options), storage, audit, options, NullLogger<ExportProcessor>.Instance);
+    await using var provider = new ServiceCollection().AddSingleton(factory).AddSingleton(processor).BuildServiceProvider();
+    using var worker = new ExportWorker(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<ExportWorker>.Instance);
+    using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    var ct = deadline.Token;
+    // NullLogger suppresses Information, while diagnostics require a complete protocol.
+    using var logs = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Information).AddProvider(new ProtocolLoggerProvider()));
+    var diagnostics = new ApiDiagnosticService(factory, permissions, api, credentials, logs.CreateLogger<ApiDiagnosticService>());
+    await using var probe = await factory.CreateDbContextAsync(ct);
+    await probe.Database.OpenConnectionAsync(ct);
+    async Task<bool> TryExportLockAsync() => await probe.Database
+      .SqlQueryRaw<bool>($"SELECT pg_try_advisory_lock({PostgresAdvisoryLocks.ExportQueue}) AS \"Value\"").SingleAsync(ct);
+    async Task ReleaseExportLockAsync() => await probe.Database
+      .ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({PostgresAdvisoryLocks.ExportQueue})", CancellationToken.None);
+    async Task WaitForWorkerAsync()
+    {
+      // Each successful probe is released immediately; failure proves the worker owns the lease.
+      while (await TryExportLockAsync())
+      {
+        await ReleaseExportLockAsync();
+        await Task.Delay(25, ct);
+      }
+    }
+    try
+    {
+      check(!await probe.ExportJobs.AnyAsync(ct), "worker isolation starts with an empty export queue");
+      await worker.StartAsync(ct);
+      await WaitForWorkerAsync();
+      check(!await TryExportLockAsync(), "another export connection cannot own the worker lease");
+      var date = new DateOnly(2000, 8, 10);
+      var result = await diagnostics.RunAsync(date, ct);
+      check(result.FetchComplete && result.AnalysisComplete, "diagnostics complete while idle export worker owns its lease");
+      var sync = await runner.RunAsync("test-api-root", null, false, ct, date);
+      check(sync.Status == SynchronizationStatus.Succeeded, "synchronization completes while idle export worker owns its lease");
+
+      api.Pause = new(TaskCreationOptions.RunContinuationsAsynchronously);
+      api.Started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+      using (var cancel = CancellationTokenSource.CreateLinkedTokenSource(ct))
+      {
+        var pending = diagnostics.RunAsync(date, cancel.Token);
+        try
+        {
+          await api.Started.Task.WaitAsync(ct);
+          await PostgresTests.ThrowsAsync<EntityRuleException>(() => diagnostics.RunAsync(date, ct), check, "parallel diagnostics remain rejected");
+          await PostgresTests.ThrowsAsync<EntityRuleException>(() => runner.RunAsync("test-api-root", null, false, ct), check, "diagnostics block direct synchronization");
+          await PostgresTests.ThrowsAsync<EntityRuleException>(() => service.RunAsync(ct, enqueue: true), check, "diagnostics block queued synchronization requests");
+        }
+        finally { await cancel.CancelAsync(); await pending.WaitAsync(ct); }
+      }
+      api.Pause = null;
+      check((await diagnostics.RunAsync(date, ct)).AnalysisComplete, "cancelled diagnostics release the synchronization lock");
+
+      api.Pause = new(TaskCreationOptions.RunContinuationsAsynchronously);
+      api.Started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+      var pendingSync = runner.RunAsync("test-api-root", null, false, ct, date);
+      try
+      {
+        await api.Started.Task.WaitAsync(ct);
+        await PostgresTests.ThrowsAsync<EntityRuleException>(() => diagnostics.RunAsync(date, ct), check, "active synchronization still blocks diagnostics");
+      }
+      finally { api.Pause.TrySetResult(); await pendingSync.WaitAsync(ct); api.Pause = null; }
+
+      await worker.StopAsync(ct);
+      var acquired = await TryExportLockAsync();
+      try { check(acquired, "stopped export worker releases its lease to another connection"); }
+      finally { if (acquired) await ReleaseExportLockAsync(); }
+      using var replacement = new ExportWorker(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<ExportWorker>.Instance);
+      try
+      {
+        await replacement.StartAsync(ct);
+        await WaitForWorkerAsync();
+        check(true, "replacement export worker acquires released lease");
+      }
+      finally { using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10)); await replacement.StopAsync(stop.Token); }
+    }
+    finally
+    {
+      api.Pause?.TrySetResult(); api.Pause = null;
+      using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      await worker.StopAsync(stop.Token);
+      if (root.StartsWith(Path.GetFullPath(Path.GetTempPath()), StringComparison.OrdinalIgnoreCase) && Directory.Exists(root))
+        Directory.Delete(root, true);
+    }
+  }
+
+  private sealed class ProtocolLoggerProvider : ILoggerProvider
+  {
+    public ILogger CreateLogger(string categoryName) => new ProtocolLogger();
+    public void Dispose() { }
+    private sealed class ProtocolLogger : ILogger
+    {
+      public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+      public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Information;
+      public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+    }
+  }
+
   private sealed class ClientStub : IDirectoryApiClient
   {
     public Task<ApiSnapshot> ResolveDependenciesAsync(ApiSnapshot snapshot, IReadOnlySet<(int Type, int Code)> knownClassifiers,
@@ -318,12 +521,14 @@ internal static class ApiSynchronizationIntegrationTests
     public Task PingAsync(string baseUrl, string username, string password, CancellationToken ct) => Task.CompletedTask;
     public ApiSnapshot Snapshot { get; set; } = ApiSynchronizationTests.Snapshot();
     public bool ThrowOnFetch { get; set; }
+    public int FetchCalls { get; private set; }
     public TaskCompletionSource? Pause { get; set; }
     public TaskCompletionSource? Started { get; set; }
     public Task<ApiSnapshot> FetchAsync(string baseUrl, int pageSize, CancellationToken ct, string? username = null, string? password = null, DateOnly? updatedSince = null, long? headSubdivisionId = null, Func<string, CancellationToken, Task>? phaseChanged = null) => FetchAsync(ct);
     public Task<ApiSnapshot> FetchDiagnosticAsync(string baseUrl, int pageSize, string username, string password, DateOnly updatedSince, CancellationToken ct, IProgress<string>? progress = null) => FetchAsync(ct);
     public async Task<ApiSnapshot> FetchAsync(CancellationToken ct)
     {
+      FetchCalls++;
       ct.ThrowIfCancellationRequested();
       if (ThrowOnFetch) throw new HttpRequestException("Test failure");
       if (Pause != null) { Started!.TrySetResult(); await Pause.Task.WaitAsync(ct); }
@@ -340,6 +545,7 @@ internal static class ApiSynchronizationIntegrationTests
   }
   private sealed class AuditStub : IAuditService
   {
-    public void LogIdentityEvent(AuditEventType eventType, string? userName, string? ipAddress = null, string? details = null) { }
+    public List<string> Details { get; } = [];
+    public void LogIdentityEvent(AuditEventType eventType, string? userName, string? ipAddress = null, string? details = null) => Details.Add(details ?? "");
   }
 }

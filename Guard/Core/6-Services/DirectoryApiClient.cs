@@ -13,8 +13,6 @@ public sealed class DirectoryApiOptions
   public string Username { get; set; } = "";
   public string Password { get; set; } = "";
   public int PageSize { get; set; } = 500;
-  // Должно быть подтверждено владельцем API перед архивацией по отсутствию.
-  public bool CompleteSnapshotGuaranteed { get; set; }
 }
 
 public interface IDirectoryApiClient
@@ -58,8 +56,6 @@ public sealed class DirectoryApiClient(HttpClient http, IOptions<DirectoryApiOpt
         address.Scheme != Uri.UriSchemeHttps || string.IsNullOrWhiteSpace(username) ||
         string.IsNullOrEmpty(password) || pageSize is < 1 or > 500)
       throw new EntityRuleException("Не настроено защищённое подключение к API.");
-    if (!diagnostic && !settings.CompleteSnapshotGuaranteed)
-      throw new EntityRuleException("Перед синхронизацией необходимо подтвердить полноту и согласованность выгрузки API.");
     var authorization = Convert.ToBase64String(Encoding.UTF8.GetBytes(username + ":" + password));
     progress?.Report("Получение классификаторов");
     if (phaseChanged != null) await phaseChanged("Classifiers", ct);

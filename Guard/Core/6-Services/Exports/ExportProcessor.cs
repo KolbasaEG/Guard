@@ -148,7 +148,7 @@ public sealed class ExportWorker(IServiceScopeFactory scopes, ILogger<ExportWork
       try {
         using var release = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         if (lease.Database.GetDbConnection().State == System.Data.ConnectionState.Open)
-          await lease.Database.ExecuteSqlRawAsync("SELECT pg_advisory_unlock(73460220)", release.Token);
+          await lease.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({PostgresAdvisoryLocks.ExportQueue})", release.Token);
       } catch (Exception ex) { logger.LogWarning(ex, "Освобождение блокировки очереди экспорта"); }
       finally { await lease.DisposeAsync(); lease = null; }
     }
@@ -162,7 +162,7 @@ public sealed class ExportWorker(IServiceScopeFactory scopes, ILogger<ExportWork
           var candidate = await factory.CreateDbContextAsync(stoppingToken);
           try {
             await candidate.Database.OpenConnectionAsync(stoppingToken);
-            if (await candidate.Database.SqlQueryRaw<bool>("SELECT pg_try_advisory_lock(73460220) AS \"Value\"").SingleAsync(stoppingToken)) lease = candidate;
+            if (await candidate.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_lock({PostgresAdvisoryLocks.ExportQueue}) AS \"Value\"").SingleAsync(stoppingToken)) lease = candidate;
             else await candidate.DisposeAsync();
           } catch { await candidate.DisposeAsync(); throw; }
         }

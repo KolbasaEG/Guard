@@ -930,6 +930,11 @@ namespace Guard.Migrations
                     b.Property<DateTime?>("ClassifiersSynchronizedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("CompleteSnapshotGuaranteed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<TimeOnly>("DailyTime")
                         .HasColumnType("time without time zone");
 
@@ -979,6 +984,7 @@ namespace Guard.Migrations
                             ApiBaseUrl = "",
                             ApiPageSize = 500,
                             ApiUsername = "",
+                            CompleteSnapshotGuaranteed = false,
                             DailyTime = new TimeOnly(2, 0, 0),
                             Mode = 0,
                             ScheduleEnabled = false,

@@ -31,7 +31,7 @@ internal static class ApiLifecycleIntegrationTests
       db.Add(employee); await db.SaveChangesAsync(); employeeId = employee.Id;
     }
     settings = (await service.GetOverviewAsync()).Settings;
-    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version);
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, completeSnapshotGuaranteed: true);
     client.Snapshot = new([], [], []) { ExitEvents = [new() { PersonalId = 990001, EventAt = markerTime }] };
     var exit = await service.RunAsync(updatedSince: new(2026, 10, 1));
     check(exit.Status == SynchronizationStatus.Succeeded && exit.Archived == 1 && exit.ExitEvents == 1, "explicit exit event archives imported employee atomically");
@@ -98,7 +98,7 @@ internal static class ApiLifecycleIntegrationTests
       (await db.Personals.FindAsync(employeeId))!.Status = Status.Blocked; await db.SaveChangesAsync();
     }
     settings = (await service.GetOverviewAsync()).Settings;
-    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version);
+    await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), settings.Version, completeSnapshotGuaranteed: true);
     client.Snapshot = new([], [], []) { ExitEvents = [new() { PersonalId = 990001, EventAt = markerTime.AddHours(4) }] };
     await service.RunAsync(updatedSince: new(2026, 10, 1));
     await using (var db = await factory.CreateDbContextAsync())

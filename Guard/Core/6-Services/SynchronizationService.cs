@@ -10,7 +10,7 @@ public interface ISynchronizationService
 {
   Task<DirectoryActuality> GetActualityAsync(string readPermission, CancellationToken ct = default);
   Task<SynchronizationOverview> GetOverviewAsync(bool classifiers = false, bool includeChildren = true, CancellationToken ct = default, bool allSubdivisions = false);
-  Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null);
+  Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null, bool? completeSnapshotGuaranteed = null);
   Task<SynchronizationRun> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false);
   Task<IReadOnlyList<SynchronizationRun>> GetHistoryAsync(CancellationToken ct = default);
   Task CheckConnectionAsync(CancellationToken ct = default);
@@ -55,7 +55,7 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
     return new(settings, null, await GlobalActualAtAsync(db, ct), last, settings.Mode == DataManagementMode.Api);
   }
 
-  public async Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null)
+  public async Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null, bool? completeSnapshotGuaranteed = null)
   {
     var actor = await permissions.GetCurrentAsync(ct);
     if (!actor.IsRoot) throw new UnauthorizedAccessException("Настройки доступны только Root.");
@@ -81,6 +81,9 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
     await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({ApplicationDbContext.ManagementLock})", ct);
     var settings = await db.SynchronizationSettings.SingleAsync(s => s.Id == 1, ct);
     EntityInputValidation.CheckVersion(settings.Version, version);
+    var sourceChanged = SynchronizationSettingsRules.SourceChanged(settings, apiBaseUrl, apiUsername);
+    var previouslyConfirmed = settings.CompleteSnapshotGuaranteed;
+    settings.CompleteSnapshotGuaranteed = !sourceChanged && (completeSnapshotGuaranteed ?? previouslyConfirmed);
     settings.Mode = mode; settings.ScheduleEnabled = enabled; settings.DailyTime = time;
     settings.ApiHeadSubdivisionId = apiHeadSubdivisionId;
     if (apiBaseUrl != null) settings.ApiBaseUrl = apiBaseUrl.TrimEnd('/');
@@ -93,7 +96,7 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
     settings.ModifiedBy = actor.UserId; settings.ModifiedAt = DateTime.UtcNow;
     await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
     audit.LogIdentityEvent(Guard.Core.Enums.AuditEventType.SynchronizationSettingsChanged, actor.UserId,
-      details: $"Mode={mode}; ScheduleEnabled={enabled}; DailyTime={time:HH:mm}; TimeZone={TimeZoneInfo.Local.Id}; ApiHeadSubdivisionId={apiHeadSubdivisionId}");
+      details: $"Mode={mode}; ScheduleEnabled={enabled}; DailyTime={time:HH:mm}; TimeZone={TimeZoneInfo.Local.Id}; ApiHeadSubdivisionId={apiHeadSubdivisionId}; CompleteSnapshotGuaranteed={settings.CompleteSnapshotGuaranteed}; PreviouslyConfirmed={previouslyConfirmed}; SourceChanged={sourceChanged}");
   }
 
   public async Task<SynchronizationRun> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false)
@@ -104,11 +107,12 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
     if (!enqueue) return await runner.RunAsync(actor.UserId, pool, false, ct, updatedSince);
     await using var queueDb = await factory.CreateDbContextAsync(ct);
     await using var transaction = await queueDb.Database.BeginTransactionAsync(ct);
-    if (!await queueDb.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_xact_lock({ApiSynchronizationRunner.RunLock}) AS \"Value\"").SingleAsync(ct))
+    if (!await queueDb.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_xact_lock({PostgresAdvisoryLocks.ApiSynchronization}) AS \"Value\"").SingleAsync(ct))
       throw new EntityRuleException("Синхронизация или диагностика уже выполняется.");
     await queueDb.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({ApplicationDbContext.ManagementLock})", ct);
     var settings = await queueDb.SynchronizationSettings.SingleAsync(s => s.Id == 1, ct);
     if (settings.Mode != DataManagementMode.Api) throw new EntityRuleException("В локальном режиме синхронизация отключена.");
+    SynchronizationSettingsRules.RequireSnapshotConfirmation(settings);
     if (await queueDb.SynchronizationRuns.AnyAsync(r => r.Status == SynchronizationStatus.Queued || r.Status == SynchronizationStatus.Running, ct))
       throw new EntityRuleException("Синхронизация уже ожидает запуска или выполняется.");
     var request = new SynchronizationRun { ActorId = actor.UserId, PoolId = pool, UpdatedSince = updatedSince,
@@ -131,21 +135,20 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
 public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbContext> factory,
   IDirectoryApiClient client, IPermissionService permissions, IAuditService audit, ILogger<ApiSynchronizationRunner> logger, ApiCredentialProtector credentials, IHostApplicationLifetime? applicationLifetime = null, TimeProvider? timeProvider = null)
 {
-  internal const long RunLock = 73460220;
   public Task CheckConnectionAsync(string baseUrl, string username, string password, CancellationToken ct) => client.PingAsync(baseUrl, username, password, ct);
 
   public async Task RecoverInterruptedAsync(CancellationToken ct)
   {
     await using var db = await factory.CreateDbContextAsync(ct);
     await db.Database.OpenConnectionAsync(ct);
-    if (!await db.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_lock({RunLock}) AS \"Value\"").SingleAsync(ct)) return;
+    if (!await db.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_lock({PostgresAdvisoryLocks.ApiSynchronization}) AS \"Value\"").SingleAsync(ct)) return;
     try
     {
       await db.SynchronizationRuns.Where(r => r.Status == SynchronizationStatus.Running)
         .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, SynchronizationStatus.Interrupted)
           .SetProperty(r => r.CompletedAt, DateTime.UtcNow).SetProperty(r => r.Error, "Предыдущий процесс завершился до окончания синхронизации."), ct);
     }
-    finally { await db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({RunLock})", CancellationToken.None); }
+    finally { await db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({PostgresAdvisoryLocks.ApiSynchronization})", CancellationToken.None); }
   }
 
   public async Task<SynchronizationRun> RunAsync(string actor, Guid? pool, bool scheduled, CancellationToken ct, DateOnly? updatedSince = null, Guid? queuedRunId = null)
@@ -154,7 +157,7 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
     await using var db = await factory.CreateDbContextAsync(ct);
     db.IsSynchronization = true;
     await db.Database.OpenConnectionAsync(ct);
-    if (!await db.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_lock({RunLock}) AS \"Value\"").SingleAsync(ct))
+    if (!await db.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_lock({PostgresAdvisoryLocks.ApiSynchronization}) AS \"Value\"").SingleAsync(ct))
       throw new EntityRuleException("Синхронизация уже выполняется. Дождитесь её завершения.");
     SynchronizationRun? run = null;
     var committed = false;
@@ -175,6 +178,7 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
       }
       var settings = await db.SynchronizationSettings.AsNoTracking().SingleAsync(s => s.Id == 1, ct);
       if (settings.Mode != DataManagementMode.Api) throw new EntityRuleException("В локальном режиме синхронизация отключена.");
+      SynchronizationSettingsRules.RequireSnapshotConfirmation(settings);
       if (run?.RequestedSettingsVersion is Guid expectedVersion && expectedVersion != settings.Version)
         throw new EntityRuleException("Настройки изменились после постановки в очередь. Запустите синхронизацию повторно.");
       if (!scheduled)
@@ -240,6 +244,7 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
         var current = await db.SynchronizationSettings.SingleAsync(s => s.Id == 1, ct);
         if (current.Mode != DataManagementMode.Api || current.Version != settings.Version)
           throw new EntityRuleException("Настройки изменились. Запустите синхронизацию повторно.");
+        SynchronizationSettingsRules.RequireSnapshotConfirmation(current);
         if (!scheduled)
         {
           var access = await permissions.GetForUserAsync(actor, ct);
@@ -308,7 +313,7 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
     }
     finally
     {
-      await db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({RunLock})", CancellationToken.None);
+      await db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({PostgresAdvisoryLocks.ApiSynchronization})", CancellationToken.None);
       runScope?.Dispose();
     }
   }
@@ -337,7 +342,7 @@ public static class SynchronizationSchedule
   public static bool IsDue(SynchronizationSettings settings, DateTimeOffset utcNow)
   {
     var local = TimeZoneInfo.ConvertTime(utcNow, TimeZoneInfo.Local);
-    return settings.Mode == DataManagementMode.Api && settings.ScheduleEnabled &&
+    return settings.Mode == DataManagementMode.Api && settings.CompleteSnapshotGuaranteed && settings.ScheduleEnabled &&
       TimeOnly.FromDateTime(local.DateTime) >= settings.DailyTime &&
       (!settings.LastScheduledDate.HasValue || settings.LastScheduledDate.Value < DateOnly.FromDateTime(local.DateTime));
   }

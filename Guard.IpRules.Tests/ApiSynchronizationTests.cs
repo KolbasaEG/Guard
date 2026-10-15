@@ -41,7 +41,7 @@ internal static class ApiSynchronizationTests
     Reject(snapshot with { Personnel = [new() { Id = 1, SubdivisionId = 999, FirstName = "A", LastName = "B", UpdatedAt = Stamp }] }, "unknown employee subdivision rejected");
     Reject(snapshot with { Personnel = [new() { Id = 1, SubdivisionId = 200, FirstName = "A", LastName = new string('x', 101), UpdatedAt = Stamp }] }, "API input respects database length limits");
     Reject(snapshot with { Classifiers = [new() { Type = 6, Code = 1, IsActive = 2, UpdatedAt = Stamp }] }, "unknown active state rejected");
-    var settings = new SynchronizationSettings { Mode = DataManagementMode.Api, ScheduleEnabled = true, DailyTime = new(2, 0) };
+    var settings = new SynchronizationSettings { Mode = DataManagementMode.Api, CompleteSnapshotGuaranteed = true, ScheduleEnabled = true, DailyTime = new(2, 0) };
     var localDay = new DateTime(2026, 10, 9);
     DateTimeOffset Utc(DateTime local) => new(TimeZoneInfo.ConvertTimeToUtc(local, TimeZoneInfo.Local));
     check(!SynchronizationSchedule.IsDue(settings, Utc(localDay.AddHours(1))), "schedule waits for server local time");
@@ -53,7 +53,7 @@ internal static class ApiSynchronizationTests
 
     using var handler = new Handler(snapshot);
     using var http = new HttpClient(handler);
-    var options = Options.Create(new DirectoryApiOptions { BaseUrl = "https://example.invalid/api", Username = "test", Password = "test", PageSize = 2, CompleteSnapshotGuaranteed = true });
+    var options = Options.Create(new DirectoryApiOptions { BaseUrl = "https://example.invalid/api", Username = "test", Password = "test", PageSize = 2 });
     var diagnostics = new DiagnosticLogger();
     var client = new DirectoryApiClient(http, options, diagnostics);
     options.Value.BaseUrl = "https://unused.invalid/unused";
@@ -83,10 +83,7 @@ internal static class ApiSynchronizationTests
     handler.FailSecondPage = false; handler.BadCount = true;
     try { await client.FetchAsync(CancellationToken.None); check(false, "inconsistent pagination rejected"); }
     catch (EntityRuleException) { check(true, "inconsistent pagination rejected"); }
-    options.Value.CompleteSnapshotGuaranteed = false;
-    try { await client.FetchAsync(CancellationToken.None); check(false, "unconfirmed snapshot contract blocks archival synchronization"); }
-    catch (EntityRuleException) { check(true, "unconfirmed snapshot contract blocks archival synchronization"); }
-    options.Value.CompleteSnapshotGuaranteed = true;
+
     handler.CancelRequest = true;
     try { await client.FetchAsync("https://example.invalid/api", 2, CancellationToken.None, "diagnostic-user", "diagnostic-secret"); check(false, "HTTP cancellation propagated"); }
     catch (OperationCanceledException) { check(true, "HTTP cancellation propagated"); }
@@ -101,7 +98,6 @@ internal static class ApiSynchronizationTests
     check(!diagnostics.Messages.Any(m => m.Contains("diagnostic-user") || m.Contains("diagnostic-secret") || m.Contains("Authorization")), "API diagnostic messages do not contain credentials or authorization header");
 
     handler.CancelRequest = false; handler.BadCount = false;
-    options.Value.CompleteSnapshotGuaranteed = false;
     snapshot.Subdivisions[0].ParentId = 999;
     var beforeDiagnostic = handler.Calls;
     var diagnosticSnapshot = await client.FetchDiagnosticAsync("https://example.invalid/api", 2, "test", "test", new DateOnly(1978, 10, 9), CancellationToken.None);

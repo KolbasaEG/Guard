@@ -128,6 +128,17 @@
                           </details>
                         </InfoBlock>
                       </div>
+                      <div class="schedule-toggle">
+                        <RadzenCheckBox TValue="bool" Value="@(form.CompleteSnapshotGuaranteed && !ApiSourceChanged)"
+                                        Change="@(value => form.CompleteSnapshotGuaranteed = value)"
+                                        Disabled="@(ApiSourceChanged || busy || settingsLoading || settingsNeedReload)" Name="CompleteSnapshotGuaranteed" />
+                        <RadzenLabel Text="Подтверждена полнота и согласованность выгрузки API" Component="CompleteSnapshotGuaranteed" />
+                      </div>
+                      <p class="sync-hint">Владелец API подтвердил полноту данных и согласованность страниц. Неполная выгрузка может привести к ошибочной архивации записей.</p>
+                      @if (ApiSourceChanged)
+                      {
+                        <RadzenAlert AlertStyle="AlertStyle.Warning">Адрес или учётная запись API изменены. Подтверждение полноты будет сброшено. Сначала сохраните источник, затем подтвердите полноту его выгрузки отдельно.</RadzenAlert>
+                      }
                       <div class="settings-actions">
                         <RadzenButton Text="Сохранить настройки" Icon="save" ButtonType="ButtonType.Submit" Disabled="@(busy || settingsLoading || settingsNeedReload)" />
                         <RadzenButton Text="Проверить подключение" Icon="network_check" ButtonType="ButtonType.Button" Click="CheckConnectionAsync" Disabled="@(busy || settingsLoading)" ButtonStyle="ButtonStyle.Secondary" />

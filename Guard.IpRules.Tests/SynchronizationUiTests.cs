@@ -170,7 +170,7 @@ internal static class SynchronizationUiTests
     public Task<SynchronizationOverview> GetOverviewAsync(bool classifiers = false, bool includeChildren = true, CancellationToken ct = default, bool allSubdivisions = false) =>
       Task.FromResult(new SynchronizationOverview(new() { Mode = DataManagementMode.Api }, null, run.StartedAt, run, true));
     public Task<IReadOnlyList<SynchronizationRun>> GetHistoryAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<SynchronizationRun>>([run]);
-    public Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null) => throw new NotSupportedException();
+    public Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null, bool? completeSnapshotGuaranteed = null) => throw new NotSupportedException();
     public Task<SynchronizationRun> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false)
     {
       if (RejectRun) throw new EntityRuleException("Диагностическая ошибка запуска.");

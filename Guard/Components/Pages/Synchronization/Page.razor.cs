@@ -23,6 +23,7 @@ public partial class Page : IDisposable
     public long? ApiHeadSubdivisionId { get; set; }
     public string ApiUsername { get; set; } = "";
     public string ApiPassword { get; set; } = "";
+    public bool CompleteSnapshotGuaranteed { get; set; }
   }
   private readonly object[] modes = [new { Text = "Локальное управление", Value = DataManagementMode.Local }, new { Text = "Управление из API", Value = DataManagementMode.Api }];
   private readonly CancellationTokenSource lifetime = new();
@@ -43,6 +44,8 @@ public partial class Page : IDisposable
   private bool runsReloadRequested;
   private string? connectionResult;
   private UserAccessSnapshot? loadedAccess;
+  private bool ApiSourceChanged => settings != null &&
+    SynchronizationSettingsRules.SourceChanged(settings, form.ApiBaseUrl, form.ApiUsername);
 
   protected override async Task OnParametersSetAsync()
   {
@@ -67,7 +70,7 @@ public partial class Page : IDisposable
       var overview = await Service.GetOverviewAsync(ct: ct);
       if (disposed) return false;
       settings = overview.Settings;
-      form = new() { Mode = settings.Mode, Enabled = settings.ScheduleEnabled, Time = settings.DailyTime.ToString("HH:mm"), ApiBaseUrl = settings.ApiBaseUrl, ApiPageSize = settings.ApiPageSize, ApiUsername = settings.ApiUsername, ApiHeadSubdivisionId = settings.ApiHeadSubdivisionId };
+      form = new() { Mode = settings.Mode, Enabled = settings.ScheduleEnabled, Time = settings.DailyTime.ToString("HH:mm"), ApiBaseUrl = settings.ApiBaseUrl, ApiPageSize = settings.ApiPageSize, ApiUsername = settings.ApiUsername, ApiHeadSubdivisionId = settings.ApiHeadSubdivisionId, CompleteSnapshotGuaranteed = settings.CompleteSnapshotGuaranteed };
       settingsError = null;
       settingsNeedReload = savedSettingsNeedReload = false;
       return true;
@@ -159,12 +162,15 @@ public partial class Page : IDisposable
     try
     {
       if (!TimeOnly.TryParseExact(form.Time, "HH:mm", out var time)) throw new ArgumentException("Укажите время в формате ЧЧ:ММ.");
-      await Service.SaveSettingsAsync(form.Mode, form.Enabled, time, settings.Version, ct, form.ApiBaseUrl, form.ApiPageSize, form.ApiUsername, form.ApiPassword, form.ApiHeadSubdivisionId);
+      var sourceChanged = ApiSourceChanged;
+      await Service.SaveSettingsAsync(form.Mode, form.Enabled, time, settings.Version, ct, form.ApiBaseUrl, form.ApiPageSize, form.ApiUsername, form.ApiPassword, form.ApiHeadSubdivisionId, form.CompleteSnapshotGuaranteed);
       if (disposed) return;
       form.ApiPassword = "";
       settingsNeedReload = savedSettingsNeedReload = true;
       connectionResult = null;
-      Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Синхронизация", Detail = "Настройки сохранены.",
+      Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Синхронизация", Detail = sourceChanged
+        ? "Настройки сохранены. Источник API изменён; подтвердите полноту выгрузки отдельно и сохраните настройки повторно."
+        : "Настройки сохранены.",
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" });
       await ReloadSettingsAsync();
       if (!disposed && statusPanel != null) await statusPanel.RefreshAsync();

@@ -14,6 +14,7 @@ public class SynchronizationSettingsConfiguration : IEntityTypeConfiguration<Syn
     builder.Property(s => s.ModifiedBy).HasMaxLength(450);
     builder.Property(s => s.ApiBaseUrl).HasMaxLength(2048);
     builder.Property(s => s.ApiUsername).HasMaxLength(256);
+    builder.Property(s => s.CompleteSnapshotGuaranteed).HasDefaultValue(false);
     builder.Property(s => s.ApiHeadSubdivisionId).HasColumnType("bigint");
     builder.ToTable("SynchronizationSettings", table => table.HasCheckConstraint(
       "CK_SynchronizationSettings_ApiHeadSubdivisionId", "\"ApiHeadSubdivisionId\" IS NULL OR \"ApiHeadSubdivisionId\" > 0"));

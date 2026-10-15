@@ -25,7 +25,7 @@ public sealed class ApiDiagnosticService(IDbContextFactory<ApplicationDbContext>
       throw new EntityRuleException("Для полного протокола диагностики включите уровень логирования Information.");
     await using var db = await factory.CreateDbContextAsync(ct);
     await db.Database.OpenConnectionAsync(ct);
-    if (!await db.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_lock({ApiSynchronizationRunner.RunLock}) AS \"Value\"").SingleAsync(ct))
+    if (!await db.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_lock({PostgresAdvisoryLocks.ApiSynchronization}) AS \"Value\"").SingleAsync(ct))
       throw new EntityRuleException("Уже выполняется синхронизация или диагностика. Дождитесь завершения.");
     var id = Guid.CreateVersion7();
     using var scope = logger.BeginScope(new Dictionary<string, object> { ["DiagnosticRunId"] = id,
@@ -94,7 +94,7 @@ public sealed class ApiDiagnosticService(IDbContextFactory<ApplicationDbContext>
     {
       logger.LogInformation("Диагностика {DiagnosticRunId}: конец протокола, FetchComplete {FetchComplete}, AnalysisComplete {AnalysisComplete}, нарушений {DiagnosticIssueCount}, длительность {DiagnosticElapsedMs} мс",
         id, snapshot != null, analysisComplete, issueCount, elapsed.Elapsed.TotalMilliseconds);
-      await db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({ApiSynchronizationRunner.RunLock})", CancellationToken.None);
+      await db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({PostgresAdvisoryLocks.ApiSynchronization})", CancellationToken.None);
     }
   }
 }

@@ -23,6 +23,8 @@ internal static class SynchronizationRecoveryTests
     {
       await Call(page, "ReloadSettingsAsync");
       var form = Field<Page.SettingsForm>(page, "form");
+      check(form.CompleteSnapshotGuaranteed, "settings form loads stored snapshot confirmation");
+      form.CompleteSnapshotGuaranteed = false;
       var version = Field<SynchronizationSettings>(page, "settings").Version;
       form.ApiBaseUrl = "https://edited.example.test"; form.ApiPassword = "test-new-password";
       service.FailHistory = 1;
@@ -63,6 +65,8 @@ internal static class SynchronizationRecoveryTests
         !Field<bool>(page, "settingsNeedReload") && Field<string?>(page, "runsError") != null,
         "successful save accepts new settings version despite history failure");
       check(Field<Page.SettingsForm>(page, "form").ApiPassword == "", "successful save clears new password");
+      check(!service.CompleteSnapshotGuaranteed && !Field<Page.SettingsForm>(page, "form").CompleteSnapshotGuaranteed,
+        "settings form submits and reloads revoked snapshot confirmation");
 
       service.FailReloadAfterSave = true;
       await Call(page, "SaveAsync");
@@ -349,6 +353,7 @@ internal static class SynchronizationRecoveryTests
     public Guid Version = Guid.NewGuid();
     public int FailOverview, FailHistory, HistoryReads, SaveCalls;
     public bool FailReloadAfterSave, RejectSave;
+    public bool CompleteSnapshotGuaranteed = true;
     public SynchronizationStatus Status = SynchronizationStatus.Running;
     public Func<CancellationToken, Task>? BeforeHistory;
     public Func<CancellationToken, Task>? BeforeOverview;
@@ -363,7 +368,7 @@ internal static class SynchronizationRecoveryTests
       ct.ThrowIfCancellationRequested();
       if (FailOverview > 0) { FailOverview--; throw new IOException("Test overview failure"); }
       if (BeforeOverview != null) await BeforeOverview(ct);
-      return new SynchronizationOverview(new() { Version = Version, ApiBaseUrl = apiUrl }, null, null, Run, false);
+      return new SynchronizationOverview(new() { Version = Version, ApiBaseUrl = apiUrl, CompleteSnapshotGuaranteed = CompleteSnapshotGuaranteed }, null, null, Run, false);
     }
     public async Task<IReadOnlyList<SynchronizationRun>> GetHistoryAsync(CancellationToken ct = default)
     {
@@ -372,12 +377,13 @@ internal static class SynchronizationRecoveryTests
       if (BeforeHistory != null) await BeforeHistory(ct);
       return HistoryItems ?? [Run];
     }
-    public Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null)
+    public Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null, bool? completeSnapshotGuaranteed = null)
     {
       SaveCalls++;
       if (RejectSave) throw new EntityRuleException("Сохранение отклонено.");
       if (version != Version) throw new EntityRuleException("Версия устарела.");
       Version = Guid.NewGuid(); apiUrl = apiBaseUrl ?? apiUrl;
+      CompleteSnapshotGuaranteed = completeSnapshotGuaranteed ?? CompleteSnapshotGuaranteed;
       if (FailReloadAfterSave) FailOverview = 1;
       return Task.CompletedTask;
     }

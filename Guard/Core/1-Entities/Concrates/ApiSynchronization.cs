@@ -13,6 +13,7 @@ public class SynchronizationSettings
   public int ApiPageSize { get; set; } = 500;
   public long? ApiHeadSubdivisionId { get; set; }
   public string ApiUsername { get; set; } = "";
+  public bool CompleteSnapshotGuaranteed { get; set; }
   [System.Text.Json.Serialization.JsonIgnore]
   public string? ProtectedApiPassword { get; set; }
   [System.ComponentModel.DataAnnotations.Schema.NotMapped]
