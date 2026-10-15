@@ -45,6 +45,9 @@
 `Home` отслеживает `ThemeService.ThemeChanged`: для светлой темы отображается
 `wwwroot/images/home-light.png`, для тёмной — `home-dark.png`. Исходный `backg.jpg`
 сохранён. При смене темы фон обновляется без перезагрузки страницы.
+`MainLayout` создаёт зарегистрированный `CookieThemeService`, чтобы изменения
+сохранялись в `ApplicationTheme`. `App` читает cookie при первом HTTP-запросе
+и передаёт восстановленную тему в `RadzenTheme`; без cookie используется `software`.
 
 Видимость меню не заменяет авторизацию страницы и серверные проверки.
 `Layout/Components/AccessStateProvider` остаётся над Router и обновляет permissions

@@ -13,7 +13,7 @@
     
   <!-- HeadOutlet и RadzenTheme используют conditional render mode -->
   <HeadOutlet @rendermode="@RenderModeForPage" />
-  <RadzenTheme Theme="software" @rendermode="@InteractiveServer" />
+  <RadzenTheme Theme="@(ThemeService.Theme ?? "software")" @rendermode="@InteractiveServer" />
 </head>
 <body>
   <Routes @rendermode="@RenderModeForPage" />

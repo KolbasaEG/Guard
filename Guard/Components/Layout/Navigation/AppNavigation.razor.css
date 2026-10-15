@@ -2,6 +2,14 @@
 .navigation-search { display: flex; align-items: center; gap: 6px; padding: 12px 10px 8px; flex-shrink: 0; }
 .navigation-search ::deep .rz-textbox { min-width: 0; background-color: var(--rz-sidebar-background-color); color: var(--rz-sidebar-color); }
 .navigation-search ::deep .rz-textbox::placeholder { color: var(--rz-sidebar-color); opacity: .8; }
+.navigation-search ::deep .rz-textbox:not(:disabled):not(.rz-state-disabled):is(:hover, :focus) {
+  color: var(--rz-input-value-color);
+  caret-color: var(--rz-input-value-color);
+}
+.navigation-search ::deep .rz-textbox:not(:disabled):not(.rz-state-disabled):is(:hover, :focus)::placeholder {
+  color: var(--rz-input-placeholder-color);
+  opacity: 1;
+}
 .navigation-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 12px; scrollbar-gutter: stable; }
 .navigation-caption { padding: 14px 10px 6px; font-size: 12px; font-weight: 400; }
 .navigation-hint { padding: 4px 10px 10px; font-size: 12px; overflow-wrap: anywhere; }

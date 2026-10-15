@@ -2,9 +2,6 @@
 <div class="app-user-actions">
   <AuthorizeView>
     <Authorized>
-      <a class="rz-button rz-button-md rz-variant-text rz-base header-action" href="/Account/Manage" title="@ProfileTitle" aria-label="@ProfileTitle">
-        <RadzenIcon Icon="account_circle" />
-      </a>
       @if (RendererInfo.IsInteractive)
       {
         <RadzenButton Icon="passkey" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="header-action" title="Сменить пароль" aria-label="Сменить пароль" Click="ChangePasswordAsync" />
