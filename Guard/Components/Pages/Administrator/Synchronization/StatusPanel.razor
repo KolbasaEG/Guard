@@ -2,29 +2,35 @@
 @if (overview != null)
 {
   <div class="sync-status">
-    <div class="sync-status-summary">
-    <RadzenText>@(overview.Settings.Mode == DataManagementMode.Api ? "Управление из API" : "Локальное управление")</RadzenText>
-    <RadzenText>@(overview.ActualAt.HasValue ? $"Актуально по состоянию на {Format(overview.ActualAt)}" : "Данные ещё не синхронизированы")</RadzenText>
-    <RadzenText>Полная сверка: @Format(overview.Settings.LastFullSynchronizedAt). Обновление изменений: @Format(overview.Settings.LastChangesSynchronizedAt).</RadzenText>
-    @if (overview.LastAttempt != null)
-    {
-      <RadzenText>Последняя попытка: @Format(overview.LastAttempt.StartedAt) — @StatusText(overview.LastAttempt.Status)</RadzenText>
-      @if (overview.LastAttempt.Status == SynchronizationStatus.Running) { <RadzenText>Этап: @PhaseText(overview.LastAttempt.Phase)</RadzenText> }
-    }
-    </div>
-    <div class="sync-status-actions">
-    @if (overview.CanRun)
-    {
-      @if (Access?.IsRoot == true)
-      {
-        <RadzenFormField Text="Изменения с даты (UpdatedAt)" Style="width:240px;max-width:100%;">
-          <RadzenDatePicker TValue="DateTime?" @bind-Value="updatedSince" DateFormat="dd.MM.yyyy" AllowClear="true" Disabled="busy" />
-        </RadzenFormField>
-      }
-      <RadzenButton Icon="sync" Text="Синхронизировать" Click="RunAsync" Disabled="@(busy || overview.LastAttempt?.Status is SynchronizationStatus.Running or SynchronizationStatus.Queued)" Variant="Variant.Text" />
-    }
-    <RadzenButton Icon="refresh" title="Обновить состояние синхронизации" Click="RefreshAsync" Disabled="@busy" Variant="Variant.Text" />
-    </div>
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="8px">
+      <div class="sync-status-summary">
+        <div class="sync-status-line">
+          <RadzenText><strong>@(overview.Settings.Mode == DataManagementMode.Api ? "Управление из API" : "Локальное управление")</strong></RadzenText>
+          <RadzenText>@(overview.ActualAt.HasValue ? $"Актуально по состоянию на {Format(overview.ActualAt)}" : "Данные ещё не синхронизированы")</RadzenText>
+        </div>
+        @if (overview.LastAttempt != null)
+        {
+          <div class="sync-status-line">
+            <RadzenText>Последняя попытка: @Format(overview.LastAttempt.StartedAt) — <strong>@StatusText(overview.LastAttempt.Status)</strong></RadzenText>
+            @if (overview.LastAttempt.Status == SynchronizationStatus.Running) { <RadzenText>Этап: @PhaseText(overview.LastAttempt.Phase)</RadzenText> }
+          </div>
+        }
+        <RadzenText TextStyle="TextStyle.Caption">Полная сверка: @Format(overview.Settings.LastFullSynchronizedAt). Изменения: @Format(overview.Settings.LastChangesSynchronizedAt).</RadzenText>
+      </div>
+      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="8px">
+        @if (overview.CanRun)
+        {
+          @if (Access?.IsRoot == true)
+          {
+            <RadzenFormField Text="Изменения с даты" Style="width:220px;max-width:100%;" Variant="Variant.Text">
+              <RadzenDatePicker TValue="DateTime?" @bind-Value="updatedSince" DateFormat="dd.MM.yyyy" AllowClear="true" Disabled="busy" />
+            </RadzenFormField>
+          }
+          <RadzenButton Icon="sync" Text="Синхронизировать" Click="RunAsync" Disabled="@(busy || overview.LastAttempt?.Status is SynchronizationStatus.Running or SynchronizationStatus.Queued)" Variant="Variant.Text" />
+        }
+        <RadzenButton Icon="refresh" title="Обновить состояние и запуски синхронизации" Click="RefreshManuallyAsync" Disabled="@busy" Variant="Variant.Text" />
+      </RadzenStack>
+    </RadzenStack>
     @if (overview.CanRun && Access?.IsRoot == true)
     {
       <p class="sync-status-hint">Без даты — полная загрузка. С датой — только изменения, без архивации по отсутствию.</p>

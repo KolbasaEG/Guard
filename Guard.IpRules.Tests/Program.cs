@@ -40,6 +40,7 @@ ApiDiagnosticTests.Run(Check);
 ApiHeadSubdivisionTests.Run(Check);
 await ApiDiagnosticTests.CheckAccessAsync(Check);
 await SynchronizationUiTests.RunAsync(Check);
+await SynchronizationRecoveryTests.RunAsync(Check);
 await SynchronizationListLoadTests.RunAsync(Check);
 await PersonalPagesTests.RunAsync(Check);
 await AccessRenderingTests.RunAsync(Check);

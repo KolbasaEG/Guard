@@ -3,7 +3,7 @@
 @attribute [Authorize]
 @attribute [Authorize(Policy = Guard.Core.Identity.Permissions.Logs.Read)]
 
-<TableWrapperWithFilterAndAnalytics>
+<TableWrapperWithFilterAndAnalytics AnalitycsTitle="Управление уровнем логирования" AnalitycsIcon="settings">
   <Table>
     <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="LogEntry" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="100"
                     AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
@@ -103,34 +103,24 @@
     <RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
   </FilterButtons>
   <Analitycs>
-    <AnalitycsWrapper>
-      <RadzenCard Style="width:100%; height:36px; border-radius:0px; border:none; padding:0px; background-color:var(--rz-primary-darker);flex-shrink:0;">
-        <RadzenStack Gap="10px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="0px" Style="width:100%;">
-            <RadzenIcon Icon="settings" Style="margin:8px; color:var(--rz-on-primary-darker); margin-right:15px;margin-left:12px;" />
-            <RadzenText TextStyle="TextStyle.Body1" Style="margin-right:15px; color:var(--rz-on-primary-darker);"><strong>Управление уровнем логирования</strong></RadzenText>
-          </RadzenStack>
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="height:100%;">
-            <RadzenButton Icon="save" Click="SaveLoggerSettings" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
-          </RadzenStack>
-        </RadzenStack>
-      </RadzenCard>
-      <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%; height:100%;">
-        <RadzenFormField Text="Текущий уровень логов" Style="width:100%" Variant="Variant.Text">
-          <RadzenDropDown TValue="LogEventLevel"
-                          Data="@(Enum.GetValues<LogEventLevel>())"
-                          @bind-Value="@selectedLogLevel" />
-        </RadzenFormField>
-        <RadzenFormField Text="Макс. подключений (сессий)" Variant="Variant.Text" Style="width:100%">
-          <ChildContent>
-            <RadzenNumeric TValue="int" @bind-Value="@maxSessions" Min="1" Max="10000" Style="width: 180px;" />
-          </ChildContent>
-          <Helper>
-            <RadzenText TextStyle="TextStyle.Caption">Влияет на размер пачки (Batch Size) в PostgreSQL</RadzenText>
-          </Helper>
-        </RadzenFormField>
-      </RadzenStack>
-    </AnalitycsWrapper>
+    <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;">
+      <RadzenFormField Text="Текущий уровень логов" Style="width:100%" Variant="Variant.Text">
+        <RadzenDropDown TValue="LogEventLevel"
+                        Data="@(Enum.GetValues<LogEventLevel>())"
+                        @bind-Value="@selectedLogLevel" />
+      </RadzenFormField>
+      <RadzenFormField Text="Макс. подключений (сессий)" Variant="Variant.Text" Style="width:100%">
+        <ChildContent>
+          <RadzenNumeric TValue="int" @bind-Value="@maxSessions" Min="1" Max="10000" Style="width: 180px;" />
+        </ChildContent>
+        <Helper>
+          <RadzenText TextStyle="TextStyle.Caption">Влияет на размер пачки (Batch Size) в PostgreSQL</RadzenText>
+        </Helper>
+      </RadzenFormField>
+    </RadzenStack>
   </Analitycs>
+  <AnalitycsButtons>
+    <RadzenButton Icon="save" Click="SaveLoggerSettings" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+  </AnalitycsButtons>
   
 </TableWrapperWithFilterAndAnalytics>

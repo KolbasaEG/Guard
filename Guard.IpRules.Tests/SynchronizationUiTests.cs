@@ -31,10 +31,10 @@ internal static class SynchronizationUiTests
       check(html.Contains("Логин Basic auth API") && html.Contains("Новый пароль Basic auth API"), "Root sees Basic authentication fields");
       check(html.Contains("Проверить подключение") && html.Contains("Полная сверка"), "Root UI exposes ping and distinct synchronization checkpoints");
       check(html.Contains("Изменения с даты"), "Root sees optional manual UpdatedAt date field");
-      check(html.Contains("Запустить диагностику") && html.Contains("Обязательная дата UpdatedAt"), "Root sees separate diagnostic control with required date");
+      check(html.Contains("Запустить диагностику") && html.Contains("Дата изменений") && html.Contains("Укажите дату изменений"), "Root sees separate diagnostic control with required date");
       check(html.Contains("02:00") && html.Contains("Часовой пояс сервера") && html.Contains("Последние 20 запусков", StringComparison.OrdinalIgnoreCase),
         "settings UI shows server time and run history");
-      check(html.Contains("Внешний ID головного подразделения API"), "Root can set API head subdivision");
+      check(html.Contains("ID головного подразделения") && html.Contains("внешний ID"), "Root can set API head subdivision with an explanation of the external ID");
       var admin = await renderer.RenderComponentAsync<Host>(ParameterView.FromDictionary(new Dictionary<string, object?> { [nameof(Host.Root)] = false }));
       var adminHtml = WebUtility.HtmlDecode(admin.ToHtmlString());
       check(!adminHtml.Contains("Синхронизировать") && !adminHtml.Contains("Сохранить настройки") && !adminHtml.Contains("Последние 20 запусков"), "administrator cannot access Root synchronization page even with legacy permission");
@@ -42,7 +42,7 @@ internal static class SynchronizationUiTests
       check(!adminHtml.Contains("Логин Basic auth API") && !adminHtml.Contains("Новый пароль Basic auth API"), "administrator cannot see Basic credential controls");
       check(!adminHtml.Contains("Изменения с даты"), "pool operator cannot choose manual date filter");
       check(!adminHtml.Contains("Запустить диагностику"), "diagnostic controls are hidden from pool operator");
-      check(!adminHtml.Contains("Внешний ID головного подразделения API"), "API head setting is hidden from operator");
+      check(!adminHtml.Contains("ID головного подразделения"), "API head setting is hidden from operator");
       var actuality = await renderer.RenderComponentAsync<Host>(ParameterView.FromDictionary(new Dictionary<string, object?> { [nameof(Host.Root)] = false, [nameof(Host.Actuality)] = true }));
       var actualityHtml = WebUtility.HtmlDecode(actuality.ToHtmlString());
       check(actualityHtml.Contains("Актуально по состоянию на") && actualityHtml.Contains("Синхронизация отключена"), "ordinary user sees previous global date in local mode");

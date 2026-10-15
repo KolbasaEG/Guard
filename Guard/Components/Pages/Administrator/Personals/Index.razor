@@ -86,12 +86,8 @@
 </Filter>
 <FilterButtons><RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" /></FilterButtons>
 <Analitycs>
-  <AnalitycsWrapper>
-    <InfoBlock Title="Результат поиска" Icon="analytics" Style="width:100%;">
-      <Guard.Components.Pages.Administrator.Synchronization.ActualityPanel ReadPermission="@Permissions.Personals.Read" ApiModeChanged="@((bool value) => apiManaged = value)" ReloadData="ReloadForSynchronizationAsync" />
-      <RadzenText>Найдено сотрудников: @count</RadzenText>
-      <RadzenText>Режим отображения: @(hierarchy == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")</RadzenText>
-    </InfoBlock>
-  </AnalitycsWrapper>
+  <Guard.Components.Pages.Administrator.Synchronization.ActualityPanel ReadPermission="@Permissions.Personals.Read" ApiModeChanged="@((bool value) => apiManaged = value)" ReloadData="ReloadForSynchronizationAsync" />
+  <RadzenText>Найдено сотрудников: @count</RadzenText>
+  <RadzenText>Режим отображения: @(hierarchy == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")</RadzenText>
 </Analitycs>
 </TableWrapperWithFilterAndAnalytics>

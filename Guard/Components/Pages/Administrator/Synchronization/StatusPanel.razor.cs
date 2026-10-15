@@ -16,8 +16,16 @@ public partial class StatusPanel : IAsyncDisposable
   [Parameter] public bool AllSubdivisions { get; set; }
   [Parameter] public EventCallback<bool> ApiModeChanged { get; set; }
   [Parameter] public EventCallback Synchronized { get; set; }
+  [Parameter] public EventCallback LastAttemptChanged { get; set; }
+  [Parameter] public EventCallback ManualRefreshRequested { get; set; }
+  [Parameter] public EventCallback RefreshCompleted { get; set; }
+  // True means LastAttemptChanged already requested a reload in this cycle.
+  [Parameter] public EventCallback<bool> PollingCycleCompleted { get; set; }
   [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
   private SynchronizationOverview? overview;
+  private (Guid? Id, SynchronizationStatus? Status, string? Phase, DateTime? CompletedAt)? lastSuccessfulAttempt;
+  private UserAccessSnapshot? loadedAccess;
+  private (bool Classifiers, bool IncludeChildren, bool AllSubdivisions)? loadedScope;
   private bool busy, disposed;
   private readonly Guid panelId = Guid.NewGuid();
   private DateTime? updatedSince;
@@ -27,10 +35,15 @@ public partial class StatusPanel : IAsyncDisposable
   private string? operationError;
   private readonly CancellationTokenSource lifetime = new();
   private Task? polling;
+  private Task? manualRefresh;
   private readonly SemaphoreSlim refresh = new(1, 1);
 
   protected override async Task OnParametersSetAsync()
   {
+    var scope = (Classifiers, IncludeChildren, AllSubdivisions);
+    if (ReferenceEquals(Access, loadedAccess) && loadedScope == scope) return;
+    loadedAccess = Access;
+    loadedScope = scope;
     if (Access != null) await RefreshAsync();
   }
 
@@ -46,29 +59,52 @@ public partial class StatusPanel : IAsyncDisposable
     {
       using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
       while (await timer.WaitForNextTickAsync(lifetime.Token))
-        await InvokeAsync(async () => { await RefreshAsync(); if (!disposed) StateHasChanged(); });
+        await InvokeAsync(async () => { await RunPollingCycleAsync(); if (!disposed) StateHasChanged(); });
     }
     catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
   }
 
-  protected async Task RefreshAsync()
+  public Task RefreshAsync() => RefreshCoreAsync(manual: false);
+
+  private async Task RunPollingCycleAsync()
   {
-    if (disposed || Access == null) return;
-    try { await refresh.WaitAsync(lifetime.Token); }
-    catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { return; }
+    var attemptRefreshRequested = await RefreshCoreAsync(manual: false);
+    if (disposed || lifetime.IsCancellationRequested) return;
+    await PollingCycleCompleted.InvokeAsync(attemptRefreshRequested);
+  }
+
+  protected Task RefreshManuallyAsync()
+  {
+    if (manualRefresh is { IsCompleted: false }) return manualRefresh;
+    return manualRefresh = RefreshCoreAsync(manual: true);
+  }
+
+  private async Task<bool> RefreshCoreAsync(bool manual)
+  {
+    if (disposed || Access == null) return false;
+    var ct = lifetime.Token;
+    try { await refresh.WaitAsync(ct); }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { return false; }
+    var attemptChanged = false;
+    var refreshed = false;
     try
     {
-      var result = await Service.GetOverviewAsync(Classifiers, IncludeChildren, lifetime.Token, AllSubdivisions);
-      if (disposed) return;
-      var completed = overview != null && result.LastAttempt?.Status == SynchronizationStatus.Succeeded &&
-        (overview.LastAttempt?.Id != result.LastAttempt.Id || overview.LastAttempt?.Status != SynchronizationStatus.Succeeded);
+      var result = await Service.GetOverviewAsync(Classifiers, IncludeChildren, ct, AllSubdivisions);
+      if (disposed) return false;
+      var previous = lastSuccessfulAttempt;
+      var current = (result.LastAttempt?.Id, result.LastAttempt?.Status, result.LastAttempt?.Phase, result.LastAttempt?.CompletedAt);
+      var completed = previous.HasValue && result.LastAttempt?.Status == SynchronizationStatus.Succeeded &&
+        (previous.Value.Id != result.LastAttempt.Id || previous.Value.Status != SynchronizationStatus.Succeeded);
+      attemptChanged = previous.HasValue && previous.Value != current;
       overview = result; error = null;
+      lastSuccessfulAttempt = current;
+      refreshed = true;
       var api = result.Settings.Mode == DataManagementMode.Api;
       if (lastMode != api) { lastMode = api; await ApiModeChanged.InvokeAsync(api); }
       if (completed && !skipNextReload) await Synchronized.InvokeAsync();
       skipNextReload = false;
     }
-    catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     catch (Exception ex)
     {
       overview = null; error = "Не удалось проверить актуальность данных.";
@@ -76,6 +112,11 @@ public partial class StatusPanel : IAsyncDisposable
       if (lastMode != true) { lastMode = true; await ApiModeChanged.InvokeAsync(true); }
     }
     finally { refresh.Release(); }
+    if (disposed || ct.IsCancellationRequested) return false;
+    if (manual && ManualRefreshRequested.HasDelegate) await ManualRefreshRequested.InvokeAsync();
+    else if (refreshed && attemptChanged) await LastAttemptChanged.InvokeAsync();
+    else if (refreshed) await RefreshCompleted.InvokeAsync();
+    return !manual && refreshed && attemptChanged && LastAttemptChanged.HasDelegate;
   }
 
   protected async Task RunAsync()
