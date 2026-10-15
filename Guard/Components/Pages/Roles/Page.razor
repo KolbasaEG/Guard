@@ -1,0 +1,3 @@
+@page "/roles"
+@attribute [Authorize(Policy = Permissions.Roles.Read)]
+<PermissionView Permission="@Permissions.Roles.Read"><ChildContent><Guard.Components.Pages.Roles.Index /></ChildContent><NotAllowed><AccessDenied /></NotAllowed></PermissionView>

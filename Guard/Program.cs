@@ -289,6 +289,8 @@ app.Lifetime.ApplicationStopped.Register(loggerManager.Dispose);
 app.UseForwardedHeaders();
 app.UseStaticFiles();
 app.UseRouting();
+// Скомпилированные публичные ресурсы, включая версионированный загрузчик Blazor.
+app.MapStaticAssets().ShortCircuit();
 
 app.UseAuthentication();
 app.UseAuthorization();

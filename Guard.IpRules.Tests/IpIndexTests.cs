@@ -1,4 +1,4 @@
-using Guard.Components.Pages.Administrator.IpAddresses;
+using Guard.Components.Pages.IpAddresses;
 using Guard.Core.Entities;
 using Guard.Core.Services;
 using Guard.Core.Services.DTOs;

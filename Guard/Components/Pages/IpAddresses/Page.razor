@@ -1,0 +1,3 @@
+@page "/ip"
+@attribute [Authorize(Policy = Permissions.IpAddresses.Read)]
+<PermissionView Permission="@Permissions.IpAddresses.Read"><ChildContent><Guard.Components.Pages.IpAddresses.Index/></ChildContent><NotAllowed><AccessDenied /></NotAllowed></PermissionView>

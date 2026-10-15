@@ -1,0 +1,92 @@
+@using Guard.Core.Services.DTOs
+<div class="app-navigation">
+  <div class="navigation-search">
+    <RadzenIcon Icon="search" />
+    <RadzenTextBox Value="@search" ValueChanged="SearchChanged" Immediate="true" MaxLength="100"
+                   Placeholder="Найти раздел…" Disabled="@(!RendererInfo.IsInteractive)" aria-label="Поиск по доступным разделам" Style="width:100%;" />
+    @if (!string.IsNullOrEmpty(search))
+    {
+      <RadzenButton Icon="close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small"
+                    aria-label="Очистить поиск разделов" title="Очистить поиск" Click="@(() => SearchChanged(string.Empty))" />
+    }
+  </div>
+  <nav class="navigation-scroll" aria-label="Разделы приложения">
+    @if (HomeItem is { } home)
+    {
+      <NavigationEntry Item="@home" CurrentPath="@CurrentPath" ShowFavorite="false" />
+    }
+    @if (HasSearch)
+    {
+      <div class="navigation-caption" role="status">Найдено разделов: @SearchGroups.Sum(group => group.Items.Count)</div>
+      @foreach (var group in SearchGroups)
+      {
+        <div class="navigation-caption">@group.Text</div>
+        @foreach (var item in group.Items)
+        {
+          <NavigationEntry @key="item.Path" Item="@item" CurrentPath="@CurrentPath" IsFavorite="@favorites.Contains(item.Path)"
+                           CanFavorite="@PreferencesReady" FavoriteChanged="ToggleFavoriteAsync" />
+        }
+      }
+      @if (SearchGroups.Count == 0)
+      {
+        <div class="navigation-hint">Раздел не найден. Попробуйте другое название.</div>
+      }
+    }
+    else
+    {
+      @if (groups.Count > 0)
+      {
+        <div class="navigation-caption">Избранное</div>
+        @foreach (var item in FavoriteItems)
+        {
+          <NavigationEntry @key="item.Path" Item="@item" CurrentPath="@CurrentPath" IsFavorite="true"
+                           CanFavorite="@PreferencesReady" FavoriteChanged="ToggleFavoriteAsync" />
+        }
+        @if (!FavoriteItems.Any())
+        {
+          <div class="navigation-hint">Закрепляйте нужные разделы кнопкой со звездой.</div>
+        }
+        @if (storageNotice != null)
+        {
+          <div class="navigation-hint" role="status">@storageNotice</div>
+        }
+        <div class="navigation-caption">Все разделы</div>
+        @if (RendererInfo.IsInteractive)
+        {
+        <RadzenAccordion SelectedIndex="@SelectedGroupIndex" SelectedIndexChanged="SelectGroup" Multiple="false"
+                         RenderMode="AccordionRenderMode.Client" class="navigation-groups">
+          <Items>
+            @foreach (var group in groups)
+            {
+              <RadzenAccordionItem @key="group.Text" Text="@group.Text" Icon="@group.Icon"
+                                   ExpandTitle="@($"Развернуть: {group.Text}")" CollapseTitle="@($"Свернуть: {group.Text}")">
+                <ChildContent>
+                  @foreach (var item in group.Items)
+                  {
+                    <NavigationEntry @key="item.Path" Item="@item" CurrentPath="@CurrentPath" IsFavorite="@favorites.Contains(item.Path)"
+                                     CanFavorite="@PreferencesReady" FavoriteChanged="ToggleFavoriteAsync" />
+                  }
+                </ChildContent>
+              </RadzenAccordionItem>
+            }
+          </Items>
+        </RadzenAccordion>
+        }
+        else
+        {
+          @foreach (var group in groups)
+          {
+            <details class="navigation-static-group" name="navigation-static-groups" open="@(group.Text == expandedGroup)" @key="group.Text">
+              <summary><RadzenIcon Icon="@group.Icon" />@group.Text</summary>
+              @foreach (var item in group.Items)
+              {
+                <NavigationEntry @key="item.Path" Item="@item" CurrentPath="@CurrentPath" IsFavorite="@favorites.Contains(item.Path)"
+                                 CanFavorite="false" FavoriteChanged="ToggleFavoriteAsync" />
+              }
+            </details>
+          }
+        }
+      }
+    }
+  </nav>
+</div>

@@ -1,0 +1,20 @@
+@using Guard.Core.Entities
+<div class="app-header">
+  <RadzenSidebarToggle Click="@(_ => ToggleSidebar.InvokeAsync())" ToggleAriaLabel="Показать или скрыть меню" />
+  <div class="app-heading">
+    @if (!string.IsNullOrWhiteSpace(UserContext?.Subdivision?.Name))
+    {
+      <span class="app-subdivision">@UserContext.Subdivision.Name</span>
+    }
+    <span class="app-title">@Title</span>
+  </div>
+  <div class="app-account">
+    <RadzenAppearanceToggle />
+    <UserMenu UserContext="@UserContext" />
+  </div>
+</div>
+@code {
+  [Parameter] public UserContext? UserContext { get; set; }
+  [Parameter] public string Title { get; set; } = "АИС Охрана";
+  [Parameter] public EventCallback ToggleSidebar { get; set; }
+}

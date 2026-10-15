@@ -1,0 +1,21 @@
+<div class="navigation-entry @(CurrentPath == Item.Path ? "navigation-entry-active" : "")">
+  <RadzenLink Path="@Item.Path" Text="@Item.Text" Icon="@Item.Icon" class="navigation-entry-link"
+              aria-current="@(CurrentPath == Item.Path ? "page" : null)" title="@Item.Text" />
+  @if (ShowFavorite)
+  {
+    <RadzenButton Icon="@(IsFavorite ? "star" : "star_border")" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base"
+                  Size="ButtonSize.Small" class="navigation-favorite" Disabled="@(!RendererInfo.IsInteractive || !CanFavorite)"
+                  aria-label="@FavoriteLabel" aria-pressed="@(IsFavorite ? "true" : "false")" title="@FavoriteLabel"
+                  Click="@(() => FavoriteChanged.InvokeAsync(Item))" />
+  }
+</div>
+
+@code {
+  [Parameter, EditorRequired] public NavigationItem Item { get; set; } = default!;
+  [Parameter] public string? CurrentPath { get; set; }
+  [Parameter] public bool ShowFavorite { get; set; } = true;
+  [Parameter] public bool IsFavorite { get; set; }
+  [Parameter] public bool CanFavorite { get; set; }
+  [Parameter] public EventCallback<NavigationItem> FavoriteChanged { get; set; }
+  private string FavoriteLabel => $"{(IsFavorite ? "Убрать из избранного" : "Добавить в избранное")}: {Item.Text}";
+}

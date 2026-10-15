@@ -1,0 +1,6 @@
+@page "/export-archive"
+@attribute [Authorize(Policy = Permissions.Exports.ReadArchive)]
+
+<PermissionView Permission="@Permissions.Exports.ReadArchive"><ChildContent>
+  <Guard.Components.Pages.ExportArchive.Archive />
+</ChildContent><NotAllowed><AccessDenied /></NotAllowed></PermissionView>

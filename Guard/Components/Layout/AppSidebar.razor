@@ -1,0 +1,42 @@
+<div class="app-sidebar-content">
+  <a class="app-brand" href="/" aria-label="АИС Охрана — главная">
+    <RadzenImage Path="images/logo.png" AlternateText="" Style="width:48px; height:48px;" />
+    <span>АИС Охрана</span>
+  </a>
+  <div class="sidebar-navigation">
+    <Guard.Components.Layout.Navigation.AppNavigation />
+  </div>
+  <AuthorizeView>
+    <Authorized>
+      <section class="sidebar-user" aria-label="Пользователь и подразделение">
+        <div class="sidebar-detail">
+          <RadzenIcon Icon="account_circle" />
+          <div class="sidebar-detail-text">
+            <span class="sidebar-label">Пользователь</span>
+            <span class="sidebar-value" title="@DisplayName">@DisplayName</span>
+            @if (!string.IsNullOrWhiteSpace(UserContext?.Personal?.FullName) && !string.IsNullOrWhiteSpace(UserContext.UserName))
+            {
+              <span class="sidebar-login" title="@UserContext.UserName">@UserContext.UserName</span>
+            }
+          </div>
+        </div>
+        <div class="sidebar-detail">
+          <RadzenIcon Icon="domain" />
+          <div class="sidebar-detail-text">
+            <span class="sidebar-label">Подразделение</span>
+            <span class="sidebar-value" title="@(UserContext?.Subdivision?.Name)">@(UserContext == null ? "Загрузка…" : UserContext.Subdivision?.Name ?? "Не назначено")</span>
+          </div>
+        </div>
+      </section>
+    </Authorized>
+  </AuthorizeView>
+  <div class="app-version">АИС Охрана v3.5.0</div>
+</div>
+
+@code {
+  [CascadingParameter] public UserContext? UserContext { get; set; }
+  private string DisplayName => !string.IsNullOrWhiteSpace(UserContext?.Personal?.FullName)
+    ? UserContext.Personal.FullName
+    : !string.IsNullOrWhiteSpace(UserContext?.UserName) ? UserContext.UserName
+    : UserContext == null ? "Загрузка…" : "Имя не указано";
+}

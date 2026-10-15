@@ -141,17 +141,17 @@ internal static class SynchronizationUiTests
           child.AddComponentReferenceCapture(1, component => CapturePanel((PanelProbe)component));
           child.CloseComponent();
         }
-        else { child.OpenComponent<Guard.Components.Pages.Workspaces.Administrator.Synchronization>(0); child.CloseComponent(); }
+        else { child.OpenComponent<Guard.Components.Pages.Synchronization.Page>(0); child.CloseComponent(); }
       }));
       builder.CloseComponent();
     }
   }
-  public sealed class PanelProbe : Guard.Components.Pages.Administrator.Synchronization.StatusPanel
+  public sealed class PanelProbe : Guard.Components.Pages.Synchronization.StatusPanel
   {
     public async Task ClickAsync() { await RunAsync(); StateHasChanged(); }
     public async Task RefreshForTestAsync() { await RefreshAsync(); StateHasChanged(); }
   }
-  public sealed class ActualityProbe : Guard.Components.Pages.Administrator.Synchronization.ActualityPanel
+  public sealed class ActualityProbe : Guard.Components.Pages.Synchronization.ActualityPanel
   {
     public async Task RefreshForTestAsync() { await RefreshAsync(); StateHasChanged(); }
   }

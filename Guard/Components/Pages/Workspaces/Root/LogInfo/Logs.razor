@@ -1,4 +1,0 @@
-@page "/Logs"
-@attribute [Authorize(Policy = Permissions.Logs.Read)]
-
-<PermissionView Permission="@Permissions.Logs.Read"><ChildContent><Guard.Components.Pages.Root.LogInfo.Index/></ChildContent><NotAllowed><AccessDenied /></NotAllowed></PermissionView>

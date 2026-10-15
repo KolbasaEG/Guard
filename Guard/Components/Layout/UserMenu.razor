@@ -1,0 +1,37 @@
+@inject DialogService DialogService
+<div class="app-user-actions">
+  <AuthorizeView>
+    <Authorized>
+      <a class="rz-button rz-button-md rz-variant-text rz-base header-action" href="/Account/Manage" title="@ProfileTitle" aria-label="@ProfileTitle">
+        <RadzenIcon Icon="account_circle" />
+      </a>
+      @if (RendererInfo.IsInteractive)
+      {
+        <RadzenButton Icon="passkey" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="header-action" title="Сменить пароль" aria-label="Сменить пароль" Click="ChangePasswordAsync" />
+      }
+      else
+      {
+        <a class="rz-button rz-button-md rz-variant-text rz-base header-action" href="/Account/Manage/ChangePassword" title="Сменить пароль" aria-label="Сменить пароль">
+          <RadzenIcon Icon="passkey" />
+        </a>
+      }
+      <form method="post" action="/Account/Logout" data-enhance="false">
+        <AntiforgeryToken />
+        <input type="hidden" name="returnUrl" value="/Account/Login" />
+        <RadzenButton Icon="power_settings_new" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" class="header-action" title="Выйти" aria-label="Выйти" />
+      </form>
+    </Authorized>
+    <NotAuthorized>
+      <a class="rz-button rz-button-md rz-variant-text rz-base header-action" href="/Account/Login" title="Войти" aria-label="Войти"><RadzenIcon Icon="login" /></a>
+    </NotAuthorized>
+  </AuthorizeView>
+</div>
+@code {
+  [Parameter] public UserContext? UserContext { get; set; }
+  private string ProfileTitle => $"Профиль: {UserContext?.Personal?.FullName ?? UserContext?.UserName ?? "Текущий пользователь"}";
+  private async Task ChangePasswordAsync()
+  {
+    await DialogService.OpenAsync<ChangePasswordDialog>("", null,
+      new DialogOptions { Width = "600px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+  }
+}

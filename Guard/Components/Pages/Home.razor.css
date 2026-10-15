@@ -1,0 +1,9 @@
+.home-page {
+  min-height: 100%;
+  background-color: var(--rz-body-background-color);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
+.home-page-light { background-image: url('/images/home-light.png'); }
+.home-page-dark { background-image: url('/images/home-dark.png'); }

@@ -1,3 +1,0 @@
-@page "/users"
-@attribute [Authorize(Policy = Permissions.Users.Read)]
-<PermissionView Permission="@Permissions.Users.Read"><ChildContent><Guard.Components.Pages.Administrator.Users.Index/></ChildContent><NotAllowed><AccessDenied /></NotAllowed></PermissionView>

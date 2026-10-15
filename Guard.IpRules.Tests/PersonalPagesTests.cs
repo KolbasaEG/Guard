@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Radzen;
-using PersonalPages = Guard.Components.Pages.Administrator.Personals;
+using PersonalPages = Guard.Components.Pages.Personals;
 
 internal static class PersonalPagesTests
 {

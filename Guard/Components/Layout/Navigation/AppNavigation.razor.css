@@ -1,0 +1,28 @@
+.app-navigation { display: flex; flex-direction: column; height: 100%; min-height: 0; color: var(--rz-sidebar-color); }
+.navigation-search { display: flex; align-items: center; gap: 6px; padding: 12px 10px 8px; flex-shrink: 0; }
+.navigation-search ::deep .rz-textbox { min-width: 0; background-color: var(--rz-sidebar-background-color); color: var(--rz-sidebar-color); }
+.navigation-search ::deep .rz-textbox::placeholder { color: var(--rz-sidebar-color); opacity: .8; }
+.navigation-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 12px; scrollbar-gutter: stable; }
+.navigation-caption { padding: 14px 10px 6px; font-size: 12px; font-weight: 400; }
+.navigation-hint { padding: 4px 10px 10px; font-size: 12px; overflow-wrap: anywhere; }
+.navigation-scroll ::deep .rz-accordion {
+  border: none;
+  background: transparent;
+  --rz-accordion-item-background-color: var(--rz-sidebar-background-color);
+  --rz-accordion-item-color: var(--rz-sidebar-color);
+  --rz-accordion-item-font-size: 14px;
+  --rz-accordion-item-font-weight: 500;
+  --rz-accordion-item-padding-block: 12px;
+  --rz-accordion-item-padding-inline: 10px;
+  --rz-accordion-item-border: none;
+  --rz-accordion-shadow: none;
+  --rz-accordion-hover-color: var(--rz-sidebar-color);
+}
+.navigation-scroll ::deep .rz-accordion-header { background: var(--rz-sidebar-background-color); color: var(--rz-sidebar-color); border: none; font-size: 14px; }
+.navigation-scroll ::deep .rz-accordion-toggle-icon { color: var(--rz-sidebar-color); }
+.navigation-scroll ::deep .rz-accordion-header a { color: inherit; }
+.navigation-scroll ::deep .rz-accordion-header > button { width: 100%; min-width: 0; text-align: left; }
+.navigation-scroll ::deep .rz-accordion-content { background: transparent; padding: 2px 0 6px 8px; border: none; }
+.navigation-scroll ::deep .rz-accordion-header .rz-accordion-header-text { white-space: normal; }
+.navigation-static-group summary { padding: 12px 10px; font-size: 14px; font-weight: 500; cursor: pointer; }
+.navigation-static-group summary ::deep .rz-icon { font-size: 18px; vertical-align: middle; margin-right: 8px; }

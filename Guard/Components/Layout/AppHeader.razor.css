@@ -1,0 +1,9 @@
+.app-header { display: flex; align-items: center; gap: 12px; height: var(--rz-header-min-height, 3.125rem); padding-right: 12px; }
+.app-heading { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.app-subdivision { font-size: 12px; color: var(--rz-text-secondary-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-title { font-size: 16px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-account { margin-left: auto; display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+@media (max-width: 600px) {
+  .app-header { gap: 4px; padding-right: 4px; }
+  .app-subdivision { display: none; }
+}

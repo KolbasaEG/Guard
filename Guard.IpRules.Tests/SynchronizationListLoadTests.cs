@@ -73,26 +73,26 @@ internal static class SynchronizationListLoadTests
     Task<bool> Reload();
     Task LoadOther();
   }
-  private sealed class ClassifiersPage : Guard.Components.Pages.Administrator.Classifiers.Index, Page
+  private sealed class ClassifiersPage : Guard.Components.Pages.Classifiers.Index, Page
   {
     public ClassifiersPage(IClassifierService service, BrowserTimeService time)
-    { ClassifierService = service; Time = time; PermissionService = new PermissionsStub(); NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Administrator.Classifiers.Index>.Instance; Access = new("root", true, []); }
+    { ClassifierService = service; Time = time; PermissionService = new PermissionsStub(); NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Classifiers.Index>.Instance; Access = new("root", true, []); }
     public Task<bool> Reload() => ReloadForSynchronizationAsync();
     public Task LoadOther() => LoadData(new() { Skip = 0, Top = 20 });
     protected override Task ReloadGridForSynchronizationAsync() => LoadOther();
   }
-  private sealed class SubdivisionsPage : Guard.Components.Pages.Administrator.Subdivisions.Index, Page
+  private sealed class SubdivisionsPage : Guard.Components.Pages.Subdivisions.Index, Page
   {
     public SubdivisionsPage(ISubdivisionService service, BrowserTimeService time)
-    { SubdivisionService = service; Time = time; PermissionService = new PermissionsStub(); NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Administrator.Subdivisions.Index>.Instance; Access = new("root", true, []); }
+    { SubdivisionService = service; Time = time; PermissionService = new PermissionsStub(); NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Subdivisions.Index>.Instance; Access = new("root", true, []); }
     public Task<bool> Reload() => ReloadForSynchronizationAsync();
     public Task LoadOther() => LoadData(new() { Skip = 0, Top = 20 });
     protected override Task ReloadGridForSynchronizationAsync() => LoadOther();
   }
-  private sealed class PersonalsPage : Guard.Components.Pages.Administrator.Personals.Index, Page
+  private sealed class PersonalsPage : Guard.Components.Pages.Personals.Index, Page
   {
     public PersonalsPage(IPersonalService service)
-    { Service = service; PermissionService = new PermissionsStub(); Notifications = new(); Logger = NullLogger<Guard.Components.Pages.Administrator.Personals.Index>.Instance; Access = new("root", true, []); }
+    { Service = service; PermissionService = new PermissionsStub(); Notifications = new(); Logger = NullLogger<Guard.Components.Pages.Personals.Index>.Instance; Access = new("root", true, []); }
     public Task<bool> Reload() => ReloadForSynchronizationAsync();
     public Task LoadOther() => LoadData(new() { Skip = 0, Top = 20 });
     protected override Task ReloadGridForSynchronizationAsync() => LoadOther();

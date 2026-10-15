@@ -1,4 +1,4 @@
-using Guard.Components.Pages.Administrator.Users;
+using Guard.Components.Pages.Users;
 using Guard.Core.Entities;
 using Guard.Core.Services;
 using Microsoft.EntityFrameworkCore;

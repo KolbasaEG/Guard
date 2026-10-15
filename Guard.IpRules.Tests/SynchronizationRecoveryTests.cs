@@ -11,8 +11,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
 using Radzen;
-using Page = Guard.Components.Pages.Workspaces.Administrator.Synchronization;
-using Panel = Guard.Components.Pages.Administrator.Synchronization.StatusPanel;
+using Page = Guard.Components.Pages.Synchronization.Page;
+using Panel = Guard.Components.Pages.Synchronization.StatusPanel;
 
 internal static class SynchronizationRecoveryTests
 {
