@@ -11,8 +11,8 @@ public interface ISynchronizationService
   Task<DirectoryActuality> GetActualityAsync(string readPermission, CancellationToken ct = default);
   Task<SynchronizationOverview> GetOverviewAsync(bool classifiers = false, bool includeChildren = true, CancellationToken ct = default, bool allSubdivisions = false);
   Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null, bool? completeSnapshotGuaranteed = null);
-  Task<SynchronizationRun> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false);
-  Task<IReadOnlyList<SynchronizationRun>> GetHistoryAsync(CancellationToken ct = default);
+  Task<SynchronizationRunDto> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false);
+  Task<IReadOnlyList<SynchronizationRunDto>> GetHistoryAsync(CancellationToken ct = default);
   Task CheckConnectionAsync(CancellationToken ct = default);
 }
 
@@ -48,10 +48,10 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
     var access = await permissions.GetCurrentAsync(ct);
     if (!access.IsRoot) throw new UnauthorizedAccessException("Управление синхронизацией доступно только Root.");
     await using var db = await factory.CreateDbContextAsync(ct);
-    var settings = await db.SynchronizationSettings.AsNoTracking().SingleAsync(s => s.Id == 1, ct);
-    var last = await db.SynchronizationRuns.AsNoTracking().OrderByDescending(r => r.StartedAt).FirstOrDefaultAsync(ct);
-    settings.HasApiPassword = !string.IsNullOrEmpty(settings.ProtectedApiPassword);
-    settings.ProtectedApiPassword = null;
+    var settings = await db.SynchronizationSettings.AsNoTracking().Where(s => s.Id == 1)
+      .Select(SynchronizationProjection.Settings).SingleAsync(ct);
+    var last = await db.SynchronizationRuns.AsNoTracking().OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id)
+      .Select(SynchronizationProjection.Run).FirstOrDefaultAsync(ct);
     return new(settings, null, await GlobalActualAtAsync(db, ct), last, settings.Mode == DataManagementMode.Api);
   }
 
@@ -99,12 +99,12 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
       details: $"Mode={mode}; ScheduleEnabled={enabled}; DailyTime={time:HH:mm}; TimeZone={TimeZoneInfo.Local.Id}; ApiHeadSubdivisionId={apiHeadSubdivisionId}; CompleteSnapshotGuaranteed={settings.CompleteSnapshotGuaranteed}; PreviouslyConfirmed={previouslyConfirmed}; SourceChanged={sourceChanged}");
   }
 
-  public async Task<SynchronizationRun> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false)
+  public async Task<SynchronizationRunDto> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false)
   {
     var actor = await permissions.GetCurrentAsync(ct);
     if (!actor.IsRoot) throw new UnauthorizedAccessException("Запуск синхронизации доступен только Root.");
     Guid? pool = null;
-    if (!enqueue) return await runner.RunAsync(actor.UserId, pool, false, ct, updatedSince);
+    if (!enqueue) return SynchronizationProjection.FromRun(await runner.RunAsync(actor.UserId, pool, false, ct, updatedSince));
     await using var queueDb = await factory.CreateDbContextAsync(ct);
     await using var transaction = await queueDb.Database.BeginTransactionAsync(ct);
     if (!await queueDb.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_xact_lock({PostgresAdvisoryLocks.ApiSynchronization}) AS \"Value\"").SingleAsync(ct))
@@ -119,16 +119,18 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
       Status = SynchronizationStatus.Queued, QueuedAt = DateTime.UtcNow, StartedAt = DateTime.UtcNow,
       RequestedSettingsVersion = settings.Version, Phase = "Queued" };
     queueDb.Add(request); await queueDb.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-    return request;
+    return SynchronizationProjection.FromRun(request);
   }
 
-  public async Task<IReadOnlyList<SynchronizationRun>> GetHistoryAsync(CancellationToken ct = default)
+  public async Task<IReadOnlyList<SynchronizationRunDto>> GetHistoryAsync(CancellationToken ct = default)
   {
     var access = await permissions.GetCurrentAsync(ct);
     if (!access.IsRoot) throw new UnauthorizedAccessException("История синхронизации доступна только Root.");
     await using var db = await factory.CreateDbContextAsync(ct);
-    return await db.SynchronizationRuns.AsNoTracking()
-      .OrderByDescending(r => r.StartedAt).Take(20).ToListAsync(ct);
+    var history = await db.SynchronizationRuns.AsNoTracking()
+      .OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id).Take(20)
+      .Select(SynchronizationProjection.Run).ToListAsync(ct);
+    return history.AsReadOnly();
   }
 }
 

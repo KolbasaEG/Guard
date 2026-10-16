@@ -80,7 +80,7 @@ public sealed class ApiPersonnelExitEvent
   public DateTimeOffset EventAt { get; set; }
 }
 
-public record SynchronizationOverview(SynchronizationSettings Settings, Guid? PoolId,
-  DateTime? ActualAt, SynchronizationRun? LastAttempt, bool CanRun);
+public record SynchronizationOverview(SynchronizationSettingsDto Settings, Guid? PoolId,
+  DateTime? ActualAt, SynchronizationRunDto? LastAttempt, bool CanRun);
 
 public record DirectoryActuality(DataManagementMode Mode, DateTime? ActualAt);

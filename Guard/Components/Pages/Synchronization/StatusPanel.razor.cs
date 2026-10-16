@@ -159,7 +159,7 @@ public partial class StatusPanel : IAsyncDisposable
     "Classifiers" => "Классификаторы", "Subdivisions" => "Подразделения", "Personnel" => "Персонал", "ExitEvents" => "События выхода персонала",
     "Fetch" => "Получение данных API", "Dependencies" => "Дозагрузка зависимостей", "Apply" => "Проверка и сохранение", _ => "Подготовка"
   };
-  private static bool NeedsRecovery(SynchronizationSettings settings)
+  private static bool NeedsRecovery(SynchronizationSettingsDto settings)
   {
     if (settings.RecoveryRequiredFrom.HasValue) return true;
     var at = new[] { settings.LastFullSynchronizedAt, settings.LastChangesSynchronizedAt }.Where(d => d.HasValue).Max();

@@ -30,9 +30,9 @@ public partial class Page : IDisposable
   private readonly SemaphoreSlim reload = new(1, 1);
   private SyncStatus? statusPanel;
   private SettingsForm form = new();
-  private SynchronizationSettings? settings;
-  private SynchronizationRun? last;
-  private IReadOnlyList<SynchronizationRun> history = [];
+  private SynchronizationSettingsDto? settings;
+  private SynchronizationRunDto? last;
+  private IReadOnlyList<SynchronizationRunDto> history = [];
   private bool busy, disposed;
   private int selectedTab;
   private string? error;
@@ -45,7 +45,7 @@ public partial class Page : IDisposable
   private string? connectionResult;
   private UserAccessSnapshot? loadedAccess;
   private bool ApiSourceChanged => settings != null &&
-    SynchronizationSettingsRules.SourceChanged(settings, form.ApiBaseUrl, form.ApiUsername);
+    SynchronizationSettingsRules.SourceChanged(settings.ApiBaseUrl, settings.ApiUsername, form.ApiBaseUrl, form.ApiUsername);
 
   protected override async Task OnParametersSetAsync()
   {

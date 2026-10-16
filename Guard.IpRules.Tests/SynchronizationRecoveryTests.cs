@@ -25,14 +25,14 @@ internal static class SynchronizationRecoveryTests
       var form = Field<Page.SettingsForm>(page, "form");
       check(form.CompleteSnapshotGuaranteed, "settings form loads stored snapshot confirmation");
       form.CompleteSnapshotGuaranteed = false;
-      var version = Field<SynchronizationSettings>(page, "settings").Version;
+      var version = Field<SynchronizationSettingsDto>(page, "settings").Version;
       form.ApiBaseUrl = "https://edited.example.test"; form.ApiPassword = "test-new-password";
       service.FailHistory = 1;
       await Call(page, "ReloadRunsAsync");
       check(Field<string?>(page, "runsError") != null && Field<string?>(page, "settingsError") == null,
         "history failure is independent of settings");
       check(ReferenceEquals(form, Field<Page.SettingsForm>(page, "form")) &&
-        form.ApiPassword == "test-new-password" && Field<SynchronizationSettings>(page, "settings").Version == version,
+        form.ApiPassword == "test-new-password" && Field<SynchronizationSettingsDto>(page, "settings").Version == version,
         "history failure preserves edited fields, password and version");
 
       await using var panel = CreatePanel(service);
@@ -40,7 +40,7 @@ internal static class SynchronizationRecoveryTests
       Connect(panel, "ManualRefreshRequested", () => Call(page, "ReloadRunsAsync"));
       ConnectCycle(panel, page);
       await Call(panel, "RunPollingCycleAsync");
-      check(Field<string?>(page, "runsError") == null && Field<IReadOnlyList<SynchronizationRun>>(page, "history").Count == 1,
+      check(Field<string?>(page, "runsError") == null && Field<IReadOnlyList<SynchronizationRunDto>>(page, "history").Count == 1,
         "successful poll retries failed history even when the attempt is unchanged");
       var reads = service.HistoryReads;
       await Call(panel, "RunPollingCycleAsync");
@@ -56,12 +56,12 @@ internal static class SynchronizationRecoveryTests
       check(service.HistoryReads == reads + 1, "manual refresh with changed attempt reads history only once");
       check(ReferenceEquals(form, Field<Page.SettingsForm>(page, "form")) &&
         form.ApiBaseUrl == "https://edited.example.test", "refresh and retries preserve unsaved form");
-      check(Field<SynchronizationSettings>(page, "settings").Version == version,
+      check(Field<SynchronizationSettingsDto>(page, "settings").Version == version,
         "refresh and retries preserve the version of unsaved settings");
 
       service.FailHistory = 1;
       await Call(page, "SaveAsync");
-      check(Field<SynchronizationSettings>(page, "settings").Version == service.Version &&
+      check(Field<SynchronizationSettingsDto>(page, "settings").Version == service.Version &&
         !Field<bool>(page, "settingsNeedReload") && Field<string?>(page, "runsError") != null,
         "successful save accepts new settings version despite history failure");
       check(Field<Page.SettingsForm>(page, "form").ApiPassword == "", "successful save clears new password");
@@ -78,17 +78,17 @@ internal static class SynchronizationRecoveryTests
       check(service.SaveCalls == saves, "stale settings version cannot be saved again");
       await Call(page, "RetrySettingsAsync");
       check(!Field<bool>(page, "settingsNeedReload") &&
-        Field<SynchronizationSettings>(page, "settings").Version == service.Version,
+        Field<SynchronizationSettingsDto>(page, "settings").Version == service.Version,
         "explicit retry restores current version and enables saving");
 
       service.FailReloadAfterSave = false; service.RejectSave = true;
       form = Field<Page.SettingsForm>(page, "form");
       form.ApiPassword = "test-preserved-password";
       var messages = Field<NotificationService>(page, "Notifications", property: true).Messages.Count;
-      version = Field<SynchronizationSettings>(page, "settings").Version;
+      version = Field<SynchronizationSettingsDto>(page, "settings").Version;
       await Call(page, "SaveAsync");
       check(form.ApiPassword == "test-preserved-password" &&
-        Field<SynchronizationSettings>(page, "settings").Version == version &&
+        Field<SynchronizationSettingsDto>(page, "settings").Version == version &&
         Field<NotificationService>(page, "Notifications", property: true).Messages.Count == messages &&
         Field<string?>(page, "error") != null,
         "rejected save preserves input and version and emits no success");
@@ -121,7 +121,7 @@ internal static class SynchronizationRecoveryTests
       check(service.HistoryReads == 1, "new run update does not start a parallel history read");
       gate.SetResult();
       await Task.WhenAll(first, second);
-      check(service.HistoryReads == 2 && Field<SynchronizationRun>(page, "last").Status == SynchronizationStatus.Succeeded,
+      check(service.HistoryReads == 2 && Field<SynchronizationRunDto>(page, "last").Status == SynchronizationStatus.Succeeded,
         "update arriving during a read is followed by a fresh snapshot instead of leaving stale status");
     }
 
@@ -137,7 +137,7 @@ internal static class SynchronizationRecoveryTests
       page.Dispose();
       gate.SetResult();
       await Task.WhenAll(first, second);
-      check(ct.IsCancellationRequested && Field<IReadOnlyList<SynchronizationRun>>(page, "history").Count == 0,
+      check(ct.IsCancellationRequested && Field<IReadOnlyList<SynchronizationRunDto>>(page, "history").Count == 0,
         "leaving page cancels pending read and ignores its late result");
     }
 
@@ -151,7 +151,7 @@ internal static class SynchronizationRecoveryTests
     using (var page = CreatePage(stub))
     {
       await Call(page, "ReloadSettingsAsync");
-      var version = Field<SynchronizationSettings>(page, "settings").Version;
+      var version = Field<SynchronizationSettingsDto>(page, "settings").Version;
       var form = Field<Page.SettingsForm>(page, "form");
       form.ApiBaseUrl = "https://unsaved.example.test";
       stub.FailOverview = int.MaxValue; stub.FailHistory = 2;
@@ -167,7 +167,7 @@ internal static class SynchronizationRecoveryTests
       await Call(panel, "RunPollingCycleAsync");
       check(stub.HistoryReads == 3, "failed overview cycles do not reread healthy history");
       check(ReferenceEquals(form, Field<Page.SettingsForm>(page, "form")) &&
-        form.ApiBaseUrl == "https://unsaved.example.test" && Field<SynchronizationSettings>(page, "settings").Version == version,
+        form.ApiBaseUrl == "https://unsaved.example.test" && Field<SynchronizationSettingsDto>(page, "settings").Version == version,
         "recovery during overview outage preserves edited settings and version");
 
       stub.FailHistory = 1;
@@ -295,7 +295,7 @@ internal static class SynchronizationRecoveryTests
     using (var page = CreatePage(stub))
     {
       await Call(page, "ReloadRunsAsync");
-      check(ReferenceEquals(Field<SynchronizationRun>(page, "last"), stub.HistoryItems[0]),
+      check(ReferenceEquals(Field<SynchronizationRunDto>(page, "last"), stub.HistoryItems[0]),
         "latest attempt is taken from the first history entry, not a separate overview");
     }
 
@@ -357,11 +357,11 @@ internal static class SynchronizationRecoveryTests
     public SynchronizationStatus Status = SynchronizationStatus.Running;
     public Func<CancellationToken, Task>? BeforeHistory;
     public Func<CancellationToken, Task>? BeforeOverview;
-    public IReadOnlyList<SynchronizationRun>? HistoryItems;
+    public IReadOnlyList<SynchronizationRunDto>? HistoryItems;
     public CancellationToken LastHistoryToken;
     private readonly Guid runId = Guid.NewGuid();
     private string apiUrl = "https://saved.example.test";
-    private SynchronizationRun Run => new() {
+    private SynchronizationRunDto Run => new() {
       Id = runId, Status = Status, Phase = "Fetch", StartedAt = new(2026, 10, 15, 8, 0, 0, DateTimeKind.Utc) };
     public async Task<SynchronizationOverview> GetOverviewAsync(bool classifiers = false, bool includeChildren = true, CancellationToken ct = default, bool allSubdivisions = false)
     {
@@ -370,7 +370,7 @@ internal static class SynchronizationRecoveryTests
       if (BeforeOverview != null) await BeforeOverview(ct);
       return new SynchronizationOverview(new() { Version = Version, ApiBaseUrl = apiUrl, CompleteSnapshotGuaranteed = CompleteSnapshotGuaranteed }, null, null, Run, false);
     }
-    public async Task<IReadOnlyList<SynchronizationRun>> GetHistoryAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<SynchronizationRunDto>> GetHistoryAsync(CancellationToken ct = default)
     {
       HistoryReads++; LastHistoryToken = ct;
       if (FailHistory > 0) { FailHistory--; throw new IOException("Test history failure"); }
@@ -388,7 +388,7 @@ internal static class SynchronizationRecoveryTests
       return Task.CompletedTask;
     }
     public Task<DirectoryActuality> GetActualityAsync(string readPermission, CancellationToken ct = default) => throw new NotSupportedException();
-    public Task<SynchronizationRun> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false) => throw new NotSupportedException();
+    public Task<SynchronizationRunDto> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false) => throw new NotSupportedException();
     public Task CheckConnectionAsync(CancellationToken ct = default) => throw new NotSupportedException();
   }
   public sealed class Host : ComponentBase

@@ -166,15 +166,15 @@ internal static class SynchronizationUiTests
     public bool RejectRun { get; set; } = true;
     public bool LastEnqueued { get; private set; }
     public Task CheckConnectionAsync(CancellationToken ct = default) => throw new NotSupportedException();
-    private readonly SynchronizationRun run = new() { StartedAt = new(2026, 10, 9, 0, 0, 0, DateTimeKind.Utc), Status = SynchronizationStatus.Succeeded };
+    private SynchronizationRunDto run = new() { StartedAt = new(2026, 10, 9, 0, 0, 0, DateTimeKind.Utc), Status = SynchronizationStatus.Succeeded };
     public Task<SynchronizationOverview> GetOverviewAsync(bool classifiers = false, bool includeChildren = true, CancellationToken ct = default, bool allSubdivisions = false) =>
       Task.FromResult(new SynchronizationOverview(new() { Mode = DataManagementMode.Api }, null, run.StartedAt, run, true));
-    public Task<IReadOnlyList<SynchronizationRun>> GetHistoryAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<SynchronizationRun>>([run]);
+    public Task<IReadOnlyList<SynchronizationRunDto>> GetHistoryAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<SynchronizationRunDto>>([run]);
     public Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null, bool? completeSnapshotGuaranteed = null) => throw new NotSupportedException();
-    public Task<SynchronizationRun> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false)
+    public Task<SynchronizationRunDto> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false)
     {
       if (RejectRun) throw new EntityRuleException("Диагностическая ошибка запуска.");
-      LastEnqueued = enqueue; run.Status = SynchronizationStatus.Queued; return Task.FromResult(run);
+      LastEnqueued = enqueue; run = run with { Status = SynchronizationStatus.Queued }; return Task.FromResult(run);
     }
   }
   private sealed class DiagnosticStub : IApiDiagnosticService

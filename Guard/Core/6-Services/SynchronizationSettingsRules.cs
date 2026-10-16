@@ -5,8 +5,11 @@ namespace Guard.Core.Services;
 internal static class SynchronizationSettingsRules
 {
   internal static bool SourceChanged(SynchronizationSettings settings, string? apiBaseUrl, string? apiUsername) =>
-    apiBaseUrl != null && !string.Equals(settings.ApiBaseUrl, apiBaseUrl.Trim().TrimEnd('/'), StringComparison.Ordinal) ||
-    apiUsername != null && !string.Equals(settings.ApiUsername, apiUsername.Trim(), StringComparison.Ordinal);
+    SourceChanged(settings.ApiBaseUrl, settings.ApiUsername, apiBaseUrl, apiUsername);
+
+  internal static bool SourceChanged(string currentBaseUrl, string currentUsername, string? apiBaseUrl, string? apiUsername) =>
+    apiBaseUrl != null && !string.Equals(currentBaseUrl, apiBaseUrl.Trim().TrimEnd('/'), StringComparison.Ordinal) ||
+    apiUsername != null && !string.Equals(currentUsername, apiUsername.Trim(), StringComparison.Ordinal);
 
   internal static void RequireSnapshotConfirmation(SynchronizationSettings settings)
   {

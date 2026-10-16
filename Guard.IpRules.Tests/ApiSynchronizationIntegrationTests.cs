@@ -13,6 +13,57 @@ using Microsoft.Extensions.Options;
 
 internal static class ApiSynchronizationIntegrationTests
 {
+  private static async Task CheckReadContractsAsync(IDbContextFactory<ApplicationDbContext> factory,
+    SynchronizationService service, Action<bool, string> check)
+  {
+    var at = new DateTime(2090, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    var runs = Enumerable.Range(0, 22).Select(i => new SynchronizationRun {
+      StartedAt = at, CompletedAt = at.AddMinutes(1), QueuedAt = at.AddMinutes(-1),
+      Status = SynchronizationStatus.Succeeded, PoolId = Guid.NewGuid(), Scheduled = true,
+      UpdatedSince = new(2089, 12, 31), Phase = "Completed", Added = i, Updated = 2, Archived = 3,
+      Restored = 4, Deactivated = 5, ExitEvents = 6, RepeatedExitEvents = 7, UnknownExitEmployees = 8,
+      Error = "Test result", ActorId = "server-only-actor", RequestedSettingsVersion = Guid.NewGuid()
+    }).ToArray();
+    var ids = runs.Select(r => r.Id).ToArray();
+    try
+    {
+      await using (var db = await factory.CreateDbContextAsync())
+      {
+        db.AddRange(runs);
+        await db.SaveChangesAsync();
+      }
+      var history = await service.GetHistoryAsync();
+      var overview = await service.GetOverviewAsync();
+      var expected = runs.OrderByDescending(r => r.Id).First();
+      check(history.Count == 20 && history.Select(r => r.Id).SequenceEqual(ids.OrderDescending().Take(20)) &&
+        overview.LastAttempt == history[0], "history and overview use the same stable latest-run order and 20-row limit");
+      var item = history[0];
+      check(item.PoolId == expected.PoolId && item.Scheduled && item.UpdatedSince == expected.UpdatedSince &&
+        item.StartedAt == at && item.CompletedAt == at.AddMinutes(1) && item.QueuedAt == at.AddMinutes(-1) &&
+        item.Status == expected.Status && item.Phase == expected.Phase && item.Error == expected.Error &&
+        item.Added == expected.Added && item.Updated == 2 && item.Archived == 3 && item.Restored == 4 &&
+        item.Deactivated == 5 && item.ExitEvents == 6 && item.RepeatedExitEvents == 7 && item.UnknownExitEmployees == 8,
+        "run DTO preserves scope, timing, state and every result counter");
+      check(history is System.Collections.Generic.ICollection<SynchronizationRunDto> { IsReadOnly: true },
+        "history collection cannot be mutated by its consumer");
+      await using (var db = await factory.CreateDbContextAsync())
+        await db.SynchronizationRuns.Where(r => r.Id == item.Id).ExecuteUpdateAsync(s => s.SetProperty(r => r.Added, 999));
+      check(item.Added == expected.Added && (await service.GetHistoryAsync())[0].Added == 999,
+        "materialized run snapshot remains unchanged while a fresh read reflects persisted changes");
+      using var cancelled = new CancellationTokenSource();
+      cancelled.Cancel();
+      await PostgresTests.ThrowsAsync<OperationCanceledException>(() => service.GetOverviewAsync(ct: cancelled.Token), check,
+        "overview forwards cancellation to database read");
+      await PostgresTests.ThrowsAsync<OperationCanceledException>(() => service.GetHistoryAsync(cancelled.Token), check,
+        "history forwards cancellation to database read");
+    }
+    finally
+    {
+      await using var db = await factory.CreateDbContextAsync();
+      await db.SynchronizationRuns.Where(r => ids.Contains(r.Id)).ExecuteDeleteAsync();
+    }
+  }
+
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory, Action<bool, string> check)
   {
     var permissions = new PermissionsStub();
@@ -33,7 +84,10 @@ internal static class ApiSynchronizationIntegrationTests
       var saved = await service.GetOverviewAsync();
       check(saved.Settings.ApiBaseUrl == "https://example.invalid/api" && saved.Settings.ApiPageSize == 25,
         "Root source and page size settings persist in database");
-      check(saved.Settings.ApiUsername == "test" && saved.Settings.HasApiPassword && saved.Settings.ProtectedApiPassword == null,
+      check(saved.Settings.ApiUsername == "test" && saved.Settings.HasApiPassword &&
+        !System.Text.Json.JsonSerializer.Serialize(saved).Contains("\"ProtectedApiPassword\"") &&
+        !System.Text.Json.JsonSerializer.Serialize(saved).Contains("\"ApiPassword\"") &&
+        !System.Text.Json.JsonSerializer.Serialize(saved).Contains("test-password"),
         "overview returns username and password presence without protected or plaintext password");
       await using (var credentialDb = await factory.CreateDbContextAsync())
       {
@@ -54,6 +108,7 @@ internal static class ApiSynchronizationIntegrationTests
         catch (ArgumentException) { check(true, "invalid source settings rejected"); }
       }
     }
+    await CheckReadContractsAsync(factory, service, check);
     await CheckSnapshotConfirmationAsync(factory, service, runner, permissions, api, audit, credentials, check);
     var first = await runner.RunAsync("test-api-root", null, false, CancellationToken.None, new DateOnly(2000, 8, 10));
     check(first.Status == SynchronizationStatus.Succeeded && first.UpdatedSince == new DateOnly(2000, 8, 10), "initial synchronization with date succeeds without prior full import");
@@ -342,9 +397,13 @@ internal static class ApiSynchronizationIntegrationTests
     }
     var counts = await CountsAsync();
     var requests = api.FetchCalls;
-    settings.ScheduleEnabled = true;
-    settings.DailyTime = TimeOnly.MinValue;
-    check(!SynchronizationSchedule.IsDue(settings, DateTimeOffset.UtcNow), "scheduler waits for stored snapshot confirmation");
+    await using (var scheduleDb = await factory.CreateDbContextAsync(ct))
+    {
+      var scheduleSettings = await scheduleDb.SynchronizationSettings.AsNoTracking().SingleAsync(ct);
+      scheduleSettings.ScheduleEnabled = true;
+      scheduleSettings.DailyTime = TimeOnly.MinValue;
+      check(!SynchronizationSchedule.IsDue(scheduleSettings, DateTimeOffset.UtcNow), "scheduler waits for stored snapshot confirmation");
+    }
     await service.SaveSettingsAsync(DataManagementMode.Api, true, TimeOnly.MinValue, settings.Version, ct);
     await PostgresTests.ThrowsAsync<EntityRuleException>(() => runner.RunAsync("test-api-root", null, false, ct), check,
       "unconfirmed stored snapshot blocks manual synchronization");

@@ -113,21 +113,21 @@ internal static class ApiLifecycleIntegrationTests
     using var pageLifetime = new CancellationTokenSource();
     var queued = await service.RunAsync(pageLifetime.Token, new(2026, 10, 1), enqueue: true);
     pageLifetime.Cancel();
-    check(queued.Status == SynchronizationStatus.Queued && queued.QueuedAt.HasValue && queued.RequestedSettingsVersion.HasValue, "manual request stored durably before page cancellation");
+    check(queued.Status == SynchronizationStatus.Queued && queued.QueuedAt.HasValue && (await ReadRunAsync(factory, queued.Id)).RequestedSettingsVersion.HasValue, "manual request stored durably before page cancellation");
     await PostgresTests.ThrowsAsync<EntityRuleException>(() => service.RunAsync(enqueue: true), check, "second queued request rejected");
     await runner.RecoverInterruptedAsync(CancellationToken.None);
     await using (var db = await factory.CreateDbContextAsync())
       check((await db.SynchronizationRuns.FindAsync(queued.Id))!.Status == SynchronizationStatus.Queued, "restart recovery preserves pending queued request");
-    var background = await runner.RunAsync(queued.ActorId, queued.PoolId, false, CancellationToken.None, queued.UpdatedSince, queued.Id);
+    var background = await runner.RunAsync((await ReadRunAsync(factory, queued.Id)).ActorId, queued.PoolId, false, CancellationToken.None, queued.UpdatedSince, queued.Id);
     check(background.Id == queued.Id && background.Status == SynchronizationStatus.Succeeded, "background execution completes same queued record independently of page token");
     var outdated = await service.RunAsync(enqueue: true);
     settings = (await service.GetOverviewAsync()).Settings;
     await service.SaveSettingsAsync(DataManagementMode.Api, false, new(3, 0), settings.Version);
-    var rejected = await runner.RunAsync(outdated.ActorId, outdated.PoolId, false, CancellationToken.None, outdated.UpdatedSince, outdated.Id);
+    var rejected = await runner.RunAsync((await ReadRunAsync(factory, outdated.Id)).ActorId, outdated.PoolId, false, CancellationToken.None, outdated.UpdatedSince, outdated.Id);
     check(rejected.Status == SynchronizationStatus.Failed && rejected.Error!.Contains("Настройки изменились"), "queued run does not silently use changed source configuration");
     var denied = await service.RunAsync(enqueue: true);
     permissions.Root = false;
-    var revoked = await runner.RunAsync(denied.ActorId, denied.PoolId, false, CancellationToken.None, denied.UpdatedSince, denied.Id);
+    var revoked = await runner.RunAsync((await ReadRunAsync(factory, denied.Id)).ActorId, denied.PoolId, false, CancellationToken.None, denied.UpdatedSince, denied.Id);
     check(revoked.Status == SynchronizationStatus.Failed && client.FetchCalls == beforeQueueFetches + 1, "queued run rechecks revoked permissions before contacting API");
     permissions.Root = true;
     var hostedRequest = await service.RunAsync(updatedSince: new(2026, 10, 1), enqueue: true);
@@ -172,7 +172,7 @@ internal static class ApiLifecycleIntegrationTests
     }
     client.OnFetch = () => clock.Now = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(day.AddDays(1).AddMinutes(2), TimeZoneInfo.Local));
     var midnight = await clockRunner.RunAsync("system:api-sync", null, true, CancellationToken.None);
-    var midnightSettings = (await service.GetOverviewAsync()).Settings;
+    var midnightSettings = await ReadSettingsAsync(factory);
     check(midnight.Status == SynchronizationStatus.Succeeded && TimeZoneInfo.ConvertTimeFromUtc(midnight.StartedAt, TimeZoneInfo.Local).Date != TimeZoneInfo.ConvertTimeFromUtc(midnight.CompletedAt!.Value, TimeZoneInfo.Local).Date && midnightSettings.LastScheduledDate == DateOnly.FromDateTime(day),
       "cross-midnight success records scheduled start day rather than completion day");
     check(midnight.UpdatedSince == DateOnly.FromDateTime(day).AddDays(-1) && client.LastUpdatedSince == midnight.UpdatedSince,
@@ -183,7 +183,7 @@ internal static class ApiLifecycleIntegrationTests
     clock.Now = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(day.AddDays(1).AddHours(23).AddMinutes(58), TimeZoneInfo.Local));
     client.OnFetch = () => throw new OperationCanceledException();
     var scheduledFailure = await clockRunner.RunAsync("system:api-sync", null, true, CancellationToken.None);
-    midnightSettings = (await service.GetOverviewAsync()).Settings;
+    midnightSettings = await ReadSettingsAsync(factory);
     check(scheduledFailure.Status == SynchronizationStatus.Failed && midnightSettings.LastScheduledDate == DateOnly.FromDateTime(day) && SynchronizationSchedule.IsDue(midnightSettings, clock.Now),
       "failed scheduled export preserves completed day and permits retry");
     using var cancelled = new CancellationTokenSource();
@@ -198,6 +198,16 @@ internal static class ApiLifecycleIntegrationTests
     }
     permissions.Root = false;
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => service.CheckConnectionAsync(), check, "ping operation restricted to Root");
+  }
+  private static async Task<SynchronizationSettings> ReadSettingsAsync(IDbContextFactory<ApplicationDbContext> factory)
+  {
+    await using var db = await factory.CreateDbContextAsync();
+    return await db.SynchronizationSettings.AsNoTracking().SingleAsync();
+  }
+  private static async Task<SynchronizationRun> ReadRunAsync(IDbContextFactory<ApplicationDbContext> factory, Guid id)
+  {
+    await using var db = await factory.CreateDbContextAsync();
+    return await db.SynchronizationRuns.AsNoTracking().SingleAsync(r => r.Id == id);
   }
   private sealed class ClientStub : IDirectoryApiClient
   {
