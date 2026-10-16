@@ -110,6 +110,7 @@ internal static class AuthorizationTests
     var viewerId=await roles.SaveAsync(new(){Name="Viewer",Permissions=[Permissions.Personals.Read]});
     var exporterId=await roles.SaveAsync(new(){Name="Exporter",Permissions=[Permissions.Personals.Read,Permissions.Personals.Export]});
     await RoleInputSnapshotTests.RunAsync(scope.ServiceProvider, check);
+    await RoleCompletionTests.RunAsync(scope.ServiceProvider, factory, check);
     var legacyRoleId = await roles.SaveAsync(new() { Name = "Legacy synchronization", Permissions = [Permissions.Subdivisions.Read] });
     await using (var db = await factory.CreateDbContextAsync())
     {
@@ -227,7 +228,7 @@ internal static class AuthorizationTests
       await db.RoleClaims.Where(c=>c.RoleId=="admin-role").ExecuteDeleteAsync();
       check(await db.UserClaims.CountAsync(c=>c.UserId=="user" && c.ClaimType=="Permission")==1,"individual claims remain in database");
     }
-    await roles.InitializeAdministratorAsync();
+    await RoleCompletionTests.InitializeAsync(scope.ServiceProvider, factory, check);
     check((await roles.GetAsync("admin-role")).Permissions.Count==PermissionCatalog.All.Count(p=>!p.RootOnly),"explicit initialization sets complete non-system permissions");
     await PostgresTests.ThrowsAsync<InvalidOperationException>(()=>roles.InitializeAdministratorAsync(),check,"initialization does not overwrite configured role");
     authentication.Id="user";

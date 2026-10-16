@@ -10,7 +10,8 @@ using System.Security.Claims;
 namespace Guard.Core.Services;
 
 // Менеджеры Identity разрешаются в отдельном scope: один контекст и транзакция на операцию.
-public class RoleAccessService(IPermissionService permissions, IServiceScopeFactory scopes, IAuditService audit, IAccessChangeNotifier notifier)
+public class RoleAccessService(IPermissionService permissions, IServiceScopeFactory scopes, IAuditService audit,
+    IAccessChangeNotifier notifier, ILogger<RoleAccessService> logger)
     : IRoleAccessService
 {
   private async Task<string> RequireRootAsync(CancellationToken ct)
@@ -25,6 +26,22 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
   }
   private static string UserVersion(string? stamp, IEnumerable<string> ids) =>
       (stamp ?? "") + ":" + string.Join(",", ids.OrderBy(id => id, StringComparer.Ordinal));
+
+  // Вызывать только после подтверждённого commit. Ошибки доставки не отменяют запись.
+  private async Task CompleteCommittedAsync(IEnumerable<string> affectedUsers, AuditEventType eventType,
+      string actor, string targetId, string details)
+  {
+    try { await notifier.PublishAsync(affectedUsers); }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Изменение ролей сохранено, но уведомление не доставлено. EventType={EventType}; TargetId={TargetId}", eventType, targetId);
+    }
+    try { audit.LogIdentityEvent(eventType, actor, details: details); }
+    catch (Exception ex)
+    {
+      logger.LogError(ex, "Изменение ролей сохранено, но аудит не доставлен. EventType={EventType}; TargetId={TargetId}", eventType, targetId);
+    }
+  }
 
   public async Task<RoleEditDto> GetAsync(string id, CancellationToken ct = default)
   {
@@ -70,8 +87,7 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     // Обновление stamp фиксирует также изменения только набора claims.
     Check(await manager.UpdateAsync(role));
     await tx.CommitAsync(ct);
-    await notifier.PublishAsync(affectedUsers);
-    audit.LogIdentityEvent(AuditEventType.RolePermissionsChanged, actor, details:
+    await CompleteCommittedAsync(affectedUsers, AuditEventType.RolePermissionsChanged, actor, role.Id,
         $"RoleId={role.Id}; added={string.Join(",", selected.Except(old.Select(c => c.Value)))}; removed={string.Join(",", old.Select(c => c.Value).Except(selected))}");
     return role.Id;
   }
@@ -90,8 +106,7 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     var affectedUsers = await db.UserRoles.Where(r => r.RoleId == id).Select(r => r.UserId).ToListAsync(ct);
     Check(await manager.DeleteAsync(role));
     await tx.CommitAsync(ct);
-    await notifier.PublishAsync(affectedUsers);
-    audit.LogIdentityEvent(AuditEventType.RolePermissionsChanged, actor, details: $"Deleted role {id}");
+    await CompleteCommittedAsync(affectedUsers, AuditEventType.RolePermissionsChanged, actor, id, $"Deleted role {id}");
   }
 
   public async Task<UserRoleAssignmentsDto> GetUserRolesAsync(string userId, CancellationToken ct = default)
@@ -134,8 +149,8 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     Check(await users.RemoveFromRolesAsync(user, removeNames));
     Check(await users.AddToRolesAsync(user, addNames));
     await tx.CommitAsync(ct);
-    await notifier.PublishAsync([userId]);
-    audit.LogIdentityEvent(AuditEventType.UserRolesChanged, actor, details: $"UserId={userId}; added={string.Join(",", addNames)}; removed={string.Join(",", removeNames)}");
+    await CompleteCommittedAsync([userId], AuditEventType.UserRolesChanged, actor, userId,
+        $"UserId={userId}; added={string.Join(",", addNames)}; removed={string.Join(",", removeNames)}");
   }
 
   public async Task<PermissionTransitionReport> GetTransitionReportAsync(CancellationToken ct = default)
@@ -166,7 +181,6 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
       Check(await manager.AddClaimAsync(role, new Claim("Permission", p.Code)));
     Check(await manager.UpdateAsync(role));
     await tx.CommitAsync(ct);
-    await notifier.PublishAsync(affectedUsers);
-    audit.LogIdentityEvent(AuditEventType.RolePermissionsChanged, actor, details: "Initialized Administrator permissions");
+    await CompleteCommittedAsync(affectedUsers, AuditEventType.RolePermissionsChanged, actor, role.Id, "Initialized Administrator permissions");
   }
 }

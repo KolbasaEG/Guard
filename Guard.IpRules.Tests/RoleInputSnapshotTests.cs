@@ -13,7 +13,8 @@ internal static class RoleInputSnapshotTests
     var ids = new List<string>();
     RoleAccessService Service(PausedPermissions paused) => new(paused,
         provider.GetRequiredService<IServiceScopeFactory>(), provider.GetRequiredService<IAuditService>(),
-        provider.GetRequiredService<IAccessChangeNotifier>());
+        provider.GetRequiredService<IAccessChangeNotifier>(),
+        provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<RoleAccessService>>());
     try
     {
       var input = new RoleEditDto { Name = "Snapshot create", Permissions = [Permissions.Personals.Read] };
