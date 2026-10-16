@@ -33,6 +33,86 @@ public class SubdivisionService : ISubdivisionService
   }
 
   // ==================== Read (Изолированный IReadRepository) ====================
+  public async Task<SubdivisionDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default)
+  {
+    var (user, scope) = await GetDialogAccessAsync(false, ct);
+    await using var db = await _factory.CreateDbContextAsync(ct);
+    var result = await DialogSubdivisions(db, scope).Where(s => s.Id == id &&
+      (s.Status == Status.Inserted || s.Status == Status.Modified || s.Status == Status.Blocked ||
+       (s.Status == Status.Archived || s.Status == Status.ArchivedBlocked) && user.Has(Permissions.Subdivisions.ReadArchive) ||
+       s.Status == Status.Deleted && user.IsRoot))
+      .Select(s => new SubdivisionDetailsDto {
+        Id = s.Id, Version = s.Version, Status = s.Status, ParentId = s.ParentId,
+        ParentName = s.Parent == null ? null : s.Parent.Name,
+        OrganTypeName = s.OrganType == null ? null : s.OrganType.Value,
+        StatusClassifierName = s.StatusClassifier == null ? null : s.StatusClassifier.Value,
+        Name = s.Name, PositionFormationName = s.PositionFormationName, PostalCode = s.PostalCode,
+        Address = s.Address, Phone = s.Phone, Fax = s.Fax, StaffCount = s.StaffCount,
+        LevelOrder = s.LevelOrder, IsDepartment = s.IsDepartment, StatusType = s.StatusType,
+        StatusCode = s.StatusCode, OrganTypeId = s.OrganTypeId, OrganTypeCode = s.OrganTypeCode,
+        Info = new EntityInfoDto {
+          Id = s.Id, InsertedDate = s.InsertedDate, LastModifiedDate = s.LastModifiedDate,
+          Creator = db.Users.Where(u => u.Id == s.CreatedBy).Select(u => u.Email).FirstOrDefault(),
+          Editor = db.Users.Where(u => u.Id == s.ModifiedBy).Select(u => u.Email).FirstOrDefault()
+        }
+      }).SingleOrDefaultAsync(ct);
+    await EnsureDialogAccessAsync(user, scope, false, ct);
+    return result;
+  }
+
+  public async Task<SubdivisionEditorOptionsDto> GetEditorOptionsAsync(CancellationToken ct = default)
+  {
+    var (user, scope) = await GetDialogAccessAsync(true, ct);
+    await using var db = await _factory.CreateDbContextAsync(ct);
+    var parents = await ParentOptions(DialogSubdivisions(db, scope)).ToListAsync(ct);
+    var organs = await db.Classifiers.AsNoTracking().Where(c => c.Type == 363 && c.IsActive)
+      .OrderBy(c => c.Value).ThenBy(c => c.Code).Select(c => new SubdivisionClassifierOptionDto(c.Type, c.Code, c.Value)).ToListAsync(ct);
+    // Статусы, включая неактивные, сохраняют прежний набор вариантов формы.
+    var statuses = await db.Classifiers.AsNoTracking().Where(c => c.Type == (int)ClassifierType.СтатусПодразделения)
+      .OrderBy(c => c.Value).ThenBy(c => c.Code).Select(c => new SubdivisionClassifierOptionDto(c.Type, c.Code, c.Value)).ToListAsync(ct);
+    await EnsureDialogAccessAsync(user, scope, true, ct);
+    return new(parents, organs, statuses);
+  }
+
+  public async Task<IReadOnlyList<SubdivisionParentOptionDto>> GetMoveParentOptionsAsync(Guid id, CancellationToken ct = default)
+  {
+    var (user, scope) = await GetDialogAccessAsync(true, ct);
+    await using var db = await _factory.CreateDbContextAsync(ct);
+    var target = await DialogSubdivisions(db, scope).Where(s => s.Id == id)
+      .Select(s => new { s.Path, s.Status }).SingleOrDefaultAsync(ct) ?? throw new KeyNotFoundException("Подразделение недоступно.");
+    if (target.Status is not (Status.Inserted or Status.Modified)) throw new EntityRuleException("Подразделение неактивно или заблокировано.");
+    if (!DataAccessScopeService.IsValidPath(target.Path)) throw new EntityRuleException("Путь подразделения не настроен.");
+    var result = await ParentOptions(DialogSubdivisions(db, scope).Where(s => s.Id != id && !s.Path.StartsWith(target.Path))).ToListAsync(ct);
+    await EnsureDialogAccessAsync(user, scope, true, ct);
+    return result;
+  }
+
+  private static IQueryable<Subdivision> DialogSubdivisions(ApplicationDbContext db, DataAccessScope scope) =>
+    scope.IsRoot ? db.Subdivisions.AsNoTracking() : db.Subdivisions.AsNoTracking().Where(s => scope.SubdivisionIds.Contains(s.Id));
+
+  private static IQueryable<SubdivisionParentOptionDto> ParentOptions(IQueryable<Subdivision> query) => query
+    .Where(s => s.Status == Status.Inserted || s.Status == Status.Modified)
+    .OrderBy(s => s.Name).ThenBy(s => s.Id).Select(s => new SubdivisionParentOptionDto(s.Id, s.Name, s.Path));
+
+  private async Task<(UserAccessSnapshot User, DataAccessScope Scope)> GetDialogAccessAsync(bool write, CancellationToken ct)
+  {
+    var user = await _permissions.GetCurrentAsync(ct);
+    if (!user.Has(Permissions.Subdivisions.Read) || write && !user.Has(Permissions.Subdivisions.Write))
+      throw new UnauthorizedAccessException("Недостаточно прав для работы с подразделениями.");
+    var scope = await _scopes.GetAsync(ct);
+    if (scope.UserId != user.UserId || scope.IsRoot != user.IsRoot) throw new UnauthorizedAccessException("Область доступа изменилась.");
+    return (user, scope);
+  }
+
+  private async Task EnsureDialogAccessAsync(UserAccessSnapshot user, DataAccessScope scope, bool write, CancellationToken ct)
+  {
+    var (final, finalScope) = await GetDialogAccessAsync(write, ct);
+    ct.ThrowIfCancellationRequested();
+    if (user.UserId != final.UserId || user.IsRoot != final.IsRoot || !user.Permissions.SetEquals(final.Permissions) ||
+        !scope.SubdivisionIds.SetEquals(finalScope.SubdivisionIds))
+      throw new UnauthorizedAccessException("Область доступа изменилась во время загрузки.");
+  }
+
   public async Task<SubdivisionSearchResult> SearchAsync(SubdivisionSearchRequest request, CancellationToken ct = default)
   {
     ArgumentNullException.ThrowIfNull(request);

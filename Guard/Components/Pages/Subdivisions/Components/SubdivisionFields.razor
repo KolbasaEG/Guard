@@ -1,4 +1,4 @@
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 
 <div class="subdivision-form">
   <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;">
@@ -14,7 +14,7 @@
     else
     {
       <RadzenFormField Text="Вышестоящее подразделение" Variant="Variant.Text" Style="width:100%;">
-        <RadzenTextBox Value="@(Item.Parent?.Name ?? "—")" ReadOnly="true" Style="width:100%;" />
+        <RadzenTextBox Value="@(Item.ParentName ?? "—")" ReadOnly="true" Style="width:100%;" />
       </RadzenFormField>
     }
     <RadzenFormField Text="Наименование подразделения" Variant="Variant.Text" Style="width:100%;">
@@ -27,14 +27,14 @@
     </RadzenFormField>
     <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" Class="subdivision-form-row" Style="width:100%;">
       <RadzenFormField Text="Тип органа" Variant="Variant.Text" Style="flex:1;min-width:0;">
-        <RadzenDropDown Data="OrganTypes" TextProperty="Value" TValue="Classifier"
+        <RadzenDropDown Data="OrganTypes" TextProperty="Value" TValue="SubdivisionClassifierOptionDto"
                         Value="@(OrganTypes.FirstOrDefault(x => x.Type == Item.OrganTypeId && x.Code == Item.OrganTypeCode))"
                         Change="OrganTypeChanged" Name="OrganType" AllowClear="true" AllowFiltering="true"
                         FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterOperator="StringFilterOperator.Contains"
                         Style="width:100%;" />
       </RadzenFormField>
       <RadzenFormField Text="Статус подразделения" Variant="Variant.Text" Style="flex:1;min-width:0;">
-        <RadzenDropDown Data="StatusClassifiers" TextProperty="Value" TValue="Classifier"
+        <RadzenDropDown Data="StatusClassifiers" TextProperty="Value" TValue="SubdivisionClassifierOptionDto"
                         Value="@(StatusClassifiers.FirstOrDefault(x => x.Type == Item.StatusType && x.Code == Item.StatusCode))"
                         Change="StatusChanged" Name="StatusClassifier" AllowClear="true" AllowFiltering="true"
                         FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterOperator="StringFilterOperator.Contains"
@@ -74,22 +74,22 @@
 </div>
 
 @code {
-  [Parameter, EditorRequired] public Subdivision Item { get; set; } = default!;
-  [Parameter] public IEnumerable<Classifier> OrganTypes { get; set; } = [];
-  [Parameter] public IEnumerable<Classifier> StatusClassifiers { get; set; } = [];
-  [Parameter] public IEnumerable<Subdivision> Subdivisions { get; set; } = [];
+  [Parameter, EditorRequired] public SubdivisionDetailsDto Item { get; set; } = default!;
+  [Parameter] public IEnumerable<SubdivisionClassifierOptionDto> OrganTypes { get; set; } = [];
+  [Parameter] public IEnumerable<SubdivisionClassifierOptionDto> StatusClassifiers { get; set; } = [];
+  [Parameter] public IEnumerable<SubdivisionParentOptionDto> Subdivisions { get; set; } = [];
   [Parameter] public bool ShowParentSelector { get; set; }
 
   private void OrganTypeChanged(object value)
   {
-    var selected = value as Classifier;
+    var selected = value as SubdivisionClassifierOptionDto;
     Item.OrganTypeId = selected?.Type;
     Item.OrganTypeCode = selected?.Code;
   }
 
   private void StatusChanged(object value)
   {
-    var selected = value as Classifier;
+    var selected = value as SubdivisionClassifierOptionDto;
     Item.StatusType = selected?.Type;
     Item.StatusCode = selected?.Code;
   }

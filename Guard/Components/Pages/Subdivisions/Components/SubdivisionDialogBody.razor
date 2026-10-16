@@ -1,17 +1,17 @@
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 
 @if (CanEdit)
 {
-  <EditEntity TItem="Subdivision" Data="Item" Name="РЕДАКТИРОВАНИЕ ПОДРАЗДЕЛЕНИЯ"
+  <EditEntity TItem="SubdivisionDetailsDto" Data="Item" Name="РЕДАКТИРОВАНИЕ ПОДРАЗДЕЛЕНИЯ"
               Submit="Submit" ShowInfoButton="true" OnInfoClick="OnInfoClick"
-              IsLoading="IsLoading" OnCancelButtonClick="OnCancel">
+              IsLoading="IsLoading" IsSaving="IsSaving" OnCancelButtonClick="OnCancel">
     <SubdivisionFields Item="Item" OrganTypes="OrganTypes" StatusClassifiers="StatusClassifiers" />
   </EditEntity>
 }
 else
 {
-  <ViewEntity TItem="Subdivision" Data="Item" Name="ПРОСМОТР ПОДРАЗДЕЛЕНИЯ"
-              ShowInfoButton="@(!IsLoading)" OnInfoClick="OnInfoClick"
+  <ViewEntity TItem="SubdivisionDetailsDto" Data="Item" Name="ПРОСМОТР ПОДРАЗДЕЛЕНИЯ"
+              ShowInfoButton="@(!IsLoading && !IsSaving)" OnInfoClick="OnInfoClick"
               IsLoading="IsLoading" OnCancelButtonClick="OnCancel">
     @if (!IsLoading)
     {
@@ -22,10 +22,11 @@ else
 
 @code {
   [CascadingParameter] public DialogAccessState? AccessState { get; set; }
-  [Parameter, EditorRequired] public Subdivision Item { get; set; } = default!;
-  [Parameter] public IEnumerable<Classifier> OrganTypes { get; set; } = [];
-  [Parameter] public IEnumerable<Classifier> StatusClassifiers { get; set; } = [];
+  [Parameter, EditorRequired] public SubdivisionDetailsDto Item { get; set; } = default!;
+  [Parameter] public IEnumerable<SubdivisionClassifierOptionDto> OrganTypes { get; set; } = [];
+  [Parameter] public IEnumerable<SubdivisionClassifierOptionDto> StatusClassifiers { get; set; } = [];
   [Parameter] public bool IsLoading { get; set; }
+  [Parameter] public bool IsSaving { get; set; }
   [Parameter] public EventCallback Submit { get; set; }
   [Parameter] public EventCallback OnInfoClick { get; set; }
   [Parameter] public EventCallback OnCancel { get; set; }

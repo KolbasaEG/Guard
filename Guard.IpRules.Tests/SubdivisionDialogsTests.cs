@@ -2,7 +2,7 @@ using System.Net;
 using Guard.Components.Library.Authorization;
 using Guard.Components.Library.Forms;
 using Guard.Components.Pages.Subdivisions.Components;
-using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
 using Guard.Core.Enums;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -54,7 +54,7 @@ internal static class SubdivisionDialogsTests
   {
     [Parameter] public Action<Host>? Capture { get; set; }
     [Parameter] public bool Adding { get; set; }
-    private readonly Subdivision item = new() { Name = "Черновик подразделения", Status = Status.Modified };
+    private readonly SubdivisionDetailsDto item = new() { Name = "Черновик подразделения", Status = Status.Modified };
     private DialogAccessState access = new(true, true, null, () => Task.CompletedTask);
     protected override void OnInitialized() => Capture?.Invoke(this);
     public Task ChangeAsync(bool read, bool write, Status status) => InvokeAsync(() =>
@@ -71,7 +71,7 @@ internal static class SubdivisionDialogsTests
       {
         if (Adding)
         {
-          child.OpenComponent<CreateEntity<Subdivision>>(0);
+          child.OpenComponent<CreateEntity<SubdivisionDetailsDto>>(0);
           child.AddAttribute(1, "Data", item);
           child.AddAttribute(2, "ChildContent", (RenderFragment)(fields =>
           {

@@ -1,158 +1,106 @@
 using Guard.Core.Services.DTOs;
-using Guard.Components.Library.Loading;
-
-using Guard.Core.Entities;
 using Guard.Core.Services;
+using Guard.Core.Enums;
 using Guard.Shared;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Logging;
-using Microsoft.JSInterop;
 using Radzen;
 
-namespace Guard.Components.Pages.Subdivisions
+namespace Guard.Components.Pages.Subdivisions;
+
+public partial class Edit : IDisposable
 {
-  public partial class Edit : IDisposable
+  [Inject] protected DialogService DialogService { get; set; } = default!;
+  [Inject] protected NotificationService NotificationService { get; set; } = default!;
+  [Inject] protected ISubdivisionService SubdivisionService { get; set; } = default!;
+  [Inject] protected ILogger<Edit> Logger { get; set; } = default!;
+  [Parameter] public Guid Id { get; set; }
+
+  private readonly CancellationTokenSource _cts = new();
+  private bool disposed;
+  protected bool isLoading;
+  protected bool isSaving;
+  protected bool isLoaded;
+  protected SubdivisionDetailsDto item = new();
+  protected IEnumerable<SubdivisionClassifierOptionDto> organTypes = [];
+  protected IEnumerable<SubdivisionClassifierOptionDto> statusClassifiers = [];
+
+  protected override async Task OnInitializedAsync()
   {
-    [Inject]
-    protected DialogService DialogService { get; set; }
-    [Inject]
-    protected NotificationService NotificationService { get; set; }
-    [Inject]
-    protected ISubdivisionService SubdivisionService { get; set; }
-    [Inject]
-    protected ILogger<Edit> Logger { get; set; }
-
-    [Parameter]
-    public Guid Id { get; set; }
-
-    private readonly CancellationTokenSource _cts = new();
-
-    protected bool isLoading = false;
-    protected Subdivision item = new();
-    protected IEnumerable<Classifier> organTypes = [];
-    protected IEnumerable<Classifier> statusClassifiers = [];
-
-    protected override async Task OnInitializedAsync()
-    {
-      if (Id == Guid.Empty)
-      {
-        Logger.LogWarning("Передан пустой ID при вызове формы редактирования подразделения");
-        DialogService.Close(null);
-        return;
+    var ct = _cts.Token;
+    isLoading = true;
+    try {
+      var loaded = await SubdivisionService.GetDetailsAsync(Id, ct);
+      if (disposed || ct.IsCancellationRequested) return;
+      if (loaded == null) throw new KeyNotFoundException("Подразделение не найдено или недоступно. Обновите список.");
+      if (Access?.Has(Guard.Core.Identity.Permissions.Subdivisions.Write) == true &&
+          loaded.Status is Status.Inserted or Status.Modified) {
+        var options = await SubdivisionService.GetEditorOptionsAsync(ct);
+        if (disposed || ct.IsCancellationRequested) return;
+        organTypes = options.OrganTypes;
+        statusClassifiers = options.StatusClassifiers;
       }
-
-      try
-      {
-        isLoading = true;
-        Logger.LogDebug("Инициализация диалогового окна редактирования подразделения с ID '{Id}'", Id);
-
-        var entity = await SubdivisionService.GetByIdAsync(Id, _cts.Token);
-        if (entity != null)
-        {
-          item = entity;
-          if (Access?.Has(Guard.Core.Identity.Permissions.Subdivisions.Write) != true) {
-            organTypes = entity.OrganType == null ? [] : [entity.OrganType];
-            statusClassifiers = entity.StatusClassifier == null ? [] : [entity.StatusClassifier];
-            return;
-          }
-          // Параллельная загрузка справочников и списка подразделений
-          var organTypesTask = SubdivisionService.GetOrganTypesAsync(_cts.Token);
-          var statusClassifiersTask = SubdivisionService.GetClassifiersByTypeAsync(Core.Enums.ClassifierType.СтатусПодразделения, _cts.Token);
-
-          await Task.WhenAll(organTypesTask, statusClassifiersTask);
-
-          organTypes = await organTypesTask;
-          statusClassifiers = await statusClassifiersTask;
-
-          item = entity;
-
-        }
-        else
-        {
-          Logger.LogWarning("Подразделение с ID '{Id}' не найдено", Id);
-          NotificationService.Notify(new NotificationMessage
-          {
-            Severity = NotificationSeverity.Warning,
-            Summary = "Внимание!",
-            Detail = $"Подразделение с ID '{Id}' не найдено",
-            Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-          });
-          DialogService.Close(null);
-        }
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogInformation("Инициализация диалогового окна редактирования подразделения была отменена");
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при инициализации диалогового окна редактирования подразделения с ID '{Id}'", Id);
-        NotificationService.Notify(new NotificationMessage
-        {
-          Severity = NotificationSeverity.Error,
-          Summary = "Внимание!",
-          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
-          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-        });
-      }
-      finally
-      {
-        isLoading = false;
-      }
+      item = loaded;
+      isLoaded = true;
     }
-
-    protected async Task FormSubmit()
-    {
-      try
-      {
-        isLoading = true;
-        Logger.LogInformation("Запуск обновления подразделения '{SubdivisionName}' (ID: {Id})", item.Name, item.Id);
-
-        // Асинхронное обновление сущности
-        await SubdivisionService.UpdateFromDtoAsync(new EditSubdivisionDto(item.Id, item.Version, SubdivisionFieldsDto.From(item)), _cts.Token);
-
-        Logger.LogInformation("Подразделение '{SubdivisionName}' с ID '{Id}' успешно обновлено", item.Name, item.Id);
-        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogWarning("Операция обновления подразделения '{SubdivisionName}' была отменена пользователем", item.Name);
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при обновлении подразделения '{SubdivisionName}' (ID: {Id})", item.Name, item.Id);
-
-        NotificationService.Notify(new NotificationMessage
-        {
-          Severity = NotificationSeverity.Error,
-          Summary = "Внимание!",
-          Detail = Guard.Core.Services.UserOperationErrors.Message(ex),
-          Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-        });
-      }
-      finally
-      {
-        isLoading = false;
-      }
-    }
-
-    protected async Task InfoButtonClick()
-    {
-      var baseEntity = item as BaseEntity;
-      await DialogService.OpenAsync<DialogInfo>("", new Dictionary<string, object> { { "BaseEntity", baseEntity }, { "Compact", true } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-    }
-
-    protected void HandleCancelButtonClick()
-    {
-      Logger.LogInformation("Пользователь отменил редактирование подразделения через кнопку 'Отмена'");
-      _cts.Cancel();
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (Exception ex) {
+      if (disposed || ct.IsCancellationRequested) return;
+      ShowError(ex);
       DialogService.Close(null);
     }
+    finally { isLoading = false; }
+  }
 
-    public void Dispose()
-    {
-      _cts.Cancel();
-      _cts.Dispose();
+  protected async Task FormSubmit()
+  {
+    if (disposed || !isLoaded || isSaving || _cts.IsCancellationRequested || item.Status is not (Status.Inserted or Status.Modified)) return;
+    var ct = _cts.Token;
+    isSaving = true;
+    try {
+      await SubdivisionService.UpdateFromDtoAsync(new EditSubdivisionDto(item.Id, item.Version, item.ToFields()), ct);
+      if (disposed || ct.IsCancellationRequested) return;
+      DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true, item.Id));
     }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (Exception ex) { ShowError(ex); }
+    finally { isSaving = false; }
+  }
+
+  private bool infoOpen;
+  protected async Task InfoButtonClick()
+  {
+    if (disposed || !isLoaded || isLoading || isSaving || infoOpen || _cts.IsCancellationRequested) return;
+    infoOpen = true;
+    try {
+      await DialogService.OpenAsync<DialogInfo>("", new Dictionary<string, object?> { { "SubdivisionDetails", item }, { "Compact", true } },
+        new DialogOptions { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+    }
+    finally { infoOpen = false; }
+  }
+
+  protected void HandleCancelButtonClick()
+  {
+    if (disposed || _cts.IsCancellationRequested) return;
+    _cts.Cancel();
+    DialogService.Close(null);
+  }
+
+  private void ShowError(Exception ex)
+  {
+    if (disposed || _cts.IsCancellationRequested) return;
+    Logger.LogError(ex, "Операция с подразделением {SubdivisionId}", item.Id);
+    NotificationService.Notify(new NotificationMessage {
+      Severity = NotificationSeverity.Error, Summary = "Подразделение",
+      Detail = UserOperationErrors.Message(ex),
+      Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+    });
+  }
+
+  public void Dispose()
+  {
+    if (disposed) return;
+    disposed = true;
+    _cts.Cancel();
+    _cts.Dispose();
   }
 }

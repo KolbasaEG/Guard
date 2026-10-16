@@ -1,4 +1,4 @@
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 
 <div class="subdivision-details">
   <RadzenTable Style="width:100%;table-layout:fixed;" aria-label="Сведения о подразделении">
@@ -20,14 +20,14 @@
 </div>
 
 @code {
-  [Parameter, EditorRequired] public Subdivision Item { get; set; } = default!;
+  [Parameter, EditorRequired] public SubdivisionDetailsDto Item { get; set; } = default!;
 
   private IEnumerable<(string Icon, string Label, string? Value)> Rows => [
     ("business", "Наименование", Item.Name),
     ("work_outline", "Наименование для должности", Item.PositionFormationName),
-    ("account_tree", "Вышестоящее подразделение", Item.Parent?.Name),
-    ("account_balance", "Тип органа", Item.OrganType?.Value),
-    ("check_circle_outline", "Статус подразделения", Item.StatusClassifier?.Value),
+    ("account_tree", "Вышестоящее подразделение", Item.ParentName),
+    ("account_balance", "Тип органа", Item.OrganTypeName),
+    ("check_circle_outline", "Статус подразделения", Item.StatusClassifierName),
     ("format_list_numbered", "Порядок на уровне", Item.LevelOrder.ToString()),
     ("folder_open", "Является отделом", Item.IsDepartment ? "Да" : "Нет"),
     ("markunread_mailbox", "Почтовый индекс", Item.PostalCode),

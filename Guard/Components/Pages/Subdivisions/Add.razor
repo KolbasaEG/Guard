@@ -1,10 +1,10 @@
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 @using Guard.Components.Pages.Subdivisions.Components
 @attribute [Authorize]
 
 <Guard.Components.Layout.Components.AccessDialog ReadPermission="@Permissions.Subdivisions.Read" WritePermission="@Permissions.Subdivisions.Write">
-  <CreateEntity TItem="Subdivision" Data="@item" Name="ДОБАВЛЕНИЕ ПОДРАЗДЕЛЕНИЯ"
-                Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading">
+  <CreateEntity TItem="SubdivisionDetailsDto" Data="@item" Name="ДОБАВЛЕНИЕ ПОДРАЗДЕЛЕНИЯ"
+                Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading" IsSaving="isSaving">
     <SubdivisionFields Item="item" OrganTypes="organTypes" StatusClassifiers="statusClassifiers"
                        Subdivisions="subdivisions" ShowParentSelector="true" />
   </CreateEntity>

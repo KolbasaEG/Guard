@@ -5,7 +5,7 @@ namespace Guard.Core.Services;
 public class DataAccessScopeService(IPermissionService permissions, IDbContextFactory<ApplicationDbContext> factory)
     : IDataAccessScopeService
 {
-  private static bool ValidPath(string? path) => path != null && path.StartsWith('/') && path.EndsWith('/') &&
+  internal static bool IsValidPath(string? path) => path != null && path.StartsWith('/') && path.EndsWith('/') &&
     path.Split('/', StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } segments &&
     segments.All(s => long.TryParse(s, out var value) && value > 0);
   public async Task<DataAccessScope> GetAsync(CancellationToken ct = default)
@@ -16,7 +16,7 @@ public class DataAccessScopeService(IPermissionService permissions, IDbContextFa
     var path = await db.Users.Where(u => u.Id == user.UserId)
         .Select(u => u.Personal == null || u.Personal.Subdivision == null ? null : u.Personal.Subdivision.Path)
         .SingleOrDefaultAsync(ct);
-    var ids = !ValidPath(path) ? new List<Guid>() :
+    var ids = !IsValidPath(path) ? new List<Guid>() :
         await db.Subdivisions.Where(s => s.Path.StartsWith(path!)).Select(s => s.Id).ToListAsync(ct);
     return new(user.UserId, false, ids.ToHashSet());
   }

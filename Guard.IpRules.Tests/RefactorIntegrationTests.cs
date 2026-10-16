@@ -40,6 +40,23 @@ internal static class RefactorIntegrationTests
         (await db.Personals.FindAsync(personal.Id))!.Status == Status.Inserted, "subdivision status does not cascade to descendants or employees");
     }
     await subdivisions.UnblockAsync(parent.Id);
+    var subdivisionCard = (await subdivisions.GetDetailsAsync(parent.Id))!;
+    await subdivisions.UpdateFromDtoAsync(new(subdivisionCard.Id, subdivisionCard.Version,
+      subdivisionCard.ToFields() with { Name = "DTO updated parent" }));
+    await PostgresTests.ThrowsAsync<EntityConflictException>(() => subdivisions.UpdateFromDtoAsync(
+      new(subdivisionCard.Id, subdivisionCard.Version, subdivisionCard.ToFields())), check,
+      "subdivision card version prevents overwriting a newer edit");
+    await PostgresTests.ThrowsAsync<EntityRuleException>(() => subdivisions.MoveAsync(parent.Id, child.Id), check,
+      "subdivision move rejects a parent inside its subtree");
+    var childCard = (await subdivisions.GetDetailsAsync(child.Id))!;
+    await subdivisions.MoveAsync(child.Id, null, expectedVersion: childCard.Version);
+    await PostgresTests.ThrowsAsync<EntityConflictException>(() => subdivisions.MoveAsync(child.Id, parent.Id,
+      expectedVersion: childCard.Version), check, "subdivision move rejects stale card version");
+    await using (var moved = await factory.CreateDbContextAsync()) {
+      var result = await moved.Subdivisions.SingleAsync(s => s.Id == child.Id);
+      check(result.ParentId == null && result.Path == $"/{result.SubdivisionId}/",
+        "subdivision DTO move preserves agreement of parent and materialized path");
+    }
     var original = await people.GetByIdAsync(personal.Id) ?? throw new Exception("missing test employee");
     await people.UpdateFromDtoAsync(new(original.Id, original.Version, PersonalFieldsDto.From(original) with { FirstName = "Changed" }));
     await PostgresTests.ThrowsAsync<EntityConflictException>(() => people.UpdateFromDtoAsync(

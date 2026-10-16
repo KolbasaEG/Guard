@@ -9,6 +9,9 @@ namespace Guard.Core.Services;
 /// </summary>
 public interface ISubdivisionService
 {
+  Task<SubdivisionDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default);
+  Task<SubdivisionEditorOptionsDto> GetEditorOptionsAsync(CancellationToken ct = default);
+  Task<IReadOnlyList<SubdivisionParentOptionDto>> GetMoveParentOptionsAsync(Guid id, CancellationToken ct = default);
   Task<SubdivisionSearchResult> SearchAsync(SubdivisionSearchRequest request, CancellationToken ct = default);
   Task<string?> GetOwnSubdivisionPathAsync(CancellationToken ct = default);
   // ==================== Read Operations ====================
