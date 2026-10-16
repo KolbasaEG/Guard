@@ -18,7 +18,8 @@ public partial class Index : IDisposable
   private readonly Guard.Components.Library.Loading.ListLoadConfirmation synchronizationLoad = new();
   protected Task<bool> ReloadForSynchronizationAsync() => synchronizationLoad.ReloadAsync(ReloadGridForSynchronizationAsync);
   protected virtual Task ReloadGridForSynchronizationAsync() { if (disposed || grid == null) return Task.CompletedTask; grid.ResetLoadData(); return grid.Reload(); }
-  [Inject] protected IPersonalService Service { get; set; } = default!;
+  [Inject] protected IPersonalSearchService Service { get; set; } = default!;
+  [Inject] protected IPersonalStatusService StatusService { get; set; } = default!;
   [Inject] protected DialogService Dialogs { get; set; } = default!;
   [Inject] protected IJSRuntime JS { get; set; } = default!;
   [Inject] protected ILogger<Index> Logger { get; set; } = default!;
@@ -169,8 +170,7 @@ public partial class Index : IDisposable
     }
     var result = new PersonalFilter(All: logicalOperator == LogicalFilterOperator.And,
       Children: filters.Select(filter => Clone(filter, 1)).ToArray());
-    // Строим выражение без запроса к БД: ошибочный фильтр не заменяет применённый.
-    PersonalQueryFilter.Apply(Array.Empty<Personal>().AsQueryable(), result);
+    PersonalFilterValidation.Validate(result);
     return result;
   }
 
@@ -230,11 +230,11 @@ public partial class Index : IDisposable
         new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) != true || disposed) return;
       switch (operation)
       {
-        case StatusOperation.Archive: await Service.ArchiveAsync(row.Id, cts.Token, row.Version); break;
-        case StatusOperation.Restore: await Service.RestoreAsync(row.Id, cts.Token, row.Version); break;
-        case StatusOperation.Block: await Service.BlockAsync(row.Id, cts.Token, row.Version); break;
-        case StatusOperation.Unblock: await Service.UnblockAsync(row.Id, cts.Token, row.Version); break;
-        case StatusOperation.Delete: await Service.SoftDeleteAsync(row.Id, cts.Token, row.Version); break;
+        case StatusOperation.Archive: await StatusService.ArchiveAsync(row.Id, cts.Token, row.Version); break;
+        case StatusOperation.Restore: await StatusService.RestoreAsync(row.Id, cts.Token, row.Version); break;
+        case StatusOperation.Block: await StatusService.BlockAsync(row.Id, cts.Token, row.Version); break;
+        case StatusOperation.Unblock: await StatusService.UnblockAsync(row.Id, cts.Token, row.Version); break;
+        case StatusOperation.Delete: await StatusService.SoftDeleteAsync(row.Id, cts.Token, row.Version); break;
       }
       Notify(NotificationSeverity.Success, "Статус записи изменён.");
       await ReloadAsync();

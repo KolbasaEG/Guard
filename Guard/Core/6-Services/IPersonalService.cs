@@ -7,10 +7,8 @@ namespace Guard.Core.Services;
 /// <summary>
 /// Сервис для управления персоналом (Personal).
 /// </summary>
-public interface IPersonalService
+public interface IPersonalService : IPersonalSearchService, IPersonalDetailsService, IPersonalStatusService
 {
-  Task<Guard.Core.Services.DTOs.PersonalSearchResult> SearchAsync(Guard.Core.Services.DTOs.PersonalSearchRequest request, CancellationToken ct = default);
-  Task<Guard.Core.Services.DTOs.PersonalDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default);
   /// <summary>
   /// Асинхронно получает список всех активных подразделений (исключая удалённые и архивированные).
   /// </summary>
@@ -78,42 +76,6 @@ public interface IPersonalService
   /// <param name="ct">Токен отмены операции</param>
   Task UpdateAsync(Personal Personal, CancellationToken ct = default);
 
-  // ==================== Status Management ====================
-
-  /// <summary>
-  /// Асинхронно выполняет мягкое удаление сотрудника (Status = Deleted).
-  /// </summary>
-  /// <param name="id">Идентификатор сотрудника</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task SoftDeleteAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
-
-  /// <summary>
-  /// Асинхронно переводит запись сотрудника в архив (Status = Archived).
-  /// </summary>
-  /// <param name="id">Идентификатор сотрудника</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task ArchiveAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
-
-  /// <summary>
-  /// Асинхронно блокирует запись сотрудника от редактирования.
-  /// </summary>
-  /// <param name="id">Идентификатор сотрудника</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task BlockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
-
-  /// <summary>
-  /// Асинхронно снимает блокировку с записи сотрудника.
-  /// </summary>
-  /// <param name="id">Идентификатор сотрудника</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task UnblockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
-
-  /// <summary>
-  /// Асинхронно восстанавливает запись сотрудника из удалённых или архива (Status = Modified).
-  /// </summary>
-  /// <param name="id">Идентификатор сотрудника</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task RestoreAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
   Task<Guid> CreateFromDtoAsync(CreatePersonalDto input, CancellationToken ct = default);
   Task UpdateFromDtoAsync(EditPersonalDto input, CancellationToken ct = default);
 }

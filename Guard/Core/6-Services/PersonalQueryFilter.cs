@@ -8,30 +8,28 @@ public static class PersonalQueryFilter
 {
   public static IQueryable<Personal> Apply(IQueryable<Personal> query, PersonalFilter? filter)
   {
+    PersonalFilterValidation.Validate(filter);
     if (filter == null) return query;
-    var parameter = Expression.Parameter(typeof(Personal), "p"); var count = 0;
-    return query.Where(Expression.Lambda<Func<Personal, bool>>(Build(filter, parameter, 0, ref count), parameter));
+    var parameter = Expression.Parameter(typeof(Personal), "p");
+    return query.Where(Expression.Lambda<Func<Personal, bool>>(Build(filter, parameter), parameter));
   }
-  private static Expression Build(PersonalFilter filter, ParameterExpression parameter, int depth, ref int count)
+  private static Expression Build(PersonalFilter filter, ParameterExpression parameter)
   {
-    if (depth > 16 || ++count > 100) throw new ArgumentException("Слишком сложный фильтр.");
     if (filter.Children != null) {
       Expression? group = null;
       foreach (var child in filter.Children) {
-        var item = Build(child, parameter, depth + 1, ref count);
+        var item = Build(child, parameter);
         group = group == null ? item : filter.All ? Expression.AndAlso(group, item) : Expression.OrElse(group, item);
       }
       return group ?? Expression.Constant(true);
     }
-    if (filter.Field is not ("LastName" or "FirstName" or "MiddleName" or "FullName" or "Subdivision.Name"))
-      throw new ArgumentException("Недопустимое поле фильтра сотрудников.");
     Expression field; Expression? parentExists = null;
     if (filter.Field == "Subdivision.Name") {
       var subdivision = Expression.Property(parameter, nameof(Personal.Subdivision));
       parentExists = Expression.NotEqual(subdivision, Expression.Constant(null, typeof(Subdivision)));
       field = Expression.Property(subdivision, nameof(Subdivision.Name));
     }
-    else field = Expression.Property(parameter, filter.Field);
+    else field = Expression.Property(parameter, filter.Field!);
     var nullValue = Expression.Constant(null, typeof(string));
     var exists = Expression.NotEqual(field, nullValue);
     Expression comparison;

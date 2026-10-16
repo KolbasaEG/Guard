@@ -8,7 +8,7 @@ namespace Guard.Components.Pages.Personals;
 
 public partial class Details : IDisposable
 {
-  [Inject] protected IPersonalService Service { get; set; } = default!;
+  [Inject] protected IPersonalDetailsService Service { get; set; } = default!;
   [Inject] protected DialogService Dialogs { get; set; } = default!;
   [Inject] protected NotificationService Notifications { get; set; } = default!;
   [Inject] protected ILogger<Details> Logger { get; set; } = default!;

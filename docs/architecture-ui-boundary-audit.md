@@ -64,3 +64,5 @@
 ## Обновление: редактор сотрудников
 
 [Реализован DTO редактора сотрудников](architecture-personal-editor.md): Add/Edit/PersonalFields переведены на IPersonalEditorService, PersonalEditorDto и PersonalSubdivisionOptionDto. Строки аудита о моделях Personal в этих формах описывают исходное состояние до этой поставки. Сравнение исходных полей и обновление Version после IP сохранены; чтение DTO ограничено серверными правами, областью и активным статусом. В пункте 1 последовательности ещё остаются узкие контракты списка/просмотра и независимая проверка PersonalFilter. Этап 1 целиком не завершён.
+
+Уточнение после переноса списка и просмотра сотрудников: Index использует IPersonalSearchService/IPersonalStatusService, Details — IPersonalDetailsService. Проверка PersonalFilter вынесена в независимый PersonalFilterValidation; Web больше не вызывает PersonalQueryFilter.Apply/AsQueryable. Сервер поиска и экспорта повторно проверяет контракт перед построением выражения. Оставшиеся пункты аудита, включая UserContext и Account, сохраняют силу.

@@ -50,6 +50,45 @@ internal static class PersonalPagesTests
     try { IndexHarness.Capture([recursive]); check(false, "recursive personal filter bounded"); }
     catch (ArgumentException) { check(true, "recursive personal filter bounded"); }
 
+    var leaf = new PersonalFilter("LastName", "Contains", "one");
+    PersonalFilterValidation.Validate(new(Children: Enumerable.Repeat(leaf, 99).ToArray()));
+    check(true, "independent personal validator accepts 100 nodes including root");
+    var deep = leaf;
+    for (var i = 0; i < 16; i++) deep = new(Children: [deep]);
+    PersonalFilterValidation.Validate(deep);
+    check(true, "independent personal validator accepts depth 16");
+    foreach (var invalid in new[] {
+      new PersonalFilter(Children: Enumerable.Repeat(leaf, 100).ToArray()),
+      new PersonalFilter(Children: [deep]),
+      new PersonalFilter(Children: [null!]),
+      new PersonalFilter("User.PasswordHash", "Equals", "secret"),
+      new PersonalFilter("LastName", "GreaterThan", "one")
+    })
+    {
+      try { PersonalFilterValidation.Validate(invalid); check(false, "independent personal validator rejects invalid contract"); }
+      catch (ArgumentException) { check(true, "independent personal validator rejects invalid contract"); }
+      try { PersonalQueryFilter.Apply(people, invalid); check(false, "server repeats personal filter validation"); }
+      catch (ArgumentException) { check(true, "server repeats personal filter validation"); }
+    }
+    foreach (var operation in new[] { "Equals", "NotEquals", "Contains", "DoesNotContain", "StartsWith", "EndsWith",
+      "IsNull", "IsNotNull", "IsEmpty", "IsNotEmpty" })
+    {
+      PersonalFilterValidation.Validate(new("Subdivision.Name", operation, "o"));
+      var nullablePeople = new[] { new Personal(), new Personal { Subdivision = new() { Name = "Own" } } }.AsQueryable();
+      var matches = PersonalQueryFilter.Apply(nullablePeople, new("Subdivision.Name", operation, "o")).ToArray();
+      check(matches.All(p => p.Subdivision != null || operation == "IsNull"),
+        $"personal subdivision filter preserves null-parent semantics for {operation}");
+    }
+
+    var registrations = new ServiceCollection();
+    registrations.Scan(scan => scan.FromAssemblyOf<PersonalService>()
+      .AddClasses(classes => classes.Where(type => type == typeof(PersonalService)))
+      .AsImplementedInterfaces().WithScopedLifetime());
+    check(new[] { typeof(IPersonalSearchService), typeof(IPersonalDetailsService), typeof(IPersonalStatusService),
+      typeof(IPersonalEditorService), typeof(IPersonalService) }.All(contract => registrations.Any(d =>
+        d.ServiceType == contract && d.ImplementationType == typeof(PersonalService) && d.Lifetime == ServiceLifetime.Scoped)),
+      "Scrutor registers narrow personal interfaces and compatible legacy service");
+
     var lowId = Guid.Parse("00000000-0000-0000-0000-000000000001");
     var highId = Guid.Parse("00000000-0000-0000-0000-000000000002");
     var ties = new[] {
@@ -223,7 +262,7 @@ internal static class PersonalPagesTests
     await using var renderServices = new ServiceCollection().AddLogging()
       .AddSingleton<IDirectoryManagementService, LocalManagement>()
       .AddSingleton(editorProxy).AddSingleton<IPermissionService, PermissionStub>()
-      .AddSingleton(proxy).AddSingleton<NotificationService>().AddScoped<DialogService>()
+      .AddSingleton(proxy).AddSingleton<IPersonalDetailsService>(proxy).AddSingleton<NotificationService>().AddScoped<DialogService>()
       .AddSingleton<IJSRuntime, NoJs>().AddSingleton<NavigationManager, TestNavigation>().BuildServiceProvider();
     await using var renderer = new HtmlRenderer(renderServices, renderServices.GetRequiredService<ILoggerFactory>());
     await renderer.Dispatcher.InvokeAsync(async () =>
@@ -333,6 +372,7 @@ internal static class PersonalPagesTests
     public IndexHarness(IPersonalService service)
     {
       Service = service;
+      StatusService = service;
       PermissionService = new PermissionStub();
       Logger = NullLogger<PersonalPages.Index>.Instance;
       Notifications = new();
