@@ -41,7 +41,7 @@
 
 | Интерфейс | Цель и необходимое ограничение |
 | --- | --- |
-| ICurrentUserService | Application как порт доверенного автора; реализация получения контекста зависит от хоста. Текущий глобальный namespace не исправлять отдельным массовым переименованием. В этапе 2 проверить единый снимок исполнителя на операцию |
+| ICurrentSession (заменил ICurrentUserService) | Независимый порт идентичности сеанса UserId/SecurityStamp; Web-адаптер читает Blazor/HTTP. Полномочия подтверждает PermissionService, а legacy-аудит читает автора при сохранении. Display больше не хранит автора. [Реализация и проверки](architecture-current-session.md) |
 | IPermissionService | Application: актуальные полномочия и проверки. UserAccessSnapshot.Has зависит от PermissionCatalog, который должен перемещаться вместе с независимыми правилами permissions |
 | IDataAccessScopeService | Application: серверная область. DataAccessScope содержит HashSet<Guid>; её изменяемость и единый снимок проверить в этапе 2. Пустая область не становится полным доступом |
 | IIpManagementAccessService | Application: разрешение чтения/записи и область IP. IpManagementScope — независимые значения, без доверия к данным UI |

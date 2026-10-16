@@ -34,6 +34,7 @@ Check(IpStatusTransitions.Apply(Guard.Core.Enums.Status.Deleted, "restore") == G
 try
 {
 await AccessEventTests.RunAsync(Check);
+await CurrentSessionTests.RunAsync(Check);
 AccountPolicyTests.Run(Check);
 await AccountPolicyBoundaryTests.RunAsync(Check);
 await LoginLockoutTests.RunAsync(Check);

@@ -80,7 +80,7 @@ internal static class AccountPolicyIntegrationTests
       await PostgresTests.ThrowsAsync<ArgumentException>(() => administration.SaveAsync(new SaveAccountPolicyCommand { MinimumLength = 5 }), check, "invalid policy command rejected");
       principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "root"),
         new Claim(manager.Options.ClaimsIdentity.SecurityStampClaimType, "revoked")], "test"));
-      var fixedPermissions = new PermissionService(new FixedAuthentication(principal), new HttpContextAccessor(), factory, new AuditStub(), policies);
+      var fixedPermissions = new PermissionService(new Guard.Components.Account.CurrentSessionAdapter(new FixedAuthentication(principal), new HttpContextAccessor()), factory, new AuditStub(), policies);
       await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => fixedPermissions.GetCurrentAsync(), check, "revoked stamp cannot use application services");
     }
     updated = (await administration.GetSettingsAsync()).ToCommand() with { PasswordExpirationEnabled = false, MaxFailedLoginAttempts = 3, LoginLockoutMinutes = 20 };
@@ -91,7 +91,7 @@ internal static class AccountPolicyIntegrationTests
     var currentTarget = await Read();
     var targetPrincipal = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, target.Id),
       new Claim("AspNet.Identity.SecurityStamp", currentTarget.SecurityStamp!)], "test"));
-    var nonRootPermissions = new PermissionService(new FixedAuthentication(targetPrincipal), new HttpContextAccessor(), factory, new AuditStub(), policies);
+    var nonRootPermissions = new PermissionService(new Guard.Components.Account.CurrentSessionAdapter(new FixedAuthentication(targetPrincipal), new HttpContextAccessor()), factory, new AuditStub(), policies);
     await using (var nonRootProvider = new ServiceCollection().AddSingleton<IPermissionService>(nonRootPermissions).BuildServiceProvider()) {
       var nonRootPolicy = new AccountPolicyService(factory, nonRootProvider, new AuditStub(), services.GetRequiredService<IAccessChangeNotifier>());
       await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => nonRootPolicy.SaveAsync(updated), check, "non-Root cannot change account policy");

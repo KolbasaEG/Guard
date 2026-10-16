@@ -60,7 +60,7 @@ internal static class ExportIntegrationTests
     var http = new HttpContextAccessor();
     await using var provider = new ServiceCollection().AddLogging().BuildServiceProvider();
     var policies = new AccountPolicyService(factory, provider, new AuditStub(), new AccessChangeNotifier(NullLogger<AccessChangeNotifier>.Instance));
-    var permissions = new PermissionService(auth, http, factory, new AuditStub(), policies);
+    var permissions = new PermissionService(new Guard.Components.Account.CurrentSessionAdapter(auth, http), factory, new AuditStub(), policies);
     var access = new ExportAccess(factory, permissions);
     var service = new DataExportService(factory, permissions, access, storage, opts, new AuditStub(), http);
     var processor = new ExportProcessor(factory, access, new ExportSnapshot(factory, storage), new ExportDocumentWriter(storage, opts), storage, new AuditStub(), opts, NullLogger<ExportProcessor>.Instance);
@@ -157,7 +157,9 @@ internal static class ExportIntegrationTests
     var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing" }); builder.Logging.ClearProviders(); builder.WebHost.UseUrls("http://127.0.0.1:0");
     builder.Services.AddSingleton(factory); builder.Services.AddSingleton(policies); builder.Services.AddSingleton(storage);
     builder.Services.AddSingleton(options); builder.Services.AddSingleton<IAuditService, AuditStub>(); builder.Services.AddHttpContextAccessor();
-    builder.Services.AddScoped<AuthenticationStateProvider, HttpAuthentication>(); builder.Services.AddScoped<IPermissionService, PermissionService>(); builder.Services.AddScoped<ExportAccess>();
+    builder.Services.AddScoped<AuthenticationStateProvider, HttpAuthentication>();
+    builder.Services.AddScoped<ICurrentSession, Guard.Components.Account.CurrentSessionAdapter>();
+    builder.Services.AddScoped<IPermissionService, PermissionService>(); builder.Services.AddScoped<ExportAccess>();
     builder.Services.AddAuthentication("export-test").AddScheme<AuthenticationSchemeOptions, TestHandler>("export-test", _ => { });
     builder.Services.AddAuthorization(); builder.Services.AddAntiforgery();
     await using var app = builder.Build(); app.UseAuthentication(); app.UseAuthorization(); app.UseAntiforgery();

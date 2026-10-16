@@ -8,32 +8,33 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 public class AuditSaveChangesInterceptor : SaveChangesInterceptor
 {
-  private readonly ICurrentUserService _currentUserService;
+  private readonly ICurrentSession _session;
 
-  public AuditSaveChangesInterceptor(ICurrentUserService currentUserService)
+  public AuditSaveChangesInterceptor(ICurrentSession session)
   {
-    _currentUserService = currentUserService;
+    _session = session;
   }
 
   public override InterceptionResult<int> SavingChanges(
       DbContextEventData eventData,
       InterceptionResult<int> result)
   {
-    ApplyAudit(eventData.Context);
+    var pending = _session.GetAsync();
+    if (!pending.IsCompleted)
+      throw new InvalidOperationException("Для асинхронного контекста сеанса используйте SaveChangesAsync.");
+    ApplyAudit(eventData.Context, pending.GetAwaiter().GetResult()?.UserId ?? "system");
     return base.SavingChanges(eventData, result);
   }
 
-  public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+  public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
       DbContextEventData eventData,
       InterceptionResult<int> result,
       CancellationToken cancellationToken = default)
   {
-    ApplyAudit(eventData.Context);
-    return base.SavingChangesAsync(eventData, result, cancellationToken);
+    var actor = await _session.GetAsync(cancellationToken);
+    ApplyAudit(eventData.Context, actor?.UserId ?? "system");
+    return await base.SavingChangesAsync(eventData, result, cancellationToken);
   }
-
-  private void ApplyAudit(DbContext? context)
-    => ApplyAudit(context, _currentUserService.UserId ?? "system");
 
   internal static void ApplyAudit(DbContext? context, string userId)
   {

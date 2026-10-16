@@ -49,6 +49,7 @@ internal static class PostgresTests
       foreach (var permission in PermissionCatalog.All.Where(p => !p.RootOnly)) db.RoleClaims.Add(new() { RoleId = adminRole.Id, ClaimType = "Permission", ClaimValue = permission.Code });
       await db.SaveChangesAsync();
 
+      await CurrentSessionTests.RunIntegrationAsync(factory, check);
       var gate = new IpAccessService(factory);
       check(!await gate.IsAllowedAsync("missing", "192.168.1.1"), "unknown user denied");
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "empty assignments denied");
@@ -56,8 +57,8 @@ internal static class PostgresTests
 
       await using var policyProvider = new ServiceCollection().AddLogging().BuildServiceProvider();
       var policies = new AccountPolicyService(factory, policyProvider, new AuditStub(), new AccessChangeNotifier(NullLogger<AccessChangeNotifier>.Instance));
-      var rootPermissions = new PermissionService(new Authentication(root.Id, factory), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub(), policies);
-      var userPermissions = new PermissionService(new Authentication(user.Id, factory), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub(), policies);
+      var rootPermissions = new PermissionService(new Guard.Components.Account.CurrentSessionAdapter(new Authentication(root.Id, factory), new Microsoft.AspNetCore.Http.HttpContextAccessor()), factory, new AuditStub(), policies);
+      var userPermissions = new PermissionService(new Guard.Components.Account.CurrentSessionAdapter(new Authentication(user.Id, factory), new Microsoft.AspNetCore.Http.HttpContextAccessor()), factory, new AuditStub(), policies);
       await UserEditIntegrationTests.RunAsync(factory, rootPermissions, userPermissions, check);
       await UserAdministrationIntegrationTests.RunAsync(factory, check);
       await PersonalEditorIntegrationTests.RunAsync(factory, check);

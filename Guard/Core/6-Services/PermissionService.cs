@@ -1,26 +1,22 @@
 using Guard.Core.Contexts;
 using Guard.Core.Identity;
 using Guard.Core.Services.DTOs;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace Guard.Core.Services;
 
-public class PermissionService(AuthenticationStateProvider authentication, IHttpContextAccessor http,
+public class PermissionService(ICurrentSession session,
     IDbContextFactory<ApplicationDbContext> factory, IAuditService audit, IAccountPolicyService policies) : IPermissionService
 {
   public async Task<UserAccessSnapshot> GetCurrentAsync(CancellationToken ct = default)
   {
-    ClaimsPrincipal? principal;
-    try { principal = (await authentication.GetAuthenticationStateAsync()).User; }
-    catch (InvalidOperationException) { principal = http.HttpContext?.User; }
-    var id = principal?.FindFirstValue(ClaimTypes.NameIdentifier);
-    if (principal?.Identity?.IsAuthenticated != true || id == null)
+    var current = await session.GetAsync(ct);
+    if (current == null)
       throw new UnauthorizedAccessException("Необходим вход в систему.");
+    var id = current.UserId;
     await using var db = await factory.CreateDbContextAsync(ct);
     var stamp = await db.Users.Where(u => u.Id == id).Select(u => u.SecurityStamp).SingleOrDefaultAsync(ct);
-    if (stamp == null || stamp != principal.FindFirstValue("AspNet.Identity.SecurityStamp"))
+    if (stamp == null || stamp != current.SecurityStamp)
       throw new UnauthorizedAccessException("Сессия завершена. Войдите заново.");
     return await GetForUserAsync(id, ct);
   }
@@ -50,7 +46,7 @@ public class PermissionService(AuthenticationStateProvider authentication, IHttp
   public async Task RequireAsync(string permission, CancellationToken ct = default)
   {
     if (!await HasAsync(permission, ct)) {
-      var id = http.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+      var id = (await session.GetAsync(ct))?.UserId;
       try { id = (await GetCurrentAsync(ct)).UserId; } catch (UnauthorizedAccessException) { }
       audit.LogIdentityEvent(Guard.Core.Enums.AuditEventType.AccessDenied, id, details: $"Permission={permission}");
       throw new UnauthorizedAccessException("Недостаточно прав для этой операции.");
