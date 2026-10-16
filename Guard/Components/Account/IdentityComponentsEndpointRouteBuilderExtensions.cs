@@ -25,6 +25,9 @@ namespace Microsoft.AspNetCore.Routing
           form["NewPassword"].ToString(), form["Confirmation"].ToString(), context.RequestAborted);
         return result.Status switch {
           OwnPasswordChangeStatus.Succeeded => Results.Ok(),
+          OwnPasswordChangeStatus.SignInRequired => Results.Ok(new {
+            requiresSignIn = true, message = OwnPasswordChangeResult.SignInRequiredMessage
+          }),
           OwnPasswordChangeStatus.Unauthorized => Results.Unauthorized(),
           _ => Results.BadRequest(new { error = result.Error })
         };

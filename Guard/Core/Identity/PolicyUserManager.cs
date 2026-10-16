@@ -78,7 +78,11 @@ public class PolicyUserManager(IUserStore<ApplicationUser> store, IOptions<Ident
     if (!await CheckPasswordAsync(user, currentPassword))
       return IdentityResult.Failed(new IdentityError { Code = "PasswordMismatch", Description = "Текущий пароль неверен." });
     var result = await SetPasswordAsync(user, newPassword, () => base.ChangePasswordAsync(user, currentPassword, newPassword));
-    if (result.Succeeded) audit.LogIdentityEvent(Core.Enums.AuditEventType.PasswordChanged, user.Id);
+    if (result.Succeeded) {
+      // The store has confirmed the password update. Audit delivery cannot undo it.
+      try { audit.LogIdentityEvent(Core.Enums.AuditEventType.PasswordChanged, user.Id); }
+      catch (Exception ex) { Logger.LogError(ex, "Пароль пользователя {UserId} сохранён, но событие аудита не отправлено", user.Id); }
+    }
     return result;
   }
 }

@@ -7,7 +7,8 @@ namespace Guard.Core.Identity;
 
 // Request-scoped Identity adapter: changing a password also replaces the HTTP cookie.
 public sealed class OwnPasswordService(IHttpContextAccessor contexts,
-  UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn) : IOwnPasswordService
+  UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn,
+  ILogger<OwnPasswordService> logger) : IOwnPasswordService
 {
   private async Task<ApplicationUser?> GetUserAsync(CancellationToken ct)
   {
@@ -39,7 +40,11 @@ public sealed class OwnPasswordService(IHttpContextAccessor contexts,
     if (!result.Succeeded)
       return new(OwnPasswordChangeStatus.Rejected, string.Join(" ", result.Errors.Select(e => e.Description)));
     // Do not interrupt cookie refresh after the password and security stamp were persisted.
-    await signIn.RefreshSignInAsync(user);
+    try { await signIn.RefreshSignInAsync(user); }
+    catch (Exception ex) {
+      logger.LogError(ex, "Пароль сохранён, но сеанс пользователя {UserId} не обновлён", user.Id);
+      return new(OwnPasswordChangeStatus.SignInRequired);
+    }
     return new(OwnPasswordChangeStatus.Succeeded);
   }
 }

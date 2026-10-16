@@ -9,6 +9,10 @@ export async function changePassword(container) {
         return null;
     }
     if (response.ok) {
+        if (response.headers.get("content-type")?.includes("application/json")) {
+            const result = await response.json();
+            if (result.requiresSignIn) return { requiresSignIn: true };
+        }
         // Новый cookie содержит актуальный security stamp; перезагрузка обновляет circuit.
         window.location.reload();
         return null;
@@ -19,7 +23,7 @@ export async function changePassword(container) {
     }
     if (response.headers.get("content-type")?.includes("application/json")) {
         const result = await response.json();
-        return result.error || "Не удалось изменить пароль. Повторите попытку.";
+        return { error: result.error || "Не удалось подтвердить результат. Проверьте вход с новым паролем перед повторной сменой." };
     }
-    return "Не удалось изменить пароль. Обновите страницу и повторите попытку.";
+    return { error: "Не удалось подтвердить результат. Проверьте вход с новым паролем перед повторной сменой." };
 }

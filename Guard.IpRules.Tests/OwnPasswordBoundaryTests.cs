@@ -7,7 +7,7 @@ internal static class OwnPasswordBoundaryTests
   public static async Task RunAsync(Action<bool, string> check)
   {
     var contexts = new HttpContextAccessor();
-    var service = new OwnPasswordService(contexts, null!, null!);
+    var service = new OwnPasswordService(contexts, null!, null!, Microsoft.Extensions.Logging.Abstractions.NullLogger<OwnPasswordService>.Instance);
     check(await service.GetStateAsync() == OwnPasswordState.MissingUser,
       "own password adapter rejects missing HTTP context before accessing Identity");
     contexts.HttpContext = new DefaultHttpContext();

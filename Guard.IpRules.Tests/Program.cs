@@ -50,6 +50,8 @@ await UserDialogLifecycleTests.RunAsync(Check);
 await RefactorTests.RunAsync(Check);
 await LogConfigurationTests.RunAsync(Check);
 await OwnPasswordBoundaryTests.RunAsync(Check);
+await OwnPasswordCompletionTests.RunAsync(Check);
+await OwnPasswordUiCompletionTests.RunAsync(Check);
 await LocalAccountBoundaryTests.RunAsync(Check);
 ManagementBoundaryTests.Run(Check);
 await DialogInfoRenderingTests.RunAsync(Check);
