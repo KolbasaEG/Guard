@@ -1,8 +1,8 @@
 <Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Classifiers.Read" WritePermission="@Guard.Core.Identity.Permissions.Classifiers.Manage">
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 @attribute [Authorize]
 
-<CreateEntity TItem="Classifier" Data="@item" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading" >
+<CreateEntity TItem="ClassifierDetailsDto" Data="@item" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="isLoading" IsSaving="isSaving" >
   <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
     <RadzenFormField Text="Наименование справочника" Variant="Variant.Text" Style="width:100%;">
       <ChildContent>

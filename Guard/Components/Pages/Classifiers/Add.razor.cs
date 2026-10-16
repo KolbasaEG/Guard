@@ -1,110 +1,63 @@
 using Guard.Core.Services.DTOs;
-using Guard.Core.Entities;
-using Guard.Core.Identity;
 using Guard.Core.Services;
+
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using Radzen;
 
-namespace Guard.Components.Pages.Classifiers
+namespace Guard.Components.Pages.Classifiers;
+
+public partial class Add : IDisposable
 {
-  public partial class Add : IDisposable
+  [Inject] protected DialogService DialogService { get; set; } = default!;
+  [Inject] protected NotificationService NotificationService { get; set; } = default!;
+  [Inject] protected IClassifierService ClassifierService { get; set; } = default!;
+  [Inject] protected ILogger<Add> Logger { get; set; } = default!;
+
+  private readonly CancellationTokenSource _cts = new();
+  private bool disposed;
+  protected bool isLoading;
+  protected bool isSaving;
+  protected bool isLoaded = true;
+  protected ClassifierDetailsDto item = new();
+
+  protected async Task FormSubmit()
   {
-    [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
-    [Inject] protected NavigationManager NavigationManager { get; set; } = default!;
-    [Inject] protected DialogService DialogService { get; set; } = default!;
-    [Inject] protected TooltipService TooltipService { get; set; } = default!;
-    [Inject] protected ContextMenuService ContextMenuService { get; set; } = default!;
-    [Inject] protected NotificationService NotificationService { get; set; } = default!;
-    [Inject] protected IClassifierService ClassifierService { get; set; } = default!;
-    [Inject] protected ILogger<Add> Logger { get; set; } = default!;
-
-    [CascadingParameter] protected UserContext? UserContext { get; set; }
-
-    private readonly CancellationTokenSource _cts = new();
-
-    protected bool isLoading = false;
-    protected Classifier item = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-      try
-      {
-        isLoading = true;
-        Logger.LogDebug("Инициализация диалогового окна создания элемента классификатора");
-        await Task.CompletedTask;
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogInformation("Инициализация диалогового окна создания элемента классификатора была отменена");
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при инициализации диалогового окна создания элемента классификатора");
-        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
-      }
-      finally
-      {
-        isLoading = false;
-      }
+    if (disposed || !isLoaded || isSaving || _cts.IsCancellationRequested) return;
+    var ct = _cts.Token;
+    isSaving = true;
+    try {
+      await ClassifierService.CreateFromDtoAsync(new CreateClassifierDto(item.ToFields()), ct);
+      if (disposed || ct.IsCancellationRequested) return;
+      DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
     }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (Exception ex) { ShowError(ex); }
+    finally { isSaving = false; }
+  }
 
-    protected async Task FormSubmit()
-    {
-      try
-      {
-        isLoading = true;
-        Logger.LogInformation("Запуск создания элемента классификатора '{Value}' (Type: {Type}, Code: {Code})", item.Value, item.Type, item.Code);
+  protected void HandleCancelButtonClick()
+  {
+    if (disposed || _cts.IsCancellationRequested) return;
+    _cts.Cancel();
+    DialogService.Close(null);
+  }
 
-        bool isUnique = await ClassifierService.IsCodeUniqueInTypeAsync(item.Type, item.Code, null, _cts.Token);
-        if (!isUnique)
-        {
-          ShowErrorNotification($"Код {item.Code} уже используется для типа справочника {item.Type}.");
-          return;
-        }
+  private void ShowError(Exception ex)
+  {
+    if (disposed || _cts.IsCancellationRequested) return;
+    Logger.LogError(ex, "Операция с классификатором {ClassifierId}", item.Id);
+    NotificationService.Notify(new NotificationMessage {
+      Severity = NotificationSeverity.Error, Summary = "Классификатор",
+      Detail = UserOperationErrors.Message(ex),
+      Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+    });
+  }
 
-        await ClassifierService.CreateFromDtoAsync(new CreateClassifierDto(ClassifierFieldsDto.From(item)), _cts.Token);
-
-        Logger.LogInformation("Элемент классификатора '{Value}' успешно создан", item.Value);
-        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogWarning("Операция создания элемента классификатора '{Value}' была отменена пользователем", item.Value);
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при создании элемента классификатора '{Value}'", item.Value);
-        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
-      }
-      finally
-      {
-        isLoading = false;
-      }
-    }
-
-    protected void HandleCancelButtonClick()
-    {
-      Logger.LogInformation("Пользователь отменил создание элемента классификатора через кнопку 'Отмена'");
-      _cts.Cancel();
-      DialogService.Close(null);
-    }
-
-    private void ShowErrorNotification(string detail)
-    {
-      NotificationService.Notify(new NotificationMessage
-      {
-        Severity = NotificationSeverity.Error,
-        Summary = "Внимание!",
-        Detail = detail,
-        Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-      });
-    }
-
-    public void Dispose()
-    {
-      _cts.Cancel();
-      _cts.Dispose();
-    }
+  public void Dispose()
+  {
+    if (disposed) return;
+    disposed = true;
+    _cts.Cancel();
+    _cts.Dispose();
   }
 }

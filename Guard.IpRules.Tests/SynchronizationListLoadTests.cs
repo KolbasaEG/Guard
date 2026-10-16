@@ -53,7 +53,7 @@ internal static class SynchronizationListLoadTests
   }
   private static object Empty(Type type) => type == typeof(PersonalSearchResult)
     ? new PersonalSearchResult([], 0)
-    : type == typeof(SubdivisionSearchResult) ? new SubdivisionSearchResult([], 0)
+    : type == typeof(ClassifierSearchResult) ? new ClassifierSearchResult([], 0) : type == typeof(SubdivisionSearchResult) ? new SubdivisionSearchResult([], 0)
     : Activator.CreateInstance(type, Activator.CreateInstance(type.GenericTypeArguments[0]), 0)!;
 
   public class QueryProxy : DispatchProxy

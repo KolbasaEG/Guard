@@ -1,127 +1,84 @@
 using Guard.Core.Services.DTOs;
-using Guard.Core.Entities;
-using Guard.Core.Identity;
 using Guard.Core.Services;
-using Guard.Shared;
+
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using Radzen;
 
-namespace Guard.Components.Pages.Classifiers
+namespace Guard.Components.Pages.Classifiers;
+
+public partial class Edit : IDisposable
 {
-  public partial class Edit : IDisposable
+  [Inject] protected DialogService DialogService { get; set; } = default!;
+  [Inject] protected NotificationService NotificationService { get; set; } = default!;
+  [Inject] protected IClassifierService ClassifierService { get; set; } = default!;
+  [Inject] protected ILogger<Edit> Logger { get; set; } = default!;
+  [Parameter] public int Id { get; set; }
+
+  private readonly CancellationTokenSource _cts = new();
+  private bool disposed;
+  protected bool isLoading;
+  protected bool isSaving;
+  protected bool isLoaded;
+  protected ClassifierDetailsDto item = new();
+
+  protected override async Task OnInitializedAsync()
   {
-    [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
-    [Inject] protected NavigationManager NavigationManager { get; set; } = default!;
-    [Inject] protected DialogService DialogService { get; set; } = default!;
-    [Inject] protected TooltipService TooltipService { get; set; } = default!;
-    [Inject] protected ContextMenuService ContextMenuService { get; set; } = default!;
-    [Inject] protected NotificationService NotificationService { get; set; } = default!;
-    [Inject] protected IClassifierService ClassifierService { get; set; } = default!;
-    [Inject] protected ILogger<Edit> Logger { get; set; } = default!;
-
-    [CascadingParameter] protected UserContext? UserContext { get; set; }
-
-    /// <summary>
-    /// Идентификатор редактируемой записи классификатора
-    /// </summary>
-    [Parameter] public int Id { get; set; }
-
-    private readonly CancellationTokenSource _cts = new();
-
-    protected bool isLoading = false;
-    protected Classifier item = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-      try
-      {
-        isLoading = true;
-        Logger.LogDebug("Инициализация диалогового окна редактирования элемента классификатора {ClassifierId}", Id);
-
-        // Загрузка существующей записи по ID
-        var loadedItem = await ClassifierService.GetByIdAsync(Id, _cts.Token);
-        if (loadedItem == null)
-        {
-          Logger.LogWarning("Элемент классификатора с ID {ClassifierId} не найден", Id);
-          ShowErrorNotification("Запись не найдена в базе данных");
-          DialogService.Close(null);
-          return;
-        }
-
-        item = loadedItem;
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogInformation("Инициализация диалогового окна редактирования элемента классификатора {ClassifierId} была отменена", Id);
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при инициализации диалогового окна редактирования элемента классификатора {ClassifierId}", Id);
-        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
-      }
-      finally
-      {
-        isLoading = false;
-      }
+    var ct = _cts.Token;
+    isLoading = true;
+    try {
+      var loaded = await ClassifierService.GetDetailsAsync(Id, ct);
+      if (disposed || ct.IsCancellationRequested) return;
+      if (loaded == null) throw new KeyNotFoundException("Классификатор не найден или недоступен. Обновите список.");
+      item = loaded;
+      isLoaded = true;
     }
-
-    protected async Task FormSubmit()
-    {
-      try
-      {
-        isLoading = true;
-        Logger.LogInformation("Запуск обновления элемента классификатора '{Value}' (ID: {ClassifierId})", item.Value, item.Id);
-
-        bool isUnique = await ClassifierService.IsCodeUniqueInTypeAsync(item.Type, item.Code, item.Id, _cts.Token);
-        if (!isUnique)
-        {
-          ShowErrorNotification($"Код {item.Code} уже используется для типа справочника {item.Type}.");
-          return;
-        }
-
-        await ClassifierService.UpdateFromDtoAsync(new EditClassifierDto(item.Id, item.Version, ClassifierFieldsDto.From(item)), _cts.Token);
-
-        Logger.LogInformation("Элемент классификатора '{Value}' (ID: {ClassifierId}) успешно обновлен", item.Value, item.Id);
-        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogWarning("Операция обновления элемента классификатора '{Value}' была отменена пользователем", item.Value);
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при обновлении элемента классификатора '{Value}'", item.Value);
-        ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
-      }
-      finally
-      {
-        isLoading = false;
-      }
-    }
-
-    protected void HandleCancelButtonClick()
-    {
-      Logger.LogInformation("Пользователь отменил редактирование элемента классификатора через кнопку 'Отмена'");
-      _cts.Cancel();
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (Exception ex) {
+      if (disposed || ct.IsCancellationRequested) return;
+      ShowError(ex);
       DialogService.Close(null);
     }
+    finally { isLoading = false; }
+  }
 
-    private void ShowErrorNotification(string detail)
-    {
-      NotificationService.Notify(new NotificationMessage
-      {
-        Severity = NotificationSeverity.Error,
-        Summary = "Внимание!",
-        Detail = detail,
-        Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-      });
+  protected async Task FormSubmit()
+  {
+    if (disposed || !isLoaded || isSaving || _cts.IsCancellationRequested) return;
+    var ct = _cts.Token;
+    isSaving = true;
+    try {
+      await ClassifierService.UpdateFromDtoAsync(new EditClassifierDto(item.Id, item.Version, item.ToFields()), ct);
+      if (disposed || ct.IsCancellationRequested) return;
+      DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
     }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (Exception ex) { ShowError(ex); }
+    finally { isSaving = false; }
+  }
 
-    public void Dispose()
-    {
-      _cts.Cancel();
-      _cts.Dispose();
-    }
+  protected void HandleCancelButtonClick()
+  {
+    if (disposed || _cts.IsCancellationRequested) return;
+    _cts.Cancel();
+    DialogService.Close(null);
+  }
+
+  private void ShowError(Exception ex)
+  {
+    if (disposed || _cts.IsCancellationRequested) return;
+    Logger.LogError(ex, "Операция с классификатором {ClassifierId}", item.Id);
+    NotificationService.Notify(new NotificationMessage {
+      Severity = NotificationSeverity.Error, Summary = "Классификатор",
+      Detail = UserOperationErrors.Message(ex),
+      Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+    });
+  }
+
+  public void Dispose()
+  {
+    if (disposed) return;
+    disposed = true;
+    _cts.Cancel();
+    _cts.Dispose();
   }
 }

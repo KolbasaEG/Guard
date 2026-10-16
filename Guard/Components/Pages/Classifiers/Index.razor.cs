@@ -5,11 +5,10 @@ using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.EntityFrameworkCore;
+
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
-using System.Linq.Dynamic.Core;
 
 namespace Guard.Components.Pages.Classifiers
 {
@@ -21,8 +20,7 @@ namespace Guard.Components.Pages.Classifiers
     protected virtual Task ReloadGridForSynchronizationAsync() { if (disposed || grid == null) return Task.CompletedTask; grid.ResetLoadData(); return grid.Reload(); }
     [Inject] protected IPermissionService PermissionService { get; set; } = default!;
     [Inject] protected BrowserTimeService Time { get; set; } = default!;
-    private static readonly HashSet<string> supportedFields = ["ClassifierName", "Code", "Id", "IsActive", "Type", "UpdatedAt", "Value"];
-    private Func<IQueryable<Classifier>, IQueryable<Classifier>> appliedFilter = q => q;
+    private Guard.Core.Services.Exports.ExportFilter? appliedFilter;
     private bool disposed, reloadPending = true;
     private Guard.Core.Services.DTOs.UserAccessSnapshot? loadedAccess;
     protected override void OnParametersSet() { if (!ReferenceEquals(loadedAccess, Access)) { loadedAccess = Access; _loadDataCts?.Cancel(); filteredData = []; count = 0; reloadPending = true; } }
@@ -89,19 +87,10 @@ namespace Guard.Components.Pages.Classifiers
       var filter = appliedFilter;
       isLoading = true;
       try {
-        if ((args.Skip ?? 0) < 0 || (args.Top ?? 20) is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
-        var result = await ClassifierService.QueryClassifiersAsync(async query => {
-          query = filter(query);
-          var total = await query.CountAsync(ct);
-          query = EntityListQuery<Classifier>.Sort(query, args.OrderBy, supportedFields, "Type asc, Code asc");
-          var page = await query.Skip(args.Skip ?? 0).Take(args.Top ?? 20).Select(p => new ClassifierListDto(p.Id, p.Version, p.Type, p.Code, p.ClassifierName, p.Value, p.IsActive, p.UpdatedAt)).ToListAsync(ct);
-          return (page, total);
-        }, ct);
-        ct.ThrowIfCancellationRequested();
-        await PermissionService.RequireAsync(Guard.Core.Identity.Permissions.Classifiers.Read, ct);
+        var result = await ClassifierService.SearchAsync(new(args.Skip ?? 0, args.Top ?? 20, args.OrderBy, filter), ct);
         ct.ThrowIfCancellationRequested();
         if (disposed || !ReferenceEquals(request, _loadDataCts)) return;
-        filteredData = result.page; count = result.total; synchronizationLoad.Confirm(loadTicket);
+        filteredData = result.Items; count = result.Count; synchronizationLoad.Confirm(loadTicket);
       }
       catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
       catch (Exception ex) {
@@ -177,10 +166,7 @@ namespace Guard.Components.Pages.Classifiers
       }
     }
 
-
-
-    async Task ApplyFilter() { try { appliedFilter = EntityListQuery<Classifier>.Capture(dataFilter, supportedFields, Time); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
-
+    async Task ApplyFilter() { try { appliedFilter = ClassifierListQuery.Capture(dataFilter, Time); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
 
     private void ShowSuccessNotification(string detail)
     {

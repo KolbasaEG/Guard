@@ -25,6 +25,49 @@ public class ClassifierService : IClassifierService
 
   // ==================== Read (Изолированный IReadRepository) ====================
 
+  private async Task<UserAccessSnapshot> RequireReadAsync(CancellationToken ct)
+  {
+    ct.ThrowIfCancellationRequested();
+    var access = await _permissions.GetCurrentAsync(ct);
+    if (!access.Has(Permissions.Classifiers.Read)) throw new UnauthorizedAccessException();
+    return access with { Permissions = new(access.Permissions) };
+  }
+
+  private async Task RecheckReadAsync(UserAccessSnapshot access, CancellationToken ct)
+  {
+    var current = await RequireReadAsync(ct);
+    if (access.UserId != current.UserId || access.IsRoot != current.IsRoot || !access.Permissions.SetEquals(current.Permissions))
+      throw new UnauthorizedAccessException("Доступ изменился. Повторите загрузку.");
+    ct.ThrowIfCancellationRequested();
+  }
+
+  public async Task<ClassifierSearchResult> SearchAsync(ClassifierSearchRequest request, CancellationToken ct = default)
+  {
+    ArgumentNullException.ThrowIfNull(request);
+    var access = await RequireReadAsync(ct);
+    if (request.Skip < 0 || request.Take is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
+    var result = await _readClassifierRepository.QueryAsync(async query => {
+      query = ClassifierSearchQuery.Filter(query, request.Filter);
+      var count = await query.CountAsync(ct);
+      var items = await ClassifierSearchQuery.Sort(query, request.OrderBy).Skip(request.Skip).Take(request.Take)
+        .Select(c => new ClassifierListDto(c.Id, c.Version, c.Type, c.Code, c.ClassifierName, c.Value, c.IsActive, c.UpdatedAt)).ToListAsync(ct);
+      return new ClassifierSearchResult(items, count);
+    }, ct);
+    await RecheckReadAsync(access, ct);
+    return result;
+  }
+
+  public async Task<ClassifierDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default)
+  {
+    var access = await RequireReadAsync(ct);
+    var result = await _readClassifierRepository.QueryAsync(query => query.Where(c => c.Id == id)
+      .Select(c => new ClassifierDetailsDto { Id = c.Id, Version = c.Version, Type = c.Type, Code = c.Code,
+        ClassifierName = c.ClassifierName, Value = c.Value, IsActive = c.IsActive, UpdatedAt = c.UpdatedAt })
+      .SingleOrDefaultAsync(ct), ct);
+    await RecheckReadAsync(access, ct);
+    return result;
+  }
+
   public async Task<TResult> QueryClassifiersAsync<TResult>(
       Func<IQueryable<Classifier>, Task<TResult>> query,
       CancellationToken ct = default)
@@ -93,6 +136,8 @@ public class ClassifierService : IClassifierService
     EntityInputValidation.Validate(classifier);
     await DirectoryManagementService.RequireLocalAsync(_uow, ct);
 
+    await RequireUniqueCodeAsync(_uow, classifier, ct);
+
     return await _uow.ExecuteInTransactionAsync(async () =>
     {
       classifier.ClassifierName = classifier.ClassifierName?.Trim() ?? string.Empty;
@@ -123,6 +168,7 @@ public class ClassifierService : IClassifierService
 
     var current = await GetRequiredForWriteAsync(_uow, classifier.Id, ct);
     EntityInputValidation.CheckVersion(current.Version, classifier.Version);
+    await RequireUniqueCodeAsync(_uow, classifier, ct);
     ClassifierFieldsDto.From(classifier).ApplyTo(current);
     current.UpdatedAt = DateTime.UtcNow;
     await _uow.SaveChangesAsync(ct);
@@ -164,6 +210,12 @@ public class ClassifierService : IClassifierService
   }
 
   // ==================== Private Helpers ====================
+
+  private static async Task RequireUniqueCodeAsync(IUnitOfWork work, Classifier classifier, CancellationToken ct)
+  {
+    if (await work.BasicRepository<Classifier>().Query().AnyAsync(c => c.Type == classifier.Type && c.Code == classifier.Code && c.Id != classifier.Id, ct))
+      throw new ArgumentException($"Код {classifier.Code} уже используется для типа справочника {classifier.Type}.");
+  }
 
   private async Task<Classifier> GetRequiredForWriteAsync(IUnitOfWork _uow, int id, CancellationToken ct)
   {

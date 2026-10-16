@@ -28,6 +28,9 @@ internal static class BrowserTestHost
         StaffCount = n * 1.5, LevelOrder = n, IsDepartment = n % 2 == 0, CreatedBy = "root"
       }).ToArray();
       db.AddRange(subdivisions); await db.SaveChangesAsync();
+      db.Classifiers.AddRange(Enumerable.Range(1, 25).Select(n => new Classifier {
+        Type = 998812, Code = n, ClassifierName = "Проверка DTO", Value = $"Значение {n:00}", IsActive = n % 2 == 0
+      }));
       foreach (var subdivision in subdivisions) subdivision.Path = $"/{subdivision.SubdivisionId}/";
       db.IpAddresses.AddRange(Enumerable.Range(1, 25).Select(n => new IpAddress {
         Address = $"203.0.113.{n}", Description = $"Проверка пагинации {n:00}", CreatedBy = "root"

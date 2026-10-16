@@ -8,6 +8,8 @@ namespace Guard.Core.Services;
 /// </summary>
 public interface IClassifierService
 {
+  Task<ClassifierSearchResult> SearchAsync(ClassifierSearchRequest request, CancellationToken ct = default);
+  Task<ClassifierDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default);
   // ==================== Read Operations ====================
 
   /// <summary>
