@@ -1,15 +1,13 @@
 using Guard.Components.Library;
 using Guard.Core.Services.DTOs;
-using Guard.Core.Entities;
+using Guard.Core.Services.Exports;
 using Guard.Core.Extensions;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
-using System.Linq.Dynamic.Core;
 
 namespace Guard.Components.Pages.Roles
 {
@@ -17,8 +15,8 @@ namespace Guard.Components.Pages.Roles
   {
     [Inject] protected IPermissionService PermissionService { get; set; } = default!;
     [Inject] protected BrowserTimeService Time { get; set; } = default!;
-    private static readonly HashSet<string> supportedFields = ["Id", "Name"];
-    private Func<IQueryable<ApplicationRole>, IQueryable<ApplicationRole>> appliedFilter = q => q;
+
+    private ExportFilter? appliedFilter;
     private bool disposed, reloadPending = true;
     private Guard.Core.Services.DTOs.UserAccessSnapshot? loadedAccess;
     protected override void OnParametersSet() { if (!ReferenceEquals(loadedAccess, Access)) { loadedAccess = Access; _loadDataCts?.Cancel(); filteredData = []; count = 0; reloadPending = true; } }
@@ -34,12 +32,13 @@ namespace Guard.Components.Pages.Roles
     [Inject] protected NotificationService NotificationService { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!;
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
-    [Inject] protected IApplicationRoleService RoleService { get; set; } = default!;
+    [Inject] protected IRoleAccessService RoleAccess { get; set; } = default!;
+    [Inject] protected IRoleSearchService RoleService { get; set; } = default!;
 
-    protected IEnumerable<ApplicationRole> data = [];
+    protected IEnumerable<RoleFilterFields> data = [];
     protected IEnumerable<RoleListDto> filteredData = [];
     protected RadzenDataGrid<RoleListDto> grid = default!;
-    protected RadzenDataFilter<ApplicationRole> dataFilter = default!;
+    protected RadzenDataFilter<RoleFilterFields> dataFilter = default!;
 
     private readonly CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
@@ -68,7 +67,7 @@ namespace Guard.Components.Pages.Roles
       }
     }
 
-    async Task LoadData(LoadDataArgs args)
+    protected async Task LoadData(LoadDataArgs args)
     {
       if (disposed || Time.Zone == null) return;
       _loadDataCts?.Cancel();
@@ -77,18 +76,11 @@ namespace Guard.Components.Pages.Roles
       var filter = appliedFilter;
       isLoading = true;
       try {
-        if ((args.Skip ?? 0) < 0 || (args.Top ?? 20) is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
-        var result = await RoleService.QueryRolesAsync(async query => {
-          query = filter(query);
-          var total = await query.CountAsync(ct);
-          query = EntityListQuery<ApplicationRole>.Sort(query, args.OrderBy, supportedFields, "Name asc");
-          var page = await query.Skip(args.Skip ?? 0).Take(args.Top ?? 20).Select(p => new RoleListDto(p.Id, p.Name, p.NormalizedName)).ToListAsync(ct);
-          return (page, total);
-        }, ct);
+        var result = await RoleService.SearchAsync(new(args.Skip ?? 0, args.Top ?? 20, args.OrderBy, filter), ct);
         ct.ThrowIfCancellationRequested();
         await PermissionService.RequireAsync(Guard.Core.Identity.Permissions.Roles.Read, ct);
         if (disposed || !ReferenceEquals(request, _loadDataCts)) return;
-        filteredData = result.page; count = result.total;
+        filteredData = result.Items; count = result.Count;
       }
       catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
       catch (Exception ex) {
@@ -131,7 +123,7 @@ namespace Guard.Components.Pages.Roles
       {
         try
         {
-          await RoleService.DeleteAsync(item.Id, ct: _cts.Token);
+          await RoleAccess.DeleteAsync(item.Id, ct: _cts.Token);
           ShowSuccessNotification("Роль успешно удалена!");
           await grid.Reload();
         }
@@ -143,10 +135,7 @@ namespace Guard.Components.Pages.Roles
       }
     }
 
-
-
-    async Task ApplyFilter() { try { appliedFilter = EntityListQuery<ApplicationRole>.Capture(dataFilter, supportedFields, Time); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
-
+    async Task ApplyFilter() { try { appliedFilter = AdministrationListQuery.Capture(dataFilter, Time, RoleSearchQuery.Fields, RoleSearchQuery.ValidateFilter); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
 
     private void ShowSuccessNotification(string detail)
     {
@@ -172,6 +161,7 @@ namespace Guard.Components.Pages.Roles
 
     public void Dispose()
     {
+      if (disposed) return;
       disposed = true;
       _loadDataCts?.Cancel();
 

@@ -216,6 +216,7 @@ builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHand
 // === REPOSITORIES & SERVICES (Scrutor)
 // =====================================================
 builder.Services.AddScoped<ILogService, LogService>();
+builder.Services.AddScoped<ILogSearchService>(services => services.GetRequiredService<ILogService>());
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();

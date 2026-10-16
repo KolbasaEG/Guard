@@ -5,7 +5,7 @@ namespace Guard.Core.Services;
 /// <summary>
 /// Сервис для управления ролями пользователей (ApplicationRole).
 /// </summary>
-public interface IApplicationRoleService
+public interface IApplicationRoleService : IRoleSearchService
 {
   // ==================== Read Operations ====================
 

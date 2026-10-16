@@ -31,6 +31,9 @@ internal static class BrowserTestHost
       db.Classifiers.AddRange(Enumerable.Range(1, 25).Select(n => new Classifier {
         Type = 998812, Code = n, ClassifierName = "Проверка DTO", Value = $"Значение {n:00}", IsActive = n % 2 == 0
       }));
+      db.Roles.AddRange(Enumerable.Range(1, 25).Select(n => new ApplicationRole {
+        Name = $"DTO роль {n:00}", NormalizedName = $"DTO РОЛЬ {n:00}", ConcurrencyStamp = Guid.NewGuid().ToString()
+      }));
       db.Users.AddRange(Enumerable.Range(1, 25).Select(n => new ApplicationUser {
         UserName = $"dto-user-{n:00}", NormalizedUserName = $"DTO-USER-{n:00}",
         Email = $"dto-{n:00}@browser.test", NormalizedEmail = $"DTO-{n:00}@BROWSER.TEST",
@@ -45,6 +48,8 @@ internal static class BrowserTestHost
         new IpAddress { Address = "203.0.113.101", Description = "Архивная запись", Status = Guard.Core.Enums.Status.Archived, CreatedBy = "root" },
         new IpAddress { Address = "203.0.113.102", Description = "Удалённая запись", Status = Guard.Core.Enums.Status.Deleted, CreatedBy = "root" });
       await db.SaveChangesAsync();
+      await db.Database.ExecuteSqlRawAsync("CREATE TABLE logs (timestamp timestamp without time zone, level varchar, layer varchar, message text, message_template text, exception text, properties jsonb, user_id varchar, ip_address varchar)");
+      await db.Database.ExecuteSqlRawAsync("INSERT INTO logs SELECT timestamp '2026-01-01', CASE WHEN n % 2 = 0 THEN 'Error' ELSE 'Information' END, 'Service', 'DTO log ' || lpad(n::text, 3, '0'), 'DTO log', NULL, jsonb_build_object(), 'test', '192.0.2.1' FROM generate_series(1, 125) n");
     }
     var start = new ProcessStartInfo("dotnet") {
       UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true

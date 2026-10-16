@@ -1,11 +1,11 @@
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 @using Serilog.Events
 @attribute [Authorize]
 @attribute [Authorize(Policy = Guard.Core.Identity.Permissions.Logs.Read)]
 
 <TableWrapperWithFilterAndAnalytics AnalitycsTitle="Управление уровнем логирования" AnalitycsIcon="settings">
   <Table>
-    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="LogEntry" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="100"
+    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="LogEntryDto" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="100"
                     AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                     DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
                     LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NotEqualsText="Не равно" OrOperatorText="Или"
@@ -35,25 +35,25 @@
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="LogEntry" Property="Timestamp" Title="Дата и время" FormatString="{0:dd.MM.yyyy HH:mm:ss}" Width="160px" Frozen="true" ><Template Context="log">@Time.Format(log.Timestamp)</Template></RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LogEntry" Property="Level" Title="Уровень" Width="120px">
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="Timestamp" SortProperty="Timestamp" Title="Дата и время" FormatString="{0:dd.MM.yyyy HH:mm:ss}" Width="160px" Frozen="true" ><Template Context="log">@Time.Format(log.Timestamp)</Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="Level" SortProperty="Level" Title="Уровень" Width="120px">
           <Template Context="log">
             <RadzenBadge BadgeStyle="@GetBadgeStyle(log.Level)" Text="@log.Level" IsPill="true" />
           </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LogEntry" Property="Layer" Title="Слой" Width="130px">
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="Layer" SortProperty="Layer" Title="Слой" Width="130px">
           <Template Context="log">
             <RadzenBadge BadgeStyle="@GetLayerBadgeStyle(log.Layer)" Text="@(log.Layer ?? "System")" IsPill="true" />
           </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LogEntry" Property="UserId" Title="Пользователь" Width="150px" />
-        <RadzenDataGridColumn TItem="LogEntry" Property="ClientIp" Title="IP-адрес" Width="130px" />
-        <RadzenDataGridColumn TItem="LogEntry" Property="Message" Title="Сообщение" Width="400px">
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="UserId" SortProperty="UserId" Title="Пользователь" Width="150px" />
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="ClientIp" SortProperty="ClientIp" Title="IP-адрес" Width="130px" />
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="Message" SortProperty="Message" Title="Сообщение" Width="400px">
           <Template Context="log">
             <span style="white-space: pre-wrap; word-break: break-word;">@log.Message</span>
           </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LogEntry" Property="Exception" Title="Исключение" Width="300px">
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="Exception" SortProperty="Exception" Title="Исключение" Width="300px">
           <Template Context="log">
             @if (!string.IsNullOrEmpty(log.Exception))
             {
@@ -68,14 +68,14 @@
 
   </Table>
   <Filter>
-    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="LogEntry"
+    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="LogFilterFields"
                       AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                       DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
                       AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
       <Properties>
-        <RadzenDataFilterProperty TItem="LogEntry" Property="Timestamp" Title="Дата и время" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="Timestamp" Title="Дата и время" />
         <!-- Фильтр для Level -->
-        <RadzenDataFilterProperty TItem="LogEntry" Property="Level" Title="Уровень" FilterValue="@finalSelectedItemsLevel"
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="Level" Title="Уровень" FilterValue="@finalSelectedItemsLevel"
                                   Type="typeof(IEnumerable<string>)" FilterOperator="FilterOperator.In">
           <FilterTemplate>
             <RadzenDropDown @bind-Value=@selectedItemsLevel Style="width:100%;" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
@@ -84,17 +84,17 @@
         </RadzenDataFilterProperty>
 
         <!-- Фильтр для Layer -->
-        <RadzenDataFilterProperty TItem="LogEntry" Property="Layer" Title="Слой" FilterValue="@finalSelectedItemsLayer"
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="Layer" Title="Слой" FilterValue="@finalSelectedItemsLayer"
                                   Type="typeof(IEnumerable<string>)" FilterOperator="FilterOperator.In">
           <FilterTemplate>
             <RadzenDropDown @bind-Value=@selectedItemsLayer Style="width:100%;" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                             Change=@OnSelectedLayerChange Data="@(itemsLayer)" AllowClear="true" Multiple="true" />
           </FilterTemplate>
         </RadzenDataFilterProperty>        
-        <RadzenDataFilterProperty TItem="LogEntry" Property="UserId" Title="ID пользователя" />
-        <RadzenDataFilterProperty TItem="LogEntry" Property="ClientIp" Title="IP-адрес" />
-        <RadzenDataFilterProperty TItem="LogEntry" Property="Message" Title="Сообщение" />
-        <RadzenDataFilterProperty TItem="LogEntry" Property="Exception" Title="Текст ошибки (Exception)" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="UserId" Title="ID пользователя" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="ClientIp" Title="IP-адрес" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="Message" Title="Сообщение" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="Exception" Title="Текст ошибки (Exception)" />
       </Properties>
     </RadzenDataFilter>
 

@@ -1,30 +1,40 @@
 using Guard.Components.Library;
-using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
+using Guard.Core.Services.Exports;
 using Guard.Core.Enums;
 using Guard.Core.Logging;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
 using Serilog.Core;
 using Serilog.Events;
-using System.Linq.Dynamic.Core;
 
 namespace Guard.Components.Pages.Logs
 {
   public partial class Index : IAsyncDisposable
   {
     [Inject] protected BrowserTimeService Time { get; set; } = default!;
-    private static readonly HashSet<string> supportedFields = ["Timestamp", "Level", "Layer", "Message", "Exception", "UserId", "ClientIp"];
-    private Func<IQueryable<LogEntry>, IQueryable<LogEntry>> appliedFilter = q => q;
+
+    private ExportFilter? appliedFilter;
     private CancellationTokenSource? loading;
     private Task? realtimeTask;
     private readonly List<Task> realtimeTasks = [];
     private bool disposed;
+    private bool reloadPending = true;
+    private UserAccessSnapshot? loadedAccess;
+    [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
+    protected override void OnParametersSet()
+    {
+      if (ReferenceEquals(loadedAccess, Access)) return;
+      loadedAccess = Access; loading?.Cancel(); filteredData = []; count = 0; reloadPending = true;
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender) {
-      if (firstRender) { try { await Time.InitializeAsync(); await grid.Reload(); StateHasChanged(); } catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс логов"); } }
+      if (disposed || !reloadPending) return;
+      reloadPending = false;
+      try { await Time.InitializeAsync(); await grid.Reload(); if (!disposed) StateHasChanged(); }
+      catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс логов"); }
     }
     [Inject] protected IPermissionService Permissions { get; set; } = default!;
     [Inject]
@@ -36,7 +46,7 @@ namespace Guard.Components.Pages.Logs
     [Inject]
     protected LoggingLevelSwitch LevelSwitch { get; set; }
     [Inject]
-    protected ILogService LogService { get; set; }
+    protected ILogSearchService LogService { get; set; }
     [Inject]
     protected ILogger<Index> Logger { get; set; }
     [Inject]
@@ -44,7 +54,6 @@ namespace Guard.Components.Pages.Logs
 
     private readonly CancellationTokenSource _cts = new();
     private CancellationTokenSource? _realtimeCts;
-
 
     protected int count;
     protected int maxSessions = 100;
@@ -54,10 +63,10 @@ namespace Guard.Components.Pages.Logs
     protected string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
     
 
-    protected IEnumerable<LogEntry> data;
-    protected IEnumerable<LogEntry> filteredData;
-    protected RadzenDataGrid<LogEntry> grid;
-    protected RadzenDataFilter<LogEntry> dataFilter;
+    protected IEnumerable<LogFilterFields> data = [];
+    protected IEnumerable<LogEntryDto> filteredData = [];
+    protected RadzenDataGrid<LogEntryDto> grid;
+    protected RadzenDataFilter<LogFilterFields> dataFilter;
     
 
     // Переменные для Level
@@ -108,7 +117,7 @@ namespace Guard.Components.Pages.Logs
       finalSelectedItemsLevel = selectedItemsLevel?.ToArray();
       finalSelectedItemsLayer = selectedItemsLayer?.ToArray();
       SetSelectionValues(dataFilter.Filters ?? []);
-      try { appliedFilter = EntityListQuery<LogEntry>.Capture(dataFilter, supportedFields, Time); if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
+      try { appliedFilter = AdministrationListQuery.Capture(dataFilter, Time, LogSearchQuery.Fields, LogSearchQuery.ValidateFilter); if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
       catch (Exception ex) { Logger.LogWarning(ex, "Фильтр логов"); NotificationService.Notify(new NotificationMessage { Severity=NotificationSeverity.Error, Summary="Фильтр", Detail=Guard.Core.Services.UserOperationErrors.Message(ex), Style="position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); }
     }
     private void SetSelectionValues(IEnumerable<CompositeFilterDescriptor> filters)
@@ -153,21 +162,15 @@ namespace Guard.Components.Pages.Logs
       }
     }
 
-    async Task LoadData(LoadDataArgs args)
+    protected async Task LoadData(LoadDataArgs args)
     {
       if (disposed || Time.Zone == null) return;
       loading?.Cancel(); var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token); loading = request;
       var ct = request.Token; var filter = appliedFilter; isLoading = true;
       try {
-        if ((args.Skip ?? 0) < 0 || (args.Top ?? 100) is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
-        var result = await LogService.GetLogsAsync(async query => {
-          query = filter(query); var total = await query.CountAsync(ct);
-          query = EntityListQuery<LogEntry>.Sort(query, args.OrderBy, supportedFields, "Timestamp desc", uniqueKey: null);
-          var page = await query.Skip(args.Skip ?? 0).Take(args.Top ?? 100).ToListAsync(ct);
-          return (page, total);
-        }, ct);
+        var result = await LogService.SearchAsync(new(args.Skip ?? 0, args.Top ?? 100, args.OrderBy, filter), ct);
         ct.ThrowIfCancellationRequested(); await Permissions.RequireAsync(Guard.Core.Identity.Permissions.Logs.Read, ct);
-        if (!disposed && ReferenceEquals(request, loading)) { filteredData = result.page; count = result.total; }
+        if (!disposed && ReferenceEquals(request, loading)) { filteredData = result.Items; count = result.Count; }
       }
       catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
       catch (Exception ex) { if (!disposed && ReferenceEquals(request, loading)) { filteredData = []; count = 0; Logger.LogError(ex, "Загрузка логов"); NotificationService.Notify(new NotificationMessage { Severity=NotificationSeverity.Error, Summary="Логи", Detail="Не удалось загрузить логи. Проверьте доступ и повторите попытку.", Style="position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); } }
@@ -245,7 +248,7 @@ namespace Guard.Components.Pages.Logs
       }
     }
 
-    protected async Task EditRow(LogEntry item)
+    protected async Task EditRow(LogEntryDto item)
     {
       var result = await DialogService.OpenAsync<LogDetailsDialog>("", new Dictionary<string, object> { { "Log", item } }, new DialogOptions() { Width = "1200px", ShowTitle = false, ContentCssClass = "rz-p-1" });
     }
@@ -268,6 +271,7 @@ namespace Guard.Components.Pages.Logs
     /// </summary>
     public async ValueTask DisposeAsync()
     {
+      if (disposed) return;
       disposed = true;
       loading?.Cancel();
       StopRealtimeLoop();

@@ -1,11 +1,11 @@
 <Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Logs.Read">
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 @using System.Text.Json
 @using System.Text.RegularExpressions
 @inject DialogService DialogService
 @inject Guard.Components.Library.BrowserTimeService Time
 @inject ILogger<LogDetailsDialog> Logger
-<ViewEntity TItem="LogEntry" Data="Log" OnCancelButtonClick="HandleCancelButtonClick">
+<ViewEntity TItem="LogEntryDto" Data="Log" OnCancelButtonClick="HandleCancelButtonClick">
   <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;height:100%;">
     <InfoBlock Title="Основные метаданные контекста">
       <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="10px">
@@ -99,7 +99,7 @@
     try { await Time.InitializeAsync(); StateHasChanged(); }
     catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс события журнала"); }
   }
-  [Parameter] public LogEntry Log { get; set; } = default!;
+  [Parameter] public LogEntryDto Log { get; set; } = default!;
 
   private string? parsedJsonMessage;
   private string exceptionHeader = string.Empty;

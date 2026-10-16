@@ -129,6 +129,7 @@ internal static class PostgresTests
       await SubdivisionDetailsIntegrationTests.RunAsync(factory, rootPermissions, userPermissions, check);
       await ClassifierIntegrationTests.RunAsync(factory, check);
       await UserSearchIntegrationTests.RunAsync(factory, check);
+      await AdministrationSearchIntegrationTests.RunAsync(factory, check);
       await AuthorizationTests.RunAsync(factory, check);
       await RefactorIntegrationTests.RunAsync(factory, check);
       await ApiSynchronizationIntegrationTests.RunAsync(factory, check);
