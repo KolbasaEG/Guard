@@ -21,8 +21,7 @@ public sealed class AccountPolicyMiddleware(RequestDelegate next)
         context.Response.Redirect("/Account/Login");
         return;
       }
-      var passwordPage = context.Request.Path.Equals("/Account/Manage/ChangePassword", StringComparison.OrdinalIgnoreCase) ||
-        context.Request.Path.Equals("/Account/Manage/SetPassword", StringComparison.OrdinalIgnoreCase);
+      var passwordPage = context.Request.Path.Equals("/Account/Manage/ChangePassword", StringComparison.OrdinalIgnoreCase);
       if (state.PasswordExpired && !passwordPage) {
         context.Response.Redirect("/Account/Manage/ChangePassword");
         return;

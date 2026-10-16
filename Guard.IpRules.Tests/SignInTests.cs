@@ -87,12 +87,34 @@ internal static class SignInTests
     check((await users.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddSeconds(-1))).Succeeded, "simulate elapsed temporary lockout");
     check((await manager.PasswordSignInAsync(user, "TestPassword123!", false, true)).Succeeded,
       "persisted expired lockout allows password login again");
+    var accounts = new LocalAccountService(scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>(), users, manager,
+      scope.ServiceProvider.GetRequiredService<IAuditService>());
+    check(await accounts.SignInAsync("  DIFFERENT-EMAIL@example.test  ", "TestPassword123!", false) == Guard.Core.Services.DTOs.LocalSignInStatus.Succeeded,
+      "local adapter resolves trimmed email distinct from username");
+    check((await users.SetTwoFactorEnabledAsync(user, true)).Succeeded, "enable synthetic account 2FA");
+    authentication.RememberedUserId = user.Id;
+    check(await manager.IsTwoFactorClientRememberedAsync(user), "fixture authenticates remembered 2FA device");
+    var beforeTwoFactor = authentication.Issued;
+    check(await accounts.SignInAsync(user.Email!, "TestPassword123!", true) == Guard.Core.Services.DTOs.LocalSignInStatus.RequiresTwoFactor,
+      "local adapter denies 2FA account even with remembered-device authentication");
+    check(authentication.Issued == beforeTwoFactor, "2FA denial issues neither application nor intermediate cookie");
+    check(await users.GetTwoFactorEnabledAsync(user), "2FA denial preserves stored protection");
+    check(await accounts.SignInAsync(user.Email!, "incorrect", false) == Guard.Core.Services.DTOs.LocalSignInStatus.Failed,
+      "2FA account still checks password and counts failures");
+    check((await users.SetTwoFactorEnabledAsync(user, false)).Succeeded, "restore synthetic 2FA fixture");
+    authentication.RememberedUserId = null;
+
   }
 
   private sealed class AuthenticationRecorder : IAuthenticationService
   {
     public int Issued { get; private set; }
-    public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) => Task.FromResult(AuthenticateResult.NoResult());
+    public string? RememberedUserId { get; set; }
+    public Task<AuthenticateResult> AuthenticateAsync(HttpContext context, string? scheme) => Task.FromResult(
+      scheme == IdentityConstants.TwoFactorRememberMeScheme && RememberedUserId != null
+        ? AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity(
+          [new Claim(ClaimTypes.Name, RememberedUserId)], scheme)), scheme))
+        : AuthenticateResult.NoResult());
     public Task ChallengeAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) => Task.CompletedTask;
     public Task ForbidAsync(HttpContext context, string? scheme, AuthenticationProperties? properties) => Task.CompletedTask;
     public Task SignInAsync(HttpContext context, string? scheme, ClaimsPrincipal principal, AuthenticationProperties? properties)

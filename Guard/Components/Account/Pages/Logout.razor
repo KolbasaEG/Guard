@@ -62,23 +62,6 @@
 
   protected override void OnInitialized()
   {
-    // Санитизация ReturnUrl — защита от Open Redirect атак (как в RedirectToLogin.razor)
-    var targetReturnUrl = ReturnUrl;
-
-    if (string.IsNullOrWhiteSpace(targetReturnUrl))
-    {
-      targetReturnUrl = "/";
-    }
-
-    if (!Uri.IsWellFormedUriString(targetReturnUrl, UriKind.Relative) ||
-        targetReturnUrl.StartsWith("//", StringComparison.Ordinal) ||
-        targetReturnUrl.Contains("://", StringComparison.Ordinal))
-    {
-      targetReturnUrl = "/";
-    }
-
-    CancelReturnUrl = targetReturnUrl;
-
-    // После подтверждения выхода форма направляет пользователя на страницу входа.
+    CancelReturnUrl = AccountReturnUrl.Normalize(ReturnUrl);
   }
 }

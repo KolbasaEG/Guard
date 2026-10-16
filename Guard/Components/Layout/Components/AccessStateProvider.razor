@@ -85,8 +85,7 @@
           var account = await Policies.CheckAsync(subscribedUser, stop.Token);
           var passwordRequired = account.PasswordExpired && !account.Blocked;
           var path = new Uri(Navigation.Uri).AbsolutePath;
-          var passwordPage = path.Equals("/Account/Manage/ChangePassword", StringComparison.OrdinalIgnoreCase) ||
-            path.Equals("/Account/Manage/SetPassword", StringComparison.OrdinalIgnoreCase);
+          var passwordPage = path.Equals("/Account/Manage/ChangePassword", StringComparison.OrdinalIgnoreCase);
           if (!passwordRequired || !passwordPage)
             Navigation.NavigateTo(passwordRequired ? "/Account/Manage/ChangePassword" : "/Account/Login", forceLoad: true);
         }

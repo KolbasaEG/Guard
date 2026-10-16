@@ -87,6 +87,7 @@ internal static class BrowserTestHost
       }
       if (!ready) throw new InvalidOperationException("Тестовый сервер не готов. См. Guard/obj/account-policy-browser.log.");
       await OwnPasswordHttpTests.RunAsync(factory);
+      await LocalAccountHttpTests.RunAsync(factory);
       Console.WriteLine("Isolated browser server: http://127.0.0.1:5079 ; Root: root@browser.test / BrowserRoot123! ; press Enter to stop and remove temporary DB.");
       await Console.In.ReadLineAsync();
     }

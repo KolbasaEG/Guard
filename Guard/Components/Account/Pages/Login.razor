@@ -1,19 +1,11 @@
 @page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
-@using Guard.Core.Entities;
-@using Guard.Core.Enums
 @using Guard.Core.Services
-@using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Identity
+@using Guard.Core.Services.DTOs
 
-
-@inject UserManager<ApplicationUser> UserManager
-@inject SignInManager<ApplicationUser> SignInManager
-@inject ILogger<Login> Logger
-@inject NavigationManager NavigationManager
+@inject ILocalAccountService Accounts
 @inject IdentityRedirectManager RedirectManager
-@inject IAuditService AuditService
 @layout AccountLayout
 
 <PageTitle>Вход в систему — АИС «Охрана»</PageTitle>
@@ -25,7 +17,7 @@
 
       <ValidationSummary class="text-danger" role="alert" />
       <div class="form-floating mb-2">
-        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" style="height:48px; min-height:48px;" autocomplete="username webauthn" aria-required="true" placeholder="name@example.com" />
+        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" style="height:48px; min-height:48px;" autocomplete="username" aria-required="true" placeholder="name@example.com" />
         <label for="Input.Email" class="form-label">Email</label>
         <ValidationMessage For="() => Input.Email" class="text-danger" />
       </div>
@@ -62,92 +54,32 @@
   [SupplyParameterFromQuery]
   private string? ReturnUrl { get; set; }
 
-  protected override async Task OnInitializedAsync()
+  protected override void OnInitialized()
   {
     Input ??= new();
-
     editContext = new EditContext(Input);
-
-    if (HttpMethods.IsGet(HttpContext.Request.Method))
-    {
-      // Clear the existing external cookie to ensure a clean login process
-      await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-    }
   }
 
   public async Task LoginUser()
   {
-    if (!string.IsNullOrEmpty(Input.Passkey?.Error))
-    {
-      errorMessage = $"Error: {Input.Passkey.Error}";
-      return;
-    }
-
-    SignInResult result;
-    if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
-    {
-      // When performing passkey sign-in, don't perform form validation.
-      result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
-    }
-    else
-    {
-      // If doing a password sign-in, validate the form.
-      if (!editContext.Validate())
-      {
-        return;
-      }
-
-      // Строковая перегрузка ищет UserName, который может отличаться от email.
-      var user = await UserManager.FindByEmailAsync(Input.Email.Trim());
-      result = user == null ? SignInResult.Failed
-        : await SignInManager.PasswordSignInAsync(user, Input.Password, Input.RememberMe, lockoutOnFailure: true);
-    }
-
-    var ipAddress = Guard.Core.Identity.ClientIpAddress.Get(HttpContext);
-
-    if (result.Succeeded)
-    {
-      AuditService.LogIdentityEvent(
-                AuditEventType.LoginSuccess,
-                Input.Email,
-                ipAddress,
-                !string.IsNullOrEmpty(Input.Passkey?.CredentialJson)
-                    ? "Successful login with Passkey"
-                    : "Successful login with password");
-
-      RedirectManager.RedirectTo(ReturnUrl);
-    }
-    else if (result.IsNotAllowed)
-    {
-      errorMessage = "Вход не разрешён. Учётная запись может быть заблокирована, либо не выполнены условия IP-доступа и подтверждения. Обратитесь к администратору.";
-    }
-    else if (result.RequiresTwoFactor)
-    {
-      RedirectManager.RedirectTo(
-          "Account/LoginWith2fa",
-          new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
-    }
-    else if (result.IsLockedOut)
-    {
-      AuditService.LogIdentityEvent(
-                AuditEventType.LoginFailed,
-                Input.Email,
-                ipAddress,
-                "Account is locked out");
-
-      RedirectManager.RedirectTo("Account/Lockout");
-    }
-    else
-    {
-      AuditService.LogIdentityEvent(
-                AuditEventType.LoginFailed,
-                Input.Email,
-                ipAddress,
-                !string.IsNullOrEmpty(Input.Passkey?.CredentialJson)
-                    ? "Passkey login failed"
-                    : "Invalid email or password");
-
-      errorMessage = "Error: Неверный email или пароль.";
+    if (!editContext.Validate()) return;
+    var result = await Accounts.SignInAsync(Input.Email, Input.Password, Input.RememberMe, HttpContext.RequestAborted);
+    switch (result) {
+      case LocalSignInStatus.Succeeded:
+        RedirectManager.RedirectTo(AccountReturnUrl.Normalize(ReturnUrl));
+        break;
+      case LocalSignInStatus.LockedOut:
+        RedirectManager.RedirectTo("Account/Lockout");
+        break;
+      case LocalSignInStatus.RequiresTwoFactor:
+        errorMessage = "Ошибка: Для этой учётной записи включена двухфакторная проверка. Обратитесь к администратору для перехода на локальный вход.";
+        break;
+      case LocalSignInStatus.NotAllowed:
+        errorMessage = "Ошибка: Вход не разрешён. Учётная запись может быть заблокирована, либо не выполнены условия IP-доступа и подтверждения. Обратитесь к администратору.";
+        break;
+      default:
+        errorMessage = "Ошибка: Неверный email или пароль.";
+        break;
     }
   }
 
@@ -164,6 +96,5 @@
     [Display(Name = "Remember me?")]
     public bool RememberMe { get; set; }
 
-    public PasskeyInputModel? Passkey { get; set; }
   }
 }
