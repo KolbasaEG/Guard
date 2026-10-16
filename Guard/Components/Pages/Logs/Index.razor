@@ -1,5 +1,4 @@
 @using Guard.Core.Services.DTOs
-@using Serilog.Events
 @attribute [Authorize]
 @attribute [Authorize(Policy = Guard.Core.Identity.Permissions.Logs.Read)]
 
@@ -105,13 +104,14 @@
   <Analitycs>
     <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;">
       <RadzenFormField Text="Текущий уровень логов" Style="width:100%" Variant="Variant.Text">
-        <RadzenDropDown TValue="LogEventLevel"
-                        Data="@(Enum.GetValues<LogEventLevel>())"
+        <RadzenDropDown TValue="ApplicationLogLevel"
+                        Disabled="@(!settingsLoaded || settingsSaving)"
+                        Data="@(Enum.GetValues<ApplicationLogLevel>())"
                         @bind-Value="@selectedLogLevel" />
       </RadzenFormField>
       <RadzenFormField Text="Макс. подключений (сессий)" Variant="Variant.Text" Style="width:100%">
         <ChildContent>
-          <RadzenNumeric TValue="int" @bind-Value="@maxSessions" Min="1" Max="10000" Style="width: 180px;" />
+          <RadzenNumeric TValue="int" Disabled="@(!settingsLoaded || settingsSaving)" @bind-Value="@maxSessions" Min="1" Max="10000" Style="width: 180px;" />
         </ChildContent>
         <Helper>
           <RadzenText TextStyle="TextStyle.Caption">Влияет на размер пачки (Batch Size) в PostgreSQL</RadzenText>
@@ -120,7 +120,7 @@
     </RadzenStack>
   </Analitycs>
   <AnalitycsButtons>
-    <RadzenButton Icon="save" Click="SaveLoggerSettings" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+    <RadzenButton Icon="save" Disabled="@(!settingsLoaded || settingsSaving || Access?.Has(Guard.Core.Identity.Permissions.Logs.Configure) != true)" Click="SaveLoggerSettings" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
   </AnalitycsButtons>
   
 </TableWrapperWithFilterAndAnalytics>

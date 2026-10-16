@@ -1,6 +1,7 @@
-using Serilog.Events;
+using Guard.Core.Services.DTOs;
 namespace Guard.Core.Services;
 public interface ILogConfigurationService
 {
-  Task SaveAsync(int maxSessions, LogEventLevel level, CancellationToken ct = default);
+  Task<LogConfigurationDto> GetAsync(CancellationToken ct = default);
+  Task<LogConfigurationDto> SaveAsync(LogConfigurationDto settings, CancellationToken ct = default);
 }

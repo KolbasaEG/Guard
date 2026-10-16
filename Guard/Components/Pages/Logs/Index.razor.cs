@@ -2,14 +2,11 @@ using Guard.Components.Library;
 using Guard.Core.Services.DTOs;
 using Guard.Core.Services.Exports;
 using Guard.Core.Enums;
-using Guard.Core.Logging;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
-using Serilog.Core;
-using Serilog.Events;
 
 namespace Guard.Components.Pages.Logs
 {
@@ -44,13 +41,9 @@ namespace Guard.Components.Pages.Logs
     [Inject]
     protected DialogService DialogService { get; set; }
     [Inject]
-    protected LoggingLevelSwitch LevelSwitch { get; set; }
-    [Inject]
     protected ILogSearchService LogService { get; set; }
     [Inject]
     protected ILogger<Index> Logger { get; set; }
-    [Inject]
-    protected DynamicLoggerManager LoggerManager { get; set; }
 
     private readonly CancellationTokenSource _cts = new();
     private CancellationTokenSource? _realtimeCts;
@@ -59,7 +52,9 @@ namespace Guard.Components.Pages.Logs
     protected int maxSessions = 100;
     protected bool isLoading = false;
     protected bool isRealtime = false;
-    protected LogEventLevel selectedLogLevel;
+    protected ApplicationLogLevel selectedLogLevel = ApplicationLogLevel.Information;
+    protected bool settingsLoaded;
+    protected bool settingsSaving;
     protected string pagingSummaryFormat = "Страница {0} из {1} (всего {2} записей)";
     
 
@@ -130,15 +125,17 @@ namespace Guard.Components.Pages.Logs
     }
     protected override async Task OnInitializedAsync()
     {
+      if (disposed) return;
+      settingsLoaded = false;
       try
       {
         isLoading = true;
         Logger.LogDebug("Инициализация панели управления системными логами");
-        // Загружаем сохраненный уровень и количество сессий
-        var savedState = LogLevelPersistenceService.LoadState();
+        var savedState = await Configuration.GetAsync(_cts.Token);
+        if (disposed) return;
         maxSessions = savedState.MaxSessions;
-        selectedLogLevel = LevelSwitch.MinimumLevel;
-        await Task.CompletedTask;
+        selectedLogLevel = savedState.MinimumLevel;
+        settingsLoaded = true;
       }
       catch (OperationCanceledException)
       {
@@ -146,13 +143,14 @@ namespace Guard.Components.Pages.Logs
       }
       catch (Exception ex)
       {
+        if (disposed) return;
         Logger.LogError(ex, "Ошибка при инициализации панели логов");
 
         NotificationService.Notify(new NotificationMessage
         {
           Severity = NotificationSeverity.Error,
           Summary = "Ошибка!",
-          Detail = "Не удалось инициализировать панель управления логами",
+          Detail = "Не удалось загрузить настройки логирования. Обновите страницу и повторите попытку.",
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
       }
@@ -259,12 +257,19 @@ namespace Guard.Components.Pages.Logs
     [Inject] protected ILogConfigurationService Configuration { get; set; } = default!;
     protected async Task SaveLoggerSettings()
     {
+      if (disposed || !settingsLoaded || settingsSaving) return;
+      settingsSaving = true;
+      var settings = new LogConfigurationDto(maxSessions, selectedLogLevel);
       try {
-        await Configuration.SaveAsync(maxSessions, selectedLogLevel, _cts.Token);
+        var saved = await Configuration.SaveAsync(settings, _cts.Token);
+        if (disposed) return;
+        maxSessions = saved.MaxSessions;
+        selectedLogLevel = saved.MinimumLevel;
         NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Успешно", Detail = "Настройки логирования сохранены.", Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" });
       }
       catch (OperationCanceledException) when (_cts.IsCancellationRequested) { }
-      catch (Exception ex) { Logger.LogError(ex, "Настройки логирования"); NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Внимание", Detail = Guard.Core.Services.UserOperationErrors.Message(ex), Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); }
+      catch (Exception ex) { if (!disposed) { Logger.LogError(ex, "Настройки логирования"); NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Внимание", Detail = Guard.Core.Services.UserOperationErrors.Message(ex), Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); } }
+      finally { settingsSaving = false; }
     }
     /// <summary>
     /// Освобождение ресурсов при закрытии страницы

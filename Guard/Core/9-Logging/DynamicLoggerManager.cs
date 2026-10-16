@@ -14,7 +14,16 @@ public sealed class DynamicLoggerManager : IDisposable
   private readonly Func<int, LogEventLevel, Logger> create;
   private Logger? current;
   private bool disposed;
+  private int maxSessions = 100;
   public Logger Logger { get; }
+
+  public (int MaxSessions, LogEventLevel MinimumLevel) GetConfiguration()
+  {
+    lock (gate) {
+      ObjectDisposedException.ThrowIf(disposed, this);
+      return (maxSessions, _levelSwitch.MinimumLevel);
+    }
+  }
 
   public DynamicLoggerManager(string connectionString, LoggingLevelSwitch levelSwitch)
   {
@@ -44,6 +53,7 @@ public sealed class DynamicLoggerManager : IDisposable
         persist?.Invoke();
         var previous = current;
         current = replacement; replacement = null;
+        this.maxSessions = maxSessions;
         _levelSwitch.MinimumLevel = newLevel;
         previous?.Dispose();
       }

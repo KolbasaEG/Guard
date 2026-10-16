@@ -130,6 +130,7 @@ internal static class RefactorTests
       original.Information("still active");
       check(level.MinimumLevel == LogEventLevel.Information && sinks[1].Events == 2 && sinks[2].Disposed,
         "persistence failure retains old configuration and releases candidate");
+      check(manager.GetConfiguration() == (200, LogEventLevel.Information), "failed persistence retains complete runtime configuration snapshot");
       await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() => {
         original.Information("parallel"); manager.ApplyConfiguration(100, LogEventLevel.Information);
       })));
