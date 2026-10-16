@@ -8,10 +8,12 @@ internal static class OwnPasswordHttpTests
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory)
   {
     var cookies = new CookieContainer();
+    var checks = 0;
     using var handler = new HttpClientHandler { CookieContainer = cookies, AllowAutoRedirect = false };
     using var client = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:5079") };
     void Check(bool value, string scenario) {
       if (!value) throw new InvalidOperationException($"Own password HTTP: {scenario}");
+      checks++;
     }
     string Token(string html) => WebUtility.HtmlDecode(Regex.Match(html,
       "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
@@ -39,6 +41,8 @@ internal static class OwnPasswordHttpTests
       Check(!denied.IsSuccessStatusCode, "missing antiforgery token rejected");
     using (var mismatch = await Change("BrowserRoot123!", "BrowserRoot456!", "different"))
       Check(mismatch.StatusCode == HttpStatusCode.BadRequest, "confirmation checked on server");
+    using (var empty = await Change("", "BrowserRoot456!", "BrowserRoot456!"))
+      Check(empty.StatusCode == HttpStatusCode.BadRequest, "empty current password rejected on server");
     using (var wrong = await Change("wrong", "BrowserRoot456!", "BrowserRoot456!"))
       Check(wrong.StatusCode == HttpStatusCode.BadRequest, "incorrect current password rejected");
     using (var weak = await Change("BrowserRoot123!", "short", "short"))
@@ -58,6 +62,25 @@ internal static class OwnPasswordHttpTests
     token = Token(page);
     using (var restored = await Change("BrowserRoot456!", "BrowserRoot123!", "BrowserRoot123!"))
       Check(restored.IsSuccessStatusCode, "browser fixture password restored");
+    async Task<HttpResponseMessage> ChangeFromPage(string password, string confirmation) {
+      var html = await client.GetStringAsync("/Account/Manage/ChangePassword");
+      return await client.PostAsync("/Account/Manage/ChangePassword", new FormUrlEncodedContent(new Dictionary<string, string> {
+        ["__RequestVerificationToken"] = Token(html), ["_handler"] = "change-password",
+        ["Input.OldPassword"] = "BrowserRoot123!", ["Input.NewPassword"] = password,
+        ["Input.ConfirmPassword"] = confirmation
+      }));
+    }
+    using (var invalid = await ChangeFromPage("BrowserRoot789!", "different"))
+      Check(invalid.StatusCode == HttpStatusCode.OK && WebUtility.HtmlDecode(await invalid.Content.ReadAsStringAsync()).Contains("Пароли не совпадают"),
+        "SSR form displays confirmation error without redirecting to success");
+    using (var changed = await ChangeFromPage("BrowserRoot789!", "BrowserRoot789!"))
+      Check(changed.StatusCode == HttpStatusCode.Redirect && changed.Headers.Location != null &&
+        new Uri(client.BaseAddress!, changed.Headers.Location).AbsolutePath == "/",
+        $"SSR form changes own password through shared adapter (status {changed.StatusCode}, redirect {changed.Headers.Location})");
+    page = await client.GetStringAsync("/Account/Manage/ChangePassword");
+    token = Token(page);
+    using (var restored = await Change("BrowserRoot789!", "BrowserRoot123!", "BrowserRoot123!"))
+      Check(restored.IsSuccessStatusCode, "SSR success refreshes cookie and persisted password works through HTTP endpoint");
     await using (var db = await factory.CreateDbContextAsync()) {
       await db.Users.Where(u => u.Id == "root").ExecuteUpdateAsync(s => s.SetProperty(u => u.MustChangePassword, true));
       page = await client.GetStringAsync("/Account/Manage/ChangePassword");
@@ -70,8 +93,10 @@ internal static class OwnPasswordHttpTests
         "mandatory password change permits logout");
       using var denied = await client.GetAsync("/Account/Manage/ChangePassword");
       Check(denied.StatusCode == HttpStatusCode.Redirect, "logout clears authentication cookie");
+      using var anonymous = await Change("BrowserRoot123!", "BrowserRoot456!", "BrowserRoot456!");
+      Check(!anonymous.IsSuccessStatusCode, "anonymous own password POST cannot change password");
       await db.Users.Where(u => u.Id == "root").ExecuteUpdateAsync(s => s.SetProperty(u => u.MustChangePassword, false));
     }
-    Console.WriteLine("Passed 15 own-password/logout HTTP checks on isolated database.");
+    Console.WriteLine($"Passed {checks} own-password/logout HTTP checks on isolated database.");
   }
 }

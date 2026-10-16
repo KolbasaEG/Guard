@@ -3,6 +3,7 @@ using Guard.Components.Account.Pages.Manage;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -27,26 +28,18 @@ namespace Microsoft.AspNetCore.Routing
 
       accountGroup.MapPost("/ChangeOwnPassword", async (
           HttpContext context,
-          [FromServices] UserManager<ApplicationUser> userManager,
-          [FromServices] SignInManager<ApplicationUser> signInManager,
+          [FromServices] IOwnPasswordService passwords,
           [FromServices] IAntiforgery antiforgery) =>
       {
         await antiforgery.ValidateRequestAsync(context);
-        var user = await userManager.GetUserAsync(context.User);
-        if (user is null) return Results.Unauthorized();
         var form = await context.Request.ReadFormAsync(context.RequestAborted);
-        var oldPassword = form["OldPassword"].ToString();
-        var newPassword = form["NewPassword"].ToString();
-        var confirmation = form["Confirmation"].ToString();
-        if (string.IsNullOrEmpty(oldPassword) || string.IsNullOrEmpty(newPassword))
-          return Results.BadRequest(new { error = "Заполните текущий и новый пароль." });
-        if (newPassword != confirmation)
-          return Results.BadRequest(new { error = "Пароли не совпадают." });
-        var result = await userManager.ChangePasswordAsync(user, oldPassword, newPassword);
-        if (!result.Succeeded)
-          return Results.BadRequest(new { error = string.Join(" ", result.Errors.Select(e => e.Description)) });
-        await signInManager.RefreshSignInAsync(user);
-        return Results.Ok();
+        var result = await passwords.ChangeAsync(form["OldPassword"].ToString(),
+          form["NewPassword"].ToString(), form["Confirmation"].ToString(), context.RequestAborted);
+        return result.Status switch {
+          OwnPasswordChangeStatus.Succeeded => Results.Ok(),
+          OwnPasswordChangeStatus.Unauthorized => Results.Unauthorized(),
+          _ => Results.BadRequest(new { error = result.Error })
+        };
       }).RequireAuthorization();
 
       accountGroup.MapPost("/PerformExternalLogin", (

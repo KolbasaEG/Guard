@@ -47,6 +47,7 @@ await AdministrationSearchUiTests.RunAsync(Check);
 await UserDialogLifecycleTests.RunAsync(Check);
 await RefactorTests.RunAsync(Check);
 await LogConfigurationTests.RunAsync(Check);
+await OwnPasswordBoundaryTests.RunAsync(Check);
 await ExportTests.RunAsync(Check);
 await ExportBoundaryTests.RunAsync(Check);
 await ApiSynchronizationTests.RunAsync(Check);
