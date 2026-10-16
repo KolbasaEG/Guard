@@ -112,7 +112,7 @@ namespace Guard.Components.Pages.Logs
       finalSelectedItemsLevel = selectedItemsLevel?.ToArray();
       finalSelectedItemsLayer = selectedItemsLayer?.ToArray();
       SetSelectionValues(dataFilter.Filters ?? []);
-      try { appliedFilter = AdministrationListQuery.Capture(dataFilter, Time, LogSearchQuery.Fields, LogSearchQuery.ValidateFilter); if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
+      try { appliedFilter = AdministrationListQuery.Capture(dataFilter, Time, LogSearchFilter.Fields, LogSearchFilter.Validate); if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
       catch (Exception ex) { Logger.LogWarning(ex, "Фильтр логов"); NotificationService.Notify(new NotificationMessage { Severity=NotificationSeverity.Error, Summary="Фильтр", Detail=Guard.Core.Services.UserOperationErrors.Message(ex), Style="position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); }
     }
     private void SetSelectionValues(IEnumerable<CompositeFilterDescriptor> filters)

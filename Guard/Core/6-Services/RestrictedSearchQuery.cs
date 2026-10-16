@@ -13,7 +13,6 @@ internal static class RestrictedSearchQuery<T>
     return Expression.Property(parameter, name);
   }
 
-  public static void ValidateFilter(ExportFilter? filter, IReadOnlySet<string> fields) => _ = Predicate(filter, fields);
   public static IQueryable<T> Filter(IQueryable<T> query, ExportFilter? filter, IReadOnlySet<string> fields) => query.Where(Predicate(filter, fields));
 
   private static Expression<Func<T, bool>> Predicate(ExportFilter? filter, IReadOnlySet<string> fields)

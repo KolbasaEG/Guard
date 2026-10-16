@@ -98,7 +98,7 @@ internal static class RefactorTests
 #pragma warning disable BL0005
     var logFilter = new RadzenDataFilter<LogFilterFields> { Filters = [new() { Property = "Level", Type = typeof(IEnumerable<string>), FilterOperator = FilterOperator.In, FilterValue = levels }] };
 #pragma warning restore BL0005
-    var levelSnapshot = AdministrationListQuery.Capture(logFilter, time, LogSearchQuery.Fields, LogSearchQuery.ValidateFilter);
+    var levelSnapshot = AdministrationListQuery.Capture(logFilter, time, LogSearchFilter.Fields, LogSearchFilter.Validate);
     levels.Clear(); levels.Add("Information");
     check(LogSearchQuery.Filter(new[] { new LogEntry { Level = "Error" }, new LogEntry { Level = "Information" } }.AsQueryable(), levelSnapshot).Single().Level == "Error",
       "multiselect snapshot remains independent of changed selection collection");

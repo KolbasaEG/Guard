@@ -135,7 +135,7 @@ namespace Guard.Components.Pages.Roles
       }
     }
 
-    async Task ApplyFilter() { try { appliedFilter = AdministrationListQuery.Capture(dataFilter, Time, RoleSearchQuery.Fields, RoleSearchQuery.ValidateFilter); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
+    async Task ApplyFilter() { try { appliedFilter = AdministrationListQuery.Capture(dataFilter, Time, RoleSearchFilter.Fields, RoleSearchFilter.Validate); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
 
     private void ShowSuccessNotification(string detail)
     {

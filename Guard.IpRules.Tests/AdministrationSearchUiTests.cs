@@ -22,10 +22,10 @@ internal static class AdministrationSearchUiTests
     var levelDescriptor = new CompositeFilterDescriptor { Property = "Level", FilterOperator = FilterOperator.In, FilterValue = levels };
     var logFilter = new RadzenDataFilter<LogFilterFields> { Filters = [levelDescriptor] };
 #pragma warning restore BL0005
-    var snapshot = AdministrationListQuery.Capture(filter, time, RoleSearchQuery.Fields, RoleSearchQuery.ValidateFilter);
+    var snapshot = AdministrationListQuery.Capture(filter, time, RoleSearchFilter.Fields, RoleSearchFilter.Validate);
     descriptor.FilterValue = "Beta";
     check(RoleSearchQuery.Filter(new[] { new ApplicationRole { Name = "Alpha" }, new ApplicationRole { Name = "Beta" } }.AsQueryable(), snapshot).Single().Name == "Alpha", "role applied filter is independent of edits");
-    var logSnapshot = AdministrationListQuery.Capture(logFilter, time, LogSearchQuery.Fields, LogSearchQuery.ValidateFilter);
+    var logSnapshot = AdministrationListQuery.Capture(logFilter, time, LogSearchFilter.Fields, LogSearchFilter.Validate);
     levels[0] = "Information";
     check(LogSearchQuery.Filter(new[] { new LogEntry { Level = "Error" }, new LogEntry { Level = "Information" } }.AsQueryable(), logSnapshot).Single().Level == "Error", "log selection snapshot does not share mutable arrays");
 

@@ -8,5 +8,5 @@ namespace Guard.Components.Pages.Users;
 public static class UserListQuery
 {
   public static ExportFilter Capture(RadzenDataFilter<UserFilterFields> filter, BrowserTimeService time) =>
-    AdministrationListQuery.Capture(filter, time, UserSearchQuery.Fields, UserSearchQuery.ValidateFilter);
+    AdministrationListQuery.Capture(filter, time, UserSearchFilter.Fields, UserSearchFilter.Validate);
 }
