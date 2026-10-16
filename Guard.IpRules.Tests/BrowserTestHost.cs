@@ -31,6 +31,12 @@ internal static class BrowserTestHost
       db.Classifiers.AddRange(Enumerable.Range(1, 25).Select(n => new Classifier {
         Type = 998812, Code = n, ClassifierName = "Проверка DTO", Value = $"Значение {n:00}", IsActive = n % 2 == 0
       }));
+      db.Users.AddRange(Enumerable.Range(1, 25).Select(n => new ApplicationUser {
+        UserName = $"dto-user-{n:00}", NormalizedUserName = $"DTO-USER-{n:00}",
+        Email = $"dto-{n:00}@browser.test", NormalizedEmail = $"DTO-{n:00}@BROWSER.TEST",
+        SecurityStamp = Guid.NewGuid().ToString(), ConcurrencyStamp = Guid.NewGuid().ToString(),
+        AccountBlockReason = n % 2 == 0 ? "Administrator" : null
+      }));
       foreach (var subdivision in subdivisions) subdivision.Path = $"/{subdivision.SubdivisionId}/";
       db.IpAddresses.AddRange(Enumerable.Range(1, 25).Select(n => new IpAddress {
         Address = $"203.0.113.{n}", Description = $"Проверка пагинации {n:00}", CreatedBy = "root"

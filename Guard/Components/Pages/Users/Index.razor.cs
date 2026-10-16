@@ -1,17 +1,13 @@
 using Guard.Components.Library;
-using Guard.Core.Entities;
+using Guard.Core.Services.Exports;
 using Guard.Core.Enums;
-using Guard.Core.Extensions;
 using Guard.Core.Services;
 using Guard.Core.Identity;
 using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
-using System.Linq.Dynamic.Core;
 
 namespace Guard.Components.Pages.Users
 {
@@ -23,17 +19,15 @@ namespace Guard.Components.Pages.Users
     [Inject] protected DialogService DialogService { get; set; } = default!;
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
     [Inject] protected ISecurityService Security { get; set; } = default!;
-    [Inject] protected IPermissionService PermissionsService { get; set; } = default!;
-    [Inject] protected IAccountPolicyService Policies { get; set; } = default!;
 
-    protected IEnumerable<ApplicationUser> data = [];
+    protected IEnumerable<UserFilterFields> data = [];
     protected IEnumerable<UserDto> filteredData = [];
     protected RadzenDataGrid<UserDto> grid = default!;
-    protected RadzenDataFilter<ApplicationUser> dataFilter = default!;
+    protected RadzenDataFilter<UserFilterFields> dataFilter = default!;
 
     private CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
-    private Func<IQueryable<ApplicationUser>, IQueryable<ApplicationUser>> appliedFilter = query => query;
+    private ExportFilter? appliedFilter;
     private bool disposed;
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -64,7 +58,7 @@ namespace Guard.Components.Pages.Users
       }
     }
 
-    async Task LoadData(LoadDataArgs args)
+    protected async Task LoadData(LoadDataArgs args)
     {
       _loadDataCts?.Cancel();
       var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
@@ -75,43 +69,10 @@ namespace Guard.Components.Pages.Users
 
       try
       {
-        await PermissionsService.RequireAsync(Permissions.Users.Read, ct);
-        var policy = await Policies.GetAsync(ct);
-        var passwordCutoff = DateTimeOffset.UtcNow.AddDays(-policy.PasswordDays);
-        var (items, totalCount) = await Security.QueryUsersAsync(async query =>
-        {
-          query = filter(query);
-
-          var total = await query.CountAsync(ct);
-
-          var pageData = await UserListQuery.Sort(query, args.OrderBy)
-              .Skip(args.Skip ?? 0)
-              .Take(args.Top ?? 10)
-              .Select(p => new UserDto
-              {
-                Id = p.Id,
-                Email = p.Email ?? "-",
-                IsLockedOut = p.AccountBlockReason != null || p.LockoutEnabled && p.LockoutEnd > DateTimeOffset.UtcNow,
-                AccountBlockReason = p.AccountBlockReason,
-                LastActivityAtUtc = p.LastActivityAtUtc,
-                PasswordChangedAtUtc = p.PasswordChangedAtUtc,
-                MustChangePassword = p.MustChangePassword,
-                PasswordChangeRequired = p.MustChangePassword || policy.PasswordExpirationEnabled &&
-                  (p.PasswordChangedAtUtc != null ? p.PasswordChangedAtUtc <= passwordCutoff :
-                    p.CreatedAtUtc <= passwordCutoff && (policy.PasswordEnabledAtUtc == null || policy.PasswordEnabledAtUtc <= passwordCutoff)),
-                PersonalId = p.PersonalId,
-                UserName = p.UserName ?? "-",
-                PersonalFullName = p.Personal != null ? p.Personal.FullName : "-"
-              })
-              .ToListAsync(ct);
-
-          return (pageData, total);
-        }, ct);
-
-        await PermissionsService.RequireAsync(Permissions.Users.Read, ct);
+        var result = await Security.SearchUsersAsync(new UserSearchRequest(args.Skip ?? 0, args.Top ?? 20, args.OrderBy, filter), ct);
         if (disposed || !ReferenceEquals(_loadDataCts, request)) return;
-        filteredData = items;
-        count = totalCount;
+        filteredData = result.Items;
+        count = result.Count;
       }
       catch (OperationCanceledException)
       {
@@ -201,6 +162,7 @@ namespace Guard.Components.Pages.Users
 
     public void Dispose()
     {
+      if (disposed) return;
       disposed = true;
       _loadDataCts?.Cancel();
       _loadDataCts?.Dispose();

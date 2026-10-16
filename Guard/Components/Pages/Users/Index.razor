@@ -1,4 +1,3 @@
-@using Guard.Core.Entities
 @using Guard.Core.Enums
 @using Guard.Core.Services.DTOs
 @attribute [Authorize]
@@ -26,10 +25,10 @@
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="UserDto" Property="Id" Title="Id" Frozen="true" Width="200px" />
-        <RadzenDataGridColumn TItem="UserDto" Property="UserName" Title="Имя пользователя" Width="200px" />
-        <RadzenDataGridColumn TItem="UserDto" Property="Email" Title="Email" Width="200px" />
-        <RadzenDataGridColumn TItem="UserDto" Property="PersonalId" Title="Id сотрудника" Width="200px" />
+        <RadzenDataGridColumn TItem="UserDto" Property="Id" SortProperty="Id" Title="Id" Frozen="true" Width="200px" />
+        <RadzenDataGridColumn TItem="UserDto" Property="UserName" SortProperty="UserName" Title="Имя пользователя" Width="200px" />
+        <RadzenDataGridColumn TItem="UserDto" Property="Email" SortProperty="Email" Title="Email" Width="200px" />
+        <RadzenDataGridColumn TItem="UserDto" Property="PersonalId" SortProperty="PersonalId" Title="Id сотрудника" Width="200px" />
         <RadzenDataGridColumn TItem="UserDto" Property="PersonalFullName" Title="ФИО" Sortable="false" Width="100%" />
         <RadzenDataGridColumn TItem="UserDto" Property="IsLockedOut" Title="Блокировка" Sortable="false" Width="200px">
           <Template Context="item">@(item.IsLockedOut ? "Да" : "Нет")</Template>
@@ -57,13 +56,13 @@
     </RadzenDataGrid>
   </Table>
   <Filter>
-    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="ApplicationUser"
+    <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="UserFilterFields"
                       AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                       DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
                       AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
       <Properties>
-        <RadzenDataFilterProperty TItem="ApplicationUser" Property="UserName" Title="Имя пользователя" />
-        <RadzenDataFilterProperty TItem="ApplicationUser" Property="Email" Title="Email" />
+        <RadzenDataFilterProperty TItem="UserFilterFields" Property="UserName" Title="Имя пользователя" />
+        <RadzenDataFilterProperty TItem="UserFilterFields" Property="Email" Title="Email" />
       </Properties>
     </RadzenDataFilter>
   </Filter>

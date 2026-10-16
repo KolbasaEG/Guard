@@ -6,11 +6,11 @@ using Guard.Core.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 namespace Guard.Core.Services;
-public class SecurityService(
+public partial class SecurityService(
   IReadRepository<ApplicationUser> userReads, IReadRepository<ApplicationRole> roleReads, IReadRepository<Personal> personalReads,
   IIpAddressService ips, IPersonalIpService assignments, IIpAccessService ipGate, IPermissionService permissions,
   IDataAccessScopeService accessScopes, IRoleAccessService roles, IServiceScopeFactory scopes,
-  IAuditService audit, IAccessChangeNotifier notifier) : ISecurityService
+  IAuditService audit, IAccessChangeNotifier notifier, IAccountPolicyService policies) : ISecurityService
 {
   public Task<TResult> QueryUsersAsync<TResult>(Func<IQueryable<ApplicationUser>,Task<TResult>> query, CancellationToken ct=default) => userReads.QueryAsync(query,ct);
   public Task<TResult> QueryRolesAsync<TResult>(Func<IQueryable<ApplicationRole>,Task<TResult>> query, CancellationToken ct=default) => roleReads.QueryAsync(query,ct);

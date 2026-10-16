@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace Guard.Core.Services;
@@ -41,6 +41,8 @@ public interface ISecurityService
       CancellationToken ct = default);
 
   #endregion
+
+  Task<Guard.Core.Services.DTOs.UserSearchResult> SearchUsersAsync(Guard.Core.Services.DTOs.UserSearchRequest request, CancellationToken ct = default);
 
   #region Операции с пользователями
 

@@ -41,6 +41,7 @@ IpSearchFilterTests.Run(Check);
 await IpSearchUiTests.RunAsync(Check);
 await SubdivisionSearchTests.RunAsync(Check);
 await ClassifierUiTests.RunAsync(Check);
+await UserSearchUiTests.RunAsync(Check);
 await RefactorTests.RunAsync(Check);
 await ExportTests.RunAsync(Check);
 await ApiSynchronizationTests.RunAsync(Check);

@@ -1,7 +1,6 @@
 using Guard.Components.Pages.Users;
-using Guard.Core.Entities;
+using Guard.Components.Library;
 using Guard.Core.Services;
-using Microsoft.EntityFrameworkCore;
 using Radzen;
 using Radzen.Blazor;
 
@@ -11,22 +10,22 @@ internal static class UserListTests
   {
 #pragma warning disable BL0005
     var condition = new CompositeFilterDescriptor { Property = "UserName", FilterOperator = FilterOperator.Contains, FilterValue = "policy" };
-    var filter = new RadzenDataFilter<ApplicationUser> { Filters = [condition] };
+    var filter = new RadzenDataFilter<UserFilterFields> { Filters = [condition] };
 #pragma warning restore BL0005
-    var snapshot = UserListQuery.Capture(filter);
+    var snapshot = UserListQuery.Capture(filter, new BrowserTimeService(null!));
     condition.FilterValue = "missing-name";
-    check(await service.QueryUsersAsync(q => snapshot(q).CountAsync()) == 1, "user filter snapshot is independent of editor");
-    check(await service.QueryUsersAsync(q => UserListQuery.Capture(filter)(q).CountAsync()) == 0, "changed user filter needs new snapshot");
-    var first = await service.QueryUsersAsync(q => UserListQuery.Sort(q, "Email desc").Skip(0).Take(1).Select(u => u.Id).SingleAsync());
-    var second = await service.QueryUsersAsync(q => UserListQuery.Sort(q, "Email desc").Skip(1).Take(1).Select(u => u.Id).SingleAsync());
+    check((await service.SearchUsersAsync(new(Filter: snapshot))).Count == 1, "user filter snapshot is independent of editor");
+    check((await service.SearchUsersAsync(new(Filter: UserListQuery.Capture(filter, new BrowserTimeService(null!))))).Count == 0, "changed user filter needs new snapshot");
+    var first = (await service.SearchUsersAsync(new(Take: 1, OrderBy: "Email desc"))).Items.Single().Id;
+    var second = (await service.SearchUsersAsync(new(Skip: 1, Take: 1, OrderBy: "Email desc"))).Items.Single().Id;
     check(first != second, "user pagination has stable unique tie-breaker");
-    await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.FromResult(UserListQuery.Sort(Array.Empty<ApplicationUser>().AsQueryable(), "PasswordHash asc")), check, "sensitive user sort fields rejected");
+    await PostgresTests.ThrowsAsync<ArgumentException>(() => service.SearchUsersAsync(new(OrderBy: "PasswordHash asc")), check, "sensitive user sort fields rejected");
     condition.Property = "PasswordHash";
-    await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.FromResult(UserListQuery.Capture(filter)), check, "sensitive user filter fields rejected");
+    await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.FromResult(UserListQuery.Capture(filter, new BrowserTimeService(null!))), check, "sensitive user filter fields rejected");
 #pragma warning disable BL0005
     filter.Filters = [];
 #pragma warning restore BL0005
-    var cleared = UserListQuery.Capture(filter);
-    check(await service.QueryUsersAsync(q => cleared(q).CountAsync()) == await service.QueryUsersAsync(q => q.CountAsync()), "clearing user filter restores authorized list");
+    var cleared = UserListQuery.Capture(filter, new BrowserTimeService(null!));
+    check((await service.SearchUsersAsync(new(Filter: cleared))).Count == (await service.SearchUsersAsync(new())).Count, "clearing user filter restores authorized list");
   }
 }
