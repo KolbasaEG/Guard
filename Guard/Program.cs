@@ -220,6 +220,8 @@ builder.Services.AddScoped<ILogSearchService>(services => services.GetRequiredSe
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<ICurrentUserDisplayService>(services =>
+    (CurrentUserService)services.GetRequiredService<ICurrentUserService>());
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
 builder.Services.AddScoped(typeof(IBasicRepository<>), typeof(BasicRepository<>));

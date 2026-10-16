@@ -26,7 +26,7 @@ public partial class Index : IDisposable
   [Inject] protected IPermissionService PermissionService { get; set; } = default!;
   [Inject] protected NotificationService Notifications { get; set; } = default!;
   [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
-  [CascadingParameter] public UserContext? UserContext { get; set; }
+  [CascadingParameter] public CurrentUserDisplayDto? UserContext { get; set; }
 
   protected IEnumerable<Personal> data = [];
   protected IEnumerable<PersonalListItemDto> filteredData = [];
@@ -47,7 +47,7 @@ public partial class Index : IDisposable
   private string? sort;
   private bool disposed, reloadPending = true, operationPending;
   private UserAccessSnapshot? loadedAccess;
-  private UserContext? loadedContext;
+  private CurrentUserDisplayDto? loadedContext;
   protected bool ActionsDisabled => isLoading || operationPending;
 
   protected override void OnParametersSet()

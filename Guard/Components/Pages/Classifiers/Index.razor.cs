@@ -38,7 +38,7 @@ namespace Guard.Components.Pages.Classifiers
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
     [Inject] protected IClassifierService ClassifierService { get; set; } = default!;
 
-    [CascadingParameter] protected UserContext? UserContext { get; set; }
+    [CascadingParameter] protected CurrentUserDisplayDto? UserContext { get; set; }
 
     int count;
     [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; }

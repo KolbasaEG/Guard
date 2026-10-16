@@ -16,12 +16,12 @@ public partial class Edit : IDisposable
   [Inject] protected ILogger<Edit> Logger { get; set; } = default!;
   [Parameter] public Guid Id { get; set; }
   [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
-  [CascadingParameter] public UserContext? UserContext { get; set; }
+  [CascadingParameter] public CurrentUserDisplayDto? UserContext { get; set; }
 
   private readonly CancellationTokenSource cts = new();
   private CancellationTokenSource? loading;
   private Guid? loadedId;
-  private UserContext? loadedContext;
+  private CurrentUserDisplayDto? loadedContext;
   private PersonalFieldsDto? originalFields;
   private bool disposed;
   protected PersonalEditorDto item = new();

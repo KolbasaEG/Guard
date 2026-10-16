@@ -32,7 +32,7 @@ namespace Guard.Components.Pages.Subdivisions
     private ExportFilter? appliedFilter;
     private string? exportSort;
     private bool disposed, reloadPending = true;
-    private Guard.Core.Identity.UserContext? loadedContext;
+    private Guard.Core.Services.DTOs.CurrentUserDisplayDto? loadedContext;
     private Guard.Core.Services.DTOs.UserAccessSnapshot? loadedAccess;
     protected override void OnParametersSet() { if (!ReferenceEquals(loadedAccess, Access) || !ReferenceEquals(loadedContext, UserContext)) {
       if (Access?.IsRoot != true) allRecords = false;
@@ -67,7 +67,7 @@ namespace Guard.Components.Pages.Subdivisions
     private CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
 
-    [CascadingParameter] protected Guard.Core.Identity.UserContext? UserContext { get; set; }
+    [CascadingParameter] protected Guard.Core.Services.DTOs.CurrentUserDisplayDto? UserContext { get; set; }
     protected SubdivisionHierarchyMode hierarchyMode = SubdivisionHierarchyMode.CurrentOnly;
     int count;
     [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? Access { get; set; }

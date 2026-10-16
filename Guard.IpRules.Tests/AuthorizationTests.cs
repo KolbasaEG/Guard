@@ -68,6 +68,31 @@ internal static class AuthorizationTests
       db.Users.Add(new ApplicationUser { Id="unassigned",UserName="unassigned",NormalizedUserName="UNASSIGNED" });
       await db.SaveChangesAsync();
     }
+    var displayService = new CurrentUserService(permissions, scopes, factory, new HttpContextAccessor());
+    var rootDisplay = (await displayService.GetDisplayAsync())!;
+    check(rootDisplay.IsRoot && rootDisplay.UserId == "root", "display DTO identifies Root without an Identity graph");
+    check(rootDisplay.SubordinateSubdivisions.Count >= 3, "Root display selector includes all active subdivisions");
+    check(((ICollection<CurrentUserSubdivisionDto>)rootDisplay.SubordinateSubdivisions).IsReadOnly, "display subdivision snapshot is read-only");
+    var changingScope = new CurrentUserService(permissions, new ChangingDisplayScope(scopes), factory, new HttpContextAccessor());
+    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => changingScope.GetDisplayAsync(), check,
+        "display result is rejected when server scope changes during loading");
+    var forgedDisplay = rootDisplay with { UserId = "forged", IsRoot = false };
+    check(displayService.UserId == "root" && forgedDisplay.UserId == "forged", "UI DTO replacement cannot change audit actor");
+    authentication.Id = "user";
+    var userDisplay = (await displayService.GetDisplayAsync())!;
+    var userScope = await scopes.GetAsync();
+    check(!userDisplay.IsRoot && userDisplay.SubordinateSubdivisions.Count == 2 &&
+        userDisplay.SubordinateSubdivisions.All(s => userScope.Allows(s.Id)), "ordinary display selector is restricted to own subdivision and descendants");
+    check(displayService.UserId == "user", "audit identity comes from server permission snapshot");
+    authentication.Id = "unassigned";
+    var unassignedDisplay = (await displayService.GetDisplayAsync())!;
+    check(unassignedDisplay.SubdivisionName == null && unassignedDisplay.PersonalFullName == null &&
+        unassignedDisplay.SubordinateSubdivisions.Count == 0, "unassigned account display has no subdivision options");
+    using (var cancelled = new CancellationTokenSource()) {
+      cancelled.Cancel();
+      await PostgresTests.ThrowsAsync<OperationCanceledException>(() => displayService.GetDisplayAsync(cancelled.Token), check, "display query honors cancellation");
+    }
+    authentication.Id = "root";
     check((await permissions.GetCurrentAsync()).IsRoot,"Root recognized from current database role");
     check((await permissions.GetCurrentAsync()).Has(Permissions.Personals.Export),"Root grants catalog rights");
     check(!(await permissions.GetCurrentAsync()).Has("invented"),"Root does not grant unknown permission");
@@ -231,13 +256,24 @@ internal static class AuthorizationTests
     await using(var db=await factory.CreateDbContextAsync()) await db.Subdivisions.Where(s=>s.Name=="Own").ExecuteUpdateAsync(s=>s.SetProperty(p=>p.Path,"/"));
     check((await scopes.GetAsync()).SubdivisionIds.Count==0,"malformed root path fails closed");
     check((await personals.SearchAsync(new())).Count==0,"malformed scope cannot expose all records");
+    check((await displayService.GetDisplayAsync())!.SubordinateSubdivisions.Count == 0, "display reload fails closed after subdivision path change");
     await using(var db=await factory.CreateDbContextAsync()) await db.Users.Where(u=>u.Id=="user").ExecuteUpdateAsync(s=>s.SetProperty(u=>u.LockoutEnd,DateTimeOffset.UtcNow.AddDays(1)));
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>permissions.GetCurrentAsync(),check,"locked account loses application permissions on next operation");
+    check(await displayService.GetDisplayAsync() == null && displayService.UserId == null, "locked account clears display and server audit snapshot on reload");
     authentication.Id="";
     var currentUser = new CurrentUserService(permissions, scopes, factory, new HttpContextAccessor());
-    check(await currentUser.GetContextAsync()==null,"anonymous layout safely receives empty display context");
+    check(await currentUser.GetDisplayAsync()==null,"anonymous layout safely receives empty display context");
     authentication.Id = "root";
     await AccountPolicyIntegrationTests.RunAsync(scope.ServiceProvider, factory, check);
+  }
+  private sealed class ChangingDisplayScope(IDataAccessScopeService inner) : IDataAccessScopeService
+  {
+    private int calls;
+    public async Task<DataAccessScope> GetAsync(CancellationToken ct = default)
+    {
+      var scope = await inner.GetAsync(ct);
+      return ++calls == 1 ? scope : scope with { UserId = "different-actor" };
+    }
   }
   private sealed class Authentication(IDbContextFactory<ApplicationDbContext> factory) : AuthenticationStateProvider {
     public string Id {get;set;}="";

@@ -21,7 +21,7 @@ namespace Guard.Components.Pages.IpAddresses
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
     [Inject] protected IIpAddressService IpAddressService { get; set; } = default!;
 
-    [CascadingParameter] protected UserContext? UserContext { get; set; }
+    [CascadingParameter] protected CurrentUserDisplayDto? UserContext { get; set; }
 
     int count;
     [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? AccessSnapshot { get; set; }
@@ -61,7 +61,7 @@ namespace Guard.Components.Pages.IpAddresses
     }
     private bool disposed;
     private string? accessVersion;
-    private UserContext? loadedUserContext;
+    private CurrentUserDisplayDto? loadedUserContext;
     private bool reloadPending = true;
     protected override void OnParametersSet()
     {

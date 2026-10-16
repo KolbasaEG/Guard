@@ -13,7 +13,7 @@ public partial class Edit : IDisposable
   [Inject] protected NotificationService NotificationService { get; set; } = default!;
   [Inject] protected IIpAddressService IpAddressService { get; set; } = default!;
   [Inject] protected ILogger<Edit> Logger { get; set; } = default!;
-  [CascadingParameter] protected UserContext? UserContext { get; set; }
+  [CascadingParameter] protected CurrentUserDisplayDto? UserContext { get; set; }
   [Parameter] public Guid Id { get; set; }
   [Parameter] public bool ReadOnly { get; set; }
 

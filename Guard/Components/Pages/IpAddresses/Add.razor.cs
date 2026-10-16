@@ -12,7 +12,7 @@ public partial class Add : IDisposable
   [Inject] protected NotificationService NotificationService { get; set; } = default!;
   [Inject] protected IIpAddressService IpAddressService { get; set; } = default!;
   [Inject] protected ILogger<Add> Logger { get; set; } = default!;
-  [CascadingParameter] protected UserContext? UserContext { get; set; }
+  [CascadingParameter] protected CurrentUserDisplayDto? UserContext { get; set; }
 
   private readonly CancellationTokenSource _cts = new();
   private bool disposed;

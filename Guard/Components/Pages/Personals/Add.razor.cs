@@ -13,12 +13,12 @@ public partial class Add : IDisposable
   [Inject] protected IPersonalEditorService PersonalService { get; set; } = default!;
   [Inject] protected ILogger<Add> Logger { get; set; } = default!;
   [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
-  [CascadingParameter] public UserContext? UserContext { get; set; }
+  [CascadingParameter] public CurrentUserDisplayDto? UserContext { get; set; }
 
   private readonly CancellationTokenSource cts = new();
   private CancellationTokenSource? loading;
   private UserAccessSnapshot? loadedAccess;
-  private UserContext? loadedContext;
+  private CurrentUserDisplayDto? loadedContext;
   private bool disposed;
   protected bool isLoading, loaded;
   protected string? error;

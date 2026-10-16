@@ -1,3 +1,4 @@
+using Guard.Core.Services.DTOs;
 using Guard.Components.Layout.Navigation;
 using Guard.Core.Entities;
 using Guard.Core.Identity;
@@ -9,9 +10,9 @@ namespace Guard.Components.Layout;
 
 public partial class MainLayout : IDisposable
 {
-  [Inject] protected ICurrentUserService CurrentUserService { get; set; } = default!;
+  [Inject] protected ICurrentUserDisplayService CurrentUserService { get; set; } = default!;
   [Inject] protected NavigationManager Navigation { get; set; } = default!;
-  protected UserContext? UserContext { get; private set; }
+  protected CurrentUserDisplayDto? UserContext { get; private set; }
   protected string CurrentTitle => NavigationCatalog.Find(Navigation.ToBaseRelativePath(Navigation.Uri))?.Text ?? "АИС Охрана";
   private bool sidebarExpanded = true;
   private bool disposed;
@@ -19,7 +20,7 @@ public partial class MainLayout : IDisposable
   protected override async Task OnInitializedAsync()
   {
     Navigation.LocationChanged += LocationChanged;
-    UserContext = await CurrentUserService.GetContextAsync();
+    UserContext = await CurrentUserService.GetDisplayAsync();
   }
 
   private void ToggleSidebar() => sidebarExpanded = !sidebarExpanded;

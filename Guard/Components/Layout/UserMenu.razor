@@ -1,3 +1,4 @@
+@using Guard.Core.Services.DTOs
 @inject DialogService DialogService
 <div class="app-user-actions">
   <AuthorizeView>
@@ -24,8 +25,8 @@
   </AuthorizeView>
 </div>
 @code {
-  [Parameter] public UserContext? UserContext { get; set; }
-  private string ProfileTitle => $"Профиль: {UserContext?.Personal?.FullName ?? UserContext?.UserName ?? "Текущий пользователь"}";
+  [Parameter] public CurrentUserDisplayDto? UserContext { get; set; }
+  private string ProfileTitle => $"Профиль: {UserContext?.PersonalFullName ?? UserContext?.UserName ?? "Текущий пользователь"}";
   private async Task ChangePasswordAsync()
   {
     await DialogService.OpenAsync<ChangePasswordDialog>("", null,
