@@ -1,10 +1,5 @@
-using Guard.Components.Library.Loading;
-using Guard.Core.Entities;
-using Guard.Core.Services;
 using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.JSInterop;
 using Radzen;
 
 namespace Guard.Shared
@@ -26,64 +21,21 @@ namespace Guard.Shared
       }
     }
     [Inject]
-    protected IJSRuntime JSRuntime { get; set; }
+    protected DialogService DialogService { get; set; } = default!;
     [Inject]
-    protected NavigationManager NavigationManager { get; set; }
-    [Inject]
-    protected DialogService DialogService { get; set; }
-    [Inject]
-    protected TooltipService TooltipService { get; set; }
-    [Inject]
-    protected ContextMenuService ContextMenuService { get; set; }
-    [Inject]
-    protected NotificationService NotificationService { get; set; }
-    [Inject]
-    protected IClassifierService ClassifierService { get; set; }
-    [Inject]
-    protected ISecurityService Security { get; set; }
+    protected NotificationService NotificationService { get; set; } = default!;
 
-
-    [Parameter] public BaseEntity BaseEntity { get; set; }
     [Parameter] public IpAddressDetailsDto? IpAddressDetails { get; set; }
     [Parameter] public SubdivisionDetailsDto? SubdivisionDetails { get; set; }
     [Parameter] public bool Compact { get; set; }
 
-    private EntityInfoDto Info => IpAddressDetails?.Info ?? SubdivisionDetails?.Info ?? new EntityInfoDto {
-      Id = BaseEntity?.Id ?? Guid.Empty,
-      InsertedDate = BaseEntity?.InsertedDate ?? default,
-      LastModifiedDate = BaseEntity?.LastModifiedDate,
-      Creator = creator, Editor = editor
-    };
-    private string ReadPermission => SubdivisionDetails != null ? Guard.Core.Identity.Permissions.Subdivisions.Read : IpAddressDetails != null ? Guard.Core.Identity.Permissions.IpAddresses.Read : BaseEntity switch {
-      Personal => Guard.Core.Identity.Permissions.Personals.ReadDetails,
-      Subdivision => Guard.Core.Identity.Permissions.Subdivisions.Read,
-      IpAddress => Guard.Core.Identity.Permissions.IpAddresses.Read,
-      _ => ""
-    };
+    private EntityInfoDto Info => IpAddressDetails?.Info ?? SubdivisionDetails?.Info ?? new EntityInfoDto();
+    private string ReadPermission => SubdivisionDetails != null ? Guard.Core.Identity.Permissions.Subdivisions.Read
+      : IpAddressDetails != null ? Guard.Core.Identity.Permissions.IpAddresses.Read : "";
 
-    protected bool isLoading = false;
-    protected string creator = string.Empty;
-    protected string editor = string.Empty;
-    
-
-    protected override async Task OnInitializedAsync() 
+    protected override void OnParametersSet()
     {
-      if (IpAddressDetails != null || SubdivisionDetails != null) return;
-      if (BaseEntity != null)
-      {
-        var crtor = await Security.GetUserByIdAsync(BaseEntity.CreatedBy);
-        if (crtor != null) creator = crtor.Email ?? "";
-        if (!String.IsNullOrEmpty(BaseEntity.ModifiedBy))
-        {
-          var edtor = await Security.GetUserByIdAsync(BaseEntity.ModifiedBy);
-          if (edtor != null) editor = edtor.Email ?? "";
-        }
-      }
-      else await HandleCancelButtonClick();
+      if (IpAddressDetails == null && SubdivisionDetails == null) DialogService.Close(null);
     }
-    protected async Task HandleCancelButtonClick()
-    {
-      DialogService.Close(null);
-    }   
   }
 }
