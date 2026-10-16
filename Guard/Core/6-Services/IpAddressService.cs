@@ -21,7 +21,7 @@ public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
   }
 
   public Task<IpAddress?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
-      QueryIpAddressesAsync(q => q.SingleOrDefaultAsync(ip => ip.Id == id, ct), ct);
+      QueryIpAddressesAsync(q => q.Include(ip => ip.Subdivision).SingleOrDefaultAsync(ip => ip.Id == id, ct), ct);
 
   public async Task<IReadOnlyList<IpAddress>> GetAllActiveAsync(CancellationToken ct = default) =>
       await QueryIpAddressesAsync(q => q.Where(ip => ip.Status == Status.Inserted || ip.Status == Status.Modified)
@@ -73,12 +73,12 @@ public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
     {
       ArgumentNullException.ThrowIfNull(input);
       if (id.HasValue && entity.Status is not (Status.Inserted or Status.Modified))
-        throw new InvalidOperationException("Редактировать можно только активный незаблокированный IP-адрес.");
+        throw new EntityRuleException("Редактировать можно только активный незаблокированный IP-адрес.");
       if (!scope.IsRoot && (!input.SubdivisionId.HasValue || !scope.SubdivisionIds.Contains(input.SubdivisionId.Value)))
         throw new UnauthorizedAccessException("Подразделение недоступно. Общими IP-адресами управляет Root.");
       if (input.SubdivisionId.HasValue && !await db.Subdivisions.AnyAsync(s => s.Id == input.SubdivisionId &&
           (s.Status == Status.Inserted || s.Status == Status.Modified), ct))
-        throw new InvalidOperationException("Выберите активное подразделение.");
+        throw new EntityRuleException("Выберите активное подразделение.");
       if (!IpAddressRule.TryParse(input.Address, out var rule))
         throw new ArgumentException("Введите корректный IPv4, IPv6 или CIDR-подсеть.");
       if (input.Description?.Length > 1000) throw new ArgumentException("Описание не должно превышать 1000 символов.");

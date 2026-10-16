@@ -1,0 +1,33 @@
+@using Guard.Core.Entities
+
+<RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;min-width:0;">
+  <RadzenFormField Text="Подразделение" Variant="Variant.Text" Style="width:100%;">
+    <ChildContent>
+      <RadzenDropDown Data="Subdivisions" TextProperty="Name" ValueProperty="Id" TValue="Guid?"
+                      @bind-Value="Item.SubdivisionId" Name="SubdivisionId" AllowClear="true" AllowFiltering="true"
+                      FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterOperator="StringFilterOperator.Contains"
+                      Style="width:100%;" />
+    </ChildContent>
+    <Helper>
+      <RadzenCustomValidator Component="SubdivisionId" Validator="@(() => IsRoot || Item.SubdivisionId.HasValue)" Text="Выберите подразделение." />
+    </Helper>
+  </RadzenFormField>
+  <RadzenFormField Text="IP-адрес или подсеть" Variant="Variant.Text" Style="width:100%;">
+    <ChildContent>
+      <RadzenTextBox @bind-Value="Item.Address" Name="IpAddress" aria-label="IP-адрес или подсеть" Placeholder="192.168.1.1" Style="width:100%;" />
+    </ChildContent>
+    <Helper>
+      <RadzenRequiredValidator Component="IpAddress" Text="Укажите IP-адрес или подсеть." />
+      <RadzenCustomValidator Component="IpAddress" Validator="@(() => string.IsNullOrEmpty(Item.Address) || IpAddressRule.TryParse(Item.Address, out _))" Text="Введите IPv4, IPv6 или CIDR-подсеть." />
+    </Helper>
+  </RadzenFormField>
+  <RadzenFormField Text="Описание / назначение" Variant="Variant.Text" Style="width:100%;">
+    <RadzenTextBox @bind-Value="Item.Description" Name="Description" aria-label="Описание / назначение" MaxLength="1000" Style="width:100%;" />
+  </RadzenFormField>
+</RadzenStack>
+
+@code {
+  [Parameter, EditorRequired] public IpAddress Item { get; set; } = default!;
+  [Parameter] public IEnumerable<Subdivision> Subdivisions { get; set; } = [];
+  [Parameter] public bool IsRoot { get; set; }
+}

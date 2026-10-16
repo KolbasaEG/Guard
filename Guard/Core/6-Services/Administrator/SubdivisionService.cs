@@ -53,7 +53,7 @@ public class SubdivisionService : ISubdivisionService
   public async Task<Subdivision?> GetByIdAsync(Guid id, CancellationToken ct = default)
   {
     _logger.LogDebug("Запрос подразделения по ID: {SubdivisionId}", id);
-    return await _readSubdivisionRepository.QueryAsync(q => q.Include(s => s.OrganType).Include(s => s.StatusClassifier).SingleOrDefaultAsync(s => s.Id == id, ct), ct);
+    return await _readSubdivisionRepository.QueryAsync(q => q.Include(s => s.Parent).Include(s => s.OrganType).Include(s => s.StatusClassifier).SingleOrDefaultAsync(s => s.Id == id, ct), ct);
   }
 
   public async Task<IReadOnlyList<Subdivision>> GetAllActiveAsync(CancellationToken ct = default)

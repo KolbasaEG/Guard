@@ -3,126 +3,115 @@ using Guard.Core.Identity;
 using Guard.Core.Services;
 using Guard.Shared;
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using Radzen;
 
-namespace Guard.Components.Pages.IpAddresses
+namespace Guard.Components.Pages.IpAddresses;
+
+public partial class Edit : IDisposable
 {
-  public partial class Edit : IDisposable
+  [Inject] protected DialogService DialogService { get; set; } = default!;
+  [Inject] protected NotificationService NotificationService { get; set; } = default!;
+  [Inject] protected IIpAddressService IpAddressService { get; set; } = default!;
+  [Inject] protected ILogger<Edit> Logger { get; set; } = default!;
+  [CascadingParameter] protected UserContext? UserContext { get; set; }
+  [Parameter] public Guid Id { get; set; }
+  [Parameter] public bool ReadOnly { get; set; }
+
+  private readonly CancellationTokenSource _cts = new();
+  private bool disposed;
+  private bool infoOpen;
+  protected bool isLoading;
+  protected bool isSaving;
+  protected bool isLoaded;
+  protected IpAddress item = new();
+  protected IEnumerable<Subdivision> subdivisions = [];
+
+  protected override void OnParametersSet() => subdivisions = UserContext?.SubordinateSubdivisions ?? [];
+
+  protected override async Task OnInitializedAsync()
   {
-    [Inject] protected IJSRuntime JSRuntime { get; set; } = default!;
-    [Inject] protected NavigationManager NavigationManager { get; set; } = default!;
-    [Inject] protected DialogService DialogService { get; set; } = default!;
-    [Inject] protected TooltipService TooltipService { get; set; } = default!;
-    [Inject] protected ContextMenuService ContextMenuService { get; set; } = default!;
-    [Inject] protected NotificationService NotificationService { get; set; } = default!;
-    [Inject] protected IIpAddressService IpAddressService { get; set; } = default!;
-    [Inject] protected ISubdivisionService SubdivisionService { get; set; } = default!;
-    [Inject] protected ILogger<Edit> Logger { get; set; } = default!;
-
-    [CascadingParameter] protected UserContext? UserContext { get; set; }
-
-    /// <summary>
-    /// Идентификатор редактируемой записи IP-адреса
-    /// </summary>
-    [Parameter] public Guid Id { get; set; }
-
-    private readonly CancellationTokenSource _cts = new();
-
-    protected bool isLoading = false;
-    protected IpAddress item = new();
-    protected IEnumerable<Subdivision> subdivisions = Enumerable.Empty<Subdivision>();
-
-    protected override async Task OnInitializedAsync()
+    var ct = _cts.Token;
+    isLoading = true;
+    try
     {
-      try
+      var loadedItem = await IpAddressService.GetByIdAsync(Id, ct);
+      if (disposed || ct.IsCancellationRequested) return;
+      if (loadedItem == null)
       {
-        isLoading = true;
-        Logger.LogDebug("Инициализация диалогового окна редактирования IP-адреса {IpAddressId}", Id);
-
-        subdivisions = UserContext?.SubordinateSubdivisions ?? [];
-
-        // Загрузка существующей записи по ID
-        var loadedItem = await IpAddressService.GetByIdAsync(Id, _cts.Token);
-        if (loadedItem == null)
-        {
-          Logger.LogWarning("IP-адрес с ID {IpAddressId} не найден", Id);
-          ShowErrorNotification("Запись не найдена в базе данных");
-          DialogService.Close(null);
-          return;
-        }
-
-        item = loadedItem;
+        ShowErrorNotification("IP-адрес не найден или недоступен. Обновите список.");
+        DialogService.Close(null);
+        return;
       }
-      catch (OperationCanceledException)
-      {
-        Logger.LogInformation("Инициализация диалогового окна редактирования IP-адреса {IpAddressId} была отменена", Id);
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при инициализации диалогового окна редактирования IP-адреса {IpAddressId}", Id);
-        ShowErrorNotification(ex is UnauthorizedAccessException ? ex.Message : "Не удалось загрузить IP-адрес.");
-      }
-      finally
-      {
-        isLoading = false;
-      }
+      item = loadedItem;
+      isLoaded = true;
     }
-
-    protected async Task FormSubmit()
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (Exception ex)
     {
-      try
-      {
-        isLoading = true;
-        Logger.LogInformation("Запуск обновления IP-адреса '{IpAddress}' (ID: {IpAddressId})", item.Address, item.Id);
-
-        await IpAddressService.UpdateAsync(item, _cts.Token);
-
-        Logger.LogInformation("IP-адрес '{IpAddress}' (ID: {IpAddressId}) успешно обновлен", item.Address, item.Id);
-        DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
-      }
-      catch (OperationCanceledException)
-      {
-        Logger.LogWarning("Операция обновления IP-адреса '{IpAddress}' была отменена пользователем", item.Address);
-      }
-      catch (Exception ex)
-      {
-        Logger.LogError(ex, "Ошибка при обновлении IP-адреса '{IpAddress}'", item.Address);
-        ShowErrorNotification(ex is ArgumentException or UnauthorizedAccessException or InvalidOperationException
-            ? ex.Message : "Не удалось сохранить IP-адрес. Попробуйте ещё раз.");
-      }
-      finally
-      {
-        isLoading = false;
-      }
-    }
-
-    protected void HandleCancelButtonClick()
-    {
-      Logger.LogInformation("Пользователь отменил редактирование IP-адреса через кнопку 'Отмена'");
-      _cts.Cancel();
+      if (disposed || ct.IsCancellationRequested) return;
+      Logger.LogError(ex, "Загрузка IP-адреса {IpAddressId}", Id);
+      ShowErrorNotification(UserOperationErrors.Message(ex));
       DialogService.Close(null);
     }
+    finally { isLoading = false; }
+  }
 
-    private void ShowErrorNotification(string detail)
+  protected async Task FormSubmit()
+  {
+    if (disposed || !isLoaded || ReadOnly || isSaving || _cts.IsCancellationRequested ||
+        item.Status is not (Guard.Core.Enums.Status.Inserted or Guard.Core.Enums.Status.Modified)) return;
+    var ct = _cts.Token;
+    isSaving = true;
+    try
     {
-      NotificationService.Notify(new NotificationMessage
-      {
-        Severity = NotificationSeverity.Error,
-        Summary = "Внимание!",
-        Detail = detail,
-        Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
-      });
+      await IpAddressService.UpdateAsync(item, ct);
+      if (disposed || ct.IsCancellationRequested) return;
+      DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true, item.Id));
     }
-    protected async Task InfoButtonClick()
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (Exception ex)
     {
-      var baseEntity = item as BaseEntity;
-      await DialogService.OpenAsync<DialogInfo>("", new Dictionary<string, object> { { "BaseEntity", baseEntity } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      if (disposed || ct.IsCancellationRequested) return;
+      Logger.LogError(ex, "Обновление IP-адреса {IpAddressId}", item.Id);
+      ShowErrorNotification(UserOperationErrors.Message(ex));
     }
-    public void Dispose()
+    finally { isSaving = false; }
+  }
+
+  protected void HandleCancelButtonClick()
+  {
+    if (disposed || _cts.IsCancellationRequested) return;
+    _cts.Cancel();
+    DialogService.Close(null);
+  }
+
+  private void ShowErrorNotification(string detail)
+  {
+    if (disposed || _cts.IsCancellationRequested) return;
+    NotificationService.Notify(new NotificationMessage {
+      Severity = NotificationSeverity.Error, Summary = "IP-адрес",
+      Detail = detail,
+      Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+    });
+  }
+
+  protected async Task InfoButtonClick()
+  {
+    if (disposed || !isLoaded || isLoading || isSaving || infoOpen || _cts.IsCancellationRequested) return;
+    infoOpen = true;
+    try
     {
-      _cts.Cancel();
-      _cts.Dispose();
+      await DialogService.OpenAsync<DialogInfo>("", new Dictionary<string, object?> { { "BaseEntity", item }, { "Compact", true } },
+        new DialogOptions { Width = "640px", Style = "max-width:calc(100vw - 24px);", ShowTitle = false, ContentCssClass = "rz-p-1" });
     }
+    finally { infoOpen = false; }
+  }
+
+  public void Dispose()
+  {
+    if (disposed) return;
+    disposed = true;
+    _cts.Cancel();
+    _cts.Dispose();
   }
 }

@@ -1,0 +1,37 @@
+@using Guard.Core.Entities
+
+@if (CanEdit)
+{
+  <EditEntity TItem="IpAddress" Data="Item" Name="РЕДАКТИРОВАНИЕ IP-АДРЕСА"
+              Submit="Submit" ShowInfoButton="true" OnInfoClick="OnInfoClick"
+              IsLoading="IsLoading" IsSaving="IsSaving" OnCancelButtonClick="OnCancel">
+    <IpAddressFields Item="Item" Subdivisions="Subdivisions" IsRoot="IsRoot" />
+  </EditEntity>
+}
+else
+{
+  <ViewEntity TItem="IpAddress" Data="Item" Name="ПРОСМОТР IP-АДРЕСА"
+              ShowInfoButton="@(IsLoaded && !IsLoading)" OnInfoClick="OnInfoClick"
+              IsLoading="IsLoading" OnCancelButtonClick="OnCancel">
+    @if (IsLoaded && !IsLoading)
+    {
+      <IpAddressDetails Item="Item" Subdivisions="Subdivisions" />
+    }
+  </ViewEntity>
+}
+
+@code {
+  [CascadingParameter] public DialogAccessState? AccessState { get; set; }
+  [Parameter, EditorRequired] public IpAddress Item { get; set; } = default!;
+  [Parameter] public IEnumerable<Subdivision> Subdivisions { get; set; } = [];
+  [Parameter] public bool IsRoot { get; set; }
+  [Parameter] public bool IsLoading { get; set; }
+  [Parameter] public bool IsSaving { get; set; }
+  [Parameter] public bool IsLoaded { get; set; }
+  [Parameter] public bool ReadOnly { get; set; }
+  [Parameter] public EventCallback Submit { get; set; }
+  [Parameter] public EventCallback OnInfoClick { get; set; }
+  [Parameter] public EventCallback OnCancel { get; set; }
+
+  private bool CanEdit => !ReadOnly && IsLoaded && AccessState?.CanWrite == true && Item.Status is Status.Inserted or Status.Modified;
+}

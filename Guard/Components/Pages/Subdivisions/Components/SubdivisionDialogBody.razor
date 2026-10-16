@@ -1,0 +1,34 @@
+@using Guard.Core.Entities
+
+@if (CanEdit)
+{
+  <EditEntity TItem="Subdivision" Data="Item" Name="РЕДАКТИРОВАНИЕ ПОДРАЗДЕЛЕНИЯ"
+              Submit="Submit" ShowInfoButton="true" OnInfoClick="OnInfoClick"
+              IsLoading="IsLoading" OnCancelButtonClick="OnCancel">
+    <SubdivisionFields Item="Item" OrganTypes="OrganTypes" StatusClassifiers="StatusClassifiers" />
+  </EditEntity>
+}
+else
+{
+  <ViewEntity TItem="Subdivision" Data="Item" Name="ПРОСМОТР ПОДРАЗДЕЛЕНИЯ"
+              ShowInfoButton="@(!IsLoading)" OnInfoClick="OnInfoClick"
+              IsLoading="IsLoading" OnCancelButtonClick="OnCancel">
+    @if (!IsLoading)
+    {
+      <SubdivisionDetails Item="Item" />
+    }
+  </ViewEntity>
+}
+
+@code {
+  [CascadingParameter] public DialogAccessState? AccessState { get; set; }
+  [Parameter, EditorRequired] public Subdivision Item { get; set; } = default!;
+  [Parameter] public IEnumerable<Classifier> OrganTypes { get; set; } = [];
+  [Parameter] public IEnumerable<Classifier> StatusClassifiers { get; set; } = [];
+  [Parameter] public bool IsLoading { get; set; }
+  [Parameter] public EventCallback Submit { get; set; }
+  [Parameter] public EventCallback OnInfoClick { get; set; }
+  [Parameter] public EventCallback OnCancel { get; set; }
+
+  private bool CanEdit => AccessState?.CanWrite == true && Item.Status is Status.Inserted or Status.Modified;
+}

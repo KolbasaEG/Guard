@@ -43,6 +43,8 @@ await SynchronizationUiTests.RunAsync(Check);
 await SynchronizationRecoveryTests.RunAsync(Check);
 await SynchronizationListLoadTests.RunAsync(Check);
 await PersonalPagesTests.RunAsync(Check);
+await SubdivisionDialogsTests.RunAsync(Check);
+await IpAddressReferenceTests.RunAsync(Check);
 await AccessRenderingTests.RunAsync(Check);
 await NavigationTests.RunAsync(Check);
 await StaticAssetsTests.RunAsync(Check);

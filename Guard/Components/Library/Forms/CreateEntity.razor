@@ -5,6 +5,7 @@
             Name="@Name"
             Icon="@Icon"
             IsLoading="IsLoading"
+            IsSaving="IsSaving"
             ShowSaveButton="ShowSaveButton"
             ShowInfoButton="ShowInfoButton"
             Submit="Submit"
@@ -17,6 +18,7 @@
   [Parameter] public string Name { get; set; } = "ДОБАВЛЕНИЕ";
   [Parameter] public string Icon { get; set; } = "add_box";
   [Parameter] public bool IsLoading { get; set; }
+  [Parameter] public bool IsSaving { get; set; }
   [Parameter] public bool ShowSaveButton { get; set; } = true;
   [Parameter] public bool ShowInfoButton { get; set; } = false;
 

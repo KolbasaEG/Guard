@@ -1,0 +1,32 @@
+@using Guard.Core.Entities
+
+<RadzenTable Style="width:100%;table-layout:fixed;" aria-label="Сведения об IP-адресе">
+  <RadzenTableBody>
+    @foreach (var row in Rows)
+    {
+      <RadzenTableRow>
+        <RadzenTableCell Style="padding:2px;width:40%;overflow-wrap:anywhere;vertical-align:top;background:var(--rz-grid-header-background-color);">
+          <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start">
+            <RadzenIcon Icon="@row.Icon" Style="font-size:16px;flex-shrink:0;" aria-hidden="true" />
+            <span>@row.Label</span>
+          </RadzenStack>
+        </RadzenTableCell>
+        <RadzenTableCell Style="padding:2px;overflow-wrap:anywhere;vertical-align:top;">@(string.IsNullOrWhiteSpace(row.Value) ? "—" : row.Value)</RadzenTableCell>
+      </RadzenTableRow>
+    }
+  </RadzenTableBody>
+</RadzenTable>
+
+@code {
+  [Parameter, EditorRequired] public IpAddress Item { get; set; } = default!;
+  [Parameter] public IEnumerable<Subdivision> Subdivisions { get; set; } = [];
+
+  private string SubdivisionName => !Item.SubdivisionId.HasValue ? "Общий адрес (без подразделения)"
+    : Item.Subdivision?.Name ?? Subdivisions.FirstOrDefault(s => s.Id == Item.SubdivisionId)?.Name ?? "Подразделение недоступно";
+
+  private IEnumerable<(string Icon, string Label, string? Value)> Rows => [
+    ("lan", "IP-адрес или подсеть", Item.Address),
+    ("account_tree", "Подразделение", SubdivisionName),
+    ("notes", "Описание / назначение", Item.Description)
+  ];
+}

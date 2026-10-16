@@ -1,6 +1,9 @@
 using Guard.Components.Pages.IpAddresses;
 using Guard.Core.Entities;
+using Guard.Core.Contexts;
+using Guard.Core.Enums;
 using Guard.Core.Services;
+using Guard.Core.Services.Exports;
 using Guard.Core.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Radzen;
@@ -8,12 +11,38 @@ using Radzen.Blazor;
 
 internal static class IpIndexTests
 {
-  public static async Task RunAsync(IIpAddressService service, Action<bool,string> check)
+  public static async Task RunAsync(IIpAddressService service, IDbContextFactory<ApplicationDbContext> factory, Action<bool,string> check)
   {
 #pragma warning disable BL0005 // Конструктор условий фильтра без браузерного renderer.
     var descriptor = new CompositeFilterDescriptor { Property = "Address", FilterOperator = FilterOperator.Contains, FilterValue = "192.168." };
     var filter = new RadzenDataFilter<IpAddress> { Filters = [descriptor] };
 #pragma warning restore BL0005
+    await using var db = await factory.CreateDbContextAsync();
+    var rootScope = new ExportAccessScope(new("root", true, []), null, null, [], "test");
+    foreach (var mode in Enum.GetValues<DataViewMode>())
+    {
+      var listIds = await service.QueryIpAddressesAsync(q => IpListQuery.ApplyVisibility(q, mode, true, true, null,
+        SubdivisionHierarchyMode.CurrentOnly).OrderBy(ip => ip.Id).Select(ip => ip.Id).ToListAsync());
+      var exportIds = await ExportQueries.IpAddresses(db, new(ExportArea.IpAddresses, ExportFormat.Excel, mode, AllSubdivisions: true), rootScope)
+        .OrderBy(ip => ip.Id).Select(ip => ip.Id).ToListAsync();
+      check(listIds.SequenceEqual(exportIds), "Root all-IP list and export contain identical records for each status mode");
+    }
+    var allRows = await service.QueryIpAddressesAsync(q => IpListQuery.ApplyVisibility(q, DataViewMode.Active, true, true, null,
+      SubdivisionHierarchyMode.CurrentOnly).ToListAsync());
+    check(allRows.Any(ip => ip.SubdivisionId == null), "Root all-IP SQL query includes common addresses");
+    var ownPath = await db.Subdivisions.OrderBy(s => s.Id).Select(s => s.Path).FirstAsync();
+    foreach (var hierarchy in Enum.GetValues<SubdivisionHierarchyMode>())
+    {
+      var scope = rootScope with { OwnPath = ownPath };
+      var listIds = await service.QueryIpAddressesAsync(q => IpListQuery.ApplyVisibility(q, DataViewMode.Active, false, true, ownPath, hierarchy)
+        .OrderBy(ip => ip.Id).Select(ip => ip.Id).ToListAsync());
+      var exportIds = await ExportQueries.IpAddresses(db, new(ExportArea.IpAddresses, ExportFormat.Excel,
+        IncludeChildren: hierarchy == SubdivisionHierarchyMode.IncludeChildren), scope).OrderBy(ip => ip.Id).Select(ip => ip.Id).ToListAsync();
+      check(listIds.SequenceEqual(exportIds), "Root hierarchy IP list and export narrow full access identically");
+    }
+    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => Task.FromResult(ExportQueries.IpAddresses(db,
+      new(ExportArea.IpAddresses, ExportFormat.Excel, AllSubdivisions: true), rootScope with { User = new("operator", false, []) })),
+      check, "IP export rejects non-Root all-records request");
     var snapshot = IpListQuery.Capture(filter);
     descriptor.FilterValue = "not-an-address";
     var result = await service.QueryIpAddressesAsync(async query => {

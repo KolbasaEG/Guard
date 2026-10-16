@@ -29,8 +29,6 @@ namespace Guard.Components.Pages.Subdivisions
 
     protected bool isLoading = false;
     protected Subdivision item = new();
-    protected Classifier? selectedOrganType;
-    protected Classifier? selectedStatusClassifier;
     protected IEnumerable<Classifier> organTypes = [];
     protected IEnumerable<Classifier> statusClassifiers = [];
 
@@ -55,8 +53,6 @@ namespace Guard.Components.Pages.Subdivisions
           if (Access?.Has(Guard.Core.Identity.Permissions.Subdivisions.Write) != true) {
             organTypes = entity.OrganType == null ? [] : [entity.OrganType];
             statusClassifiers = entity.StatusClassifier == null ? [] : [entity.StatusClassifier];
-            selectedOrganType = entity.OrganType;
-            selectedStatusClassifier = entity.StatusClassifier;
             return;
           }
           // Параллельная загрузка справочников и списка подразделений
@@ -70,9 +66,6 @@ namespace Guard.Components.Pages.Subdivisions
 
           item = entity;
 
-          // Инициализация выбранных объектов для корректного отображения в DropDown
-          selectedOrganType = organTypes.FirstOrDefault(x => x.Type == item.OrganTypeId && x.Code == item.OrganTypeCode);
-          selectedStatusClassifier = statusClassifiers.FirstOrDefault(x => x.Type == item.StatusType && x.Code == item.StatusCode);
         }
         else
         {
@@ -146,7 +139,7 @@ namespace Guard.Components.Pages.Subdivisions
     protected async Task InfoButtonClick()
     {
       var baseEntity = item as BaseEntity;
-      await DialogService.OpenAsync<DialogInfo>("", new Dictionary<string, object> { { "BaseEntity", baseEntity } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      await DialogService.OpenAsync<DialogInfo>("", new Dictionary<string, object> { { "BaseEntity", baseEntity }, { "Compact", true } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
     }
 
     protected void HandleCancelButtonClick()
@@ -154,36 +147,6 @@ namespace Guard.Components.Pages.Subdivisions
       Logger.LogInformation("Пользователь отменил редактирование подразделения через кнопку 'Отмена'");
       _cts.Cancel();
       DialogService.Close(null);
-    }
-
-    protected void OnOrganTypeChanged(object value)
-    {
-      selectedOrganType = value as Classifier;
-      if (selectedOrganType != null)
-      {
-        item.OrganTypeId = selectedOrganType.Type;
-        item.OrganTypeCode = selectedOrganType.Code;
-      }
-      else
-      {
-        item.OrganTypeId = null;
-        item.OrganTypeCode = null;
-      }
-    }
-
-    protected void OnStatusClassifierChanged(object value)
-    {
-      selectedStatusClassifier = value as Classifier;
-      if (selectedStatusClassifier != null)
-      {
-        item.StatusType = selectedStatusClassifier.Type;
-        item.StatusCode = selectedStatusClassifier.Code;
-      }
-      else
-      {
-        item.StatusType = null;
-        item.StatusCode = null;
-      }
     }
 
     public void Dispose()

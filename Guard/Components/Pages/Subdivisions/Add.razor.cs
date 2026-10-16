@@ -114,33 +114,6 @@ namespace Guard.Components.Pages.Subdivisions
       _cts.Cancel();
       DialogService.Close(null);
     }
-    protected void OnOrganTypeChanged(object value)
-    {
-      if (value is Classifier selected)
-      {
-        item.OrganTypeId = selected.Type;
-        item.OrganTypeCode = selected.Code;
-      }
-      else
-      {
-        item.OrganTypeId = null;
-        item.OrganTypeCode = null;
-      }
-    }
-
-    protected void OnStatusClassifierChanged(object value)
-    {
-      if (value is Classifier selected)
-      {
-        item.StatusType = selected.Type;
-        item.StatusCode = selected.Code;
-      }
-      else
-      {
-        item.StatusType = null;
-        item.StatusCode = null;
-      }
-    }
     public void Dispose()
     {
       _cts.Cancel();

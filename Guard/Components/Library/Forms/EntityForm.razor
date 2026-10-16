@@ -1,5 +1,6 @@
 @using Guard.Components.Library.Loading
 @typeparam TItem
+@implements IDisposable
 
 <RadzenStack Style="width:100%;height:100%;" Gap="0px">
   @if (Data != null) {
@@ -27,13 +28,13 @@
       <Guard.Components.Library.Cards.CardHeader
         Icon="@Icon"
         Name="@Name"
-        ShowSaveButton="@(ShowSaveButton && !EffectiveReadOnly && CanView)"
+        ShowSaveButton="@(ShowSaveButton && !ReadOnly && AccessState?.CanWrite != false && CanView)"
+        IsBusy="@(IsLoading || IsSaving || submitting)"
         ShowInfoButton="@(ShowInfoButton && CanView)"
         ShowCancelButton="@(StaticFormName == null)"
         OnInfoClick="InfoButtonClick"
         OnCancelButtonClick="CancelButtonClick" />
 
-      @if (AccessState?.Message != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@AccessState.Message</RadzenAlert> }
       <RadzenStack Orientation="Orientation.Horizontal" Gap="5px;" Style="flex: 1; min-height: 0; width:100%; margin-top:5px;">
         <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;min-height:0;">
           <LoadingContainer IsLoading="IsLoading">
@@ -52,8 +53,9 @@
   [Parameter] public bool ContentOnly { get; set; }
   [CascadingParameter] public Guard.Components.Library.Authorization.DialogAccessState? AccessState { get; set; }
   private bool CanView => AccessState?.CanView != false;
-  private bool EffectiveReadOnly => ReadOnly || IsLoading || submitting || AccessState?.CanWrite == false;
+  private bool EffectiveReadOnly => ReadOnly || IsLoading || IsSaving || submitting || AccessState?.CanWrite == false;
   private bool submitting;
+  private bool disposed;
   private string FieldStyle => "border:0;margin:0;padding:0;width:100%;" + (EffectiveReadOnly ? "pointer-events:none;" : "");
   [Parameter] public bool ReadOnly { get; set; }
   [Parameter] public bool ShowSaveButton { get; set; } = true;
@@ -63,6 +65,7 @@
   [Parameter] public string Name { get; set; } = "РЕДАКТИРОВАНИЕ";
   [Parameter] public string Icon { get; set; } = "edit_square";
   [Parameter] public bool IsLoading { get; set; }
+  [Parameter] public bool IsSaving { get; set; }
 
   [Parameter] public RenderFragment? ChildContent { get; set; }
   [Parameter] public EventCallback Submit { get; set; }
@@ -79,14 +82,14 @@
 
   protected async Task FormSubmit()
   {
-    if (submitting || IsLoading || ReadOnly) return;
+    if (disposed || submitting || IsLoading || IsSaving || ReadOnly) return;
     submitting = true;
     try {
       if (AccessState != null) await AccessState.RefreshAsync();
-      if (!CanView || ReadOnly || IsLoading || AccessState?.CanWrite == false) return;
+      if (disposed || !CanView || ReadOnly || IsLoading || IsSaving || AccessState?.CanWrite == false) return;
       await Submit.InvokeAsync();
     }
-    finally { submitting = false; if (AccessState != null) await AccessState.RefreshAsync(); }
+    finally { submitting = false; if (!disposed && AccessState != null) await AccessState.RefreshAsync(); }
   }
 
   protected async Task CancelButtonClick()
@@ -96,4 +99,6 @@
       await OnCancelButtonClick.InvokeAsync();
     }
   }
+
+  public void Dispose() => disposed = true;
 }

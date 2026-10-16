@@ -34,5 +34,6 @@ public enum AuditEventType
   ExportCancelled = 27,
   ExportArchiveViewed = 28,
   ExportRetentionChanged = 29,
-  ExportExpired = 30
+  ExportExpired = 30,
+  UserDetailsChanged = 31
 }

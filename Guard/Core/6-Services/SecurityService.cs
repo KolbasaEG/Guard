@@ -33,6 +33,51 @@ public class SecurityService(
   private static void Check(IdentityResult result) {
     if (!result.Succeeded) throw new UserSecurityException(string.Join("; ", result.Errors.Select(e=>e.Description)));
   }
+  public async Task<Guard.Core.Services.DTOs.UserEditData> GetUserEditAsync(string id, CancellationToken ct = default)
+  {
+    await permissions.RequireAsync(Permissions.Users.Manage, ct);
+    var access = await accessScopes.GetAsync(ct);
+    await using var scope = scopes.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id, ct)
+      ?? throw new KeyNotFoundException("Пользователь не найден.");
+    await CheckTargetAsync(db, user, ct);
+    if (user.AccountBlockReason != null || user.LockoutEnabled && user.LockoutEnd > DateTimeOffset.UtcNow)
+      throw new InvalidOperationException("Сначала разблокируйте пользователя.");
+    var query = db.Personals.AsNoTracking().Where(p =>
+      ((p.Status == Status.Inserted || p.Status == Status.Modified) && !db.Users.Any(u => u.PersonalId == p.Id)) || p.Id == user.PersonalId);
+    if (!access.IsRoot) query = query.Where(p => p.SubdivisionId.HasValue && access.SubdivisionIds.Contains(p.SubdivisionId.Value));
+    var options = await query.OrderBy(p => p.LastName).ThenBy(p => p.FirstName)
+      .Select(p => new Guard.Core.Services.DTOs.UserPersonalOption(p.Id, p.LastName + " " + p.FirstName + " " + (p.MiddleName ?? ""))).ToListAsync(ct);
+    return new(new() { Id = user.Id, UserName = user.UserName ?? "", Email = user.Email ?? "",
+      PersonalId = user.PersonalId, Version = user.ConcurrencyStamp ?? "" }, options, access.IsRoot);
+  }
+
+  public Task<IdentityResult> UpdateUserDetailsAsync(Guard.Core.Services.DTOs.EditUserDto input, CancellationToken ct = default)
+  {
+    ArgumentNullException.ThrowIfNull(input);
+    if (string.IsNullOrWhiteSpace(input.Id) || string.IsNullOrWhiteSpace(input.Version) ||
+        string.IsNullOrWhiteSpace(input.UserName) || input.UserName.Trim().Length > 256 ||
+        string.IsNullOrWhiteSpace(input.Email) || input.Email.Trim().Length > 256 ||
+        !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(input.Email.Trim()))
+      throw new ArgumentException("Укажите имя пользователя и корректный email (не более 256 символов).");
+    return WriteAsync(async (db, manager) => {
+      var user = await manager.FindByIdAsync(input.Id) ?? throw new KeyNotFoundException("Пользователь не найден.");
+      await CheckTargetAsync(db, user, ct);
+      if (user.AccountBlockReason != null || await manager.IsLockedOutAsync(user))
+        throw new InvalidOperationException("Сначала разблокируйте пользователя.");
+      if (user.ConcurrencyStamp != input.Version)
+        throw new InvalidOperationException("Пользователь уже изменён. Закройте форму и откройте её заново.");
+      await CheckPersonalAsync(db, input.PersonalId, ct);
+      if (input.PersonalId.HasValue && await db.Users.AnyAsync(u => u.Id != input.Id && u.PersonalId == input.PersonalId, ct))
+        throw new InvalidOperationException("У выбранного сотрудника уже есть учётная запись.");
+      var email = input.Email.Trim();
+      if (!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase)) user.EmailConfirmed = false;
+      user.UserName = input.UserName.Trim(); user.Email = email; user.PersonalId = input.PersonalId;
+      Check(await manager.UpdateAsync(user));
+      Check(await manager.UpdateSecurityStampAsync(user));
+    }, ct, input.Id, AuditEventType.UserDetailsChanged);
+  }
   private async Task CheckPersonalAsync(ApplicationDbContext db, Guid? id, CancellationToken ct)
   {
     var access = await accessScopes.GetAsync(ct);

@@ -123,9 +123,19 @@ internal static class ApiSynchronizationIntegrationTests
       "API mode rejects employee IP assignment even for Root");
     await using (var db = await factory.CreateDbContextAsync())
     {
-      db.Users.Add(new ApplicationUser { Id = "forbidden-link", UserName = "forbidden-link", PersonalId = employeeId });
-      await PostgresTests.ThrowsAsync<EntityRuleException>(() => db.SaveChangesAsync(), check,
-        "API mode rejects new manual account binding to employee");
+      var account = new ApplicationUser { Id = "manual-link", UserName = "manual-link", PersonalId = employeeId };
+      db.Users.Add(account);
+      await db.SaveChangesAsync();
+      check(await db.Users.AnyAsync(u => u.Id == account.Id && u.PersonalId == employeeId),
+        "API mode allows creating an account bound to an imported employee");
+      account.PersonalId = null;
+      await db.SaveChangesAsync();
+      account.PersonalId = employeeId;
+      await db.SaveChangesAsync();
+      check(await db.Users.AnyAsync(u => u.Id == account.Id && u.PersonalId == employeeId),
+        "API mode allows removing and restoring an account employee binding");
+      db.Users.Remove(account);
+      await db.SaveChangesAsync();
     }
 
     // Перевод и очистка поля полного состояния.

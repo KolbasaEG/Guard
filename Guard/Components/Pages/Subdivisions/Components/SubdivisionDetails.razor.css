@@ -1,0 +1,9 @@
+.subdivision-details {
+  width: 100%;
+  min-width: 0;
+}
+
+.subdivision-details ::deep td {
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}

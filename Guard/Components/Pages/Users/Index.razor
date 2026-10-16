@@ -43,9 +43,10 @@
         <RadzenDataGridColumn TItem="UserDto" Property="PasswordChangeRequired" Sortable="false" Title="Требуется смена пароля" Width="180px">
           <Template Context="item">@(item.PasswordChangeRequired ? "Да" : "Нет")</Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="UserDto" Filterable="false" Sortable="false" Width="135px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
+        <RadzenDataGridColumn TItem="UserDto" Filterable="false" Sortable="false" Width="180px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
             <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
+              <RadzenButton Icon="edit" Title="Редактировать пользователя" Visible="@(Access?.Has(Permissions.Users.Manage) == true && !item.IsLockedOut)" Click="@(() => EditUserAsync(item))" @onclick:stopPropagation="true" />
               <RadzenButton Icon="domino_mask" Title="Роли и итоговые права" Visible="@(Access?.IsRoot == true)" Click="@(() => EditRoles(item))" @onclick:stopPropagation="true" />
               <RadzenButton Icon="lock" Title="Изменить блокировку" Visible="@(Access?.Has(Permissions.Users.Manage) == true)" Click="@(() => ToggleLockout(item))" @onclick:stopPropagation="true" />
               <RadzenButton Icon="passkey" Title="Сбросить пароль" Visible="@(Access?.Has(Permissions.Users.Manage) == true && !item.IsLockedOut)" Click="@(() => ResetPasswordAsync(item))" @onclick:stopPropagation="true" />

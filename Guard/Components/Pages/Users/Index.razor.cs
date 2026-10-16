@@ -142,6 +142,16 @@ namespace Guard.Components.Pages.Users
       var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
       if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result)) await grid.Reload();
     }
+    protected async Task EditUserAsync(UserDto item)
+    {
+      if (disposed || Access?.Has(Permissions.Users.Manage) != true || item.IsLockedOut) return;
+      var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object> { ["UserId"] = item.Id },
+        new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result) && !disposed) {
+        ShowSuccessNotification("Данные пользователя обновлены.");
+        await grid.Reload();
+      }
+    }
     protected async Task ToggleLockout(UserDto item)
     {
       if (await DialogService.Confirm(item.IsLockedOut ? "Снять блокировку?" : "Заблокировать пользователя?", "Блокировка",

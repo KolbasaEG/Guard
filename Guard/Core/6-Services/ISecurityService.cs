@@ -45,6 +45,8 @@ public interface ISecurityService
   #region Операции с пользователями
 
   Task<ApplicationUser?> GetUserByIdAsync(string id, CancellationToken ct = default);
+  Task<Guard.Core.Services.DTOs.UserEditData> GetUserEditAsync(string id, CancellationToken ct = default);
+  Task<IdentityResult> UpdateUserDetailsAsync(Guard.Core.Services.DTOs.EditUserDto input, CancellationToken ct = default);
   Task<IReadOnlyList<Guard.Core.Services.DTOs.UserPersonalOption>> GetUserPersonalOptionsAsync(CancellationToken ct = default);
   Task<IdentityResult> CreateUserAsync(ApplicationUser user, string password, IEnumerable<string>? roles = null, CancellationToken ct = default);
   Task<IdentityResult> UpdateUserAsync(ApplicationUser user, IEnumerable<string> roles, CancellationToken ct = default);

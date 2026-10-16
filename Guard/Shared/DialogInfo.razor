@@ -2,9 +2,31 @@
 @using Guard.Components.Library.Views
 @using Microsoft.AspNetCore.Authorization
 @using Radzen.Blazor
+@using Radzen
 @attribute [Authorize]
 
 <EntityInfo >
+  @if (Compact)
+  {
+    <RadzenTable Style="width:100%;table-layout:fixed;" aria-label="Служебные сведения">
+      <RadzenTableBody>
+        @foreach (var row in CompactRows)
+        {
+          <RadzenTableRow>
+            <RadzenTableCell Style="padding:2px;width:40%;overflow-wrap:anywhere;background:var(--rz-grid-header-background-color);vertical-align:top;">
+              <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start">
+                <RadzenIcon Icon="@row.Icon" Style="font-size:16px;flex-shrink:0;" aria-hidden="true" />
+                <span>@row.Label</span>
+              </RadzenStack>
+            </RadzenTableCell>
+            <RadzenTableCell Style="padding:2px;overflow-wrap:anywhere;vertical-align:top;">@(string.IsNullOrWhiteSpace(row.Value) ? "—" : row.Value)</RadzenTableCell>
+          </RadzenTableRow>
+        }
+      </RadzenTableBody>
+    </RadzenTable>
+  }
+  else
+  {
   <RadzenTable Style="width:100%;">
     <RadzenTableBody>
       <RadzenTableRow>
@@ -51,5 +73,16 @@
       </RadzenTableRow>
     </RadzenTableBody>
   </RadzenTable>
+  }
 </EntityInfo>
 </Guard.Components.Layout.Components.AccessDialog>
+
+@code {
+  private IEnumerable<(string Icon, string Label, string? Value)> CompactRows => [
+    ("fingerprint", "Идентификатор", BaseEntity?.Id.ToString()),
+    ("event", "Создано", BaseEntity == null ? null : Time.Format(BaseEntity.InsertedDate, "dd.MM.yyyy HH:mm:ss")),
+    ("person_outline", "Создал", creator),
+    ("edit_calendar", "Изменено", BaseEntity?.LastModifiedDate.HasValue == true ? Time.Format(BaseEntity.LastModifiedDate.Value, "dd.MM.yyyy HH:mm:ss") : null),
+    ("manage_accounts", "Редактировал", editor)
+  ];
+}

@@ -43,6 +43,7 @@ namespace Guard.Shared
 
 
     [Parameter] public BaseEntity BaseEntity { get; set; }
+    [Parameter] public bool Compact { get; set; }
 
     protected bool isLoading = false;
     protected string creator = string.Empty;

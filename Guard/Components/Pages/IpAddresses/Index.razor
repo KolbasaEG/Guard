@@ -3,10 +3,10 @@
 @using Guard.Core.Services.DTOs
 @attribute [Authorize]
 <PageTitle>АИС "Охрана"</PageTitle>
-<TableWrapperWithFilterAndAnalytics >
+<div class="ip-addresses-list">
+<TableWrapperWithFilterAndAnalytics ShowAnalitycs="false" TopPaneSize="180px">
   <Table>
-    @if (loadError != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@loadError</RadzenAlert> }
-    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="IpAddressDto" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"
+    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@ViewRow" Count="@count" Data="@(filteredData)" TItem="IpAddressDto" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"
                     AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                     DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
                     LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NotEqualsText="Не равно" OrOperatorText="Или"
@@ -15,7 +15,7 @@
                     PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" ShowPagingSummary="true" PagingSummaryFormat="@pagingSummaryFormat"
                     Style="height:100%;">
       <HeaderTemplate>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%; position:relative; min-height:36px;">
+        <RadzenStack Class="ip-list-toolbar" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%; position:relative; min-height:36px;">
           @if (AccessSnapshot?.Has(Permissions.IpAddresses.Export) == true) {
             <RadzenMenu>
               <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
@@ -25,7 +25,7 @@
           }
 
 
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="5px" Style="position:absolute; left:50%; transform:translateX(-50%);">
+          <RadzenStack Class="ip-list-status" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="5px" Style="position:absolute; left:50%; transform:translateX(-50%);">
             <RadzenSelectBar TValue="DataViewMode" Size="ButtonSize.Medium" @bind-Value="@currentMode" Change="() => ResetPageAsync()" Style="background-color: var(--rz-menu-top-item-background-color); border-radius: 0px;">
               <Items>
                 <RadzenSelectBarItem Value="@(DataViewMode.Archived)" Text="Архив" Style="border-radius:0px; width:105px; text-align:center;" />
@@ -34,13 +34,17 @@
               </Items>
             </RadzenSelectBar>
           </RadzenStack>
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="margin-left:auto; background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
-            <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
-                       <RadzenToggleButton Value="@(hierarchyMode == SubdivisionHierarchyMode.IncludeChildren)" Change="@OnHierarchyModeChanged" ButtonStyle="ButtonStyle.Warning" ToggleButtonStyle="ButtonStyle.Primary" Variant="Variant.Text" Style="border-radius:0px;"
+          <RadzenStack Class="ip-list-actions" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="margin-left:auto; background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
+            @if (AccessSnapshot?.IsRoot == true)
+            {
+              <RadzenToggleButton Text="Все доступные" Icon="domain" Value="ShowAll" Change="OnAllRecordsChanged" Variant="Variant.Text" Style="border-radius:0px;" />
+            }
+            <RadzenButton Icon="refresh" Click="ReloadAsync" title="Обновить" aria-label="Обновить список IP-адресов" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+            <RadzenToggleButton Disabled="ShowAll" Value="@(hierarchyMode == SubdivisionHierarchyMode.IncludeChildren)" Change="@OnHierarchyModeChanged" title="@(hierarchyMode == SubdivisionHierarchyMode.IncludeChildren ? "Свои и подчинённые" : "Только свои")" ButtonStyle="ButtonStyle.Warning" ToggleButtonStyle="ButtonStyle.Primary" Variant="Variant.Text" Style="border-radius:0px;"
                                 Size="Radzen.ButtonSize.Medium" Icon="account_tree" ToggleIcon="domain" Shade="Shade.Light" ToggleShade="Shade.Dark"
                                 InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Переключение режима отображения иерархии" }})" />
  
-            <RadzenButton Icon="add_circle_outline" Visible="@(isEditor)" Click="@AddClick" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+            <RadzenButton Icon="add_circle_outline" Visible="@(isEditor)" Click="@AddClick" title="Добавить" aria-label="Добавить IP-адрес" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
           </RadzenStack>
         </RadzenStack>
       </HeaderTemplate>
@@ -48,22 +52,25 @@
         <RadzenDataGridColumn TItem="IpAddressDto" Property="SubdivisionName" SortProperty="Subdivision.Name" Title="Подразделения" Frozen="true" Width="200px" />
         <RadzenDataGridColumn TItem="IpAddressDto" Property="Address" SortProperty="Address" Title="IP-адрес" Width="200px" />
         <RadzenDataGridColumn TItem="IpAddressDto" Property="Description" SortProperty="Description" Title="Описание" Frozen="true" Width="100%" />
-        <RadzenDataGridColumn TItem="IpAddressDto" Filterable="false" Sortable="false" Width="90px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
+        <RadzenDataGridColumn TItem="IpAddressDto" Filterable="false" Sortable="false" Width="120px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
             <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
               @if ((Status)item.Status is Status.Inserted or Status.Modified)
               {
+                <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="edit" Size="Radzen.ButtonSize.ExtraSmall"
+                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor" title="Редактировать" aria-label="Редактировать IP-адрес"
+                              Click=@(args => EditRow(item)) @onclick:stopPropagation="true" />
                 <RadzenButton Icon="archive" Size="Radzen.ButtonSize.ExtraSmall"
-                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor" title="В архив" aria-label="Архивировать IP-адрес"
                               Click=@(args => GridArchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
                 <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="Radzen.ButtonSize.ExtraSmall"
-                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor" title="Удалить" aria-label="Удалить IP-адрес"
                               Click=@(args => GridDeleteButtonClick(args, item)) @onclick:stopPropagation="true" />
               }
               @if ((Status)item.Status == Status.Archived)
               {
                 <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="unarchive" Size="Radzen.ButtonSize.ExtraSmall"
-                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                              Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor" title="Восстановить" aria-label="Восстановить IP-адрес"
                               Click=@(args => GridUnarchiveButtonClick(args, item)) @onclick:stopPropagation="true" />
               }
             </RadzenStack>
@@ -91,11 +98,8 @@
     </RadzenDataFilter>
   </Filter>
   <FilterButtons>
-    <RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+    <RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;color:var(--rz-menu-top-item-color);" />
   </FilterButtons>
-  <Analitycs />
-  <AnalitycsButtons>
-    <RadzenButton Icon="autorenew" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
-  </AnalitycsButtons>
 
 </TableWrapperWithFilterAndAnalytics>
+</div>

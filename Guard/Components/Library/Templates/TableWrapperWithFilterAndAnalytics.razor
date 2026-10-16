@@ -2,7 +2,9 @@
 @attribute [Authorize]
 <div class="table-template">
   <RadzenSplitter Orientation="Orientation.Vertical" style="height: 100%; background-color: var(--rz-tabs-background-color);">
-    <RadzenSplitterPane Size="260px">
+    <RadzenSplitterPane Size="@TopPaneSize">
+      @if (ShowAnalitycs)
+      {
       <RadzenSplitter>
         <RadzenSplitterPane Min="30%" Max="70%">
           <AnalitycsWrapper Title="@AnalitycsTitle" Icon="@AnalitycsIcon" Buttons="@AnalitycsButtons">
@@ -15,6 +17,13 @@
           </AnalitycsWrapper>
         </RadzenSplitterPane>
       </RadzenSplitter>
+      }
+      else
+      {
+        <AnalitycsWrapper Title="Фильтрация данных" Icon="feature_search" Buttons="@FilterButtons">
+          @Filter
+        </AnalitycsWrapper>
+      }
     </RadzenSplitterPane>
     <RadzenSplitterPane>
       <RadzenCard Variant="Variant.Outlined" Style="height:100%; padding:5px;">
@@ -32,4 +41,6 @@
   [Parameter] public RenderFragment? AnalitycsButtons { get; set; }
   [Parameter] public string AnalitycsTitle { get; set; } = "Аналитическая информация";
   [Parameter] public string AnalitycsIcon { get; set; } = "analytics";
+  [Parameter] public bool ShowAnalitycs { get; set; } = true;
+  [Parameter] public string TopPaneSize { get; set; } = "260px";
 }

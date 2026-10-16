@@ -71,6 +71,7 @@ public static class ExportQueries
   }
   public static IQueryable<IpAddress> IpAddresses(ApplicationDbContext db, ExportRequest request, ExportAccessScope scope)
   {
+    if (request.AllSubdivisions && !scope.User.IsRoot) throw new UnauthorizedAccessException("Все IP-адреса доступны только Root.");
     var q = db.IpAddresses.AsNoTracking().AsQueryable();
     if (!scope.User.IsRoot) q = q.Where(p => p.SubdivisionId.HasValue && scope.AllowedIds.Contains(p.SubdivisionId.Value));
     if (!request.AllSubdivisions) q = !ExportAccess.ValidPath(scope.OwnPath) ? q.Where(p => false) :

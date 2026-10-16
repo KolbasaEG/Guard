@@ -1,0 +1,96 @@
+@using Guard.Core.Entities
+
+<div class="subdivision-form">
+  <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;">
+    @if (ShowParentSelector)
+    {
+      <RadzenFormField Text="Вышестоящее подразделение" Variant="Variant.Text" Style="width:100%;">
+        <RadzenDropDown Data="Subdivisions" TextProperty="Name" ValueProperty="Id" TValue="Guid?"
+                        @bind-Value="Item.ParentId" Name="ParentId" AllowClear="true" AllowFiltering="true"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterOperator="StringFilterOperator.Contains"
+                        Style="width:100%;" />
+      </RadzenFormField>
+    }
+    else
+    {
+      <RadzenFormField Text="Вышестоящее подразделение" Variant="Variant.Text" Style="width:100%;">
+        <RadzenTextBox Value="@(Item.Parent?.Name ?? "—")" ReadOnly="true" Style="width:100%;" />
+      </RadzenFormField>
+    }
+    <RadzenFormField Text="Наименование подразделения" Variant="Variant.Text" Style="width:100%;">
+      <ChildContent><RadzenTextBox @bind-Value="Item.Name" Name="Name" Style="width:100%;" /></ChildContent>
+      <Helper><RadzenRequiredValidator Component="Name" Text="Укажите наименование подразделения." /></Helper>
+    </RadzenFormField>
+    <RadzenFormField Text="Наименование для должности" Variant="Variant.Text" Style="width:100%;">
+      <ChildContent><RadzenTextBox @bind-Value="Item.PositionFormationName" Name="PositionFormationName" Style="width:100%;" /></ChildContent>
+      <Helper><RadzenRequiredValidator Component="PositionFormationName" Text="Укажите наименование для должности." /></Helper>
+    </RadzenFormField>
+    <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" Class="subdivision-form-row" Style="width:100%;">
+      <RadzenFormField Text="Тип органа" Variant="Variant.Text" Style="flex:1;min-width:0;">
+        <RadzenDropDown Data="OrganTypes" TextProperty="Value" TValue="Classifier"
+                        Value="@(OrganTypes.FirstOrDefault(x => x.Type == Item.OrganTypeId && x.Code == Item.OrganTypeCode))"
+                        Change="OrganTypeChanged" Name="OrganType" AllowClear="true" AllowFiltering="true"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterOperator="StringFilterOperator.Contains"
+                        Style="width:100%;" />
+      </RadzenFormField>
+      <RadzenFormField Text="Статус подразделения" Variant="Variant.Text" Style="flex:1;min-width:0;">
+        <RadzenDropDown Data="StatusClassifiers" TextProperty="Value" TValue="Classifier"
+                        Value="@(StatusClassifiers.FirstOrDefault(x => x.Type == Item.StatusType && x.Code == Item.StatusCode))"
+                        Change="StatusChanged" Name="StatusClassifier" AllowClear="true" AllowFiltering="true"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" FilterOperator="StringFilterOperator.Contains"
+                        Style="width:100%;" />
+      </RadzenFormField>
+    </RadzenStack>
+    <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Class="subdivision-form-row" Style="width:100%;">
+      <RadzenFormField Text="Порядок на уровне" Variant="Variant.Text" Style="flex:1;min-width:0;">
+        <RadzenNumeric @bind-Value="Item.LevelOrder" Name="LevelOrder" TValue="int" Min="0" Style="width:100%;" />
+      </RadzenFormField>
+      <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Style="flex:1;min-width:0;">
+        <RadzenCheckBox @bind-Value="Item.IsDepartment" Name="IsDepartment" TValue="bool" />
+        <RadzenLabel Text="Является отделом" Component="IsDepartment" />
+      </RadzenStack>
+    </RadzenStack>
+    <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" Class="subdivision-form-row" Style="width:100%;">
+      <RadzenFormField Text="Индекс" Variant="Variant.Text" Style="flex:0.32;min-width:0;">
+        <ChildContent><RadzenTextBox @bind-Value="Item.PostalCode" Name="PostalCode" Style="width:100%;" /></ChildContent>
+        <Helper><RadzenRequiredValidator Component="PostalCode" Text="Укажите почтовый индекс." /></Helper>
+      </RadzenFormField>
+      <RadzenFormField Text="Адрес" Variant="Variant.Text" Style="flex:1;min-width:0;">
+        <ChildContent><RadzenTextBox @bind-Value="Item.Address" Name="Address" Style="width:100%;" /></ChildContent>
+        <Helper><RadzenRequiredValidator Component="Address" Text="Укажите адрес." /></Helper>
+      </RadzenFormField>
+    </RadzenStack>
+    <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" Class="subdivision-form-row" Style="width:100%;">
+      <RadzenFormField Text="Телефон" Variant="Variant.Text" Style="flex:1;min-width:0;">
+        <ChildContent><RadzenTextBox @bind-Value="Item.Phone" Name="Phone" Style="width:100%;" /></ChildContent>
+        <Helper><RadzenRequiredValidator Component="Phone" Text="Укажите телефон." /></Helper>
+      </RadzenFormField>
+      <RadzenFormField Text="Факс" Variant="Variant.Text" Style="flex:1;min-width:0;">
+        <ChildContent><RadzenTextBox @bind-Value="Item.Fax" Name="Fax" Style="width:100%;" /></ChildContent>
+        <Helper><RadzenRequiredValidator Component="Fax" Text="Укажите факс." /></Helper>
+      </RadzenFormField>
+    </RadzenStack>
+  </RadzenStack>
+</div>
+
+@code {
+  [Parameter, EditorRequired] public Subdivision Item { get; set; } = default!;
+  [Parameter] public IEnumerable<Classifier> OrganTypes { get; set; } = [];
+  [Parameter] public IEnumerable<Classifier> StatusClassifiers { get; set; } = [];
+  [Parameter] public IEnumerable<Subdivision> Subdivisions { get; set; } = [];
+  [Parameter] public bool ShowParentSelector { get; set; }
+
+  private void OrganTypeChanged(object value)
+  {
+    var selected = value as Classifier;
+    Item.OrganTypeId = selected?.Type;
+    Item.OrganTypeCode = selected?.Code;
+  }
+
+  private void StatusChanged(object value)
+  {
+    var selected = value as Classifier;
+    Item.StatusType = selected?.Type;
+    Item.StatusCode = selected?.Code;
+  }
+}

@@ -11,6 +11,9 @@
   [CascadingParameter] public AccessStateProvider? Provider { get; set; }
   private bool disposed;
   private bool apiManaged;
+  [Inject] protected NotificationService Notifications { get; set; } = default!;
+  private string? lastNotifiedMessage;
+  private NotificationSeverity messageSeverity;
   public void Dispose() => disposed = true;
   private DialogAccessState state = new(false, false, null, () => Task.CompletedTask);
   protected override async Task OnInitializedAsync()
@@ -20,6 +23,18 @@
     if (Provider != null) await Provider.RefreshAsync();
   }
   protected override void OnParametersSet() => UpdateState(Access);
+  protected override void OnAfterRender(bool firstRender)
+  {
+    if (disposed || state.Message == lastNotifiedMessage) return;
+    lastNotifiedMessage = state.Message;
+    if (state.Message == null) return;
+    Notifications.Notify(new NotificationMessage {
+      Severity = messageSeverity,
+      Summary = state.CanView ? "Режим просмотра" : "Доступ",
+      Detail = state.Message,
+      Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+    });
+  }
   private void UpdateState(UserAccessSnapshot? access)
   {
     var view = access?.Has(ReadPermission) == true;
@@ -29,6 +44,8 @@
     state.CanWrite = write;
     state.Message = !view ? "Просмотр недоступен: права доступа изменились."
       : !write ? apiManaged && directoryWrite ? "Данными управляет API. Доступен только просмотр." : "Право редактирования отозвано. Введённые данные сохранены, отправка недоступна." : null;
+    messageSeverity = !view ? NotificationSeverity.Error
+      : apiManaged && directoryWrite ? NotificationSeverity.Info : NotificationSeverity.Warning;
   }
   private async Task RefreshAsync()
   {

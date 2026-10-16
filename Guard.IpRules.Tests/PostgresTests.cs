@@ -54,6 +54,7 @@ internal static class PostgresTests
       var policies = new AccountPolicyService(factory, policyProvider, new AuditStub(), new AccessChangeNotifier(NullLogger<AccessChangeNotifier>.Instance));
       var rootPermissions = new PermissionService(new Authentication(root.Id, factory), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub(), policies);
       var userPermissions = new PermissionService(new Authentication(user.Id, factory), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub(), policies);
+      await UserEditIntegrationTests.RunAsync(factory, rootPermissions, userPermissions, check);
       var rootAccess = new IpManagementAccessService(rootPermissions, new DataAccessScopeService(rootPermissions, factory));
       var userAccess = new IpManagementAccessService(userPermissions, new DataAccessScopeService(userPermissions, factory));
       var rootService = new IpAddressService(factory, rootAccess, NullLogger<IpAddressService>.Instance);
@@ -116,7 +117,7 @@ internal static class PostgresTests
       }));
       check(concurrent.Count(v => v) == 1, "concurrent duplicate insertion has one winner");
       await SignInTests.RunAsync(factory, gate, check);
-      await IpIndexTests.RunAsync(rootService, check);
+      await IpIndexTests.RunAsync(rootService, factory, check);
       await AuthorizationTests.RunAsync(factory, check);
       await RefactorIntegrationTests.RunAsync(factory, check);
       await ApiSynchronizationIntegrationTests.RunAsync(factory, check);

@@ -1,37 +1,8 @@
-<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.IpAddresses.Read" WritePermission="@Guard.Core.Identity.Permissions.IpAddresses.Manage">
-@using Guard.Core.Entities
+@using Guard.Components.Pages.IpAddresses.Components
 @attribute [Authorize]
 
-<EditEntity ReadOnly="@(AccessSnapshot?.Has(Permissions.IpAddresses.Manage) != true)" TItem="IpAddress" Data="@item" ShowSaveButton="@(AccessSnapshot?.Has(Permissions.IpAddresses.Manage) == true)" Submit="@FormSubmit" ShowInfoButton="true"  OnInfoClick="InfoButtonClick" IsLoading="isLoading">
-  <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
-    <RadzenFormField Text="Подразделение" Variant="Variant.Text" Style="width:100%;">
-      <ChildContent>
-        <RadzenDropDown Data="@subdivisions" TextProperty="Name" ValueProperty="Id" AllowClear="true"
-                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                        FilterOperator="StringFilterOperator.Contains" AllowFiltering="true"
-                        style="display: block; width: 100%"
-                        @bind-Value="@item.SubdivisionId" Name="SubdivisionId" />
-      </ChildContent>
-      <Helper><RadzenCustomValidator Component="SubdivisionId" Validator="@(() => UserContext?.IsRoot == true || item.SubdivisionId.HasValue)" Text="Выберите подразделение" /></Helper>
-    </RadzenFormField>
-
-    <RadzenFormField Text="IP-адрес" Variant="Variant.Text" Style="width:100%;">
-      <ChildContent>
-        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Address" Name="IpAddress" Placeholder="192.168.1.1" />
-      </ChildContent>
-      <Helper>
-        <RadzenRequiredValidator Component="IpAddress" Text="Обязательно для заполнения!" />
-        <RadzenCustomValidator Component="IpAddress" Validator="@(() => Guard.Core.Identity.IpAddressRule.TryParse(item.Address, out _))" Text="Введите IPv4, IPv6 или CIDR-подсеть" />
-      </Helper>
-    </RadzenFormField>
-
-    <RadzenFormField Text="Описание / Назначение" Variant="Variant.Text" Style="width:100%">
-      <ChildContent>
-        <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Description" Name="Description" />
-      </ChildContent>
-    </RadzenFormField>
-
-  </RadzenStack>
-</EditEntity>
-@code { [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? AccessSnapshot { get; set; } }
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@Permissions.IpAddresses.Read" WritePermission="@Permissions.IpAddresses.Manage">
+  <IpAddressDialogBody Item="item" Subdivisions="subdivisions" IsRoot="@(UserContext?.IsRoot == true)"
+                       IsLoading="isLoading" IsSaving="isSaving" IsLoaded="isLoaded" ReadOnly="ReadOnly" Submit="FormSubmit"
+                       OnInfoClick="InfoButtonClick" OnCancel="HandleCancelButtonClick" />
 </Guard.Components.Layout.Components.AccessDialog>

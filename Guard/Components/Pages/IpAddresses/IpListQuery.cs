@@ -1,4 +1,7 @@
 using Guard.Core.Entities;
+using Guard.Core.Enums;
+using Guard.Core.Extensions;
+using Guard.Core.Services.Exports;
 using Radzen;
 using Radzen.Blazor;
 using System.Linq.Dynamic.Core;
@@ -13,27 +16,41 @@ public static class IpListQuery
 
   public static Func<IQueryable<IpAddress>, IQueryable<IpAddress>> Capture(RadzenDataFilter<IpAddress> filter)
   {
-    var filters = (filter.Filters ?? []).Select(Clone).ToArray();
-    Validate(filters);
+    var count = 0;
+    var filters = new List<CompositeFilterDescriptor>();
+    foreach (var descriptor in filter.Filters ?? []) filters.Add(Clone(descriptor, 0, ref count));
     var source = Array.Empty<IpAddress>().AsQueryable();
     var expression = source.Where(filters, filter.LogicalFilterOperator, filter.FilterCaseSensitivity).Expression;
     return query => query.Provider.CreateQuery<IpAddress>(new ReplaceSource(source.Expression, query.Expression).Visit(expression)!);
   }
 
-  private static CompositeFilterDescriptor Clone(CompositeFilterDescriptor filter) => new() {
-    Property = filter.Property, FilterProperty = filter.FilterProperty, Type = filter.Type,
-    FilterOperator = filter.FilterOperator, LogicalFilterOperator = filter.LogicalFilterOperator,
-    FilterValue = filter.FilterValue is IEnumerable<string> values ? values.ToArray() : filter.FilterValue,
-    Filters = filter.Filters?.Select(Clone).ToArray()
-  };
-
-  private static void Validate(IEnumerable<CompositeFilterDescriptor> filters)
+  private static CompositeFilterDescriptor Clone(CompositeFilterDescriptor filter, int depth, ref int count)
   {
-    foreach (var filter in filters) {
-      if (!string.IsNullOrEmpty(filter.Property) && !Fields.Contains(filter.Property))
-        throw new ArgumentException("Недопустимое поле фильтра.");
-      if (filter.Filters != null) Validate(filter.Filters);
-    }
+    if (depth > 16 || ++count > 256) throw new ArgumentException("Слишком сложные условия фильтра.");
+    if (!string.IsNullOrEmpty(filter.Property) && !Fields.Contains(filter.Property) || !string.IsNullOrEmpty(filter.FilterProperty))
+      throw new ArgumentException("Недопустимое поле фильтра.");
+    if (filter.FilterOperator is { } operation && !Enum.IsDefined(operation) || !Enum.IsDefined(filter.LogicalFilterOperator))
+      throw new ArgumentException("Недопустимая операция фильтра.");
+    if (filter.FilterValue is not null and not string and not IEnumerable<string>)
+      throw new ArgumentException("Недопустимое значение фильтра.");
+    var children = new List<CompositeFilterDescriptor>();
+    foreach (var child in filter.Filters ?? []) children.Add(Clone(child, depth + 1, ref count));
+    return new() {
+      Property = filter.Property, Type = filter.Type, FilterOperator = filter.FilterOperator,
+      LogicalFilterOperator = filter.LogicalFilterOperator,
+      FilterValue = filter.FilterValue is IEnumerable<string> values ? values.ToArray() : filter.FilterValue,
+      Filters = filter.Filters == null ? null : children.ToArray()
+    };
+  }
+
+  public static IQueryable<IpAddress> ApplyVisibility(IQueryable<IpAddress> query, DataViewMode mode,
+    bool allRecords, bool isRoot, string? ownPath, SubdivisionHierarchyMode hierarchy)
+  {
+    if (!Enum.IsDefined(mode) || !Enum.IsDefined(hierarchy)) throw new ArgumentException("Неизвестный режим отображения.");
+    if (allRecords && !isRoot) throw new UnauthorizedAccessException("Все IP-адреса доступны только Root.");
+    query = query.FilterByMode(mode);
+    if (allRecords) return query;
+    return !ExportAccess.ValidPath(ownPath) ? query.Where(p => false) : query.FilterBySubdivision(ownPath, hierarchy);
   }
 
   public static IQueryable<IpAddress> Sort(IQueryable<IpAddress> query, string? orderBy)

@@ -20,6 +20,15 @@ internal static class BrowserTestHost
       if (!(await users.UpdateAsync(root)).Succeeded || !(await users.AddPasswordAsync(root, "BrowserRoot123!")).Succeeded)
         throw new InvalidOperationException("Не удалось подготовить тестовый Root.");
     }
+    await using (var db = await factory.CreateDbContextAsync()) {
+      db.IpAddresses.AddRange(Enumerable.Range(1, 25).Select(n => new IpAddress {
+        Address = $"203.0.113.{n}", Description = $"Проверка пагинации {n:00}", CreatedBy = "root"
+      }));
+      db.IpAddresses.AddRange(
+        new IpAddress { Address = "203.0.113.101", Description = "Архивная запись", Status = Guard.Core.Enums.Status.Archived, CreatedBy = "root" },
+        new IpAddress { Address = "203.0.113.102", Description = "Удалённая запись", Status = Guard.Core.Enums.Status.Deleted, CreatedBy = "root" });
+      await db.SaveChangesAsync();
+    }
     var start = new ProcessStartInfo("dotnet") {
       UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
     };

@@ -79,10 +79,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
   private bool HasDirectoryChanges() => ChangeTracker.Entries().Any(e =>
     e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted &&
-    (e.Entity is Personal or Subdivision or Classifier || e.Metadata.GetTableName() == "PersonalIpAddresses" ||
-      e.Entity is ApplicationUser user && (e.State is EntityState.Added or EntityState.Deleted && user.PersonalId.HasValue ||
-        e.State == EntityState.Modified && !Equals(e.Property(nameof(ApplicationUser.PersonalId)).OriginalValue,
-          e.Property(nameof(ApplicationUser.PersonalId)).CurrentValue))));
+    // Учётные записи и их привязки управляются локально, в том числе в режиме API.
+    (e.Entity is Personal or Subdivision or Classifier || e.Metadata.GetTableName() == "PersonalIpAddresses"));
 
   private void PrepareVersions()
   {
