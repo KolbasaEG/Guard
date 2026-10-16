@@ -207,7 +207,7 @@ public class SubdivisionService : ISubdivisionService
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
     ArgumentNullException.ThrowIfNull(subdivision);
     var clean = new Subdivision { Id = subdivision.Id, ParentId = subdivision.ParentId, SubdivisionId = subdivision.SubdivisionId, ParentSubdivisionId = subdivision.ParentSubdivisionId };
-    SubdivisionFieldsDto.From(subdivision).ApplyTo(clean); subdivision = clean;
+    EntityWriteMapping.From(subdivision).ApplyTo(clean); subdivision = clean;
     EntityInputValidation.Validate(subdivision);
     await DirectoryManagementService.RequireLocalAsync(_uow, ct);
 
@@ -287,7 +287,7 @@ public class SubdivisionService : ISubdivisionService
     subdivision.Status = existing.Status;
     EntityInputValidation.CheckVersion(existing.Version, subdivision.Version);
     await EntityReferences.SubdivisionAsync(_uow, subdivision, existing, ct);
-    SubdivisionFieldsDto.From(subdivision).ApplyTo(existing);
+    EntityWriteMapping.From(subdivision).ApplyTo(existing);
     existing.UpdatedAt = DateTime.UtcNow;
     await _uow.SaveChangesAsync(ct);
 

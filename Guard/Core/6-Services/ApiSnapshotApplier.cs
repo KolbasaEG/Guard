@@ -91,7 +91,7 @@ public static class ApiSnapshotApplier
         entity = new Subdivision { ExternalId = dto.Id, Name = dto.Name };
         db.Subdivisions.Add(entity); subdivisions.Add(entity); localMap.Add(dto.Id, entity); run.Added++;
       }
-      else if (SubdivisionFieldsDto.From(entity) != dto.Fields || entity.SourceUpdatedAt != SourceTime(dto.UpdatedAt) ||
+      else if (EntityWriteMapping.From(entity) != dto.Fields || entity.SourceUpdatedAt != SourceTime(dto.UpdatedAt) ||
         entity.ExternalParentId != dto.ParentId) run.Updated++;
       dto.Fields.ApplyTo(entity); entity.SourceUpdatedAt = SourceTime(dto.UpdatedAt);
       entity.ExternalParentId = dto.ParentId;
@@ -122,7 +122,7 @@ public static class ApiSnapshotApplier
         entity = new Personal { ExternalId = dto.Id, ImportedFromApi = true };
         db.Personals.Add(entity); personalMap.Add(dto.Id, entity); run.Added++;
       }
-      else if (PersonalFieldsDto.From(entity) != fields || entity.SourceUpdatedAt != SourceTime(dto.UpdatedAt) ||
+      else if (EntityWriteMapping.From(entity) != fields || entity.SourceUpdatedAt != SourceTime(dto.UpdatedAt) ||
         entity.PersonalSubdivisionId != dto.SubdivisionId) run.Updated++;
       fields.ApplyTo(entity); entity.ImportedFromApi = true;
       entity.PersonalSubdivisionId = dto.SubdivisionId; entity.SourceUpdatedAt = SourceTime(dto.UpdatedAt);

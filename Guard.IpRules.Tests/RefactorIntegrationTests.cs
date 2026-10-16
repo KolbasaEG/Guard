@@ -58,9 +58,9 @@ internal static class RefactorIntegrationTests
         "subdivision DTO move preserves agreement of parent and materialized path");
     }
     var original = await people.GetByIdAsync(personal.Id) ?? throw new Exception("missing test employee");
-    await people.UpdateFromDtoAsync(new(original.Id, original.Version, PersonalFieldsDto.From(original) with { FirstName = "Changed" }));
+    await people.UpdateFromDtoAsync(new(original.Id, original.Version, EntityWriteMapping.From(original) with { FirstName = "Changed" }));
     await PostgresTests.ThrowsAsync<EntityConflictException>(() => people.UpdateFromDtoAsync(
-      new(original.Id, original.Version, PersonalFieldsDto.From(original))), check, "stale command cannot overwrite newer employee fields");
+      new(original.Id, original.Version, EntityWriteMapping.From(original))), check, "stale command cannot overwrite newer employee fields");
     await using (var first = await writes.CreateAsync())
     await using (var second = await writes.CreateAsync()) {
       var a = (await first.BaseEntityRepository<Personal>().GetByIdAsync(personal.Id))!;

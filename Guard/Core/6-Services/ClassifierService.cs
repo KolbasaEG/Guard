@@ -132,7 +132,7 @@ public class ClassifierService : IClassifierService
     await _permissions.RequireAsync(Permissions.Classifiers.Manage, ct);
     ArgumentNullException.ThrowIfNull(classifier);
     var clean = new Classifier { Id = classifier.Id };
-    ClassifierFieldsDto.From(classifier).ApplyTo(clean); classifier = clean;
+    EntityWriteMapping.From(classifier).ApplyTo(clean); classifier = clean;
     EntityInputValidation.Validate(classifier);
     await DirectoryManagementService.RequireLocalAsync(_uow, ct);
 
@@ -169,7 +169,7 @@ public class ClassifierService : IClassifierService
     var current = await GetRequiredForWriteAsync(_uow, classifier.Id, ct);
     EntityInputValidation.CheckVersion(current.Version, classifier.Version);
     await RequireUniqueCodeAsync(_uow, classifier, ct);
-    ClassifierFieldsDto.From(classifier).ApplyTo(current);
+    EntityWriteMapping.From(classifier).ApplyTo(current);
     current.UpdatedAt = DateTime.UtcNow;
     await _uow.SaveChangesAsync(ct);
 

@@ -32,7 +32,7 @@ internal static class PersonalEditorIntegrationTests
         NullLogger<PersonalService>.Instance, permissions, scopes, factory);
       var result = await service.GetEditorAsync(person.Id);
       check(result != null && result.Id == person.Id && result.Version == person.Version &&
-        result.PersonalNumber == person.PersonalNumber && result.ToFields() == PersonalFieldsDto.From(person),
+        result.PersonalNumber == person.PersonalNumber && result.ToFields() == EntityWriteMapping.From(person),
         "personal editor SQL projection preserves editable fields and concurrency version");
       check(await service.GetEditorAsync(outsider.Id) == null, "personal editor cannot read foreign employee");
       check(await service.GetEditorAsync(Guid.NewGuid()) == null, "personal editor returns missing employee without graph");

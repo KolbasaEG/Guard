@@ -162,7 +162,7 @@ public class PersonalService : IPersonalService, IPersonalEditorService
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
     ArgumentNullException.ThrowIfNull(Personal);
     var clean = new Personal { Id = Personal.Id };
-    PersonalFieldsDto.From(Personal).ApplyTo(clean); Personal = clean;
+    EntityWriteMapping.From(Personal).ApplyTo(clean); Personal = clean;
     EntityInputValidation.Validate(Personal);
     await DirectoryManagementService.RequireLocalAsync(_uow, ct);
 
@@ -195,7 +195,7 @@ public class PersonalService : IPersonalService, IPersonalEditorService
 
     EntityInputValidation.CheckVersion(current.Version, Personal.Version);
     await EntityReferences.PersonalAsync(_uow, Personal, current, ct);
-    PersonalFieldsDto.From(Personal).ApplyTo(current);
+    EntityWriteMapping.From(Personal).ApplyTo(current);
     current.UpdatedAt = DateTime.UtcNow;
     await _uow.SaveChangesAsync(ct);
 

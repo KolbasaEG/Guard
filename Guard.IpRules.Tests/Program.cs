@@ -38,6 +38,7 @@ AccountPolicyTests.Run(Check);
 await AccountPolicyBoundaryTests.RunAsync(Check);
 await LoginLockoutTests.RunAsync(Check);
 EntityStatusTests.Run(Check);
+EntityWriteMappingTests.Run(Check);
 IpSearchFilterTests.Run(Check);
 SearchFilterContractTests.Run(Check);
 await IpSearchUiTests.RunAsync(Check);
