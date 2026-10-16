@@ -6,7 +6,6 @@ using Guard.Core.Services;
 using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.EntityFrameworkCore;
 
 using Radzen;
 using Radzen.Blazor;
@@ -27,7 +26,6 @@ namespace Guard.Components.Pages.IpAddresses
     int count;
     [CascadingParameter] public Guard.Core.Services.DTOs.UserAccessSnapshot? AccessSnapshot { get; set; }
     protected bool isEditor => AccessSnapshot?.Has(Permissions.IpAddresses.Manage) == true;
-    [Inject] protected IIpManagementAccessService Access { get; set; } = default!;
     protected bool isLoading = false;
     private bool allRecords;
     protected bool ShowAll => AccessSnapshot?.IsRoot == true && allRecords;
@@ -39,7 +37,6 @@ namespace Guard.Components.Pages.IpAddresses
     private CancellationTokenSource _cts = new();
     private CancellationTokenSource? _loadDataCts;
 
-    protected IEnumerable<IpAddress> data = [];
     protected IEnumerable<IpAddressDto> filteredData = [];
     protected RadzenDataGrid<IpAddressDto> grid = default!;
     protected RadzenDataFilter<IpAddress> dataFilter = default!;
@@ -47,7 +44,7 @@ namespace Guard.Components.Pages.IpAddresses
 
     IEnumerable<string>? itemsSubdivision;
     IEnumerable<string>? selectedItemsSubdivision;
-    private Func<IQueryable<IpAddress>, IQueryable<IpAddress>> appliedFilter = query => query;
+    private ExportFilter? appliedFilter;
     private ExportFilter? exportFilter;
     private string? exportSort;
     [Inject] protected Guard.Components.Library.BrowserTimeService ExportTime { get; set; } = default!;
@@ -108,7 +105,6 @@ namespace Guard.Components.Pages.IpAddresses
       var filter = appliedFilter;
       var mode = currentMode;
       var hierarchy = hierarchyMode;
-      var path = UserContext?.Subdivision?.Path;
       var showAll = ShowAll;
       var skip = args.Skip ?? 0;
       var take = args.Top ?? 20;
@@ -116,30 +112,10 @@ namespace Guard.Components.Pages.IpAddresses
       isLoading = true;
       try
       {
-        if (skip < 0 || take is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
-        var initialAccess = await Access.GetScopeAsync(false, ct);
-        if (showAll && !initialAccess.IsRoot) throw new UnauthorizedAccessException("Все IP-адреса доступны только Root.");
-        var (items, totalCount) = await IpAddressService.QueryIpAddressesAsync(async query =>
-        {
-          query = IpListQuery.ApplyVisibility(query, mode, showAll, initialAccess.IsRoot, path, hierarchy);
-          query = filter(query);
-          var total = await query.CountAsync(ct);
-          var page = await IpListQuery.Sort(query, orderBy).Skip(skip).Take(take)
-            .Select(p => new IpAddressDto {
-              Id = p.Id, Address = p.Address, Description = p.Description, Status = (int)p.Status,
-              SubdivisionName = p.Subdivision != null ? p.Subdivision.Name : null
-            }).ToListAsync(ct);
-          return (page, total);
-        }, ct);
+        var result = await IpAddressService.SearchAsync(new(mode, hierarchy, showAll, skip, take, orderBy, filter), ct);
         ct.ThrowIfCancellationRequested();
-        // Повторная серверная проверка перед показом результата.
-        var finalAccess = await Access.GetScopeAsync(false, ct);
-        ct.ThrowIfCancellationRequested();
-        if (initialAccess.UserId != finalAccess.UserId || initialAccess.IsRoot != finalAccess.IsRoot ||
-            !initialAccess.SubdivisionIds.SetEquals(finalAccess.SubdivisionIds))
-          throw new UnauthorizedAccessException("Область доступа изменилась во время загрузки.");
         if (disposed || !ReferenceEquals(_loadDataCts, request)) return;
-        filteredData = items; count = totalCount;
+        filteredData = result.Items; count = result.Count;
       }
       catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
       catch (Exception ex)
@@ -264,9 +240,7 @@ namespace Guard.Components.Pages.IpAddresses
     {
       try {
         var candidate = IpListQuery.Capture(dataFilter);
-        var snapshot = ExportFilters.Capture(dataFilter.Filters ?? [], dataFilter.LogicalFilterOperator);
-        _ = ExportFilters.Apply(Array.Empty<IpAddress>().AsQueryable(), snapshot, ExportQueries.IpFields);
-        appliedFilter = candidate; exportFilter = snapshot;
+        appliedFilter = candidate; exportFilter = candidate;
         await ResetPageAsync();
       } catch (ArgumentException ex) {
         Logger.LogWarning(ex, "Некорректные условия фильтра IP");

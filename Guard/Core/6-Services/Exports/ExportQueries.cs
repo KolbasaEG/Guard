@@ -76,6 +76,6 @@ public static class ExportQueries
     if (!scope.User.IsRoot) q = q.Where(p => p.SubdivisionId.HasValue && scope.AllowedIds.Contains(p.SubdivisionId.Value));
     if (!request.AllSubdivisions) q = !ExportAccess.ValidPath(scope.OwnPath) ? q.Where(p => false) :
       request.IncludeChildren ? q.Where(p => p.Subdivision != null && p.Subdivision.Path.StartsWith(scope.OwnPath!)) : q.Where(p => p.Subdivision != null && p.Subdivision.Path == scope.OwnPath);
-    return Sort(ExportFilters.Apply(Statuses(q, request.Mode), request.Filter, IpFields), request.OrderBy, IpFields);
+    return IpSearchQuery.Sort(IpSearchQuery.Filter(Statuses(q, request.Mode), request.Filter), request.OrderBy);
   }
 }

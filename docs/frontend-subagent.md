@@ -35,7 +35,8 @@
 | --- | --- | --- |
 | [Page.razor](../Guard/Components/Pages/IpAddresses/Page.razor) | Маршрут, политика, разрешённое содержимое | Отделяй вход в раздел от списка |
 | [Index.razor](../Guard/Components/Pages/IpAddresses/Index.razor) и [code-behind](../Guard/Components/Pages/IpAddresses/Index.razor.cs) | Таблица DTO, фильтр сущности, диалоги и состояние списка | Серверная пагинация, явное применение фильтра, независимые действия строки |
-| [IpListQuery.cs](../Guard/Components/Pages/IpAddresses/IpListQuery.cs) | Снимок условий, область отображения, разрешённая сортировка | Ограничивай поля и операции; добавляй уникальный ключ сортировки |
+| [IpListQuery.cs](../Guard/Components/Pages/IpAddresses/IpListQuery.cs) | Web-адаптер Radzen в независимый снимок условий | Копируй вложенные условия и значения до вызова поиска |
+| [IpSearchQuery.cs](../Guard/Core/6-Services/IpSearchQuery.cs) | Серверные фильтр, область отображения и сортировка | Проверяй поля/операции на сервере; добавляй уникальный ключ сортировки |
 | [Add](../Guard/Components/Pages/IpAddresses/Add.razor.cs) и [Edit](../Guard/Components/Pages/IpAddresses/Edit.razor.cs) | Загрузка, вызов сервиса, отмена, результат диалога | Состояние и операции принадлежат владельцу диалога |
 | [IpAddressFields](../Guard/Components/Pages/IpAddresses/Components/IpAddressFields.razor) | Общие поля создания и редактирования | Параметры и валидация без обращения к БД |
 | [IpAddressDetails](../Guard/Components/Pages/IpAddresses/Components/IpAddressDetails.razor) | Компактное чтение данных | Отдельное представление просмотра |
@@ -114,9 +115,9 @@ protected RadzenDataFilter<EntityFilterFields> dataFilter = default!;
 и примени `Items + Count`. Сервер повторно проверяет поля, операции, типы и
 сложность условий. Проекция DTO и материализация выполняются до закрытия
 контекста на сервере. Не загружай полные графы ради таблицы.
-Существующие query-делегаты временно поддерживаются до переноса их потребителей;
-не добавляй их в новые API. `IpAddresses` остаётся визуальным образцом, его
-текущий EF-запрос в code-behind не является целевым способом загрузки.
+Существующие query-делегаты других списков временно поддерживаются до переноса
+их потребителей; не добавляй их в новые API. `IpAddresses` уже вызывает
+`IIpAddressService.SearchAsync`; его code-behind не строит EF-запрос.
 Последовательность переноса описана в [плане](architecture-transition-plan.md).
 
 - У фильтра `Auto="false"` и одна кнопка «Применить». До её нажатия изменения

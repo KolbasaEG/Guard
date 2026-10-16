@@ -25,20 +25,20 @@ internal static class IpAddressReferenceTests
       new IpAddress { Address = "192.0.2.5", Subdivision = own, Status = Status.Archived }
     }.AsQueryable();
     IQueryable<IpAddress> Visible(bool all, string? path, SubdivisionHierarchyMode hierarchy) =>
-      IpListQuery.ApplyVisibility(rows, DataViewMode.Active, all, true, path, hierarchy);
+      IpSearchQuery.ApplyVisibility(rows, DataViewMode.Active, all, true, path, hierarchy);
     check(Visible(true, null, SubdivisionHierarchyMode.CurrentOnly).Count() == 5, "Root all-IP mode includes common and blocked addresses without own subdivision");
     check(Visible(false, "/1/", SubdivisionHierarchyMode.CurrentOnly).Count() == 2, "Root own-IP mode narrows full server access");
     check(Visible(false, "/1/", SubdivisionHierarchyMode.IncludeChildren).Count() == 3, "IP descendants mode excludes common and foreign addresses");
     foreach (var path in new string?[] { null, "", "/", "/oops/" })
       check(!Visible(false, path, SubdivisionHierarchyMode.IncludeChildren).Any(), "invalid own path produces empty IP display scope");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => Task.FromResult(
-      IpListQuery.ApplyVisibility(rows, DataViewMode.Active, true, false, "/1/", SubdivisionHierarchyMode.CurrentOnly)), check, "operator cannot request all-IP display scope");
+      IpSearchQuery.ApplyVisibility(rows, DataViewMode.Active, true, false, "/1/", SubdivisionHierarchyMode.CurrentOnly)), check, "operator cannot request all-IP display scope");
 #pragma warning disable BL0005
     var condition = new CompositeFilterDescriptor { Property = "Address", FilterOperator = FilterOperator.Contains, FilterValue = "192.0.2." };
     var filter = new RadzenDataFilter<IpAddress> { Filters = [condition] };
     var applied = IpListQuery.Capture(filter);
     condition.FilterValue = "2001:";
-    check(applied(rows).Count() == 5, "editing IP filter leaves its applied snapshot unchanged");
+    check(IpSearchQuery.Filter(rows, applied).Count() == 5, "editing IP filter leaves its applied snapshot unchanged");
     var cyclic = new CompositeFilterDescriptor(); cyclic.Filters = [cyclic]; filter.Filters = [cyclic];
     await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.FromResult(IpListQuery.Capture(filter)), check, "cyclic IP filter is bounded");
 #pragma warning restore BL0005

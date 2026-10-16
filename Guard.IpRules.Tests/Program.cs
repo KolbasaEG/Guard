@@ -37,6 +37,8 @@ await AccessEventTests.RunAsync(Check);
 AccountPolicyTests.Run(Check);
 await LoginLockoutTests.RunAsync(Check);
 EntityStatusTests.Run(Check);
+IpSearchFilterTests.Run(Check);
+await IpSearchUiTests.RunAsync(Check);
 await RefactorTests.RunAsync(Check);
 await ExportTests.RunAsync(Check);
 await ApiSynchronizationTests.RunAsync(Check);

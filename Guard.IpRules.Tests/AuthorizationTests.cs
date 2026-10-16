@@ -111,6 +111,8 @@ internal static class AuthorizationTests
     var viewer=await permissions.GetCurrentAsync();
     check(viewer.Has(Permissions.Personals.Read) && !viewer.Has(Permissions.Personals.ReadDetails),"list and details permissions distinct");
     check(!viewer.Has(Permissions.Roles.Manage),"individual permission cannot elevate user");
+    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => scope.ServiceProvider.GetRequiredService<IIpAddressService>().SearchAsync(new()),
+      check, "IP SearchAsync denies callers without role-based read permission");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>roles.GetAsync(viewerId),check,"non-Root role management denied");
     var accessScope=await scopes.GetAsync();
     check(accessScope.SubdivisionIds.Count==2,"scope includes own subdivision and descendant");

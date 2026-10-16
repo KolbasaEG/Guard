@@ -21,20 +21,20 @@ internal static class IpIndexTests
     var rootScope = new ExportAccessScope(new("root", true, []), null, null, [], "test");
     foreach (var mode in Enum.GetValues<DataViewMode>())
     {
-      var listIds = await service.QueryIpAddressesAsync(q => IpListQuery.ApplyVisibility(q, mode, true, true, null,
+      var listIds = await service.QueryIpAddressesAsync(q => IpSearchQuery.ApplyVisibility(q, mode, true, true, null,
         SubdivisionHierarchyMode.CurrentOnly).OrderBy(ip => ip.Id).Select(ip => ip.Id).ToListAsync());
       var exportIds = await ExportQueries.IpAddresses(db, new(ExportArea.IpAddresses, ExportFormat.Excel, mode, AllSubdivisions: true), rootScope)
         .OrderBy(ip => ip.Id).Select(ip => ip.Id).ToListAsync();
       check(listIds.SequenceEqual(exportIds), "Root all-IP list and export contain identical records for each status mode");
     }
-    var allRows = await service.QueryIpAddressesAsync(q => IpListQuery.ApplyVisibility(q, DataViewMode.Active, true, true, null,
+    var allRows = await service.QueryIpAddressesAsync(q => IpSearchQuery.ApplyVisibility(q, DataViewMode.Active, true, true, null,
       SubdivisionHierarchyMode.CurrentOnly).ToListAsync());
     check(allRows.Any(ip => ip.SubdivisionId == null), "Root all-IP SQL query includes common addresses");
     var ownPath = await db.Subdivisions.OrderBy(s => s.Id).Select(s => s.Path).FirstAsync();
     foreach (var hierarchy in Enum.GetValues<SubdivisionHierarchyMode>())
     {
       var scope = rootScope with { OwnPath = ownPath };
-      var listIds = await service.QueryIpAddressesAsync(q => IpListQuery.ApplyVisibility(q, DataViewMode.Active, false, true, ownPath, hierarchy)
+      var listIds = await service.QueryIpAddressesAsync(q => IpSearchQuery.ApplyVisibility(q, DataViewMode.Active, false, true, ownPath, hierarchy)
         .OrderBy(ip => ip.Id).Select(ip => ip.Id).ToListAsync());
       var exportIds = await ExportQueries.IpAddresses(db, new(ExportArea.IpAddresses, ExportFormat.Excel,
         IncludeChildren: hierarchy == SubdivisionHierarchyMode.IncludeChildren), scope).OrderBy(ip => ip.Id).Select(ip => ip.Id).ToListAsync();
@@ -46,18 +46,18 @@ internal static class IpIndexTests
     var snapshot = IpListQuery.Capture(filter);
     descriptor.FilterValue = "not-an-address";
     var result = await service.QueryIpAddressesAsync(async query => {
-      query = snapshot(query);
+      query = IpSearchQuery.Filter(query, snapshot);
       var count = await query.CountAsync();
-      var rows = await IpListQuery.Sort(query, "Subdivision.Name asc, Address desc").Skip(0).Take(1)
+      var rows = await IpSearchQuery.Sort(query, "Subdivision.Name asc, Address desc").Skip(0).Take(1)
         .Select(p => new IpAddressDto { Id=p.Id, Address=p.Address, Status=(int)p.Status,
           SubdivisionName=p.Subdivision != null ? p.Subdivision.Name : null }).ToListAsync();
       return (count, rows);
     });
     check(result.count > 0 && result.rows.Count == 1 && result.rows[0].Address.Contains("192.168."), "IP entity filter snapshot executes in SQL before DTO pagination");
     check(result.rows[0].SubdivisionName != null, "navigation sort and DTO projection execute without loading entity graph");
-    check(await service.QueryIpAddressesAsync(q => IpListQuery.Capture(filter)(q).CountAsync()) == 0,
+    check(await service.QueryIpAddressesAsync(q => IpSearchQuery.Filter(q, IpListQuery.Capture(filter)).CountAsync()) == 0,
       "new filter snapshot sees changed condition; prior snapshot remains unchanged");
-    await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.FromResult(IpListQuery.Sort(Array.Empty<IpAddress>().AsQueryable(), "Personals.Count desc")), check, "IP sort rejects fields outside list contract");
+    await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.FromResult(IpSearchQuery.Sort(Array.Empty<IpAddress>().AsQueryable(), "Personals.Count desc")), check, "IP sort rejects fields outside list contract");
     descriptor.Property = "Personals";
     await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.FromResult(IpListQuery.Capture(filter)), check, "IP filter rejects fields outside list contract");
 #pragma warning disable BL0005
@@ -65,20 +65,20 @@ internal static class IpIndexTests
     filter.Filters = [new() { Property="Address", FilterOperator=FilterOperator.Contains, FilterValue="192.168." },
       new() { Property="Address", FilterOperator=FilterOperator.Contains, FilterValue="2001:" }];
     var either = IpListQuery.Capture(filter);
-    var alternatives = await service.QueryIpAddressesAsync(q => either(q).Select(ip => ip.Address).ToListAsync());
+    var alternatives = await service.QueryIpAddressesAsync(q => IpSearchQuery.Filter(q, either).Select(ip => ip.Address).ToListAsync());
     check(alternatives.Any(a => a.Contains("192.168.")) && alternatives.Any(a => a.Contains("2001:")), "OR entity filters execute in PostgreSQL");
     filter.LogicalFilterOperator = LogicalFilterOperator.And;
     var both = IpListQuery.Capture(filter);
-    check(await service.QueryIpAddressesAsync(q => both(q).CountAsync()) == 0, "AND applies both conditions before count");
+    check(await service.QueryIpAddressesAsync(q => IpSearchQuery.Filter(q, both).CountAsync()) == 0, "AND applies both conditions before count");
     var names = new[] { "Own" };
     filter.Filters = [new() { Property="Subdivision.Name", Type=typeof(IEnumerable<string>), FilterOperator=FilterOperator.In, FilterValue=names }];
     var subdivisions = IpListQuery.Capture(filter);
     names[0] = "Other";
-    var ownRows = await service.QueryIpAddressesAsync(q => subdivisions(q).Select(ip => ip.Subdivision!.Name).ToListAsync());
+    var ownRows = await service.QueryIpAddressesAsync(q => IpSearchQuery.Filter(q, subdivisions).Select(ip => ip.Subdivision!.Name).ToListAsync());
     check(ownRows.Count > 0 && ownRows.All(name => name == "Own"), "subdivision IN filter copies selection and executes in SQL");
     filter.Filters = [];
     var clear = IpListQuery.Capture(filter);
-    check(await service.QueryIpAddressesAsync(q => clear(q).CountAsync()) == await service.QueryIpAddressesAsync(q => q.CountAsync()), "clear snapshot restores all authorized records");
+    check(await service.QueryIpAddressesAsync(q => IpSearchQuery.Filter(q, clear).CountAsync()) == await service.QueryIpAddressesAsync(q => q.CountAsync()), "clear snapshot restores all authorized records");
 #pragma warning restore BL0005
   }
 }

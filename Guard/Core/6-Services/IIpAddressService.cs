@@ -8,6 +8,7 @@ namespace Guard.Core.Services;
 /// </summary>
 public interface IIpAddressService
 {
+  Task<Guard.Core.Services.DTOs.IpSearchResult> SearchAsync(Guard.Core.Services.DTOs.IpSearchRequest request, CancellationToken ct = default);
   // ==================== Read Operations ====================
 
   /// <summary>

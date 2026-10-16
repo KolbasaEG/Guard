@@ -10,6 +10,34 @@ namespace Guard.Core.Services;
 public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
     IIpManagementAccessService access, ILogger<IpAddressService> logger) : IIpAddressService
 {
+  public async Task<Guard.Core.Services.DTOs.IpSearchResult> SearchAsync(Guard.Core.Services.DTOs.IpSearchRequest request, CancellationToken ct = default)
+  {
+    ArgumentNullException.ThrowIfNull(request);
+    if (request.Skip < 0 || request.Take is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
+    IpSearchQuery.ValidateFilter(request.Filter);
+    var initial = await access.GetScopeAsync(false, ct);
+    await using var db = await factory.CreateDbContextAsync(ct);
+    var ownPath = await db.Users.Where(u => u.Id == initial.UserId)
+      .Select(u => u.Personal == null || u.Personal.Subdivision == null ? null : u.Personal.Subdivision.Path).SingleOrDefaultAsync(ct);
+    var query = IpSearchQuery.ApplyVisibility(Accessible(db.IpAddresses.AsNoTracking(), initial), request.Mode,
+      request.AllSubdivisions, initial.IsRoot, ownPath, request.Hierarchy);
+    query = IpSearchQuery.Filter(query, request.Filter);
+    var sorted = IpSearchQuery.Sort(query, request.OrderBy);
+    var total = await query.CountAsync(ct);
+    var items = await sorted.Skip(request.Skip).Take(request.Take).Select(p => new Guard.Core.Services.DTOs.IpAddressDto {
+      Id = p.Id, Address = p.Address, Description = p.Description, Status = (int)p.Status,
+      SubdivisionName = p.Subdivision == null ? null : p.Subdivision.Name
+    }).ToListAsync(ct);
+    var final = await access.GetScopeAsync(false, ct);
+    var finalPath = await db.Users.Where(u => u.Id == final.UserId)
+      .Select(u => u.Personal == null || u.Personal.Subdivision == null ? null : u.Personal.Subdivision.Path).SingleOrDefaultAsync(ct);
+    ct.ThrowIfCancellationRequested();
+    if (initial.UserId != final.UserId || initial.IsRoot != final.IsRoot ||
+        !initial.SubdivisionIds.SetEquals(final.SubdivisionIds) || ownPath != finalPath)
+      throw new UnauthorizedAccessException("Область доступа изменилась во время загрузки.");
+    return new(items, total);
+  }
+
   private static IQueryable<IpAddress> Accessible(IQueryable<IpAddress> q, IpManagementScope scope) =>
       scope.IsRoot ? q : q.Where(ip => ip.SubdivisionId.HasValue && scope.SubdivisionIds.Contains(ip.SubdivisionId.Value));
 

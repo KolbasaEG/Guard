@@ -9,6 +9,7 @@ using Guard.Core.Services.Exports;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging.Abstractions;
 
 // Отдельный, явно включаемый замер. Не входит в обычные проверки.
 internal static class ArchitectureBenchmark
@@ -66,6 +67,10 @@ internal static class ArchitectureBenchmark
     Console.WriteLine($"Database bytes: {await db.Database.SqlQueryRaw<long>("SELECT pg_database_size(current_database()) AS \"Value\"").SingleAsync(ct)}");
 
     var root = new UserAccessSnapshot("benchmark", true, []);
+    db.Users.Add(new ApplicationUser { Id = root.UserId, UserName = "benchmark",
+      PersonalId = await db.Personals.OrderBy(p => p.PersonalId).Select(p => p.Id).FirstAsync(ct) });
+    await db.SaveChangesAsync(ct);
+    var ipSearch = new IpAddressService(factory, new BenchmarkAccess(root.UserId), NullLogger<IpAddressService>.Instance);
     var rootScope = new DataAccessScope(root.UserId, true, []);
     foreach (var skip in new[] { 0, 100000 }) {
       await MeasureAsync($"personals root skip={skip}", async () => {
@@ -79,14 +84,14 @@ internal static class ArchitectureBenchmark
     }
     foreach (var ownOnly in new[] { false, true }) {
       await MeasureAsync($"IP count+page ownOnly={ownOnly}", async () => {
-        var q = db.IpAddresses.AsNoTracking().Where(p => p.Status == Status.Inserted || p.Status == Status.Modified || p.Status == Status.Blocked);
-        if (ownOnly) q = q.Where(p => p.SubdivisionId == subdivisions[0].Id);
-        var count = await q.CountAsync(ct);
-        var rows = await q.OrderBy(p => p.Address).ThenBy(p => p.Id).Take(20)
-          .Select(p => new { p.Id, p.Address, Subdivision = p.Subdivision!.Name, p.Status }).ToListAsync(ct);
-        check(count == (ownOnly ? 10000 : 10000000) && rows.Count == 20, "benchmark IP page");
+        var result = await ipSearch.SearchAsync(new(AllSubdivisions: !ownOnly, OrderBy: "Address asc"), ct);
+        check(result.Count == (ownOnly ? 10000 : 10000000) && result.Items.Count == 20, "benchmark IP search page");
       });
     }
+    await MeasureAsync("IP SearchAsync default sort all", async () => {
+      var result = await ipSearch.SearchAsync(new(AllSubdivisions: true), ct);
+      check(result.Count == 10000000 && result.Items.Count == 20, "benchmark IP default sort page");
+    });
 
     var tempRoot = Path.Combine(Path.GetTempPath(), "guard-benchmark-" + Guid.NewGuid().ToString("N"));
     var options = Options.Create(new ExportOptions { Directory = "exports", RowsPerPart = 50000 });
@@ -122,5 +127,11 @@ internal static class ArchitectureBenchmark
     }
     var warm = samples.Skip(1).Order().ToArray();
     Console.WriteLine($"{name}: first={samples[0].ToString("F1", CultureInfo.InvariantCulture)} ms; warm median={warm[2].ToString("F1", CultureInfo.InvariantCulture)} ms; warm max={warm[^1].ToString("F1", CultureInfo.InvariantCulture)} ms");
+  }
+
+  private sealed class BenchmarkAccess(string userId) : IIpManagementAccessService
+  {
+    public Task<IpManagementScope> GetScopeAsync(bool write, CancellationToken ct = default) =>
+      Task.FromResult(new IpManagementScope(userId, true, []));
   }
 }
