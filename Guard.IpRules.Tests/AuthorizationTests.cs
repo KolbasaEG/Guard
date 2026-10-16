@@ -109,6 +109,7 @@ internal static class AuthorizationTests
     await PostgresTests.ThrowsAsync<InvalidOperationException>(()=>roles.SetUserRolesAsync("root",[],rootAssignments.Version),check,"last Root cannot be removed");
     var viewerId=await roles.SaveAsync(new(){Name="Viewer",Permissions=[Permissions.Personals.Read]});
     var exporterId=await roles.SaveAsync(new(){Name="Exporter",Permissions=[Permissions.Personals.Read,Permissions.Personals.Export]});
+    await RoleInputSnapshotTests.RunAsync(scope.ServiceProvider, check);
     var legacyRoleId = await roles.SaveAsync(new() { Name = "Legacy synchronization", Permissions = [Permissions.Subdivisions.Read] });
     await using (var db = await factory.CreateDbContextAsync())
     {

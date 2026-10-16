@@ -39,24 +39,30 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
 
   public async Task<string> SaveAsync(RoleEditDto input, CancellationToken ct = default)
   {
+    ArgumentNullException.ThrowIfNull(input);
+    // Форма может менять DTO, пока операция ожидает проверку доступа или блокировку.
+    var id = input.Id;
+    var name = input.Name;
+    var version = input.Version;
+    var requestedPermissions = input.Permissions.ToArray();
     var actor = await RequireRootAsync(ct);
-    if (string.IsNullOrWhiteSpace(input.Name)) throw new ArgumentException("Введите название роли.");
-    var selected = PermissionCatalog.Validate(input.Permissions);
+    if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Введите название роли.");
+    var selected = PermissionCatalog.Validate(requestedPermissions);
     await using var scope = scopes.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var manager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
     await using var tx = await db.Database.BeginTransactionAsync(ct);
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)", ct);
     actor = await RequireRootAsync(ct);
-    var create = string.IsNullOrEmpty(input.Id);
+    var create = string.IsNullOrEmpty(id);
     var role = create ? new ApplicationRole() :
-      await manager.FindByIdAsync(input.Id) ?? throw new KeyNotFoundException("Роль не найдена.");
-    if (!create && role.ConcurrencyStamp != input.Version)
+      await manager.FindByIdAsync(id) ?? throw new KeyNotFoundException("Роль не найдена.");
+    if (!create && role.ConcurrencyStamp != version)
       throw new InvalidOperationException("Роль уже изменена другим оператором. Откройте её заново.");
-    if (role.NormalizedName == "ROOT" || input.Name.Trim().Equals("Root", StringComparison.OrdinalIgnoreCase))
+    if (role.NormalizedName == "ROOT" || name.Trim().Equals("Root", StringComparison.OrdinalIgnoreCase))
       throw new InvalidOperationException("Root — защищённая системная роль.");
     var old = create ? new List<Claim>() : (await manager.GetClaimsAsync(role)).Where(c => c.Type == "Permission").ToList();
-    role.Name = input.Name.Trim();
+    role.Name = name.Trim();
     if (create) Check(await manager.CreateAsync(role)); else Check(await manager.UpdateAsync(role));
     foreach (var claim in old.Where(c => !selected.Contains(c.Value))) Check(await manager.RemoveClaimAsync(role, claim));
     foreach (var code in selected.Except(old.Select(c => c.Value))) Check(await manager.AddClaimAsync(role, new Claim("Permission", code)));
@@ -102,8 +108,9 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
 
   public async Task SetUserRolesAsync(string userId, IEnumerable<string> roles, string version, CancellationToken ct = default)
   {
-    var actor = await RequireRootAsync(ct);
+    ArgumentNullException.ThrowIfNull(roles);
     var selected = roles.Distinct().ToArray();
+    var actor = await RequireRootAsync(ct);
     await using var scope = scopes.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
