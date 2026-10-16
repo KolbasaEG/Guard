@@ -10,7 +10,7 @@ public partial class SecurityService(
   IReadRepository<ApplicationUser> userReads, IReadRepository<ApplicationRole> roleReads, IReadRepository<Personal> personalReads,
   IIpAddressService ips, IPersonalIpService assignments, IIpAccessService ipGate, IPermissionService permissions,
   IDataAccessScopeService accessScopes, IRoleAccessService roles, IServiceScopeFactory scopes,
-  IAuditService audit, IAccessChangeNotifier notifier, IAccountPolicyService policies) : ISecurityService
+  IAuditService audit, IAccessChangeNotifier notifier, IAccountPolicyService policies, ILogger<SecurityService> logger) : ISecurityService
 {
   public Task<TResult> QueryUsersAsync<TResult>(Func<IQueryable<ApplicationUser>,Task<TResult>> query, CancellationToken ct=default) => userReads.QueryAsync(query,ct);
   public Task<TResult> QueryRolesAsync<TResult>(Func<IQueryable<ApplicationRole>,Task<TResult>> query, CancellationToken ct=default) => roleReads.QueryAsync(query,ct);
@@ -114,8 +114,17 @@ public partial class SecurityService(
     await tx.CommitAsync(ct);
     targetId ??= createdId?.Invoke();
     if (targetId != null) {
-      if (eventType.HasValue) audit.LogIdentityEvent(eventType.Value, actorId, details: $"Target={targetId}");
-      await notifier.PublishAsync([targetId]);
+      // Commit is confirmed; delivery failures cannot undo the user write.
+      if (eventType.HasValue) {
+        try { audit.LogIdentityEvent(eventType.Value, actorId, details: $"Target={targetId}"); }
+        catch (Exception ex) {
+          logger.LogError(ex, "Изменение пользователя сохранено, но аудит не доставлен. EventType={EventType}; TargetId={TargetId}", eventType, targetId);
+        }
+      }
+      try { await notifier.PublishAsync([targetId]); }
+      catch (Exception ex) {
+        logger.LogError(ex, "Изменение пользователя сохранено, но уведомление не доставлено. EventType={EventType}; TargetId={TargetId}", eventType, targetId);
+      }
     }
     return IdentityResult.Success;
   }

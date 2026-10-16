@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 
 internal static class UserAdministrationIntegrationTests
 {
@@ -22,7 +23,7 @@ internal static class UserAdministrationIntegrationTests
     await using var provider = services.BuildServiceProvider();
     var permissions = new MutablePermissions(); var access = new MutableScope(); var audit = new Audit();
     var service = new SecurityService(null!, null!, null!, null!, null!, null!, permissions, access, null!,
-      provider.GetRequiredService<IServiceScopeFactory>(), audit, new AccessChangeNotifier(NullLogger<AccessChangeNotifier>.Instance), null!);
+      provider.GetRequiredService<IServiceScopeFactory>(), audit, new AccessChangeNotifier(NullLogger<AccessChangeNotifier>.Instance), null!, NullLogger<SecurityService>.Instance);
     IUserAdministrationService forms = service;
     var person = new Personal { FirstName = "Command", LastName = "User", CreatedBy = "root" };
     await using var db = await factory.CreateDbContextAsync();
@@ -88,6 +89,96 @@ internal static class UserAdministrationIntegrationTests
     finally {
       await db.Users.Where(u => u.PersonalId == person.Id).ExecuteDeleteAsync();
       await db.Personals.Where(p => p.Id == person.Id).ExecuteDeleteAsync();
+    }
+    await CheckCompletionAsync(provider, factory, check);
+  }
+  private static async Task CheckCompletionAsync(IServiceProvider provider, IDbContextFactory<ApplicationDbContext> factory,
+      Action<bool, string> check)
+  {
+    foreach (var failure in new[] { "none", "audit", "notification", "both", "cancelled" }) {
+      var delivery = new Delivery(failure);
+      var service = new SecurityService(null!, null!, null!, null!, null!, null!, new MutablePermissions(), new MutableScope(), null!,
+        provider.GetRequiredService<IServiceScopeFactory>(), delivery, delivery, null!, delivery);
+      var name = "completion-user-" + Guid.NewGuid().ToString("N");
+      await using var db = await factory.CreateDbContextAsync();
+      var person = new Personal { FirstName = "Completion", LastName = "Test", CreatedBy = "root" };
+      db.Personals.Add(person); await db.SaveChangesAsync();
+      try {
+        delivery.Observe = async () => await db.Users.AsNoTracking().AnyAsync(u => u.UserName == name);
+        var id = await service.CreateFromDtoAsync(new(name, name + "@example.test", "InitialPassword123!", person.Id));
+        delivery.Assert(check, AuditEventType.UserCreated, id);
+
+        var edit = (await service.GetUserEditAsync(id)).User;
+        var originalStamp = (await db.Users.AsNoTracking().SingleAsync(u => u.Id == id)).SecurityStamp;
+        edit.Email = name + "changed@example.test";
+        delivery.Reset(async () => await db.Users.AsNoTracking().AnyAsync(u => u.Id == id && u.Email == edit.Email && u.SecurityStamp != originalStamp));
+        await service.SaveDetailsAsync(edit);
+        delivery.Assert(check, AuditEventType.UserDetailsChanged, id);
+
+        delivery.Reset(() => Task.FromResult(true));
+        await PostgresTests.ThrowsAsync<InvalidOperationException>(() => service.SaveDetailsAsync(edit), check, "stale user edit still fails before completion");
+        check(delivery.AuditCalls == 0 && delivery.NotificationCalls == 0 && delivery.Errors.Count == 0, "rejected user edit publishes no completion events");
+        await PostgresTests.ThrowsAsync<UserSecurityException>(() => service.ResetPasswordAsync(id, "x"), check, "password validation failure still propagates");
+        check(delivery.AuditCalls == 0 && delivery.NotificationCalls == 0, "invalid reset publishes no completion events");
+
+        delivery.Reset(async () => {
+          await using var scope = provider.CreateAsyncScope();
+          var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+          var saved = (await manager.FindByIdAsync(id))!;
+          return saved.MustChangePassword && await manager.CheckPasswordAsync(saved, "ReplacementPassword123!");
+        });
+        check((await service.ResetPasswordAsync(id, "ReplacementPassword123!")).Succeeded, "password reset returns committed success");
+        delivery.Assert(check, AuditEventType.PasswordChanged, id);
+
+        delivery.Reset(async () => await db.Users.AsNoTracking().AnyAsync(u => u.Id == id && u.AccountBlockReason == "Administrator" && u.LockoutEnd > DateTimeOffset.UtcNow));
+        check((await service.ToggleUserLockoutAsync(id, true)).Succeeded, "block returns committed success");
+        delivery.Assert(check, AuditEventType.UserBlocked, id);
+
+        delivery.Reset(async () => await db.Users.AsNoTracking().AnyAsync(u => u.Id == id && u.AccountBlockReason == null && u.LockoutEnd == null && u.UnblockedAtUtc != null));
+        await service.SetUserLockoutAsync(id, false);
+        delivery.Assert(check, AuditEventType.UserUnblocked, id);
+      }
+      finally {
+        await db.Users.Where(u => u.PersonalId == person.Id).ExecuteDeleteAsync();
+        await db.Personals.Where(p => p.Id == person.Id).ExecuteDeleteAsync();
+      }
+    }
+  }
+  private sealed class Delivery(string failure) : IAuditService, IAccessChangeNotifier, ILogger<SecurityService>
+  {
+    public Func<Task<bool>> Observe = () => Task.FromResult(false);
+    public int NotificationCalls, AuditCalls;
+    private bool notificationSawCommit, auditSawCommit;
+    private string[] targets = [];
+    private string? actor, details;
+    private AuditEventType eventType;
+    public List<Exception?> Errors { get; } = [];
+    public void Reset(Func<Task<bool>> observe) {
+      Observe = observe; NotificationCalls = AuditCalls = 0;
+      notificationSawCommit = auditSawCommit = false; Errors.Clear(); targets = [];
+    }
+    public async Task PublishAsync(IEnumerable<string> userIds) {
+      NotificationCalls++; targets = userIds.ToArray(); notificationSawCommit = await Observe();
+      if (failure == "cancelled") throw new OperationCanceledException("Synthetic notification cancellation after commit");
+      if (failure is "notification" or "both") throw new IOException("Synthetic notification failure");
+    }
+    public void LogIdentityEvent(AuditEventType type, string? user, string? ip = null, string? text = null) {
+      AuditCalls++; actor = user; details = text; eventType = type; auditSawCommit = Observe().GetAwaiter().GetResult();
+      if (failure == "cancelled") throw new OperationCanceledException("Synthetic audit cancellation after commit");
+      if (failure is "audit" or "both") throw new IOException("Synthetic audit failure");
+    }
+    public void Assert(Action<bool, string> check, AuditEventType expectedType, string id) {
+      check(AuditCalls == 1 && NotificationCalls == 1, $"{expectedType}: both deliveries attempted once with {failure}");
+      check(notificationSawCommit && auditSawCommit, $"{expectedType}: independent context sees committed user write with {failure}");
+      check(actor == "root" && eventType == expectedType && details == "Target=" + id && targets.SequenceEqual([id]), "completion retains trusted actor, event and affected user");
+      var expectedErrors = failure switch { "none" => 0, "both" or "cancelled" => 2, _ => 1 };
+      check(Errors.Count == expectedErrors && Errors.All(e => e != null), "each post-commit user delivery failure is logged");
+    }
+    public IDisposable Subscribe(string userId, Func<Task> refresh) => throw new NotSupportedException();
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+    public bool IsEnabled(LogLevel logLevel) => true;
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) {
+      if (logLevel >= LogLevel.Error) Errors.Add(exception);
     }
   }
   private sealed class CallbackValidator : IUserValidator<ApplicationUser>

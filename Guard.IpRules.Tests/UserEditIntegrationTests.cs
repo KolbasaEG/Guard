@@ -18,7 +18,7 @@ internal static class UserEditIntegrationTests
     await using var provider = services.BuildServiceProvider();
     var notifier = new AccessChangeNotifier(NullLogger<AccessChangeNotifier>.Instance);
     SecurityService Service(IPermissionService permissions) => new(null!, null!, null!, null!, null!, null!, permissions,
-      new DataAccessScopeService(permissions, factory), null!, provider.GetRequiredService<IServiceScopeFactory>(), new AuditStub(), notifier, null!);
+      new DataAccessScopeService(permissions, factory), null!, provider.GetRequiredService<IServiceScopeFactory>(), new AuditStub(), notifier, null!, NullLogger<SecurityService>.Instance);
     var service = Service(root);
     var person = new Personal { FirstName = "Edit", LastName = "Test", CreatedBy = "root" };
     var takenPerson = new Personal { FirstName = "Taken", LastName = "Test", CreatedBy = "root" };

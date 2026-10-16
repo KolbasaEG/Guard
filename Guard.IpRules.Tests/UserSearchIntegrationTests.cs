@@ -18,7 +18,7 @@ internal static class UserSearchIntegrationTests
     var policy = new PolicyStub();
     var reads = new ReadRepository<ApplicationUser>(factory, permissions, scopes);
     var service = new SecurityService(reads, null!, null!, null!, null!, null!, permissions, scopes,
-      null!, provider.GetRequiredService<IServiceScopeFactory>(), null!, null!, policy);
+      null!, provider.GetRequiredService<IServiceScopeFactory>(), null!, null!, policy, Microsoft.Extensions.Logging.Abstractions.NullLogger<SecurityService>.Instance);
     await using var db = await factory.CreateDbContextAsync();
     var own = await db.Subdivisions.SingleAsync(s => s.Name == "Own");
     var other = await db.Subdivisions.SingleAsync(s => s.Name == "Other");
