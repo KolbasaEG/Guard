@@ -1,4 +1,7 @@
 using Guard.Components.Library;
+using Guard.Components.Pages.Subdivisions;
+using Guard.Components.Pages.Users;
+using Guard.Components.Pages.Logs;
 using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
@@ -73,40 +76,40 @@ internal static class RefactorTests
     var condition = new CompositeFilterDescriptor { Property = "Name", FilterOperator = FilterOperator.Contains, FilterValue = "old" };
     var filter = new RadzenDataFilter<Subdivision> { Filters = [condition] };
 #pragma warning restore BL0005
-    var snapshot = EntityListQuery<Subdivision>.Capture(filter, new HashSet<string> { "Name" }, time);
+    var snapshot = SubdivisionListQuery.Capture(filter, time);
     condition.FilterValue = "new";
     var data = new[] { new Subdivision { Name = "old" }, new Subdivision { Name = "new" } }.AsQueryable();
-    check(snapshot(data).Single().Name == "old", "applied filter is independent of edited descriptors");
+    check(SubdivisionSearchQuery.Filter(data, snapshot).Single().Name == "old", "applied filter is independent of edited descriptors");
     var dateCondition = new CompositeFilterDescriptor { Property = "LastActivityAtUtc", Type = typeof(DateTimeOffset?), FilterOperator = FilterOperator.Equals,
       FilterValue = new DateTime(2026, 1, 1) };
 #pragma warning disable BL0005
-    var dateFilter = new RadzenDataFilter<ApplicationUser> { Filters = [dateCondition] };
+    var dateFilter = new RadzenDataFilter<UserFilterFields> { Filters = [dateCondition] };
 #pragma warning restore BL0005
-    var day = EntityListQuery<ApplicationUser>.Capture(dateFilter, new HashSet<string> { "LastActivityAtUtc" }, time);
+    var day = UserListQuery.Capture(dateFilter, time);
     var times = new[] {
       new ApplicationUser { Id = "start", LastActivityAtUtc = new DateTimeOffset(2025, 12, 31, 21, 0, 0, TimeSpan.Zero) },
       new ApplicationUser { Id = "end", LastActivityAtUtc = new DateTimeOffset(2026, 1, 1, 21, 0, 0, TimeSpan.Zero) }
     }.AsQueryable();
-    check(day(times).Count() == 1 && day(times).First().Id == "start", "DateTimeOffset calendar day includes start and excludes next local midnight");
+    check(UserSearchQuery.Filter(times, day).Count() == 1 && UserSearchQuery.Filter(times, day).First().Id == "start", "DateTimeOffset calendar day includes start and excludes next local midnight");
     dateCondition.FilterOperator = FilterOperator.GreaterThan;
-    var afterDay = EntityListQuery<ApplicationUser>.Capture(dateFilter, new HashSet<string> { "LastActivityAtUtc" }, time);
-    check(afterDay(times).Single().Id == "end", "date-only greater-than starts at next local midnight");
+    var afterDay = UserListQuery.Capture(dateFilter, time);
+    check(UserSearchQuery.Filter(times, afterDay).Single().Id == "end", "date-only greater-than starts at next local midnight");
     var levels = new List<string> { "Error" };
 #pragma warning disable BL0005
-    var logFilter = new RadzenDataFilter<LogEntry> { Filters = [new() { Property = "Level", Type = typeof(IEnumerable<string>), FilterOperator = FilterOperator.In, FilterValue = levels }] };
+    var logFilter = new RadzenDataFilter<LogFilterFields> { Filters = [new() { Property = "Level", Type = typeof(IEnumerable<string>), FilterOperator = FilterOperator.In, FilterValue = levels }] };
 #pragma warning restore BL0005
-    var levelSnapshot = EntityListQuery<LogEntry>.Capture(logFilter, new HashSet<string> { "Level" }, time);
+    var levelSnapshot = AdministrationListQuery.Capture(logFilter, time, LogSearchQuery.Fields, LogSearchQuery.ValidateFilter);
     levels.Clear(); levels.Add("Information");
-    check(levelSnapshot(new[] { new LogEntry { Level = "Error" }, new LogEntry { Level = "Information" } }.AsQueryable()).Single().Level == "Error",
+    check(LogSearchQuery.Filter(new[] { new LogEntry { Level = "Error" }, new LogEntry { Level = "Information" } }.AsQueryable(), levelSnapshot).Single().Level == "Error",
       "multiselect snapshot remains independent of changed selection collection");
     using (var db = new ApplicationDbContext(options)) {
-      check(day(db.Users).ToQueryString().Contains("LastActivityAtUtc"), "browser date filter translates to PostgreSQL query");
+      check(UserSearchQuery.Filter(db.Users, day).ToQueryString().Contains("LastActivityAtUtc"), "browser date filter translates to PostgreSQL query");
       check(PersonalQueryFilter.Apply(db.Personals, new("Subdivision.Name", "Contains", "test")).ToQueryString().Contains("LIKE"),
         "explicit nested personal filter translates to PostgreSQL query");
     }
-    var sorted = EntityListQuery<Subdivision>.Sort(data, "Name desc", new HashSet<string> { "Name" }, "Name asc");
+    var sorted = SubdivisionSearchQuery.Sort(data, "Name desc");
     check(sorted.First().Name == "old", "supported sort direction is applied");
-    try { EntityListQuery<Subdivision>.Sort(data, "CreatedBy", new HashSet<string> { "Name" }, "Name asc"); check(false, "unsupported sort rejected"); }
+    try { SubdivisionSearchQuery.Sort(data, "CreatedBy"); check(false, "unsupported sort rejected"); }
     catch (ArgumentException) { check(true, "unsupported sort rejected"); }
     var people = new[] { new Personal { FirstName = "Ivan", LastName = "One" }, new Personal { FirstName = "Petr", LastName = "Two" } }.AsQueryable();
     check(PersonalQueryFilter.Apply(people, new("FirstName", "Contains", "IVAN")).Single().FirstName == "Ivan", "personal search uses explicit case-insensitive criteria");
