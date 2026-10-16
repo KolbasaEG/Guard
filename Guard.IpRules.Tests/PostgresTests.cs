@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 internal static class PostgresTests
 {
-  public static async Task RunAsync(string settingsPath, Action<bool, string> check, bool browser = false)
+  public static async Task RunAsync(string settingsPath, Action<bool, string> check, bool browser = false, bool benchmark = false)
   {
     using var json = JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath));
     var cs = new NpgsqlConnectionStringBuilder(json.RootElement.GetProperty("ConnectionStrings").GetProperty("DefaultConnection").GetString());
@@ -30,6 +30,10 @@ internal static class PostgresTests
     {
       await using var db = factory.CreateDbContext();
       await db.Database.EnsureCreatedAsync();
+      if (benchmark) {
+        await ArchitectureBenchmark.RunAsync(factory, check);
+        return;
+      }
       await AccountPolicyMigrationTests.RunAsync(db, check);
       var own = new Subdivision { Name = "Own", Path = "/1/", CreatedBy = "test" };
       var other = new Subdivision { Name = "Other", Path = "/2/", CreatedBy = "test" };
@@ -132,6 +136,7 @@ internal static class PostgresTests
       // Только созданная этим запуском БД с фиксированным префиксом и UUID.
       await using var drop = new NpgsqlCommand($"DROP DATABASE \"{name}\" WITH (FORCE)", admin);
       await drop.ExecuteNonQueryAsync();
+      if (benchmark) Console.WriteLine("Benchmark temporary database removed.");
     }
   }
 
