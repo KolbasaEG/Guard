@@ -10,7 +10,7 @@ public partial class Add : IDisposable
 {
   [Inject] protected DialogService DialogService { get; set; } = default!;
   [Inject] protected NotificationService NotificationService { get; set; } = default!;
-  [Inject] protected IIpAddressService IpAddressService { get; set; } = default!;
+  [Inject] protected IIpAddressManagementService IpAddressService { get; set; } = default!;
   [Inject] protected ILogger<Add> Logger { get; set; } = default!;
   [CascadingParameter] protected CurrentUserDisplayDto? UserContext { get; set; }
 

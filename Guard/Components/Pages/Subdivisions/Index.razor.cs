@@ -55,7 +55,7 @@ namespace Guard.Components.Pages.Subdivisions
     [Inject]
     protected DialogService DialogService { get; set; } = default!;
     [Inject]
-    protected ISubdivisionService SubdivisionService { get; set; } = default!;
+    protected ISubdivisionManagementService SubdivisionService { get; set; } = default!;
     [Inject]
     protected ILogger<Index> Logger { get; set; } = default!;
 

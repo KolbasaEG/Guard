@@ -1,4 +1,4 @@
-﻿using Guard.Core.Entities;
+using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Services.DTOs;
 
@@ -7,13 +7,8 @@ namespace Guard.Core.Services;
 /// <summary>
 /// Сервис для управления IP-адресами (IpAddress).
 /// </summary>
-public interface IIpAddressService
+public interface IIpAddressService : IIpAddressManagementService
 {
-  Task<IpAddressDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default);
-  Task<IReadOnlyList<IpSubdivisionOptionDto>> GetSubdivisionOptionsAsync(CancellationToken ct = default);
-  Task<Guid> CreateAsync(CreateIpAddressDto input, CancellationToken ct = default);
-  Task UpdateAsync(EditIpAddressDto input, CancellationToken ct = default);
-  Task<Guard.Core.Services.DTOs.IpSearchResult> SearchAsync(Guard.Core.Services.DTOs.IpSearchRequest request, CancellationToken ct = default);
   // ==================== Read Operations ====================
 
   /// <summary>
@@ -50,7 +45,6 @@ public interface IIpAddressService
   /// <param name="ct">Токен отмены операции</param>
   Task<bool> IsIpUniqueAsync(string address, Guid? excludeId = null, CancellationToken ct = default);
 
-
   // ==================== Write Operations ====================
 
   /// <summary>
@@ -67,42 +61,4 @@ public interface IIpAddressService
   /// <param name="ipAddress">Модель IP-адреса с обновлёнными данными</param>
   /// <param name="ct">Токен отмены операции</param>
   Task UpdateAsync(IpAddress ipAddress, CancellationToken ct = default);
-
-
-  // ==================== Status Management ====================
-
-  /// <summary>
-  /// Асинхронно выполняет мягкое удаление IP-адреса (Status = Deleted).
-  /// </summary>
-  /// <param name="id">Идентификатор IP-адреса</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task SoftDeleteAsync(Guid id, CancellationToken ct = default);
-
-  /// <summary>
-  /// Асинхронно переводит IP-адрес в архив (Status = Archived).
-  /// </summary>
-  /// <param name="id">Идентификатор IP-адреса</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task ArchiveAsync(Guid id, CancellationToken ct = default);
-
-  /// <summary>
-  /// Асинхронно блокирует IP-адрес от использования.
-  /// </summary>
-  /// <param name="id">Идентификатор IP-адреса</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task BlockAsync(Guid id, CancellationToken ct = default);
-
-  /// <summary>
-  /// Асинхронно снимает блокировку с IP-адреса.
-  /// </summary>
-  /// <param name="id">Идентификатор IP-адреса</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task UnblockAsync(Guid id, CancellationToken ct = default);
-
-  /// <summary>
-  /// Асинхронно восстанавливает IP-адрес из удалённых или архива (Status = Modified).
-  /// </summary>
-  /// <param name="id">Идентификатор IP-адреса</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task RestoreAsync(Guid id, CancellationToken ct = default);
 }

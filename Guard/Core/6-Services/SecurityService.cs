@@ -149,6 +149,9 @@ public partial class SecurityService(
       current.Email=user.Email; current.UserName=user.UserName; current.PersonalId=user.PersonalId;
       Check(await manager.UpdateAsync(current));
     },ct);
+  public async Task SetUserLockoutAsync(string userId, bool lockout, CancellationToken ct = default) =>
+    Check(await ToggleUserLockoutAsync(userId, lockout, ct));
+
   public Task<IdentityResult> ToggleUserLockoutAsync(string userId,bool lockout,CancellationToken ct=default) =>
     WriteAsync(async(db,manager)=>{
       var user=await manager.FindByIdAsync(userId)??throw new KeyNotFoundException("Пользователь не найден.");

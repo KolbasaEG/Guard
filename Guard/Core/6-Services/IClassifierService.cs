@@ -6,10 +6,8 @@ namespace Guard.Core.Services;
 /// <summary>
 /// Сервис для управления классификаторами и универсальными справочниками (Classifier).
 /// </summary>
-public interface IClassifierService
+public interface IClassifierService : IClassifierManagementService
 {
-  Task<ClassifierSearchResult> SearchAsync(ClassifierSearchRequest request, CancellationToken ct = default);
-  Task<ClassifierDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default);
   // ==================== Read Operations ====================
 
   /// <summary>
@@ -74,21 +72,4 @@ public interface IClassifierService
   /// <param name="classifier">Модель классификатора с обновлёнными данными</param>
   /// <param name="ct">Токен отмены операции</param>
   Task UpdateAsync(Classifier classifier, CancellationToken ct = default);
-
-  /// <summary>
-  /// Асинхронно переключает статус активности классификатора (IsActive).
-  /// </summary>
-  /// <param name="id">Идентификатор классификатора</param>
-  /// <param name="isActive">Новый статус активности</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task SetActiveStatusAsync(int id, bool isActive, CancellationToken ct = default, Guid? expectedVersion = null);
-
-  /// <summary>
-  /// Асинхронно выполняет физическое удаление записи классификатора.
-  /// </summary>
-  /// <param name="id">Идентификатор записи</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task DeleteAsync(int id, CancellationToken ct = default, Guid? expectedVersion = null);
-  Task<int> CreateFromDtoAsync(CreateClassifierDto input, CancellationToken ct = default);
-  Task UpdateFromDtoAsync(EditClassifierDto input, CancellationToken ct = default);
 }

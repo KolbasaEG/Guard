@@ -11,7 +11,7 @@ public partial class Add : IDisposable
 {
   [Inject] protected DialogService DialogService { get; set; } = default!;
   [Inject] protected NotificationService NotificationService { get; set; } = default!;
-  [Inject] protected ISubdivisionService SubdivisionService { get; set; } = default!;
+  [Inject] protected ISubdivisionManagementService SubdivisionService { get; set; } = default!;
   [Inject] protected ILogger<Add> Logger { get; set; } = default!;
 
   private readonly CancellationTokenSource _cts = new();

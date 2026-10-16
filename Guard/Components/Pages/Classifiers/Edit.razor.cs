@@ -10,7 +10,7 @@ public partial class Edit : IDisposable
 {
   [Inject] protected DialogService DialogService { get; set; } = default!;
   [Inject] protected NotificationService NotificationService { get; set; } = default!;
-  [Inject] protected IClassifierService ClassifierService { get; set; } = default!;
+  [Inject] protected IClassifierManagementService ClassifierService { get; set; } = default!;
   [Inject] protected ILogger<Edit> Logger { get; set; } = default!;
   [Parameter] public int Id { get; set; }
 

@@ -11,7 +11,7 @@ public partial class Move : IDisposable
 {
   [Inject] protected DialogService DialogService { get; set; } = default!;
   [Inject] protected NotificationService NotificationService { get; set; } = default!;
-  [Inject] protected ISubdivisionService SubdivisionService { get; set; } = default!;
+  [Inject] protected ISubdivisionManagementService SubdivisionService { get; set; } = default!;
   [Inject] protected ILogger<Move> Logger { get; set; } = default!;
   [Parameter] public Guid Id { get; set; }
 

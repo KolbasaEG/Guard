@@ -8,7 +8,7 @@ namespace Guard.Core.Services;
 /// Предоставляет универсальные методы Query...Async для гибкого выполнения LINQ-запросов,
 /// включая фильтрацию, сортировку и пагинацию в Radzen DataGrid.
 /// </summary>
-public interface ISecurityService : IUserAdministrationService
+public interface ISecurityService : IUserAdministrationService, IUserListService
 {
   #region Гибкие методы чтения (Querying)
 
@@ -42,7 +42,6 @@ public interface ISecurityService : IUserAdministrationService
 
   #endregion
 
-  Task<Guard.Core.Services.DTOs.UserSearchResult> SearchUsersAsync(Guard.Core.Services.DTOs.UserSearchRequest request, CancellationToken ct = default);
 
   #region Операции с пользователями
 

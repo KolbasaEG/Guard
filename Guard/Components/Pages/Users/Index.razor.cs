@@ -18,7 +18,7 @@ namespace Guard.Components.Pages.Users
     [Inject] protected NotificationService NotificationService { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!;
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
-    [Inject] protected ISecurityService Security { get; set; } = default!;
+    [Inject] protected IUserListService Security { get; set; } = default!;
 
     protected IEnumerable<UserFilterFields> data = [];
     protected IEnumerable<UserDto> filteredData = [];
@@ -118,8 +118,7 @@ namespace Guard.Components.Pages.Users
       if (await DialogService.Confirm(item.IsLockedOut ? "Снять блокировку?" : "Заблокировать пользователя?", "Блокировка",
         new ConfirmOptions { OkButtonText = "Да", CancelButtonText = "Отмена" }) != true) return;
       try {
-        var result = await Security.ToggleUserLockoutAsync(item.Id, !item.IsLockedOut, _cts.Token);
-        if (!result.Succeeded) throw new InvalidOperationException("Не удалось изменить блокировку.");
+        await Security.SetUserLockoutAsync(item.Id, !item.IsLockedOut, _cts.Token);
         ShowSuccessNotification(item.IsLockedOut ? "Пользователь разблокирован." : "Пользователь заблокирован.");
         await grid.Reload();
       } catch (Exception ex) { Logger.LogWarning(ex, "Блокировка пользователя"); ShowErrorNotification("Изменение блокировки недоступно."); }

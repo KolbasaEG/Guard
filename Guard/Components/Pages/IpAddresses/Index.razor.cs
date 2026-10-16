@@ -19,7 +19,7 @@ namespace Guard.Components.Pages.IpAddresses
     [Inject] protected NotificationService NotificationService { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!;
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
-    [Inject] protected IIpAddressService IpAddressService { get; set; } = default!;
+    [Inject] protected IIpAddressManagementService IpAddressService { get; set; } = default!;
 
     [CascadingParameter] protected CurrentUserDisplayDto? UserContext { get; set; }
 

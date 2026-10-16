@@ -42,11 +42,11 @@ internal static class AccountPolicyIntegrationTests
       check((await manager.ChangePasswordAsync(user, "TemporaryPassword123!", "PermanentPassword456!")).Succeeded, "user changes temporary password");
     }
     check(!(await Read()).MustChangePassword && !(await policies.CheckAsync(target.Id)).PasswordExpired, "self change clears mandatory change");
-    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.ToggleUserLockoutAsync("root", true), check, "Root cannot be blocked");
-    check((await security.ToggleUserLockoutAsync(target.Id, true)).Succeeded, "manual block succeeds");
+    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => ((IUserListService)security).SetUserLockoutAsync("root", true), check, "Root cannot be blocked");
+    await ((IUserListService)security).SetUserLockoutAsync(target.Id, true);
     check((await policies.CheckAsync(target.Id)).Blocked && (await Read()).AccountBlockReason == "Administrator", "manual block denies account");
     await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.ResetPasswordAsync(target.Id, "AnotherPassword789!"), check, "blocked account reset denied");
-    check((await security.ToggleUserLockoutAsync(target.Id, false)).Succeeded, "manual unblock succeeds");
+    await ((IUserListService)security).SetUserLockoutAsync(target.Id, false);
     var unblocked = await Read();
     check(unblocked.UnblockedAtUtc.HasValue && unblocked.AccountBlockReason == null, "unblock clears reason and restarts activity window");
     var first = (await administration.GetSettingsAsync()).ToCommand() with { InactivityEnabled = true, InactivityDays = 20 };

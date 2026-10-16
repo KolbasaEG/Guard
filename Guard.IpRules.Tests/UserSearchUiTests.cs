@@ -30,11 +30,11 @@ internal static class UserSearchUiTests
       new(Children: Enumerable.Repeat(new ExportFilter("UserName", "IsNull"), 101).ToArray())
     }) await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.Run(() => UserSearchQuery.ValidateFilter(invalid)), check, "user filter rejects invalid field, type, operator or complexity");
 
-    var service = DispatchProxy.Create<ISecurityService, IpAddressReferenceTests.ServiceProxy>();
+    var service = DispatchProxy.Create<IUserListService, IpAddressReferenceTests.ServiceProxy>();
     var proxy = (IpAddressReferenceTests.ServiceProxy)(object)service;
     var pending = new Queue<TaskCompletionSource<UserSearchResult>>(); var tokens = new List<CancellationToken>();
     proxy.Handle = (method, args) => {
-      if (method.Name != nameof(ISecurityService.SearchUsersAsync)) throw new NotSupportedException(method.Name);
+      if (method.Name != nameof(IUserListService.SearchUsersAsync)) throw new NotSupportedException(method.Name);
       tokens.Add((CancellationToken)args[1]!);
       var completion = new TaskCompletionSource<UserSearchResult>(TaskCreationOptions.RunContinuationsAsynchronously);
       pending.Enqueue(completion); return completion.Task;
@@ -51,7 +51,7 @@ internal static class UserSearchUiTests
 
   private sealed class PageProbe : Guard.Components.Pages.Users.Index
   {
-    public PageProbe(ISecurityService service, BrowserTimeService time) { Security = service; Time = time; NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Users.Index>.Instance; }
+    public PageProbe(IUserListService service, BrowserTimeService time) { Security = service; Time = time; NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Users.Index>.Instance; }
     public Task Load() => LoadData(new() { Skip = 0, Top = 20 });
     public IEnumerable<string> Ids => filteredData.Select(c => c.Id);
   }

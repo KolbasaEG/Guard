@@ -7,12 +7,8 @@ namespace Guard.Core.Services;
 /// <summary>
 /// Сервис для управления подразделениями (Subdivision).
 /// </summary>
-public interface ISubdivisionService
+public interface ISubdivisionService : ISubdivisionManagementService
 {
-  Task<SubdivisionDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default);
-  Task<SubdivisionEditorOptionsDto> GetEditorOptionsAsync(CancellationToken ct = default);
-  Task<IReadOnlyList<SubdivisionParentOptionDto>> GetMoveParentOptionsAsync(Guid id, CancellationToken ct = default);
-  Task<SubdivisionSearchResult> SearchAsync(SubdivisionSearchRequest request, CancellationToken ct = default);
   Task<string?> GetOwnSubdivisionPathAsync(CancellationToken ct = default);
   // ==================== Read Operations ====================
 
@@ -25,14 +21,6 @@ public interface ISubdivisionService
   /// <param name="ct">Токен отмены операции</param>
   /// <returns>Экземпляр <see cref="Subdivision"/> или <c>null</c>, если запись не найдена.</returns>
   Task<Subdivision?> GetByIdAsync(Guid id, CancellationToken ct = default);
-
-  /// <summary>
-  /// Перемещает подразделение к новому родителю с каскадным пересчетом Path для всех потомков.
-  /// </summary>
-  /// <param name="id">Идентификатор перемещаемого подразделения</param>
-  /// <param name="newParentId">ID нового родителя (null, если узел становится корневым)</param>
-  /// <param name="ct">Токен отмены</param>
-  Task MoveAsync(Guid id, Guid? newParentId, CancellationToken ct = default, Guid? expectedVersion = null);
 
   /// <summary>
   /// Асинхронно получает список всех активных подразделений (исключая удалённые и архивированные).
@@ -48,7 +36,6 @@ public interface ISubdivisionService
   /// <param name="ct">Токен отмены операции</param>
   /// <returns>Список дочерних подразделений.</returns>
   Task<IReadOnlyList<Subdivision>> GetByParentIdAsync(Guid? parentId, CancellationToken ct = default);
-
 
   // ==================== Write Operations ====================
 
@@ -67,51 +54,6 @@ public interface ISubdivisionService
   /// <param name="ct">Токен отмены операции</param>
   Task UpdateAsync(Subdivision subdivision, CancellationToken ct = default);
 
-
-  // ==================== Status Management ====================
-
-  /// <summary>
-  /// Асинхронно выполняет мягкое удаление подразделения (Status = Deleted).
-  /// </summary>
-  /// <param name="id">Идентификатор подразделения</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task SoftDeleteAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
-
-  /// <summary>
-  /// Асинхронно переводит подразделение в архив (Status = Archived).
-  /// </summary>
-  /// <param name="id">Идентификатор подразделения</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task ArchiveAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
-
-  /// <summary>
-  /// Асинхронно блокирует подразделение от редактирования.
-  /// </summary>
-  /// <param name="id">Идентификатор подразделения</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task BlockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
-
-  /// <summary>
-  /// Асинхронно снимает блокировку с подразделения.
-  /// </summary>
-  /// <param name="id">Идентификатор подразделения</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task UnblockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
-
-  /// <summary>
-  /// Асинхронно восстанавливает подразделение из удалённых или архива (Status = Modified).
-  /// </summary>
-  /// <param name="id">Идентификатор подразделения</param>
-  /// <param name="ct">Токен отмены операции</param>
-  Task RestoreAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null);
-
-  /// <summary>
-  /// Перестраивает связи иерархии (ParentId) и пересчитывает иерархический путь (Path)
-  /// для всех подразделений на основе полей SubdivisionId и ParentSubdivisionId.
-  /// </summary>
-  /// <param name="ct">Токен отмены операции</param>
-  Task RebuildHierarchyAndPathsAsync(CancellationToken ct = default);
-
   /// <summary>
   /// Получение типов органа.
   /// </summary>
@@ -124,6 +66,4 @@ public interface ISubdivisionService
   /// <param name="ct">Токен отмены операции</param>
   /// <param name="type">Тип классификатора</param>
   Task<IReadOnlyList<Classifier>> GetClassifiersByTypeAsync(ClassifierType type, CancellationToken ct = default);
-  Task<Guid> CreateFromDtoAsync(CreateSubdivisionDto input, CancellationToken ct = default);
-  Task UpdateFromDtoAsync(EditSubdivisionDto input, CancellationToken ct = default);
 }

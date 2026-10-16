@@ -217,7 +217,7 @@ internal static class AuthorizationTests
     var subdivisions=scope.ServiceProvider.GetRequiredService<ISubdivisionService>();
     check((await subdivisions.GetAllActiveAsync()).Count==2,"subdivision reads include own descendants only");
     await PostgresTests.ThrowsAsync<KeyNotFoundException>(()=>subdivisions.UpdateAsync(new(){Id=foreignId,Name="Forbidden"}),check,"foreign subdivision update rejected");
-    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>security.ToggleUserLockoutAsync("root",true),check,"ordinary manager cannot lock Root");
+    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>((IUserListService)security).SetUserLockoutAsync("root",true),check,"ordinary manager cannot lock Root");
     await PostgresTests.ThrowsAsync<InvalidOperationException>(async ()=>await security.UpdateUserAsync(
       (await security.GetUserByIdAsync("user"))!,["Root"]),check,"profile editing cannot change roles");
     authentication.Id="root";

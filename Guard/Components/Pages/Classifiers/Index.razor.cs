@@ -36,7 +36,7 @@ namespace Guard.Components.Pages.Classifiers
     [Inject] protected NotificationService NotificationService { get; set; } = default!;
     [Inject] protected DialogService DialogService { get; set; } = default!;
     [Inject] protected ILogger<Index> Logger { get; set; } = default!;
-    [Inject] protected IClassifierService ClassifierService { get; set; } = default!;
+    [Inject] protected IClassifierManagementService ClassifierService { get; set; } = default!;
 
     [CascadingParameter] protected CurrentUserDisplayDto? UserContext { get; set; }
 
