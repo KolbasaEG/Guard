@@ -143,15 +143,17 @@ internal static class PersonalPagesTests
       check(!page.Rows.Any(), "disposed personal list ignores late result");
     }
 
+    var editorProxy = DispatchProxy.Create<IPersonalEditorService, ServiceProxy>();
+    var editorFake = (ServiceProxy)editorProxy;
     var createCalls = 0;
-    fake.Handle = (method, _) => method.Name switch
+    editorFake.Handle = (method, _) => method.Name switch
     {
-      nameof(IPersonalService.GetAllActiveSubdivisionsAsync) => Task.FromException<IReadOnlyList<Subdivision>>(new IOException()),
-      nameof(IPersonalService.CreateFromDtoAsync) => CountCreate(),
+      nameof(IPersonalEditorService.GetSubdivisionOptionsAsync) => Task.FromException<IReadOnlyList<PersonalSubdivisionOptionDto>>(new IOException()),
+      nameof(IPersonalEditorService.CreateFromDtoAsync) => CountCreate(),
       _ => throw new NotSupportedException(method.Name)
     };
     Task<Guid> CountCreate() { createCalls++; return Task.FromResult(lowId); }
-    using (var add = new AddHarness(proxy))
+    using (var add = new AddHarness(editorProxy))
     {
       await add.Initialize();
       await add.Save();
@@ -160,22 +162,22 @@ internal static class PersonalPagesTests
     }
     foreach (var status in new[] { Status.Blocked, Status.Archived, Status.ArchivedBlocked, Status.Deleted })
     {
-      fake.Handle = (method, _) => method.Name == nameof(IPersonalService.GetByIdAsync)
-        ? Task.FromResult<Personal?>(new() { Id = lowId, Status = status })
+      editorFake.Handle = (method, _) => method.Name == nameof(IPersonalEditorService.GetEditorAsync)
+        ? Task.FromResult<PersonalEditorDto?>(new() { Id = lowId, Status = status })
         : throw new Exception("Inactive employee must not load editable references or save");
-      using var edit = new EditHarness(proxy, lowId);
+      using var edit = new EditHarness(editorProxy, lowId);
       await edit.Initialize();
       await edit.Save();
       check(!edit.Loaded && edit.Error != null, $"personal edit refuses {status} before offering save");
     }
-    var original = new Personal { Id = lowId, LastName = "Original", FirstName = "User", Version = lowId };
-    fake.Handle = (method, _) => method.Name switch
+    var original = new PersonalEditorDto { Id = lowId, LastName = "Original", FirstName = "User", Version = lowId };
+    editorFake.Handle = (method, _) => method.Name switch
     {
-      nameof(IPersonalService.GetByIdAsync) => Task.FromResult<Personal?>(original),
-      nameof(IPersonalService.GetAllActiveSubdivisionsAsync) => Task.FromResult<IReadOnlyList<Subdivision>>([]),
+      nameof(IPersonalEditorService.GetEditorAsync) => Task.FromResult<PersonalEditorDto?>(original),
+      nameof(IPersonalEditorService.GetSubdivisionOptionsAsync) => Task.FromResult<IReadOnlyList<PersonalSubdivisionOptionDto>>([]),
       _ => throw new NotSupportedException(method.Name)
     };
-    using (var edit = new EditHarness(proxy, lowId))
+    using (var edit = new EditHarness(editorProxy, lowId))
     {
       await edit.Initialize();
       edit.ChangeName("Entered");
@@ -208,8 +210,19 @@ internal static class PersonalPagesTests
       }),
       _ => throw new NotSupportedException(method.Name)
     };
+    editorFake.Handle = (method, _) => method.Name switch
+    {
+      nameof(IPersonalEditorService.GetEditorAsync) => Task.FromResult<PersonalEditorDto?>(new()
+      {
+        Id = lowId, FirstName = "Форма", LastName = "DTO", PersonalNumber = "editor-123", Version = highId
+      }),
+      nameof(IPersonalEditorService.GetSubdivisionOptionsAsync) => Task.FromResult<IReadOnlyList<PersonalSubdivisionOptionDto>>(
+        [new(lowId, "Подразделение DTO")]),
+      _ => throw new NotSupportedException(method.Name)
+    };
     await using var renderServices = new ServiceCollection().AddLogging()
       .AddSingleton<IDirectoryManagementService, LocalManagement>()
+      .AddSingleton(editorProxy).AddSingleton<IPermissionService, PermissionStub>()
       .AddSingleton(proxy).AddSingleton<NotificationService>().AddScoped<DialogService>()
       .AddSingleton<IJSRuntime, NoJs>().AddSingleton<NavigationManager, TestNavigation>().BuildServiceProvider();
     await using var renderer = new HtmlRenderer(renderServices, renderServices.GetRequiredService<ILoggerFactory>());
@@ -233,6 +246,17 @@ internal static class PersonalPagesTests
       }));
       check(!WebUtility.HtmlDecode(denied.ToHtmlString()).Contains("card-123"),
         "personal card hides details when read-details permission is absent");
+      foreach (var edit in new[] { false, true })
+      {
+        var form = await renderer.RenderComponentAsync<EditorHost>(ParameterView.FromDictionary(new Dictionary<string, object?>
+        {
+          [nameof(EditorHost.Id)] = lowId, [nameof(EditorHost.Edit)] = edit
+        }));
+        var formHtml = WebUtility.HtmlDecode(form.ToHtmlString());
+        check(formHtml.Contains(edit ? "Редактирование сотрудника" : "Добавление сотрудника") &&
+          formHtml.Contains("Фамилия") && formHtml.Contains("Подразделение") && (!edit || formHtml.Contains("editor-123")),
+          "actual personal create/edit forms render DTO fields through shared library");
+      }
     });
   }
 
@@ -240,6 +264,32 @@ internal static class PersonalPagesTests
   {
     public Func<MethodInfo, object?[], object?> Handle { get; set; } = default!;
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => Handle(targetMethod!, args ?? []);
+  }
+
+  public sealed class EditorHost : ComponentBase
+  {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public bool Edit { get; set; }
+    protected override void BuildRenderTree(RenderTreeBuilder builder)
+    {
+      builder.OpenComponent<CascadingValue<UserAccessSnapshot>>(0);
+      builder.AddAttribute(1, "Value", new UserAccessSnapshot("actor", true, []));
+      builder.AddAttribute(2, "ChildContent", (RenderFragment)(child =>
+      {
+        if (Edit)
+        {
+          child.OpenComponent<PersonalPages.Edit>(0);
+          child.AddAttribute(1, nameof(PersonalPages.Edit.Id), Id);
+          child.CloseComponent();
+        }
+        else
+        {
+          child.OpenComponent<PersonalPages.Add>(2);
+          child.CloseComponent();
+        }
+      }));
+      builder.CloseComponent();
+    }
   }
 
   private sealed class LocalManagement : IDirectoryManagementService
@@ -300,7 +350,7 @@ internal static class PersonalPagesTests
 
   private sealed class AddHarness : PersonalPages.Add
   {
-    public AddHarness(IPersonalService service)
+    public AddHarness(IPersonalEditorService service)
     {
       PersonalService = service;
       Logger = NullLogger<PersonalPages.Add>.Instance;
@@ -315,7 +365,7 @@ internal static class PersonalPagesTests
 
   private sealed class EditHarness : PersonalPages.Edit
   {
-    public EditHarness(IPersonalService service, Guid id)
+    public EditHarness(IPersonalEditorService service, Guid id)
     {
       Service = service;
       Permissions = new PermissionStub();
@@ -331,7 +381,7 @@ internal static class PersonalPagesTests
     public void ChangeName(string name) => item.FirstName = name;
     public string Name => item.FirstName;
     public Guid Version => item.Version;
-    public void Refresh(Personal current) => RefreshAfterIpSave(current);
+    public void Refresh(PersonalEditorDto current) => RefreshAfterIpSave(current);
   }
 
   private sealed class DetailsHarness : PersonalPages.Details

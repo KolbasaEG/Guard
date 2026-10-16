@@ -60,6 +60,7 @@ internal static class PostgresTests
       var userPermissions = new PermissionService(new Authentication(user.Id, factory), new Microsoft.AspNetCore.Http.HttpContextAccessor(), factory, new AuditStub(), policies);
       await UserEditIntegrationTests.RunAsync(factory, rootPermissions, userPermissions, check);
       await UserAdministrationIntegrationTests.RunAsync(factory, check);
+      await PersonalEditorIntegrationTests.RunAsync(factory, check);
       var rootAccess = new IpManagementAccessService(rootPermissions, new DataAccessScopeService(rootPermissions, factory));
       var userAccess = new IpManagementAccessService(userPermissions, new DataAccessScopeService(userPermissions, factory));
       var rootService = new IpAddressService(factory, rootAccess, NullLogger<IpAddressService>.Instance);

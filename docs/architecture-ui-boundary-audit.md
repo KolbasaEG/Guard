@@ -60,3 +60,7 @@
 Повторён поиск по `.cs`/`.razor` в `Components`: EF/DbContext/репозитории/query-делегаты; отдельно просмотрены AsQueryable, конкретные реализации поиска, Identity, Serilog, UserContext и entity-поля контрактов. Прочитаны реализации PersonalService/ExportQueries, CurrentUserService, SynchronizationService, AccountPolicyService, ExportFilters и AuditService. Проверены существующие группы тестов PersonalPagesTests, Synchronization*, Export* и AccountPolicy*: наличие файлов не означает прохождения или полноты покрытия.
 
 Изменены только этот отчёт и ссылка/статус плана перехода. Исполняемый код, настройки, данные и исходный инвентарь не изменены; повторный прогон приложения и тестов для документационной поставки не требуется.
+
+## Обновление: редактор сотрудников
+
+[Реализован DTO редактора сотрудников](architecture-personal-editor.md): Add/Edit/PersonalFields переведены на IPersonalEditorService, PersonalEditorDto и PersonalSubdivisionOptionDto. Строки аудита о моделях Personal в этих формах описывают исходное состояние до этой поставки. Сравнение исходных полей и обновление Version после IP сохранены; чтение DTO ограничено серверными правами, областью и активным статусом. В пункте 1 последовательности ещё остаются узкие контракты списка/просмотра и независимая проверка PersonalFilter. Этап 1 целиком не завершён.

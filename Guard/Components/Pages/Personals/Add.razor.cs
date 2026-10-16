@@ -1,4 +1,3 @@
-using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Guard.Core.Services.DTOs;
@@ -11,7 +10,7 @@ public partial class Add : IDisposable
 {
   [Inject] protected DialogService DialogService { get; set; } = default!;
   [Inject] protected NotificationService NotificationService { get; set; } = default!;
-  [Inject] protected IPersonalService PersonalService { get; set; } = default!;
+  [Inject] protected IPersonalEditorService PersonalService { get; set; } = default!;
   [Inject] protected ILogger<Add> Logger { get; set; } = default!;
   [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
   [CascadingParameter] public UserContext? UserContext { get; set; }
@@ -23,8 +22,8 @@ public partial class Add : IDisposable
   private bool disposed;
   protected bool isLoading, loaded;
   protected string? error;
-  protected Personal item = new();
-  protected IEnumerable<Subdivision> subdivisions = [];
+  protected PersonalEditorDto item = new();
+  protected IEnumerable<PersonalSubdivisionOptionDto> subdivisions = [];
 
   protected override async Task OnParametersSetAsync()
   {
@@ -40,7 +39,7 @@ public partial class Add : IDisposable
     error = null;
     try
     {
-      var result = await PersonalService.GetAllActiveSubdivisionsAsync(request.Token);
+      var result = await PersonalService.GetSubdivisionOptionsAsync(request.Token);
       request.Token.ThrowIfCancellationRequested();
       if (disposed || !ReferenceEquals(loading, request)) return;
       subdivisions = result;
@@ -65,7 +64,7 @@ public partial class Add : IDisposable
     error = null;
     try
     {
-      await PersonalService.CreateFromDtoAsync(new CreatePersonalDto(PersonalFieldsDto.From(item)), cts.Token);
+      await PersonalService.CreateFromDtoAsync(new CreatePersonalDto(item.ToFields()), cts.Token);
       if (!disposed) DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
     }
     catch (OperationCanceledException) when (cts.IsCancellationRequested) { }

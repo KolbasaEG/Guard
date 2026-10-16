@@ -1,7 +1,7 @@
 <Guard.Components.Layout.Components.AccessDialog ReadPermission="@Guard.Core.Identity.Permissions.Personals.ReadDetails" WritePermission="@Guard.Core.Identity.Permissions.Personals.Write">
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 @attribute [Authorize]
-<EditEntity TItem="Personal" Data="@item" Name="Редактирование сотрудника" Submit="@FormSubmit" ShowSaveButton="@loaded" ReadOnly="@(!loaded)" IsLoading="@isLoading" OnCancelButtonClick="HandleCancelButtonClick">
+<EditEntity TItem="PersonalEditorDto" Data="@item" Name="Редактирование сотрудника" Submit="@FormSubmit" ShowSaveButton="@loaded" ReadOnly="@(!loaded)" IsLoading="@isLoading" OnCancelButtonClick="HandleCancelButtonClick">
   @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
   <Guard.Components.Pages.Personals.Components.PersonalFields Item="@item" Subdivisions="@subdivisions" />
   @if (Access?.Has(Guard.Core.Identity.Permissions.IpAddresses.Manage) == true)

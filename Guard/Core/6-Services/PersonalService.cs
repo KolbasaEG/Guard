@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services;
 
-public class PersonalService : IPersonalService
+public class PersonalService : IPersonalService, IPersonalEditorService
 {
   private readonly IReadRepository<Personal> _readPersonalRepository;
   private readonly IReadRepository<Subdivision> _readSubdivisionRepository;
@@ -43,6 +43,61 @@ public class PersonalService : IPersonalService
       .OrderBy(s => s.Name).ToListAsync(ct);
   }
 
+  public async Task<PersonalEditorDto?> GetEditorAsync(Guid id, CancellationToken ct = default)
+  {
+    var actor = await SearchAccess.RequireAsync(_permissions, Permissions.Personals.Write, ct);
+    await _permissions.RequireAsync(Permissions.Personals.ReadDetails, ct);
+    var result = await _readPersonalRepository.QueryAsync(q => q.Where(p => p.Id == id)
+      .Select(p => new PersonalEditorDto {
+      Id = p.Id, Version = p.Version, Status = p.Status,
+      SubdivisionId = p.SubdivisionId,
+      LastName = p.LastName,
+      FirstName = p.FirstName,
+      MiddleName = p.MiddleName,
+      FullName = p.FullName,
+      EnlistmentYear = p.EnlistmentYear,
+      PersonalNumber = p.PersonalNumber,
+      LastNameGen = p.LastNameGen,
+      FirstNameGen = p.FirstNameGen,
+      MiddleNameGen = p.MiddleNameGen,
+      PersonnelCategoryType = p.PersonnelCategoryType,
+      PersonnelCategoryCode = p.PersonnelCategoryCode,
+      SpecialRankType = p.SpecialRankType,
+      SpecialRankCode = p.SpecialRankCode,
+      PositionType = p.PositionType,
+      PositionCode = p.PositionCode,
+      WorkerCategoryType = p.WorkerCategoryType,
+      WorkerCategoryCode = p.WorkerCategoryCode,
+      StatusType = p.StatusType,
+      StatusCode = p.StatusCode
+      }).SingleOrDefaultAsync(ct), ct);
+    await SearchAccess.RecheckAsync(_permissions, Permissions.Personals.Write, actor, ct);
+    await _permissions.RequireAsync(Permissions.Personals.ReadDetails, ct);
+    if (result != null && !(await _scopes.GetAsync(ct)).Allows(result.SubdivisionId))
+      throw new UnauthorizedAccessException("Подразделение недоступно.");
+    if (result != null && result.Status is not (Status.Inserted or Status.Modified))
+      throw new EntityRuleException("Редактирование недоступно: сотрудник заблокирован, архивирован или удалён.");
+    ct.ThrowIfCancellationRequested();
+    return result;
+  }
+
+  public async Task<IReadOnlyList<PersonalSubdivisionOptionDto>> GetSubdivisionOptionsAsync(CancellationToken ct = default)
+  {
+    var actor = await SearchAccess.RequireAsync(_permissions, Permissions.Personals.Write, ct);
+    var scope = await _scopes.GetAsync(ct);
+    await using var db = await _factory.CreateDbContextAsync(ct);
+    var result = await db.Set<Subdivision>().AsNoTracking()
+      .Where(s => (scope.IsRoot || scope.SubdivisionIds.Contains(s.Id)) &&
+        (s.Status == Status.Inserted || s.Status == Status.Modified))
+      .OrderBy(s => s.Name).ThenBy(s => s.Id)
+      .Select(s => new PersonalSubdivisionOptionDto(s.Id, s.Name)).ToListAsync(ct);
+    await SearchAccess.RecheckAsync(_permissions, Permissions.Personals.Write, actor, ct);
+    var currentScope = await _scopes.GetAsync(ct);
+    if (result.Any(s => !currentScope.Allows(s.Id)))
+      throw new UnauthorizedAccessException("Область доступа изменилась. Повторите загрузку.");
+    ct.ThrowIfCancellationRequested();
+    return result;
+  }
   // ==================== Read (Изолированный IReadRepository) ====================
 
   public async Task<TResult> QueryPersonalsAsync<TResult>(

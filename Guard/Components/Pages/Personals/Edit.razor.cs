@@ -1,4 +1,3 @@
-using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Services;
 using Guard.Core.Identity;
@@ -10,7 +9,7 @@ namespace Guard.Components.Pages.Personals;
 
 public partial class Edit : IDisposable
 {
-  [Inject] protected IPersonalService Service { get; set; } = default!;
+  [Inject] protected IPersonalEditorService Service { get; set; } = default!;
   [Inject] protected IPermissionService Permissions { get; set; } = default!;
   [Inject] protected DialogService Dialogs { get; set; } = default!;
   [Inject] protected NotificationService Notifications { get; set; } = default!;
@@ -25,8 +24,8 @@ public partial class Edit : IDisposable
   private UserContext? loadedContext;
   private PersonalFieldsDto? originalFields;
   private bool disposed;
-  protected Personal item = new();
-  protected IEnumerable<Subdivision> subdivisions = [];
+  protected PersonalEditorDto item = new();
+  protected IEnumerable<PersonalSubdivisionOptionDto> subdivisions = [];
   protected bool isLoading, loaded;
   protected string? error;
 
@@ -45,15 +44,15 @@ public partial class Edit : IDisposable
     try
     {
       await Permissions.RequireAsync(Guard.Core.Identity.Permissions.Personals.Write, request.Token);
-      var result = reloadItem ? await Service.GetByIdAsync(Id, request.Token) : item;
+      var result = reloadItem ? await Service.GetEditorAsync(Id, request.Token) : item;
       if (result == null) throw new KeyNotFoundException("Сотрудник недоступен.");
       if (result.Status is not (Status.Inserted or Status.Modified))
         throw new EntityRuleException("Редактирование недоступно: сотрудник заблокирован, архивирован или удалён.");
-      var options = await Service.GetAllActiveSubdivisionsAsync(request.Token);
+      var options = await Service.GetSubdivisionOptionsAsync(request.Token);
       request.Token.ThrowIfCancellationRequested();
       if (disposed || !ReferenceEquals(loading, request)) return;
       item = result;
-      if (reloadItem) originalFields = PersonalFieldsDto.From(result);
+      if (reloadItem) originalFields = result.ToFields();
       subdivisions = options;
       loaded = true;
     }
@@ -76,7 +75,7 @@ public partial class Edit : IDisposable
     error = null;
     try
     {
-      await Service.UpdateFromDtoAsync(new EditPersonalDto(item.Id, item.Version, PersonalFieldsDto.From(item)), cts.Token);
+      await Service.UpdateFromDtoAsync(new EditPersonalDto(item.Id, item.Version, item.ToFields()), cts.Token);
       if (!disposed) Dialogs.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
     }
     catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
@@ -106,18 +105,23 @@ public partial class Edit : IDisposable
           Severity = NotificationSeverity.Success, Summary = "Сотрудник", Detail = "Назначения IP сохранены.",
           Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
         });
-        var current = await Service.GetByIdAsync(item.Id, cts.Token)
+        loaded = false;
+        var current = await Service.GetEditorAsync(item.Id, cts.Token)
           ?? throw new KeyNotFoundException("Сотрудник недоступен.");
-        if (!disposed) RefreshAfterIpSave(current);
+        if (!disposed)
+        {
+          RefreshAfterIpSave(current);
+          loaded = true;
+        }
       }
     }
     catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
     catch (Exception ex) { ShowError(ex, "Открытие назначения IP сотруднику"); }
   }
 
-  protected void RefreshAfterIpSave(Personal current)
+  protected void RefreshAfterIpSave(PersonalEditorDto current)
   {
-    if (current.Id != item.Id || originalFields != PersonalFieldsDto.From(current))
+    if (current.Id != item.Id || originalFields != current.ToFields())
       throw new EntityConflictException();
     if (current.Status is not (Status.Inserted or Status.Modified))
     {
@@ -127,8 +131,6 @@ public partial class Edit : IDisposable
     // Назначение IP меняет версию: сохраняем введённые поля, проверив отсутствие чужих правок.
     item.Version = current.Version;
     item.Status = current.Status;
-    item.LastModifiedDate = current.LastModifiedDate;
-    item.ModifiedBy = current.ModifiedBy;
   }
 
   private void ShowError(Exception ex, string operation)

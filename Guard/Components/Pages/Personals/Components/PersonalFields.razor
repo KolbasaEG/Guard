@@ -1,4 +1,4 @@
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
   <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width: 100%;">
     <RadzenStack Orientation="Orientation.Horizontal" Style="width:100%;" Gap="0px">
       <RadzenFormField Text="Подразделение" Variant="Variant.Text" Style="width:100%;">
@@ -93,6 +93,6 @@
   </RadzenStack>
 
 @code {
-[Parameter, EditorRequired] public Personal Item { get; set; } = default!;
-[Parameter] public IEnumerable<Subdivision> Subdivisions { get; set; } = [];
+[Parameter, EditorRequired] public PersonalEditorDto Item { get; set; } = default!;
+[Parameter] public IEnumerable<PersonalSubdivisionOptionDto> Subdivisions { get; set; } = [];
 }
