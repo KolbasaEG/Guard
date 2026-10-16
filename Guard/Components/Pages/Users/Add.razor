@@ -1,13 +1,8 @@
-@using Guard.Core.Entities
 @using Guard.Core.Services.DTOs
-@implements IDisposable
-@inject ISecurityService Security
-@inject DialogService Dialogs
-@inject ILogger<Add> Logger
 
 <Guard.Components.Layout.Components.AccessDialog ReadPermission="@Permissions.Users.Read" WritePermission="@Permissions.Users.Manage">
 <CreateEntity TItem="CreateUserDto" Data="@model" Name="Создание пользователя" Submit="SaveAsync"
-              IsLoading="@busy" ShowSaveButton="@loaded" OnCancelButtonClick="@(() => Dialogs.Close(null))">
+              IsLoading="@(busy && !loaded)" IsSaving="@(busy && loaded)" ShowSaveButton="@loaded" OnCancelButtonClick="Cancel">
   <RadzenStack Gap="12px">
     @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
     @if (loaded && personals.Count == 0) { <RadzenAlert AlertStyle="AlertStyle.Info">Нет доступных сотрудников без учётной записи. Сначала добавьте сотрудника в разделе «Персонал».</RadzenAlert> }
@@ -38,45 +33,3 @@
   </RadzenStack>
 </CreateEntity>
 </Guard.Components.Layout.Components.AccessDialog>
-
-@code {
-  private readonly CreateUserDto model = new() { UserName = "", Email = "", Password = "" };
-  private readonly CancellationTokenSource stop = new();
-  private IReadOnlyList<UserPersonalOption> personals = [];
-  private string confirmation = "";
-  private string? error;
-  private bool busy, loaded;
-  protected override async Task OnInitializedAsync()
-  {
-    busy = true;
-    try { personals = await Security.GetUserPersonalOptionsAsync(stop.Token); loaded = true; }
-    catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
-    catch (Exception ex) { Logger.LogWarning(ex, "Загрузка сотрудников для создания пользователя"); error = "Не удалось загрузить сотрудников. Проверьте доступ."; }
-    finally { busy = false; }
-  }
-  private async Task SaveAsync()
-  {
-    if (busy) return;
-    error = null;
-    if (model.Password != confirmation) { error = "Пароли не совпадают."; return; }
-    if (model.PersonalId == null || string.IsNullOrWhiteSpace(model.UserName) ||
-        !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(model.Email)) {
-      error = "Заполните имя пользователя, корректный email и выберите сотрудника."; return;
-    }
-    busy = true;
-    try {
-      var result = await Security.CreateUserAsync(new ApplicationUser {
-        UserName = model.UserName.Trim(), Email = model.Email.Trim(), PersonalId = model.PersonalId
-      }, model.Password, ct: stop.Token);
-      if (!result.Succeeded) { error = string.Join("; ", result.Errors.Select(e => e.Description)); return; }
-      model.Password = ""; confirmation = "";
-      Dialogs.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true));
-    }
-    catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
-    catch (InvalidOperationException ex) { error = ex.Message; }
-    catch (UnauthorizedAccessException) { error = "Создание пользователя недоступно: проверьте права и подразделение сотрудника."; }
-    catch (Exception ex) { Logger.LogError(ex, "Ошибка создания пользователя"); error = "Не удалось создать пользователя."; }
-    finally { busy = false; }
-  }
-  public void Dispose() { model.Password = ""; confirmation = ""; stop.Cancel(); stop.Dispose(); }
-}

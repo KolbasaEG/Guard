@@ -3,7 +3,7 @@
 
 <Guard.Components.Layout.Components.AccessDialog ReadPermission="@Permissions.Users.Read" WritePermission="@Permissions.Users.Manage">
   <EditEntity TItem="EditUserDto" Data="model" Name="Редактирование пользователя" Submit="SaveAsync"
-              IsLoading="busy" ShowSaveButton="loaded" OnCancelButtonClick="Cancel">
+              IsLoading="@(busy && !loaded)" IsSaving="@(busy && loaded)" ShowSaveButton="loaded" OnCancelButtonClick="Cancel">
     <RadzenStack Gap="12px">
       @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
       @if (loaded) {

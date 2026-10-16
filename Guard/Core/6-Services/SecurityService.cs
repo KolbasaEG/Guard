@@ -19,24 +19,26 @@ public partial class SecurityService(
   public Task<ApplicationUser?> GetUserByIdAsync(string id, CancellationToken ct=default) => userReads.GetByIdAsync(id,ct);
   public async Task<IReadOnlyList<Guard.Core.Services.DTOs.UserPersonalOption>> GetUserPersonalOptionsAsync(CancellationToken ct=default)
   {
-    await permissions.RequireAsync(Permissions.Users.Manage, ct);
-    var access = await accessScopes.GetAsync(ct);
+    var initial = await RequireUserWriteAsync(ct);
+    var access = initial.Scope;
     await using var scope = scopes.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var query = db.Set<Personal>().AsNoTracking().Where(p =>
       (p.Status == Status.Inserted || p.Status == Status.Modified) && !db.Users.Any(u => u.PersonalId == p.Id));
     if (!access.IsRoot) query = query.Where(p => p.SubdivisionId.HasValue && access.SubdivisionIds.Contains(p.SubdivisionId.Value));
-    return await query.OrderBy(p => p.LastName).ThenBy(p => p.FirstName)
+    var options = await query.OrderBy(p => p.LastName).ThenBy(p => p.FirstName).ThenBy(p => p.Id)
       .Select(p => new Guard.Core.Services.DTOs.UserPersonalOption(p.Id,
         p.LastName + " " + p.FirstName + " " + (p.MiddleName ?? ""))).ToListAsync(ct);
+    await RecheckUserWriteAsync(initial, ct);
+    return options;
   }
   private static void Check(IdentityResult result) {
     if (!result.Succeeded) throw new UserSecurityException(string.Join("; ", result.Errors.Select(e=>e.Description)));
   }
   public async Task<Guard.Core.Services.DTOs.UserEditData> GetUserEditAsync(string id, CancellationToken ct = default)
   {
-    await permissions.RequireAsync(Permissions.Users.Manage, ct);
-    var access = await accessScopes.GetAsync(ct);
+    var initial = await RequireUserWriteAsync(ct);
+    var access = initial.Scope;
     await using var scope = scopes.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id, ct)
@@ -49,6 +51,7 @@ public partial class SecurityService(
     if (!access.IsRoot) query = query.Where(p => p.SubdivisionId.HasValue && access.SubdivisionIds.Contains(p.SubdivisionId.Value));
     var options = await query.OrderBy(p => p.LastName).ThenBy(p => p.FirstName)
       .Select(p => new Guard.Core.Services.DTOs.UserPersonalOption(p.Id, p.LastName + " " + p.FirstName + " " + (p.MiddleName ?? ""))).ToListAsync(ct);
+    await RecheckUserWriteAsync(initial, ct);
     return new(new() { Id = user.Id, UserName = user.UserName ?? "", Email = user.Email ?? "",
       PersonalId = user.PersonalId, Version = user.ConcurrencyStamp ?? "" }, options, access.IsRoot);
   }
@@ -56,11 +59,9 @@ public partial class SecurityService(
   public Task<IdentityResult> UpdateUserDetailsAsync(Guard.Core.Services.DTOs.EditUserDto input, CancellationToken ct = default)
   {
     ArgumentNullException.ThrowIfNull(input);
-    if (string.IsNullOrWhiteSpace(input.Id) || string.IsNullOrWhiteSpace(input.Version) ||
-        string.IsNullOrWhiteSpace(input.UserName) || input.UserName.Trim().Length > 256 ||
-        string.IsNullOrWhiteSpace(input.Email) || input.Email.Trim().Length > 256 ||
-        !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(input.Email.Trim()))
-      throw new ArgumentException("Укажите имя пользователя и корректный email (не более 256 символов).");
+    ValidateUserFields(input.UserName, input.Email);
+    if (string.IsNullOrWhiteSpace(input.Id) || string.IsNullOrWhiteSpace(input.Version))
+      throw new ArgumentException("Откройте форму пользователя заново.");
     return WriteAsync(async (db, manager) => {
       var user = await manager.FindByIdAsync(input.Id) ?? throw new KeyNotFoundException("Пользователь не найден.");
       await CheckTargetAsync(db, user, ct);
@@ -97,37 +98,45 @@ public partial class SecurityService(
     }
   }
   private async Task<IdentityResult> WriteAsync(Func<ApplicationDbContext,UserManager<ApplicationUser>,Task> write, CancellationToken ct,
-    string? targetId = null, AuditEventType? eventType = null)
+    string? targetId = null, AuditEventType? eventType = null, Func<string?>? createdId = null)
   {
-    await permissions.RequireAsync(Permissions.Users.Manage,ct);
-    var actorId = (await permissions.GetCurrentAsync(ct)).UserId;
+    var initial = await RequireUserWriteAsync(ct);
+    var actorId = initial.Actor.UserId;
     await using var scope = scopes.CreateAsyncScope();
     var db=scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var manager=scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     await using var tx=await db.Database.BeginTransactionAsync(ct);
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)",ct);
-    await permissions.RequireAsync(Permissions.Users.Manage,ct);
+    await RecheckUserWriteAsync(initial, ct);
     await write(db,manager);
+    await RecheckUserWriteAsync(initial, ct);
+    ct.ThrowIfCancellationRequested();
     await tx.CommitAsync(ct);
+    targetId ??= createdId?.Invoke();
     if (targetId != null) {
       if (eventType.HasValue) audit.LogIdentityEvent(eventType.Value, actorId, details: $"Target={targetId}");
       await notifier.PublishAsync([targetId]);
     }
     return IdentityResult.Success;
   }
-  public Task<IdentityResult> CreateUserAsync(ApplicationUser user,string password,IEnumerable<string>? roles=null,CancellationToken ct=default) =>
-    WriteAsync(async (db,manager)=>{
-      await CheckPersonalAsync(db,user.PersonalId,ct);
-      if (user.PersonalId.HasValue && await db.Users.AnyAsync(u => u.PersonalId == user.PersonalId, ct))
+  public async Task<IdentityResult> CreateUserAsync(ApplicationUser user,string password,IEnumerable<string>? roles=null,CancellationToken ct=default)
+  {
+    ArgumentNullException.ThrowIfNull(user);
+    ValidateUserFields(user.UserName, user.Email);
+    if (string.IsNullOrEmpty(password)) throw new ArgumentException("Укажите пароль.");
+    var selected = (roles ?? []).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    var created = new ApplicationUser { UserName = user.UserName!.Trim(), Email = user.Email!.Trim(), PersonalId = user.PersonalId };
+    var result = await WriteAsync(async (db,manager)=>{
+      await CheckPersonalAsync(db,created.PersonalId,ct);
+      if (created.PersonalId.HasValue && await db.Users.AnyAsync(u => u.PersonalId == created.PersonalId, ct))
         throw new InvalidOperationException("У выбранного сотрудника уже есть учётная запись.");
-      var selected=(roles??[]).Distinct().ToArray();
       if(selected.Length>0 && !(await permissions.GetCurrentAsync(ct)).IsRoot) throw new UnauthorizedAccessException("Роли назначает только Root.");
-      // Входные флаги безопасности не позволяют создавать привилегированную учётную запись.
-      var created=new ApplicationUser { UserName=user.UserName, Email=user.Email, PersonalId=user.PersonalId };
       Check(await manager.CreateAsync(created,password));
       if(selected.Length>0) Check(await manager.AddToRolesAsync(created,selected));
-      user.Id=created.Id;
-    },ct);
+    },ct,eventType: AuditEventType.UserCreated, createdId: () => created.Id);
+    user.Id = created.Id;
+    return result;
+  }
   public Task<IdentityResult> UpdateUserAsync(ApplicationUser user,IEnumerable<string> roles,CancellationToken ct=default) =>
     WriteAsync(async(db,manager)=>{
       var current=await manager.FindByIdAsync(user.Id)??throw new KeyNotFoundException("Пользователь не найден.");
