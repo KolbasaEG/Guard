@@ -5,15 +5,12 @@ using Guard.Components.Library.Loading;
 using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Enums;
-using Guard.Core.Extensions;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
-using System.Linq.Dynamic.Core;
 
 namespace Guard.Components.Pages.Subdivisions
 {
@@ -23,7 +20,7 @@ namespace Guard.Components.Pages.Subdivisions
     {
       await Time.InitializeAsync();
       return new(ExportArea.Subdivisions, format, currentMode, hierarchyMode == SubdivisionHierarchyMode.IncludeChildren,
-        ShowAll, exportSort, exportFilter, TimeZone: Time.Zone!.Id);
+        ShowAll, exportSort, appliedFilter, TimeZone: Time.Zone!.Id);
     }
     protected bool apiManaged = true;
     private readonly Guard.Components.Library.Loading.ListLoadConfirmation synchronizationLoad = new();
@@ -31,11 +28,8 @@ namespace Guard.Components.Pages.Subdivisions
     protected virtual Task ReloadGridForSynchronizationAsync() { if (disposed || grid == null) return Task.CompletedTask; grid.ResetLoadData(); return grid.Reload(); }
     protected bool allRecords;
     protected bool ShowAll => Access?.IsRoot == true && allRecords;
-    [Inject] protected IPermissionService PermissionService { get; set; } = default!;
     [Inject] protected BrowserTimeService Time { get; set; } = default!;
-    private static readonly HashSet<string> supportedFields = ["Address", "Fax", "Id", "InsertedDate", "IsDepartment", "LevelOrder", "Name", "OrganType.Value",  "Parent.Name", "Path", "Phone", "PositionFormationName", "PostalCode", "StaffCount", "StatusClassifier.Value", "StatusClassifier.Value"];
-    private Func<IQueryable<Subdivision>, IQueryable<Subdivision>> appliedFilter = q => q;
-    private ExportFilter? exportFilter;
+    private ExportFilter? appliedFilter;
     private string? exportSort;
     private bool disposed, reloadPending = true;
     private Guard.Core.Identity.UserContext? loadedContext;
@@ -65,7 +59,6 @@ namespace Guard.Components.Pages.Subdivisions
     [Inject]
     protected ILogger<Index> Logger { get; set; } = default!;
 
-    protected IEnumerable<Subdivision> data = [];
     protected IEnumerable<SubdivisionListDto> filteredData = [];
     protected RadzenDataGrid<SubdivisionListDto> grid = default!;
 
@@ -110,29 +103,14 @@ namespace Guard.Components.Pages.Subdivisions
       var request = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
       _loadDataCts = request; var ct = request.Token;
       var filter = appliedFilter;
+      var mode = currentMode; var hierarchy = hierarchyMode; var showAll = ShowAll;
       isLoading = true;
       try {
-        if ((args.Skip ?? 0) < 0 || (args.Top ?? 20) is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
-        var showAll = ShowAll;
-        var currentPath = showAll ? null : await SubdivisionService.GetOwnSubdivisionPathAsync(ct);
-        var result = await SubdivisionService.QuerySubdivisionsAsync(async query => {
-          query = query.FilterByMode(currentMode);
-          var path = currentPath;
-          var validPath = path != null && path.StartsWith('/') && path.EndsWith('/') &&
-            path.Split('/', StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } segments &&
-            segments.All(s => long.TryParse(s, out var id) && id > 0);
-          if (!showAll) query = !validPath ? query.Where(p => false) : hierarchyMode == SubdivisionHierarchyMode.CurrentOnly ? query.Where(p => p.Path == path) : query.Where(p => p.Path.StartsWith(path!));
-          query = filter(query);
-          var total = await query.CountAsync(ct);
-          query = EntityListQuery<Subdivision>.Sort(query, args.OrderBy, supportedFields, "InsertedDate desc");
-          var page = await query.Skip(args.Skip ?? 0).Take(args.Top ?? 20).Select(p => new SubdivisionListDto { Id=p.Id, Version=p.Version, Status=p.Status, Name=p.Name, OrganTypeName=p.OrganType == null ? null : p.OrganType.Value, StatusClassifierName=p.StatusClassifier == null ? null : p.StatusClassifier.Value, ParentName=p.Parent == null ? null : p.Parent.Name, PositionFormationName=p.PositionFormationName, PostalCode=p.PostalCode, Address=p.Address, Phone=p.Phone, StaffCount=p.StaffCount, LevelOrder=p.LevelOrder, IsDepartment=p.IsDepartment }).ToListAsync(ct);
-          return (page, total);
-        }, ct);
-        ct.ThrowIfCancellationRequested();
-        await PermissionService.RequireAsync(Guard.Core.Identity.Permissions.Subdivisions.Read, ct);
+        var result = await SubdivisionService.SearchAsync(new SubdivisionSearchRequest(
+          mode, hierarchy, showAll, args.Skip ?? 0, args.Top ?? 20, args.OrderBy, filter), ct);
         ct.ThrowIfCancellationRequested();
         if (disposed || !ReferenceEquals(request, _loadDataCts)) return;
-        filteredData = result.page; count = result.total; synchronizationLoad.Confirm(loadTicket);
+        filteredData = result.Items; count = result.Count; synchronizationLoad.Confirm(loadTicket);
       }
       catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
       catch (Exception ex) {
@@ -262,11 +240,11 @@ namespace Guard.Components.Pages.Subdivisions
     }
 
 
-    async Task ApplyFilter() { try { var candidate = EntityListQuery<Subdivision>.Capture(dataFilter, supportedFields, Time);
-        var snapshot = ExportFilters.Capture(EntityListQuery<Subdivision>.Snapshot(dataFilter, supportedFields, Time), dataFilter.LogicalFilterOperator);
-        _ = ExportFilters.Apply(Array.Empty<Subdivision>().AsQueryable(), snapshot, supportedFields);
-        appliedFilter = candidate; exportFilter = snapshot; await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
-
+    async Task ApplyFilter()
+    {
+      try { appliedFilter = SubdivisionListQuery.Capture(dataFilter, Time); await ResetPageAsync(); }
+      catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); }
+    }
     private void ShowSuccessNotification(string detail)
     {
       NotificationService.Notify(new NotificationMessage
@@ -290,6 +268,7 @@ namespace Guard.Components.Pages.Subdivisions
     }
     public void Dispose()
     {
+      if (disposed) return;
       disposed = true;
       _loadDataCts?.Cancel();
 

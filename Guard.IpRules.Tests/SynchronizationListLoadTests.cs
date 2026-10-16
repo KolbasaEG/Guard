@@ -53,6 +53,7 @@ internal static class SynchronizationListLoadTests
   }
   private static object Empty(Type type) => type == typeof(PersonalSearchResult)
     ? new PersonalSearchResult([], 0)
+    : type == typeof(SubdivisionSearchResult) ? new SubdivisionSearchResult([], 0)
     : Activator.CreateInstance(type, Activator.CreateInstance(type.GenericTypeArguments[0]), 0)!;
 
   public class QueryProxy : DispatchProxy
@@ -84,7 +85,7 @@ internal static class SynchronizationListLoadTests
   private sealed class SubdivisionsPage : Guard.Components.Pages.Subdivisions.Index, Page
   {
     public SubdivisionsPage(ISubdivisionService service, BrowserTimeService time)
-    { SubdivisionService = service; Time = time; PermissionService = new PermissionsStub(); NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Subdivisions.Index>.Instance; Access = new("root", true, []); }
+    { SubdivisionService = service; Time = time; NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Subdivisions.Index>.Instance; Access = new("root", true, []); }
     public Task<bool> Reload() => ReloadForSynchronizationAsync();
     public Task LoadOther() => LoadData(new() { Skip = 0, Top = 20 });
     protected override Task ReloadGridForSynchronizationAsync() => LoadOther();

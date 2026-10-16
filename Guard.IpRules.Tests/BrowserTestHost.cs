@@ -21,6 +21,14 @@ internal static class BrowserTestHost
         throw new InvalidOperationException("Не удалось подготовить тестовый Root.");
     }
     await using (var db = await factory.CreateDbContextAsync()) {
+      db.IsSynchronization = true; // Только подготовка синтетических данных изолированного стенда.
+      var subdivisions = Enumerable.Range(1, 27).Select(n => new Subdivision {
+        Name = n == 26 ? "Архив отдела" : n == 27 ? "Удалённый отдел" : $"Поиск отдела {n:00}",
+        Status = n == 26 ? Guard.Core.Enums.Status.Archived : n == 27 ? Guard.Core.Enums.Status.Deleted : Guard.Core.Enums.Status.Inserted,
+        StaffCount = n * 1.5, LevelOrder = n, IsDepartment = n % 2 == 0, CreatedBy = "root"
+      }).ToArray();
+      db.AddRange(subdivisions); await db.SaveChangesAsync();
+      foreach (var subdivision in subdivisions) subdivision.Path = $"/{subdivision.SubdivisionId}/";
       db.IpAddresses.AddRange(Enumerable.Range(1, 25).Select(n => new IpAddress {
         Address = $"203.0.113.{n}", Description = $"Проверка пагинации {n:00}", CreatedBy = "root"
       }));

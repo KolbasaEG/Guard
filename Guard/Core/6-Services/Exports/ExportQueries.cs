@@ -65,9 +65,9 @@ public static class ExportQueries
   {
     var q = db.Subdivisions.AsNoTracking().AsQueryable();
     if (!scope.User.IsRoot) q = q.Where(s => scope.AllowedIds.Contains(s.Id));
-    if (!request.AllSubdivisions) q = !ExportAccess.ValidPath(scope.OwnPath) ? q.Where(s => false) :
-      request.IncludeChildren ? q.Where(s => s.Path.StartsWith(scope.OwnPath!)) : q.Where(s => s.Path == scope.OwnPath);
-    return Sort(ExportFilters.Apply(Statuses(q, request.Mode), request.Filter, SubdivisionFields), request.OrderBy, SubdivisionFields);
+    return SubdivisionSearchQuery.Sort(SubdivisionSearchQuery.Filter(SubdivisionSearchQuery.Visibility(q, request.Mode,
+      request.AllSubdivisions, scope.User.IsRoot, scope.OwnPath,
+      request.IncludeChildren ? SubdivisionHierarchyMode.IncludeChildren : SubdivisionHierarchyMode.CurrentOnly), request.Filter), request.OrderBy);
   }
   public static IQueryable<IpAddress> IpAddresses(ApplicationDbContext db, ExportRequest request, ExportAccessScope scope)
   {

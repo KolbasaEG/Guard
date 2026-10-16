@@ -9,6 +9,7 @@ namespace Guard.Core.Services;
 /// </summary>
 public interface ISubdivisionService
 {
+  Task<SubdivisionSearchResult> SearchAsync(SubdivisionSearchRequest request, CancellationToken ct = default);
   Task<string?> GetOwnSubdivisionPathAsync(CancellationToken ct = default);
   // ==================== Read Operations ====================
 

@@ -33,6 +33,50 @@ public class SubdivisionService : ISubdivisionService
   }
 
   // ==================== Read (Изолированный IReadRepository) ====================
+  public async Task<SubdivisionSearchResult> SearchAsync(SubdivisionSearchRequest request, CancellationToken ct = default)
+  {
+    ArgumentNullException.ThrowIfNull(request);
+    if (request.Skip < 0 || request.Take is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
+    SubdivisionSearchQuery.ValidateFilter(request.Filter);
+    var initial = await _permissions.GetCurrentAsync(ct);
+    RequireSearchAccess(initial, request.Mode);
+    var scope = await _scopes.GetAsync(ct);
+    if (scope.UserId != initial.UserId || scope.IsRoot != initial.IsRoot) throw new UnauthorizedAccessException("Область доступа изменилась.");
+    await using var db = await _factory.CreateDbContextAsync(ct);
+    async Task<string?> OwnPath(string userId) => await db.Users.Where(u => u.Id == userId)
+      .Select(u => u.Personal == null || u.Personal.Subdivision == null ? null : u.Personal.Subdivision.Path).SingleOrDefaultAsync(ct);
+    var path = await OwnPath(initial.UserId);
+    var query = db.Subdivisions.AsNoTracking().AsQueryable();
+    if (!scope.IsRoot) query = query.Where(s => scope.SubdivisionIds.Contains(s.Id));
+    query = SubdivisionSearchQuery.Filter(SubdivisionSearchQuery.Visibility(query, request.Mode,
+      request.AllSubdivisions, scope.IsRoot, path, request.Hierarchy), request.Filter);
+    var sorted = SubdivisionSearchQuery.Sort(query, request.OrderBy);
+    var total = await query.CountAsync(ct);
+    var items = await sorted.Skip(request.Skip).Take(request.Take).Select(p => new SubdivisionListDto {
+      Id = p.Id, Version = p.Version, Status = p.Status, Name = p.Name,
+      OrganTypeName = p.OrganType == null ? null : p.OrganType.Value,
+      StatusClassifierName = p.StatusClassifier == null ? null : p.StatusClassifier.Value,
+      ParentName = p.Parent == null ? null : p.Parent.Name, PositionFormationName = p.PositionFormationName,
+      PostalCode = p.PostalCode, Address = p.Address, Phone = p.Phone, StaffCount = p.StaffCount,
+      LevelOrder = p.LevelOrder, IsDepartment = p.IsDepartment
+    }).ToListAsync(ct);
+    var final = await _permissions.GetCurrentAsync(ct);
+    RequireSearchAccess(final, request.Mode);
+    var finalScope = await _scopes.GetAsync(ct);
+    var finalPath = await OwnPath(final.UserId);
+    ct.ThrowIfCancellationRequested();
+    if (initial.UserId != final.UserId || initial.IsRoot != final.IsRoot || path != finalPath ||
+        scope.UserId != finalScope.UserId || scope.IsRoot != finalScope.IsRoot || !scope.SubdivisionIds.SetEquals(finalScope.SubdivisionIds))
+      throw new UnauthorizedAccessException("Область доступа изменилась во время загрузки.");
+    return new(items, total);
+  }
+
+  private static void RequireSearchAccess(UserAccessSnapshot user, DataViewMode mode)
+  {
+    if (!user.Has(Permissions.Subdivisions.Read) || mode == DataViewMode.Archived && !user.Has(Permissions.Subdivisions.ReadArchive) ||
+        mode == DataViewMode.Deleted && !user.IsRoot) throw new UnauthorizedAccessException("Недостаточно прав для выбранного режима подразделений.");
+  }
+
   public async Task<string?> GetOwnSubdivisionPathAsync(CancellationToken ct = default)
   {
     await _permissions.RequireAsync(Permissions.Subdivisions.Read, ct);
