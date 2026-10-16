@@ -29,8 +29,10 @@ internal static class LoginLockoutTests
     await using (var nonRoot = new ServiceCollection().AddSingleton<IPermissionService, NonRootPermissions>().BuildServiceProvider()) {
       var service = new AccountPolicyService(new NoDatabaseFactory(), nonRoot, new AuditStub(),
         new AccessChangeNotifier(Microsoft.Extensions.Logging.Abstractions.NullLogger<AccessChangeNotifier>.Instance));
-      await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => service.SaveAsync(policy), check,
+      await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => service.SaveAsync(new SaveAccountPolicyCommand { MaxFailedLoginAttempts = policy.MaxFailedLoginAttempts, LoginLockoutMinutes = policy.LoginLockoutMinutes }), check,
         "non-Root cannot change login threshold or duration before any database write");
+      await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => service.GetSettingsAsync(), check,
+        "non-Root cannot read administrative settings before any database access");
     }
     using (var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql().Options)) {
       check(!db.Database.HasPendingModelChanges(), "login policy migration matches EF model");
@@ -122,9 +124,9 @@ internal static class LoginLockoutTests
   }
   private sealed class Policies(AccountPolicy policy, ApplicationUser user) : IAccountPolicyService
   {
-    public Task<AccountPolicy> GetAsync(CancellationToken ct = default) => Task.FromResult(policy);
+    public Task<AccountLoginPolicyDto> GetLoginPolicyAsync(CancellationToken ct = default) => Task.FromResult(new AccountLoginPolicyDto(policy.MaxFailedLoginAttempts, policy.LoginLockoutMinutes));
+    public Task<AccountPasswordLifetimeDto> GetPasswordLifetimeAsync(CancellationToken ct = default) => throw new NotSupportedException();
     public Task<AccountState> CheckAsync(string id, CancellationToken ct = default) => Task.FromResult(new AccountState(user.AccountBlockReason != null || user.LockoutEnd > DateTimeOffset.UtcNow, false));
-    public Task SaveAsync(AccountPolicy p, CancellationToken ct = default) => throw new NotSupportedException();
     public Task RecordActivityAsync(string id, CancellationToken ct = default) => Task.CompletedTask;
     public Task SweepAsync(CancellationToken ct = default) => throw new NotSupportedException();
   }

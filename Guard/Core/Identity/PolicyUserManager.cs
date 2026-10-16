@@ -26,8 +26,8 @@ public class PolicyUserManager(IUserStore<ApplicationUser> store, IOptions<Ident
   public override async Task<IdentityResult> AccessFailedAsync(ApplicationUser user)
   {
     var ct = ServiceProvider.GetService<IHttpContextAccessor>()?.HttpContext?.RequestAborted ?? default;
-    var policy = await ServiceProvider.GetRequiredService<IAccountPolicyService>().GetAsync(ct);
-    if (!AccountPolicyRules.Valid(policy)) throw new InvalidOperationException("Некорректная политика блокировки входа.");
+    var policy = await ServiceProvider.GetRequiredService<IAccountPolicyService>().GetLoginPolicyAsync(ct);
+    if (policy.MaxFailedLoginAttempts is < 1 or > 100 || policy.LoginLockoutMinutes is < 1 or > 10080) throw new InvalidOperationException("Некорректная политика блокировки входа.");
     Options.Lockout.MaxFailedAccessAttempts = policy.MaxFailedLoginAttempts;
     Options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(policy.LoginLockoutMinutes);
     var result = await base.AccessFailedAsync(user);

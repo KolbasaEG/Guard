@@ -1,18 +1,19 @@
 using Guard.Core.Entities;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Identity;
 
 namespace Guard.Core.Identity;
 
-public class PolicyPasswordValidator(IAccountPolicyService policies) : IPasswordValidator<ApplicationUser>
+public class PolicyPasswordValidator(IPasswordRequirementsService policies) : IPasswordValidator<ApplicationUser>
 {
   public async Task<IdentityResult> ValidateAsync(UserManager<ApplicationUser> manager, ApplicationUser user, string? password)
   {
-    var p = await policies.GetAsync();
+    var p = await policies.GetRequirementsAsync();
     return Validate(p, password);
   }
 
-  public static IdentityResult Validate(AccountPolicy p, string? password)
+  public static IdentityResult Validate(PasswordRequirementsDto p, string? password)
   {
     var errors = new List<IdentityError>();
     var value = password ?? "";

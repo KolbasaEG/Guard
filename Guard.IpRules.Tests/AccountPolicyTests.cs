@@ -1,3 +1,4 @@
+using Guard.Core.Services.DTOs;
 using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Contexts;
@@ -39,12 +40,12 @@ internal static class AccountPolicyTests
     user.CreatedAtUtc = now.AddYears(-1);
     check(!AccountPolicyRules.Inactive(policy, user, false, now), "inactivity disabled");
     policy = new AccountPolicy { MinimumLength = 12, UniqueCharacters = 6 };
-    check(PolicyPasswordValidator.Validate(policy, "LongPassword12!").Succeeded, "all complexity rules accept strong password");
+    check(PolicyPasswordValidator.Validate(Requirements(policy), "LongPassword12!").Succeeded, "all complexity rules accept strong password");
     foreach (var weak in new[] { "Aa1!", "longpassword12!", "LONGPASSWORD12!", "LongPassword!!!", "LongPassword123", new string('a', 101) })
-      check(!PolicyPasswordValidator.Validate(policy, weak).Succeeded, "complexity rejects missing requirement");
+      check(!PolicyPasswordValidator.Validate(Requirements(policy), weak).Succeeded, "complexity rejects missing requirement");
     policy.RequireDigit = policy.RequireLowercase = policy.RequireUppercase = policy.RequireSymbol = false;
-    check(PolicyPasswordValidator.Validate(policy, "differentletters").Succeeded, "complexity switches can be disabled");
-    check(!PolicyPasswordValidator.Validate(policy, "aaaaaaaaaaaa").Succeeded, "unique character requirement enforced");
+    check(PolicyPasswordValidator.Validate(Requirements(policy), "differentletters").Succeeded, "complexity switches can be disabled");
+    check(!PolicyPasswordValidator.Validate(Requirements(policy), "aaaaaaaaaaaa").Succeeded, "unique character requirement enforced");
     foreach (var days in new[] { 0, -1, 3651 }) {
       policy.PasswordDays = days; check(!AccountPolicyRules.Valid(policy), "invalid N rejected");
       policy.PasswordDays = 30; policy.InactivityDays = days; check(!AccountPolicyRules.Valid(policy), "invalid M rejected");
@@ -53,4 +54,7 @@ internal static class AccountPolicyTests
     policy.UniqueCharacters = policy.MinimumLength + 1;
     check(!AccountPolicyRules.Valid(policy), "impossible unique count rejected");
   }
+  private static PasswordRequirementsDto Requirements(AccountPolicy policy) => new(policy.MinimumLength, policy.UniqueCharacters,
+    policy.RequireDigit, policy.RequireLowercase, policy.RequireUppercase, policy.RequireSymbol);
+
 }

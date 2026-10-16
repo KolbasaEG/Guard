@@ -22,7 +22,7 @@ public partial class SecurityService
     var access = await RequireUserReadAsync(ct);
     if (request.Skip < 0 || request.Take is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
     UserSearchQuery.ValidateFilter(request.Filter);
-    var policy = await policies.GetAsync(ct);
+    var policy = await policies.GetPasswordLifetimeAsync(ct);
     var now = DateTimeOffset.UtcNow;
     var cutoff = now.AddDays(-policy.PasswordDays);
     var result = await userReads.QueryAsync(async query => {

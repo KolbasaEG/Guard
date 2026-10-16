@@ -2,33 +2,101 @@ using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Identity;
+using Guard.Core.Services.DTOs;
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services;
 
 public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factory,
-    IServiceProvider services, IAuditService audit, IAccessChangeNotifier notifier) : IAccountPolicyService
+    IServiceProvider services, IAuditService audit, IAccessChangeNotifier notifier) : IAccountPolicyService, IPasswordRequirementsService, IAccountPolicyAdministrationService
 {
-  public async Task<AccountPolicy> GetAsync(CancellationToken ct = default)
+  private static readonly Expression<Func<AccountPolicy, AccountPolicySettingsDto>> Settings = p => new() {
+    Version = p.Version,
+    MaxFailedLoginAttempts = p.MaxFailedLoginAttempts,
+    LoginLockoutMinutes = p.LoginLockoutMinutes,
+    PasswordExpirationEnabled = p.PasswordExpirationEnabled,
+    PasswordDays = p.PasswordDays,
+    InactivityEnabled = p.InactivityEnabled,
+    InactivityDays = p.InactivityDays,
+    MinimumLength = p.MinimumLength,
+    UniqueCharacters = p.UniqueCharacters,
+    RequireDigit = p.RequireDigit,
+    RequireLowercase = p.RequireLowercase,
+    RequireUppercase = p.RequireUppercase,
+    RequireSymbol = p.RequireSymbol,
+    PasswordEnabledAtUtc = p.PasswordEnabledAtUtc,
+    InactivityEnabledAtUtc = p.InactivityEnabledAtUtc
+  };
+  private static readonly Func<AccountPolicy, AccountPolicySettingsDto> Snapshot = Settings.Compile();
+
+  public async Task<PasswordRequirementsDto> GetRequirementsAsync(CancellationToken ct = default)
   {
     await using var db = await factory.CreateDbContextAsync(ct);
-    return await db.Set<AccountPolicy>().AsNoTracking().SingleOrDefaultAsync(ct) ?? new AccountPolicy();
+    return await db.Set<AccountPolicy>().AsNoTracking().Select(p => new PasswordRequirementsDto(
+      p.MinimumLength, p.UniqueCharacters, p.RequireDigit, p.RequireLowercase, p.RequireUppercase, p.RequireSymbol))
+      .SingleOrDefaultAsync(ct) ?? new();
   }
 
-  public async Task SaveAsync(AccountPolicy policy, CancellationToken ct = default)
+  public async Task<AccountLoginPolicyDto> GetLoginPolicyAsync(CancellationToken ct = default)
   {
-    // Разрешаем зависимость только при записи, сохраняя AuthenticationState текущего circuit.
-    var permissions = services.GetRequiredService<IPermissionService>();
-    var actor = await permissions.GetCurrentAsync(ct);
-    if (!actor.IsRoot) throw new UnauthorizedAccessException("Политику изменяет только Root.");
+    await using var db = await factory.CreateDbContextAsync(ct);
+    return await db.Set<AccountPolicy>().AsNoTracking().Select(p => new AccountLoginPolicyDto(p.MaxFailedLoginAttempts, p.LoginLockoutMinutes))
+      .SingleOrDefaultAsync(ct) ?? new();
+  }
+
+  public async Task<AccountPasswordLifetimeDto> GetPasswordLifetimeAsync(CancellationToken ct = default)
+  {
+    await using var db = await factory.CreateDbContextAsync(ct);
+    return await db.Set<AccountPolicy>().AsNoTracking().Select(p => new AccountPasswordLifetimeDto(p.PasswordExpirationEnabled, p.PasswordDays, p.PasswordEnabledAtUtc))
+      .SingleOrDefaultAsync(ct) ?? new();
+  }
+
+  private async Task<UserAccessSnapshot> RequireRootAsync(CancellationToken ct)
+  {
+    var actor = await services.GetRequiredService<IPermissionService>().GetCurrentAsync(ct);
+    if (!actor.IsRoot) throw new UnauthorizedAccessException("Политика доступна только Root.");
+    return actor;
+  }
+
+  public async Task<AccountPolicySettingsDto> GetSettingsAsync(CancellationToken ct = default)
+  {
+    var actor = await RequireRootAsync(ct);
+    await using var db = await factory.CreateDbContextAsync(ct);
+    var result = await db.Set<AccountPolicy>().AsNoTracking().Select(Settings).SingleOrDefaultAsync(ct) ?? new();
+    if ((await RequireRootAsync(ct)).UserId != actor.UserId) throw new UnauthorizedAccessException("Сессия изменилась. Повторите загрузку.");
+    return result;
+  }
+
+  private static void Apply(SaveAccountPolicyCommand command, AccountPolicy policy)
+  {
+    policy.MaxFailedLoginAttempts = command.MaxFailedLoginAttempts;
+    policy.LoginLockoutMinutes = command.LoginLockoutMinutes;
+    policy.PasswordExpirationEnabled = command.PasswordExpirationEnabled;
+    policy.PasswordDays = command.PasswordDays;
+    policy.InactivityEnabled = command.InactivityEnabled;
+    policy.InactivityDays = command.InactivityDays;
+    policy.MinimumLength = command.MinimumLength;
+    policy.UniqueCharacters = command.UniqueCharacters;
+    policy.RequireDigit = command.RequireDigit;
+    policy.RequireLowercase = command.RequireLowercase;
+    policy.RequireUppercase = command.RequireUppercase;
+    policy.RequireSymbol = command.RequireSymbol;
+  }
+
+  public async Task<AccountPolicySettingsDto> SaveAsync(SaveAccountPolicyCommand command, CancellationToken ct = default)
+  {
+    var actor = await RequireRootAsync(ct);
+    ArgumentNullException.ThrowIfNull(command);
+    var policy = new AccountPolicy();
+    Apply(command, policy);
     if (!AccountPolicyRules.Valid(policy)) throw new ArgumentException("Проверьте число попыток входа (1–100), блокировку (1–10080 минут), периоды (1–3650 дней), длину пароля (6–100) и число различных символов.");
     await using var db = await factory.CreateDbContextAsync(ct);
     await using var tx = await db.Database.BeginTransactionAsync(ct);
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)", ct);
-    actor = await permissions.GetCurrentAsync(ct);
-    if (!actor.IsRoot) throw new UnauthorizedAccessException("Политику изменяет только Root.");
+    if ((await RequireRootAsync(ct)).UserId != actor.UserId) throw new UnauthorizedAccessException("Сессия изменилась. Повторите сохранение.");
     var existing = await db.Set<AccountPolicy>().SingleOrDefaultAsync(ct);
-    if (existing != null && existing.Version != policy.Version)
+    if (existing != null && existing.Version != command.Version)
       throw new AccountPolicyConflictException();
     var now = DateTimeOffset.UtcNow;
     var passwordEnabledAt = policy.PasswordExpirationEnabled
@@ -36,17 +104,15 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
     var inactivityEnabledAt = policy.InactivityEnabled
       ? existing?.InactivityEnabled == true ? existing.InactivityEnabledAtUtc : now : null;
     var saved = existing ?? new AccountPolicy();
-    db.Entry(saved).CurrentValues.SetValues(policy);
+    Apply(command, saved);
     saved.PasswordEnabledAtUtc = passwordEnabledAt;
     saved.InactivityEnabledAtUtc = inactivityEnabledAt;
     saved.Version = Guid.NewGuid();
     if (existing == null) db.Add(saved);
     await db.SaveChangesAsync(ct);
     await tx.CommitAsync(ct);
-    policy.Version = saved.Version;
-    policy.PasswordEnabledAtUtc = saved.PasswordEnabledAtUtc;
-    policy.InactivityEnabledAtUtc = saved.InactivityEnabledAtUtc;
-    audit.LogIdentityEvent(AuditEventType.AccountPolicyChanged, actor.UserId, details: $"Version={policy.Version}");
+    audit.LogIdentityEvent(AuditEventType.AccountPolicyChanged, actor.UserId, details: $"Version={saved.Version}");
+    return Snapshot(saved);
   }
 
   public async Task<AccountState> CheckAsync(string userId, CancellationToken ct = default)

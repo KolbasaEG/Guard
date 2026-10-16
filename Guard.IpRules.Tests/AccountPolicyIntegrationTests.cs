@@ -1,6 +1,7 @@
 using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,8 @@ internal static class AccountPolicyIntegrationTests
   public static async Task RunAsync(IServiceProvider services, IDbContextFactory<ApplicationDbContext> factory, Action<bool, string> check)
   {
     var policies = services.GetRequiredService<IAccountPolicyService>();
+    var administration = services.GetRequiredService<IAccountPolicyAdministrationService>();
+    await AccountPolicyBoundaryTests.CheckIntegrationAsync(services, factory, check);
     var security = services.GetRequiredService<ISecurityService>();
     await using var db = await factory.CreateDbContextAsync();
     var subdivision = await db.Subdivisions.FirstAsync();
@@ -46,17 +49,16 @@ internal static class AccountPolicyIntegrationTests
     check((await security.ToggleUserLockoutAsync(target.Id, false)).Succeeded, "manual unblock succeeds");
     var unblocked = await Read();
     check(unblocked.UnblockedAtUtc.HasValue && unblocked.AccountBlockReason == null, "unblock clears reason and restarts activity window");
-    var first = await policies.GetAsync();
-    first.InactivityEnabled = true; first.InactivityDays = 20;
-    await policies.SaveAsync(first);
-    var stale = await policies.GetAsync();
-    var updated = await policies.GetAsync(); updated.MinimumLength = 12;
-    await policies.SaveAsync(updated);
-    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => policies.SaveAsync(stale), check, "stale policy version rejected");
-    check((await policies.GetAsync()).MinimumLength == 12, "stale policy cannot overwrite committed settings");
+    var first = (await administration.GetSettingsAsync()).ToCommand() with { InactivityEnabled = true, InactivityDays = 20 };
+    await administration.SaveAsync(first);
+    var stale = (await administration.GetSettingsAsync()).ToCommand();
+    var updated = (await administration.GetSettingsAsync()).ToCommand() with { MinimumLength = 12 };
+    await administration.SaveAsync(updated);
+    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => administration.SaveAsync(stale), check, "stale policy version rejected");
+    check((await administration.GetSettingsAsync()).MinimumLength == 12, "stale policy cannot overwrite committed settings");
     var old = DateTimeOffset.UtcNow.AddDays(-40);
-    updated = await policies.GetAsync(); updated.PasswordExpirationEnabled = true; updated.PasswordDays = 30;
-    await policies.SaveAsync(updated);
+    updated = (await administration.GetSettingsAsync()).ToCommand() with { PasswordExpirationEnabled = true, PasswordDays = 30 };
+    await administration.SaveAsync(updated);
     await db.Users.Where(u => u.Id == target.Id).ExecuteUpdateAsync(s => s.SetProperty(u => u.PasswordChangedAtUtc, old));
     check((await policies.CheckAsync(target.Id)).PasswordExpired, "N-day expiry enforced in database-backed policy");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => services.GetRequiredService<IPermissionService>().GetForUserAsync(target.Id), check, "expired password denies application permissions");
@@ -75,16 +77,15 @@ internal static class AccountPolicyIntegrationTests
       context.Request.Path = "/Account/Manage/ChangePassword";
       await middleware.InvokeAsync(context, policies, manager);
       check(reached, "expired account can open password change without redirect loop");
-      await PostgresTests.ThrowsAsync<ArgumentException>(() => policies.SaveAsync(new AccountPolicy { Id = 2 }), check, "invalid policy singleton rejected");
+      await PostgresTests.ThrowsAsync<ArgumentException>(() => administration.SaveAsync(new SaveAccountPolicyCommand { MinimumLength = 5 }), check, "invalid policy command rejected");
       principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "root"),
         new Claim(manager.Options.ClaimsIdentity.SecurityStampClaimType, "revoked")], "test"));
       var fixedPermissions = new PermissionService(new FixedAuthentication(principal), new HttpContextAccessor(), factory, new AuditStub(), policies);
       await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => fixedPermissions.GetCurrentAsync(), check, "revoked stamp cannot use application services");
     }
-    updated = await policies.GetAsync(); updated.PasswordExpirationEnabled = false;
-    updated.MaxFailedLoginAttempts = 3; updated.LoginLockoutMinutes = 20;
-    await policies.SaveAsync(updated);
-    var savedLoginPolicy = await policies.GetAsync();
+    updated = (await administration.GetSettingsAsync()).ToCommand() with { PasswordExpirationEnabled = false, MaxFailedLoginAttempts = 3, LoginLockoutMinutes = 20 };
+    await administration.SaveAsync(updated);
+    var savedLoginPolicy = await administration.GetSettingsAsync();
     check(savedLoginPolicy.MaxFailedLoginAttempts == 3 && savedLoginPolicy.LoginLockoutMinutes == 20,
       "Root can persist changed login failure threshold and lockout duration");
     var currentTarget = await Read();
@@ -111,8 +112,8 @@ internal static class AccountPolicyIntegrationTests
     check((await Read()).LastActivityAtUtc == recorded, "activity writes throttled");
     await db.Users.Where(u => u.Id == "root").ExecuteUpdateAsync(s => s.SetProperty(u => u.CreatedAtUtc, old).SetProperty(u => u.LastActivityAtUtc, old));
     check(!(await policies.CheckAsync("root")).Blocked, "inactive Root retains access");
-    var policy = await policies.GetAsync(); policy.InactivityEnabled = false;
-    await policies.SaveAsync(policy);
+    var policy = (await administration.GetSettingsAsync()).ToCommand() with { InactivityEnabled = false };
+    await administration.SaveAsync(policy);
   }
   private sealed class FixedAuthentication(ClaimsPrincipal user) : AuthenticationStateProvider {
     public override Task<AuthenticationState> GetAuthenticationStateAsync() => Task.FromResult(new AuthenticationState(user));

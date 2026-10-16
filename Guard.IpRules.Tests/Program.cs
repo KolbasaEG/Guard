@@ -35,6 +35,7 @@ try
 {
 await AccessEventTests.RunAsync(Check);
 AccountPolicyTests.Run(Check);
+await AccountPolicyBoundaryTests.RunAsync(Check);
 await LoginLockoutTests.RunAsync(Check);
 EntityStatusTests.Run(Check);
 IpSearchFilterTests.Run(Check);

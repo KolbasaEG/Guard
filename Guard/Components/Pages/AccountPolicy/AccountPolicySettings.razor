@@ -1,15 +1,13 @@
 @page "/account-policy"
 @attribute [Authorize]
-@using Guard.Core.Entities
 @using Guard.Core.Services.DTOs
-@inject IAccountPolicyService Policies
-@inject IPermissionService PermissionsService
+@inject IAccountPolicyAdministrationService Policies
 @inject NavigationManager Navigation
 @inject ILogger<AccountPolicySettings> Logger
 @implements IDisposable
 <PageTitle>Политика паролей и аккаунтов</PageTitle>
 @if (Access?.IsRoot == true) {
-  <EditEntity TItem="AccountPolicy" Data="@model" Name="Политика паролей и аккаунтов" IsLoading="@busy" Submit="SaveAsync" OnCancelButtonClick="Cancel">
+  <EditEntity TItem="AccountPolicyForm" Data="@model" Name="Политика паролей и аккаунтов" IsLoading="loading" IsSaving="saving" ShowSaveButton="loaded" Submit="SaveAsync" OnCancelButtonClick="Cancel">
     <RadzenStack Gap="12px">
       @if (message != null) { <RadzenAlert AlertStyle="@(success ? AlertStyle.Success : AlertStyle.Danger)">@message</RadzenAlert> }
       <RadzenLabel Text="Неверных попыток входа до блокировки Z (1–100)" />
@@ -32,37 +30,49 @@
       <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.RequireUppercase" /><RadzenLabel Text="Прописные латинские буквы" /></RadzenStack>
       <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.RequireSymbol" /><RadzenLabel Text="Специальные символы" /></RadzenStack>
       <RadzenText Text="Сложность применяется при задании нового пароля. Сокращение N или M может немедленно ограничить доступ. При первом включении пользователям без истории предоставляется полный период. Повторное включение начинает новый период неактивности. Root подчиняется правилам пароля, но не блокируется за неактивность." />
-      <RadzenButton Text="Обновить настройки" Icon="refresh" Click="LoadAsync" Disabled="@busy" />
+      <RadzenButton Text="Обновить настройки" Icon="refresh" Click="LoadAsync" Disabled="@(loading || saving)" />
     </RadzenStack>
   </EditEntity>
 } else { <AccessDenied /> }
 @code {
   [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
-  private AccountPolicy model = new();
+  private AccountPolicyForm model = new();
+  private Guid version;
   private readonly CancellationTokenSource stop = new();
-  private bool busy, success;
+  private bool loading, saving, loaded, disposed, success;
   private string? message;
   protected override Task OnInitializedAsync() => LoadAsync();
   private void Cancel() => Navigation.NavigateTo("/users");
   private async Task LoadAsync()
   {
-    busy = true;
+    if (disposed || loading || saving) return;
+    loading = true;
+    var ct = stop.Token;
     try {
-      if (!(await PermissionsService.GetCurrentAsync(stop.Token)).IsRoot) throw new UnauthorizedAccessException();
-      model = await Policies.GetAsync(stop.Token); message = null;
+      var result = await Policies.GetSettingsAsync(ct);
+      if (disposed) return;
+      model = AccountPolicyForm.From(result); version = result.Version; loaded = true; message = null;
     }
-    catch (Exception ex) { Logger.LogWarning(ex, "Чтение политики"); success = false; message = "Не удалось получить настройки или недостаточно прав."; }
-    finally { busy = false; }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (Exception ex) { if (!disposed) { loaded = false; Logger.LogWarning(ex, "Чтение политики"); success = false; message = "Не удалось получить настройки или недостаточно прав. Обновите настройки перед сохранением."; } }
+    finally { loading = false; }
   }
   private async Task SaveAsync()
   {
-    if (busy) return;
-    busy = true; success = false;
-    try { await Policies.SaveAsync(model, stop.Token); success = true; message = "Настройки сохранены."; }
-    catch (ArgumentException ex) { message = ex.Message; }
-    catch (AccountPolicyConflictException ex) { message = ex.Message; }
-    catch (Exception ex) { Logger.LogError(ex, "Сохранение политики"); message = "Не удалось сохранить настройки или недостаточно прав."; }
-    finally { busy = false; }
+    if (disposed || loading || saving || !loaded) return;
+    saving = true; success = false;
+    var ct = stop.Token;
+    var command = model.ToCommand(version);
+    try {
+      var saved = await Policies.SaveAsync(command, ct);
+      if (disposed) return;
+      model = AccountPolicyForm.From(saved); version = saved.Version; success = true; message = "Настройки сохранены.";
+    }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (ArgumentException ex) { if (!disposed) message = ex.Message; }
+    catch (AccountPolicyConflictException ex) { if (!disposed) { loaded = false; message = ex.Message; } }
+    catch (Exception ex) { if (!disposed) { Logger.LogError(ex, "Сохранение политики"); message = "Не удалось сохранить настройки или недостаточно прав."; } }
+    finally { saving = false; }
   }
-  public void Dispose() { stop.Cancel(); stop.Dispose(); }
+  public void Dispose() { if (disposed) return; disposed = true; stop.Cancel(); stop.Dispose(); }
 }

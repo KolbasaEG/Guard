@@ -89,8 +89,8 @@ internal static class UserSearchIntegrationTests
   }
   private sealed class PolicyStub : IAccountPolicyService
   {
-    public Task<AccountPolicy> GetAsync(CancellationToken ct = default) => Task.FromResult(new AccountPolicy { PasswordExpirationEnabled = true, PasswordDays = 30 });
-    public Task SaveAsync(AccountPolicy p, CancellationToken ct = default) => throw new NotSupportedException();
+    public Task<AccountPasswordLifetimeDto> GetPasswordLifetimeAsync(CancellationToken ct = default) => Task.FromResult(new AccountPasswordLifetimeDto(true, 30));
+    public Task<AccountLoginPolicyDto> GetLoginPolicyAsync(CancellationToken ct = default) => throw new NotSupportedException();
     public Task<AccountState> CheckAsync(string id, CancellationToken ct = default) => throw new NotSupportedException();
     public Task RecordActivityAsync(string id, CancellationToken ct = default) => throw new NotSupportedException();
     public Task SweepAsync(CancellationToken ct = default) => throw new NotSupportedException();

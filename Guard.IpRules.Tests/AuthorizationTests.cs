@@ -30,6 +30,8 @@ internal static class AuthorizationTests
     services.AddScoped<IPasswordValidator<ApplicationUser>,PolicyPasswordValidator>();
     services.AddScoped<IPermissionService,PermissionService>();
     services.AddScoped<IAccountPolicyService,AccountPolicyService>();
+    services.AddScoped<IPasswordRequirementsService,AccountPolicyService>();
+    services.AddScoped<IAccountPolicyAdministrationService,AccountPolicyService>();
     services.AddScoped<IDataAccessScopeService,DataAccessScopeService>();
     services.AddScoped<IRoleAccessService,RoleAccessService>();
     services.AddScoped(typeof(IReadRepository<>),typeof(ReadRepository<>));
