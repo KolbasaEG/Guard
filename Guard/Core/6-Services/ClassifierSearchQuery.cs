@@ -8,7 +8,7 @@ namespace Guard.Core.Services;
 
 public static class ClassifierSearchQuery
 {
-  public static readonly FrozenSet<string> Fields = new[] { "ClassifierName", "Code", "Id", "IsActive", "Type", "UpdatedAt", "Value" }.ToFrozenSet(StringComparer.Ordinal);
+  public static readonly FrozenSet<string> Fields = ClassifierSearchFilter.Fields;
 
   private static Expression Field(ParameterExpression parameter, string name)
   {
@@ -16,7 +16,7 @@ public static class ClassifierSearchQuery
     return Expression.Property(parameter, name);
   }
 
-  public static void ValidateFilter(ExportFilter? filter) => _ = Predicate(filter);
+  public static void ValidateFilter(ExportFilter? filter) => ClassifierSearchFilter.Validate(filter);
   public static IQueryable<Classifier> Filter(IQueryable<Classifier> query, ExportFilter? filter) => query.Where(Predicate(filter));
 
   private static Expression<Func<Classifier, bool>> Predicate(ExportFilter? filter)

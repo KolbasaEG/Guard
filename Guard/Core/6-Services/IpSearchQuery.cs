@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Linq.Expressions;
 using System.Text.Json;
 using Guard.Core.Entities;
@@ -9,9 +10,9 @@ namespace Guard.Core.Services;
 // Только серверное построение запроса; не зависит от Radzen или Dynamic LINQ.
 public static class IpSearchQuery
 {
-  private static readonly HashSet<string> Fields = ["Address", "Description", "Subdivision.Name"];
+  private static readonly FrozenSet<string> Fields = IpSearchFilter.Fields;
 
-  public static void ValidateFilter(ExportFilter? filter) => _ = Predicate(filter);
+  public static void ValidateFilter(ExportFilter? filter) => IpSearchFilter.Validate(filter);
 
   public static IQueryable<IpAddress> Filter(IQueryable<IpAddress> query, ExportFilter? filter) =>
     query.Where(Predicate(filter));

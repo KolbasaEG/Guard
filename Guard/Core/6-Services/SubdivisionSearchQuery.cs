@@ -9,10 +9,7 @@ namespace Guard.Core.Services;
 
 public static class SubdivisionSearchQuery
 {
-  public static readonly FrozenSet<string> Fields = new[] {
-    "Address", "Fax", "Id", "InsertedDate", "IsDepartment", "LevelOrder", "Name", "OrganType.Value",
-    "Parent.Name", "Path", "Phone", "PositionFormationName", "PostalCode", "StaffCount", "StatusClassifier.Value"
-  }.ToFrozenSet(StringComparer.Ordinal);
+  public static readonly FrozenSet<string> Fields = SubdivisionSearchFilter.Fields;
 
   private static Expression Field(ParameterExpression parameter, string name)
   {
@@ -24,7 +21,7 @@ public static class SubdivisionSearchQuery
       Expression.Property(member, parts[1]));
   }
 
-  public static void ValidateFilter(ExportFilter? filter) => _ = Predicate(filter);
+  public static void ValidateFilter(ExportFilter? filter) => SubdivisionSearchFilter.Validate(filter);
   public static IQueryable<Subdivision> Filter(IQueryable<Subdivision> query, ExportFilter? filter) => query.Where(Predicate(filter));
 
   private static Expression<Func<Subdivision, bool>> Predicate(ExportFilter? filter)

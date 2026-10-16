@@ -12,6 +12,12 @@ internal static class SearchFilterContractTests
     Compare<ApplicationUser>(UserSearchFilter.Types, UserSearchFilter.Validate);
     Compare<ApplicationRole>(RoleSearchFilter.Types, RoleSearchFilter.Validate);
     Compare<LogEntry>(LogSearchFilter.Types, LogSearchFilter.Validate);
+    Compare<IpAddress>(IpSearchFilter.Types, IpSearchFilter.Validate,
+      filter => _ = IpSearchQuery.Filter(Array.Empty<IpAddress>().AsQueryable(), filter));
+    Compare<Subdivision>(SubdivisionSearchFilter.Types, SubdivisionSearchFilter.Validate,
+      filter => _ = SubdivisionSearchQuery.Filter(Array.Empty<Subdivision>().AsQueryable(), filter));
+    Compare<Classifier>(ClassifierSearchFilter.Types, ClassifierSearchFilter.Validate,
+      filter => _ = ClassifierSearchQuery.Filter(Array.Empty<Classifier>().AsQueryable(), filter));
 
     var users = new[] {
       new ApplicationUser { Id = "1", UserName = null, PersonalId = null },
@@ -41,12 +47,38 @@ internal static class SearchFilterContractTests
     using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql().Options);
     check(UserSearchQuery.Filter(db.Users, new("LastActivityAtUtc", "GreaterThan", Json("\"2026-01-01T00:00:00Z\""))).ToQueryString().Contains("LastActivityAtUtc"), "UTC date offset filter translates to PostgreSQL");
     check(RoleSearchQuery.Sort(RoleSearchQuery.Filter(db.Roles, new("Name", "Contains", Json("\"root\""))), "Name desc").ToQueryString().Contains("ORDER BY"), "role filter and stable sorting translate to PostgreSQL");
+    check(IpSearchQuery.Sort(IpSearchQuery.Filter(db.Set<IpAddress>(), new("Subdivision.Name", "Contains", Json("\"alpha\""))), "Subdivision.Name asc")
+      .ToQueryString().Contains("LEFT JOIN"), "IP nested filter and sorting translate to PostgreSQL");
+    check(SubdivisionSearchQuery.Sort(SubdivisionSearchQuery.Filter(db.Set<Subdivision>(), new("StaffCount", "GreaterThan", Json("10.5"))), "Parent.Name desc")
+      .ToQueryString().Contains("ORDER BY"), "subdivision numeric filter and nested sorting translate to PostgreSQL");
+    check(ClassifierSearchQuery.Filter(db.Set<Classifier>(), new("UpdatedAt", "GreaterThan", Json("\"2026-01-01T00:00:00Z\"")))
+      .ToQueryString().Contains("UpdatedAt"), "classifier UTC filter translates to PostgreSQL");
+    var ips = new[] {
+      new IpAddress { Address = "192.0.2.1", Subdivision = null },
+      new IpAddress { Address = "192.0.2.2", Subdivision = new() { Name = "Alpha" } }
+    }.AsQueryable();
+    check(IpSearchQuery.Filter(ips, new("Subdivision.Name", "IsNull")).Single().Address == "192.0.2.1", "missing IP subdivision matches nested null filter");
+    check(IpSearchQuery.Filter(ips, new("Subdivision.Name", "Equals", Json("\"ALPHA\""))).Single().Address == "192.0.2.2", "nested IP text comparison ignores case");
+    foreach (var value in new[] { "1e999", "\"NaN\"", "\"Infinity\"" })
+      check(!Accepts(() => SubdivisionSearchFilter.Validate(new("StaffCount", "Equals", Json(value)))), "subdivision rejects nonfinite numeric input");
+    check(!Accepts(() => ClassifierSearchFilter.Validate(new("Code", "Equals", Json("2147483648")))), "classifier rejects integer overflow");
+    check(!Accepts(() => IpSearchQuery.ValidateFilter(new("Unknown", "Equals"))), "IP server validator uses independent field restrictions");
+    check(!Accepts(() => SubdivisionSearchQuery.ValidateFilter(new("Unknown", "Equals"))), "subdivision server validator uses independent field restrictions");
+    check(!Accepts(() => ClassifierSearchQuery.ValidateFilter(new("Unknown", "Equals"))), "classifier server validator uses independent field restrictions");
 
-    void Compare<T>(IReadOnlyDictionary<string, Type> types, Action<ExportFilter?> validate)
+    void Compare<T>(IReadOnlyDictionary<string, Type> types, Action<ExportFilter?> validate, Action<ExportFilter?>? compile = null)
     {
       var fields = types.Keys.ToHashSet(StringComparer.Ordinal);
       // Keep the comparison against the entity expression compiler, not the forwarding validator.
-      void queryValidate(ExportFilter? filter) => _ = RestrictedSearchQuery<T>.Filter(Array.Empty<T>().AsQueryable(), filter, fields);
+      void queryValidate(ExportFilter? filter) {
+        if (compile != null) compile(filter);
+        else _ = RestrictedSearchQuery<T>.Filter(Array.Empty<T>().AsQueryable(), filter, fields);
+      }
+      Type FieldType(string path) {
+        var type = typeof(T);
+        foreach (var part in path.Split('.')) type = type.GetProperty(part)!.PropertyType;
+        return type;
+      }
       string[] operations = ["Equals", "NotEquals", "Contains", "DoesNotContain", "StartsWith", "EndsWith", "In", "NotIn",
         "IsNull", "IsNotNull", "IsEmpty", "IsNotEmpty", "GreaterThan", "GreaterThanOrEquals", "LessThan", "LessThanOrEquals", "Custom", "", null!];
       string[] values = ["null", "\"\"", "\"alpha\"", "true", "42", "[]", "[\"Alpha\",\"Beta\"]", "[null]", "[1]", "{}",
@@ -58,10 +90,11 @@ internal static class SearchFilterContractTests
             check(Accepts(() => validate(filter)) == Accepts(() => queryValidate(filter)), $"{typeof(T).Name} filter contract parity {field}/{operation}/{value}");
           }
       foreach (var field in fields) {
-        var fieldType = typeof(T).GetProperty(field)!.PropertyType;
+        var fieldType = FieldType(field);
         check(fieldType == types[field], $"{typeof(T).Name} independent field type matches storage {field}");
         var sample = fieldType == typeof(string) ? Json("\"a\"") : fieldType == typeof(bool) ? Json("true") :
-          fieldType == typeof(Guid?) ? Json("\"11111111-1111-1111-1111-111111111111\"") : Json("\"2026-01-01T00:00:00Z\"");
+          fieldType == typeof(Guid?) || fieldType == typeof(Guid) ? Json("\"11111111-1111-1111-1111-111111111111\"") :
+          fieldType == typeof(int) || fieldType == typeof(double) ? Json("42") : Json("\"2026-01-01T00:00:00Z\"");
         check(Accepts(() => validate(new(field, "Equals", sample))), $"{typeof(T).Name} supported field accepts matching value {field}");
         check(!Accepts(() => validate(new(field, "Equals", Json("{}")))) , $"{typeof(T).Name} field rejects object value {field}");
       }
@@ -78,7 +111,7 @@ internal static class SearchFilterContractTests
       }
       check(!Accepts(() => validate(new(Children: [null!]))), "null filter child rejected");
       foreach (var size in new[] { 1024, 1025 }) {
-        var filter = new ExportFilter(fields.First(f => typeof(T).GetProperty(f)!.PropertyType == typeof(string)), "In", JsonSerializer.SerializeToElement(Enumerable.Repeat("a", size)));
+        var filter = new ExportFilter(fields.First(f => FieldType(f) == typeof(string)), "In", JsonSerializer.SerializeToElement(Enumerable.Repeat("a", size)));
         check(Accepts(() => validate(filter)) == (size == 1024), "string collection size boundary");
         check(Accepts(() => validate(filter)) == Accepts(() => queryValidate(filter)), "string collection size parity");
       }

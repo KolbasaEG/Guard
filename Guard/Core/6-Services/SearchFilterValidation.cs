@@ -80,3 +80,35 @@ public static class LogSearchFilter
   public static readonly FrozenSet<string> Fields = Types.Keys.ToFrozenSet(StringComparer.Ordinal);
   public static void Validate(ExportFilter? filter) => SearchFilterValidation.Validate(filter, Types);
 }
+
+public static class IpSearchFilter
+{
+  internal static readonly FrozenDictionary<string, Type> Types = new Dictionary<string, Type>(StringComparer.Ordinal) {
+    ["Address"] = typeof(string), ["Description"] = typeof(string), ["Subdivision.Name"] = typeof(string)
+  }.ToFrozenDictionary(StringComparer.Ordinal);
+  public static readonly FrozenSet<string> Fields = Types.Keys.ToFrozenSet(StringComparer.Ordinal);
+  public static void Validate(ExportFilter? filter) => SearchFilterValidation.Validate(filter, Types);
+}
+
+public static class SubdivisionSearchFilter
+{
+  internal static readonly FrozenDictionary<string, Type> Types = new Dictionary<string, Type>(StringComparer.Ordinal) {
+    ["Address"] = typeof(string), ["Fax"] = typeof(string), ["Id"] = typeof(Guid),
+    ["InsertedDate"] = typeof(DateTime), ["IsDepartment"] = typeof(bool), ["LevelOrder"] = typeof(int),
+    ["Name"] = typeof(string), ["OrganType.Value"] = typeof(string), ["Parent.Name"] = typeof(string),
+    ["Path"] = typeof(string), ["Phone"] = typeof(string), ["PositionFormationName"] = typeof(string),
+    ["PostalCode"] = typeof(string), ["StaffCount"] = typeof(double), ["StatusClassifier.Value"] = typeof(string)
+  }.ToFrozenDictionary(StringComparer.Ordinal);
+  public static readonly FrozenSet<string> Fields = Types.Keys.ToFrozenSet(StringComparer.Ordinal);
+  public static void Validate(ExportFilter? filter) => SearchFilterValidation.Validate(filter, Types);
+}
+
+public static class ClassifierSearchFilter
+{
+  internal static readonly FrozenDictionary<string, Type> Types = new Dictionary<string, Type>(StringComparer.Ordinal) {
+    ["ClassifierName"] = typeof(string), ["Code"] = typeof(int), ["Id"] = typeof(int),
+    ["IsActive"] = typeof(bool), ["Type"] = typeof(int), ["UpdatedAt"] = typeof(DateTime), ["Value"] = typeof(string)
+  }.ToFrozenDictionary(StringComparer.Ordinal);
+  public static readonly FrozenSet<string> Fields = Types.Keys.ToFrozenSet(StringComparer.Ordinal);
+  public static void Validate(ExportFilter? filter) => SearchFilterValidation.Validate(filter, Types);
+}

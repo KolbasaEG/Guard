@@ -27,7 +27,7 @@ public static class IpListQuery
     }
     var snapshot = new ExportFilter(All: filter.LogicalFilterOperator == LogicalFilterOperator.And,
       Children: (filter.Filters ?? []).Select(descriptor => Copy(descriptor, 0)).ToArray());
-    IpSearchQuery.ValidateFilter(snapshot);
+    IpSearchFilter.Validate(snapshot);
     return snapshot;
   }
 }

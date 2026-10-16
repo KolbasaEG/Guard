@@ -21,8 +21,8 @@ public static class ClassifierListQuery
       foreach (var child in descriptor.Filters ?? []) Validate(child, depth + 1);
     }
     foreach (var descriptor in filter.Filters ?? []) Validate(descriptor, 0);
-    var snapshot = ExportFilterCapture.Capture(EntityListQuery<Classifier>.Snapshot(filter, ClassifierSearchQuery.Fields, time), filter.LogicalFilterOperator);
-    ClassifierSearchQuery.ValidateFilter(snapshot);
+    var snapshot = ExportFilterCapture.Capture(EntityListQuery<Classifier>.Snapshot(filter, ClassifierSearchFilter.Fields, time), filter.LogicalFilterOperator);
+    ClassifierSearchFilter.Validate(snapshot);
     return snapshot;
   }
 }
