@@ -1,6 +1,7 @@
 using Guard.Components.Library.Loading;
 using Guard.Core.Entities;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.JSInterop;
@@ -43,7 +44,21 @@ namespace Guard.Shared
 
 
     [Parameter] public BaseEntity BaseEntity { get; set; }
+    [Parameter] public IpAddressDetailsDto? IpAddressDetails { get; set; }
     [Parameter] public bool Compact { get; set; }
+
+    private EntityInfoDto Info => IpAddressDetails?.Info ?? new EntityInfoDto {
+      Id = BaseEntity?.Id ?? Guid.Empty,
+      InsertedDate = BaseEntity?.InsertedDate ?? default,
+      LastModifiedDate = BaseEntity?.LastModifiedDate,
+      Creator = creator, Editor = editor
+    };
+    private string ReadPermission => IpAddressDetails != null ? Guard.Core.Identity.Permissions.IpAddresses.Read : BaseEntity switch {
+      Personal => Guard.Core.Identity.Permissions.Personals.ReadDetails,
+      Subdivision => Guard.Core.Identity.Permissions.Subdivisions.Read,
+      IpAddress => Guard.Core.Identity.Permissions.IpAddresses.Read,
+      _ => ""
+    };
 
     protected bool isLoading = false;
     protected string creator = string.Empty;
@@ -52,6 +67,7 @@ namespace Guard.Shared
 
     protected override async Task OnInitializedAsync() 
     {
+      if (IpAddressDetails != null) return;
       if (BaseEntity != null)
       {
         var crtor = await Security.GetUserByIdAsync(BaseEntity.CreatedBy);

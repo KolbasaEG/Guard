@@ -1,4 +1,4 @@
-using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -17,19 +17,41 @@ public partial class Add : IDisposable
   private readonly CancellationTokenSource _cts = new();
   private bool disposed;
   protected bool isSaving;
-  protected IpAddress item = new();
-  protected IEnumerable<Subdivision> subdivisions = [];
+  protected bool isLoading;
+  protected IpAddressFieldsDto item = new();
+  protected IEnumerable<IpSubdivisionOptionDto> subdivisions = [];
 
-  protected override void OnParametersSet() => subdivisions = UserContext?.SubordinateSubdivisions ?? [];
+  protected override async Task OnInitializedAsync()
+  {
+    var ct = _cts.Token;
+    isLoading = true;
+    try
+    {
+      var options = await IpAddressService.GetSubdivisionOptionsAsync(ct);
+      if (!disposed && !ct.IsCancellationRequested) subdivisions = options;
+    }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    catch (Exception ex)
+    {
+      if (disposed || ct.IsCancellationRequested) return;
+      Logger.LogError(ex, "Загрузка подразделений для IP-адреса");
+      NotificationService.Notify(new NotificationMessage {
+        Severity = NotificationSeverity.Error, Summary = "IP-адрес", Detail = UserOperationErrors.Message(ex),
+        Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+      });
+      DialogService.Close(null);
+    }
+    finally { isLoading = false; }
+  }
 
   protected async Task FormSubmit()
   {
-    if (disposed || isSaving || _cts.IsCancellationRequested) return;
+    if (disposed || isLoading || isSaving || _cts.IsCancellationRequested) return;
     var ct = _cts.Token;
     isSaving = true;
     try
     {
-      var id = await IpAddressService.CreateAsync(item, ct);
+      var id = await IpAddressService.CreateAsync(new CreateIpAddressDto(item.Address, item.Description, item.SubdivisionId), ct);
       if (disposed || ct.IsCancellationRequested) return;
       DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true, id));
     }

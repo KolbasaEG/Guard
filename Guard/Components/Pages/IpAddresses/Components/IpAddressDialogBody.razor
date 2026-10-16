@@ -1,8 +1,8 @@
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 
 @if (CanEdit)
 {
-  <EditEntity TItem="IpAddress" Data="Item" Name="РЕДАКТИРОВАНИЕ IP-АДРЕСА"
+  <EditEntity TItem="IpAddressDetailsDto" Data="Item" Name="РЕДАКТИРОВАНИЕ IP-АДРЕСА"
               Submit="Submit" ShowInfoButton="true" OnInfoClick="OnInfoClick"
               IsLoading="IsLoading" IsSaving="IsSaving" OnCancelButtonClick="OnCancel">
     <IpAddressFields Item="Item" Subdivisions="Subdivisions" IsRoot="IsRoot" />
@@ -10,7 +10,7 @@
 }
 else
 {
-  <ViewEntity TItem="IpAddress" Data="Item" Name="ПРОСМОТР IP-АДРЕСА"
+  <ViewEntity TItem="IpAddressDetailsDto" Data="Item" Name="ПРОСМОТР IP-АДРЕСА"
               ShowInfoButton="@(IsLoaded && !IsLoading)" OnInfoClick="OnInfoClick"
               IsLoading="IsLoading" OnCancelButtonClick="OnCancel">
     @if (IsLoaded && !IsLoading)
@@ -22,8 +22,8 @@ else
 
 @code {
   [CascadingParameter] public DialogAccessState? AccessState { get; set; }
-  [Parameter, EditorRequired] public IpAddress Item { get; set; } = default!;
-  [Parameter] public IEnumerable<Subdivision> Subdivisions { get; set; } = [];
+  [Parameter, EditorRequired] public IpAddressDetailsDto Item { get; set; } = default!;
+  [Parameter] public IEnumerable<IpSubdivisionOptionDto> Subdivisions { get; set; } = [];
   [Parameter] public bool IsRoot { get; set; }
   [Parameter] public bool IsLoading { get; set; }
   [Parameter] public bool IsSaving { get; set; }

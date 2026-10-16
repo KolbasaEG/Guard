@@ -1,4 +1,4 @@
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 
 <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;min-width:0;">
   <RadzenFormField Text="Подразделение" Variant="Variant.Text" Style="width:100%;">
@@ -27,7 +27,7 @@
 </RadzenStack>
 
 @code {
-  [Parameter, EditorRequired] public IpAddress Item { get; set; } = default!;
-  [Parameter] public IEnumerable<Subdivision> Subdivisions { get; set; } = [];
+  [Parameter, EditorRequired] public IpAddressFieldsDto Item { get; set; } = default!;
+  [Parameter] public IEnumerable<IpSubdivisionOptionDto> Subdivisions { get; set; } = [];
   [Parameter] public bool IsRoot { get; set; }
 }

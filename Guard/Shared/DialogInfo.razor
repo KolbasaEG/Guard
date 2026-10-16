@@ -1,4 +1,4 @@
-<Guard.Components.Layout.Components.AccessDialog ReadPermission="@(BaseEntity switch { Guard.Core.Entities.Personal => Guard.Core.Identity.Permissions.Personals.ReadDetails, Guard.Core.Entities.Subdivision => Guard.Core.Identity.Permissions.Subdivisions.Read, Guard.Core.Entities.IpAddress => Guard.Core.Identity.Permissions.IpAddresses.Read, _ => "" })">
+<Guard.Components.Layout.Components.AccessDialog ReadPermission="@ReadPermission">
 @using Guard.Components.Library.Views
 @using Microsoft.AspNetCore.Authorization
 @using Radzen.Blazor
@@ -34,7 +34,7 @@
           Id
         </RadzenTableCell>
         <RadzenTableCell>
-          @(BaseEntity?.Id.ToString() ?? "")
+          @(Info.Id.ToString())
         </RadzenTableCell>
       </RadzenTableRow>
       <RadzenTableRow>
@@ -42,7 +42,7 @@
           Дата создания
         </RadzenTableCell>
         <RadzenTableCell>
-          @(Time.Format(BaseEntity.InsertedDate, "dd.MM.yyyy HH:mm:ss"))
+          @(Time.Format(Info.InsertedDate, "dd.MM.yyyy HH:mm:ss"))
          </RadzenTableCell>
       </RadzenTableRow>
       <RadzenTableRow>
@@ -50,7 +50,7 @@
           Создал
         </RadzenTableCell>
         <RadzenTableCell>
-          @creator
+          @Info.Creator
         </RadzenTableCell>
       </RadzenTableRow>
       <RadzenTableRow>
@@ -58,8 +58,8 @@
           Дата последнего редактирования
         </RadzenTableCell>
         <RadzenTableCell>
-          @(BaseEntity?.LastModifiedDate.HasValue == true
-            ? Time.Format(BaseEntity.LastModifiedDate.Value, "dd.MM.yyyy HH:mm:ss")
+          @(Info.LastModifiedDate.HasValue
+            ? Time.Format(Info.LastModifiedDate.Value, "dd.MM.yyyy HH:mm:ss")
             : "—")
         </RadzenTableCell>
       </RadzenTableRow>
@@ -68,7 +68,7 @@
           Редактировал
         </RadzenTableCell>
         <RadzenTableCell>
-          @editor
+          @Info.Editor
         </RadzenTableCell>
       </RadzenTableRow>
     </RadzenTableBody>
@@ -79,10 +79,10 @@
 
 @code {
   private IEnumerable<(string Icon, string Label, string? Value)> CompactRows => [
-    ("fingerprint", "Идентификатор", BaseEntity?.Id.ToString()),
-    ("event", "Создано", BaseEntity == null ? null : Time.Format(BaseEntity.InsertedDate, "dd.MM.yyyy HH:mm:ss")),
-    ("person_outline", "Создал", creator),
-    ("edit_calendar", "Изменено", BaseEntity?.LastModifiedDate.HasValue == true ? Time.Format(BaseEntity.LastModifiedDate.Value, "dd.MM.yyyy HH:mm:ss") : null),
-    ("manage_accounts", "Редактировал", editor)
+    ("fingerprint", "Идентификатор", Info.Id.ToString()),
+    ("event", "Создано", Time.Format(Info.InsertedDate, "dd.MM.yyyy HH:mm:ss")),
+    ("person_outline", "Создал", Info.Creator),
+    ("edit_calendar", "Изменено", Info.LastModifiedDate.HasValue ? Time.Format(Info.LastModifiedDate.Value, "dd.MM.yyyy HH:mm:ss") : null),
+    ("manage_accounts", "Редактировал", Info.Editor)
   ];
 }

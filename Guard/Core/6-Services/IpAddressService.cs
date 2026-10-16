@@ -2,6 +2,7 @@ using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Identity;
+using Guard.Core.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -10,6 +11,43 @@ namespace Guard.Core.Services;
 public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
     IIpManagementAccessService access, ILogger<IpAddressService> logger) : IIpAddressService
 {
+  public async Task<IpAddressDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default)
+  {
+    var scope = await access.GetScopeAsync(false, ct);
+    await using var db = await factory.CreateDbContextAsync(ct);
+    var result = await Accessible(db.IpAddresses.AsNoTracking(), scope).Where(ip => ip.Id == id)
+      .Select(ip => new IpAddressDetailsDto {
+        Id = ip.Id, Address = ip.Address, Description = ip.Description, SubdivisionId = ip.SubdivisionId,
+        SubdivisionName = ip.Subdivision == null ? null : ip.Subdivision.Name, Status = ip.Status,
+        Info = new EntityInfoDto {
+          Id = ip.Id, InsertedDate = ip.InsertedDate, LastModifiedDate = ip.LastModifiedDate,
+          Creator = db.Users.Where(u => u.Id == ip.CreatedBy).Select(u => u.Email).FirstOrDefault(),
+          Editor = db.Users.Where(u => u.Id == ip.ModifiedBy).Select(u => u.Email).FirstOrDefault()
+        }
+      }).SingleOrDefaultAsync(ct);
+    await EnsureReadScopeAsync(scope, ct);
+    return result;
+  }
+
+  public async Task<IReadOnlyList<IpSubdivisionOptionDto>> GetSubdivisionOptionsAsync(CancellationToken ct = default)
+  {
+    var scope = await access.GetScopeAsync(false, ct);
+    await using var db = await factory.CreateDbContextAsync(ct);
+    var result = await db.Subdivisions.AsNoTracking().Where(s =>
+      (s.Status == Status.Inserted || s.Status == Status.Modified) && (scope.IsRoot || scope.SubdivisionIds.Contains(s.Id)))
+      .OrderBy(s => s.Name).ThenBy(s => s.Id).Select(s => new IpSubdivisionOptionDto(s.Id, s.Name)).ToListAsync(ct);
+    await EnsureReadScopeAsync(scope, ct);
+    return result;
+  }
+
+  private async Task EnsureReadScopeAsync(IpManagementScope initial, CancellationToken ct)
+  {
+    var final = await access.GetScopeAsync(false, ct);
+    ct.ThrowIfCancellationRequested();
+    if (initial.UserId != final.UserId || initial.IsRoot != final.IsRoot || !initial.SubdivisionIds.SetEquals(final.SubdivisionIds))
+      throw new UnauthorizedAccessException("Область доступа изменилась во время загрузки.");
+  }
+
   public async Task<Guard.Core.Services.DTOs.IpSearchResult> SearchAsync(Guard.Core.Services.DTOs.IpSearchRequest request, CancellationToken ct = default)
   {
     ArgumentNullException.ThrowIfNull(request);
@@ -74,12 +112,25 @@ public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
     return !values.Any(value => IpAddressRule.TryParse(value, out var rule) && rule!.CanonicalAddress == address);
   }
 
-  public Task<Guid> CreateAsync(IpAddress ipAddress, CancellationToken ct = default) =>
-      WriteAsync(null, ipAddress, null, ct);
+  public Task<Guid> CreateAsync(IpAddress ipAddress, CancellationToken ct = default)
+  {
+    ArgumentNullException.ThrowIfNull(ipAddress);
+    return CreateAsync(new CreateIpAddressDto(ipAddress.Address, ipAddress.Description, ipAddress.SubdivisionId), ct);
+  }
   public async Task UpdateAsync(IpAddress ipAddress, CancellationToken ct = default)
   {
     ArgumentNullException.ThrowIfNull(ipAddress);
-    await WriteAsync(ipAddress.Id, ipAddress, null, ct);
+    await UpdateAsync(new EditIpAddressDto(ipAddress.Id, ipAddress.Address, ipAddress.Description, ipAddress.SubdivisionId), ct);
+  }
+  public Task<Guid> CreateAsync(CreateIpAddressDto input, CancellationToken ct = default)
+  {
+    ArgumentNullException.ThrowIfNull(input);
+    return WriteAsync(null, new(input.Address, input.Description, input.SubdivisionId), null, ct);
+  }
+  public async Task UpdateAsync(EditIpAddressDto input, CancellationToken ct = default)
+  {
+    ArgumentNullException.ThrowIfNull(input);
+    await WriteAsync(input.Id, new(input.Address, input.Description, input.SubdivisionId), null, ct);
   }
   public async Task SoftDeleteAsync(Guid id, CancellationToken ct = default) => await WriteAsync(id, null, "delete", ct);
   public async Task ArchiveAsync(Guid id, CancellationToken ct = default) => await WriteAsync(id, null, "archive", ct);
@@ -87,7 +138,7 @@ public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
   public async Task BlockAsync(Guid id, CancellationToken ct = default) => await WriteAsync(id, null, "block", ct);
   public async Task UnblockAsync(Guid id, CancellationToken ct = default) => await WriteAsync(id, null, "unblock", ct);
 
-  private async Task<Guid> WriteAsync(Guid? id, IpAddress? input, string? operation, CancellationToken ct)
+  private async Task<Guid> WriteAsync(Guid? id, CreateIpAddressDto? input, string? operation, CancellationToken ct)
   {
     var scope = await access.GetScopeAsync(true, ct);
     await using var db = await factory.CreateDbContextAsync(ct);

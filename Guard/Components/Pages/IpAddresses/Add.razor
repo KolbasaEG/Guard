@@ -1,10 +1,10 @@
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 @using Guard.Components.Pages.IpAddresses.Components
 @attribute [Authorize]
 
 <Guard.Components.Layout.Components.AccessDialog ReadPermission="@Permissions.IpAddresses.Read" WritePermission="@Permissions.IpAddresses.Manage">
-  <CreateEntity TItem="IpAddress" Data="item" Name="ДОБАВЛЕНИЕ IP-АДРЕСА"
-                Submit="FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsSaving="isSaving">
+  <CreateEntity TItem="IpAddressFieldsDto" Data="item" Name="ДОБАВЛЕНИЕ IP-АДРЕСА"
+                Submit="FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" IsSaving="isSaving" IsLoading="isLoading">
     <IpAddressFields Item="item" Subdivisions="subdivisions" IsRoot="@(UserContext?.IsRoot == true)" />
   </CreateEntity>
 </Guard.Components.Layout.Components.AccessDialog>

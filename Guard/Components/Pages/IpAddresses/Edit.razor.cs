@@ -1,4 +1,4 @@
-using Guard.Core.Entities;
+using Guard.Core.Services.DTOs;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Guard.Shared;
@@ -23,10 +23,8 @@ public partial class Edit : IDisposable
   protected bool isLoading;
   protected bool isSaving;
   protected bool isLoaded;
-  protected IpAddress item = new();
-  protected IEnumerable<Subdivision> subdivisions = [];
-
-  protected override void OnParametersSet() => subdivisions = UserContext?.SubordinateSubdivisions ?? [];
+  protected IpAddressDetailsDto item = new();
+  protected IEnumerable<IpSubdivisionOptionDto> subdivisions = [];
 
   protected override async Task OnInitializedAsync()
   {
@@ -34,13 +32,19 @@ public partial class Edit : IDisposable
     isLoading = true;
     try
     {
-      var loadedItem = await IpAddressService.GetByIdAsync(Id, ct);
+      var loadedItem = await IpAddressService.GetDetailsAsync(Id, ct);
       if (disposed || ct.IsCancellationRequested) return;
       if (loadedItem == null)
       {
         ShowErrorNotification("IP-адрес не найден или недоступен. Обновите список.");
         DialogService.Close(null);
         return;
+      }
+      if (!ReadOnly && loadedItem.Status is Guard.Core.Enums.Status.Inserted or Guard.Core.Enums.Status.Modified)
+      {
+        var options = await IpAddressService.GetSubdivisionOptionsAsync(ct);
+        if (disposed || ct.IsCancellationRequested) return;
+        subdivisions = options;
       }
       item = loadedItem;
       isLoaded = true;
@@ -64,7 +68,7 @@ public partial class Edit : IDisposable
     isSaving = true;
     try
     {
-      await IpAddressService.UpdateAsync(item, ct);
+      await IpAddressService.UpdateAsync(new EditIpAddressDto(item.Id, item.Address, item.Description, item.SubdivisionId), ct);
       if (disposed || ct.IsCancellationRequested) return;
       DialogService.Close(new Guard.Components.Library.Dialogs.EntityDialogResult(true, item.Id));
     }
@@ -101,7 +105,7 @@ public partial class Edit : IDisposable
     infoOpen = true;
     try
     {
-      await DialogService.OpenAsync<DialogInfo>("", new Dictionary<string, object?> { { "BaseEntity", item }, { "Compact", true } },
+      await DialogService.OpenAsync<DialogInfo>("", new Dictionary<string, object?> { { "IpAddressDetails", item }, { "Compact", true } },
         new DialogOptions { Width = "640px", Style = "max-width:calc(100vw - 24px);", ShowTitle = false, ContentCssClass = "rz-p-1" });
     }
     finally { infoOpen = false; }

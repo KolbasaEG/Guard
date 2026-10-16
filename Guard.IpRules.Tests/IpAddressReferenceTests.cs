@@ -3,6 +3,7 @@ using Guard.Components.Pages.IpAddresses;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
@@ -49,12 +50,15 @@ internal static class IpAddressReferenceTests
     var closes = 0; dialogs.OnClose += _ => closes++;
     var create = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
     var calls = 0; CancellationToken token = default;
-    stub.Handle = (_, args) => { calls++; token = (CancellationToken)args[1]!; return create.Task; };
+    CreateIpAddressDto? submitted = null;
+    stub.Handle = (_, args) => { calls++; submitted = (CreateIpAddressDto)args[0]!; token = (CancellationToken)args[1]!; return create.Task; };
     var creatingDialog = dialogs.OpenAsync<Add>("");
     using (var add = new AddProbe(service, notifications, dialogs))
     {
       var pending = add.Save(); await add.Save();
       check(calls == 1 && add.Saving, "IP create rejects duplicate submissions");
+      add.Address = "changed after submit";
+      check(submitted?.Address == "", "IP create snapshots only editable scalar fields before async save");
       add.Cancel(); await creatingDialog;
       var followingDialog = dialogs.OpenAsync<Add>("");
       create.SetResult(Guid.NewGuid()); await pending;
@@ -62,17 +66,18 @@ internal static class IpAddressReferenceTests
         "cancelled IP creation cannot close a subsequent dialog or notify late");
       dialogs.Close(null); await followingDialog; closes = 0;
     }
-    var load = new TaskCompletionSource<IpAddress?>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var load = new TaskCompletionSource<IpAddressDetailsDto?>(TaskCreationOptions.RunContinuationsAsynchronously);
     stub.Handle = (_, args) => { token = (CancellationToken)args[1]!; return load.Task; };
     var edit = new EditProbe(service, notifications, dialogs);
     var initializing = edit.Initialize(); edit.Dispose();
-    load.SetResult(new IpAddress { Address = "192.0.2.9" }); await initializing;
+    load.SetResult(new IpAddressDetailsDto { Address = "192.0.2.9" }); await initializing;
     check(!edit.Loaded && token.IsCancellationRequested && closes == 0, "disposed IP dialog ignores late entity load");
     var update = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     var updates = 0;
     stub.Handle = (method, _) => method.Name switch {
-      nameof(IIpAddressService.GetByIdAsync) => Task.FromResult<IpAddress?>(new() { Address = "2001:db8::/64" }),
+      nameof(IIpAddressService.GetDetailsAsync) => Task.FromResult<IpAddressDetailsDto?>(new() { Address = "2001:db8::/64" }),
       nameof(IIpAddressService.UpdateAsync) => Save(),
+      nameof(IIpAddressService.GetSubdivisionOptionsAsync) => Task.FromResult<IReadOnlyList<IpSubdivisionOptionDto>>([]),
       _ => throw new NotSupportedException(method.Name)
     };
     Task Save() { updates++; return update.Task; }
@@ -87,6 +92,14 @@ internal static class IpAddressReferenceTests
     var retrying = retry.Save(); update.SetResult(); await retrying;
     await editingDialog;
     check(updates == 2 && closes == 1, "IP update can be retried after failure");
+    var options = new TaskCompletionSource<IReadOnlyList<IpSubdivisionOptionDto>>(TaskCreationOptions.RunContinuationsAsynchronously);
+    stub.Handle = (_, args) => { token = (CancellationToken)args[0]!; return options.Task; };
+    var loadingOptions = new AddProbe(service, notifications, dialogs);
+    var initializingOptions = loadingOptions.Initialize();
+    await loadingOptions.Save();
+    check(loadingOptions.Loading && !loadingOptions.Saving, "IP creation cannot save during option loading");
+    loadingOptions.Dispose(); options.SetResult([new(Guid.NewGuid(), "Late")]); await initializingOptions;
+    check(token.IsCancellationRequested && loadingOptions.OptionCount == 0, "disposed IP form ignores late subdivision options");
   }
   public class ServiceProxy : DispatchProxy
   {
@@ -100,6 +113,10 @@ internal static class IpAddressReferenceTests
     public Task Save() => FormSubmit();
     public void Cancel() => HandleCancelButtonClick();
     public bool Saving => isSaving;
+    public Task Initialize() => OnInitializedAsync();
+    public bool Loading => isLoading;
+    public int OptionCount => subdivisions.Count();
+    public string Address { set => item.Address = value; }
   }
   private sealed class EditProbe : Edit
   {

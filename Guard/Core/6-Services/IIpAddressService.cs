@@ -1,5 +1,6 @@
 ﻿using Guard.Core.Entities;
 using Guard.Core.Enums;
+using Guard.Core.Services.DTOs;
 
 namespace Guard.Core.Services;
 
@@ -8,6 +9,10 @@ namespace Guard.Core.Services;
 /// </summary>
 public interface IIpAddressService
 {
+  Task<IpAddressDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default);
+  Task<IReadOnlyList<IpSubdivisionOptionDto>> GetSubdivisionOptionsAsync(CancellationToken ct = default);
+  Task<Guid> CreateAsync(CreateIpAddressDto input, CancellationToken ct = default);
+  Task UpdateAsync(EditIpAddressDto input, CancellationToken ct = default);
   Task<Guard.Core.Services.DTOs.IpSearchResult> SearchAsync(Guard.Core.Services.DTOs.IpSearchRequest request, CancellationToken ct = default);
   // ==================== Read Operations ====================
 

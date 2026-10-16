@@ -1,4 +1,4 @@
-@using Guard.Core.Entities
+@using Guard.Core.Services.DTOs
 
 <RadzenTable Style="width:100%;table-layout:fixed;" aria-label="Сведения об IP-адресе">
   <RadzenTableBody>
@@ -18,11 +18,11 @@
 </RadzenTable>
 
 @code {
-  [Parameter, EditorRequired] public IpAddress Item { get; set; } = default!;
-  [Parameter] public IEnumerable<Subdivision> Subdivisions { get; set; } = [];
+  [Parameter, EditorRequired] public IpAddressDetailsDto Item { get; set; } = default!;
+  [Parameter] public IEnumerable<IpSubdivisionOptionDto> Subdivisions { get; set; } = [];
 
   private string SubdivisionName => !Item.SubdivisionId.HasValue ? "Общий адрес (без подразделения)"
-    : Item.Subdivision?.Name ?? Subdivisions.FirstOrDefault(s => s.Id == Item.SubdivisionId)?.Name ?? "Подразделение недоступно";
+    : Item.SubdivisionName ?? Subdivisions.FirstOrDefault(s => s.Id == Item.SubdivisionId)?.Name ?? "Подразделение недоступно";
 
   private IEnumerable<(string Icon, string Label, string? Value)> Rows => [
     ("lan", "IP-адрес или подсеть", Item.Address),
