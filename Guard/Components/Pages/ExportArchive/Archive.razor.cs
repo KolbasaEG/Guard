@@ -40,8 +40,7 @@ public partial class Archive : IDisposable
   protected async Task ApplyAsync()
   {
     try {
-      var candidate = ExportFilters.Capture(EntityListQuery<ExportJob>.Snapshot(dataFilter, DataExportService.ArchiveFields, Time), dataFilter.LogicalFilterOperator);
-      _ = ExportFilters.Apply(Array.Empty<ExportJob>().AsQueryable(), candidate, DataExportService.ArchiveFields);
+      var candidate = AdministrationListQuery.Capture(dataFilter, Time, ExportArchiveQuery.Fields, ExportArchiveQuery.ValidateFilter);
       applied = candidate; if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true);
     } catch (Exception ex) { Error(ex); }
   }

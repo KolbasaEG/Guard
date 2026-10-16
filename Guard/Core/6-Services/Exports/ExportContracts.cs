@@ -16,6 +16,7 @@ public sealed record ExportArchiveItem(Guid Id, string Author, string? ClientIp,
 public sealed record ExportArchivePage(IReadOnlyList<ExportArchiveItem> Items, int Count);
 public sealed record ExportArchiveRequest(int Skip = 0, int Take = 20, string? OrderBy = null, ExportFilter? Filter = null);
 public sealed record ExportArchiveDetails(string Conditions, string? Sha256, long? Size, DateTimeOffset? DeliveryStartedAtUtc, DateTimeOffset? DeliveryCompletedAtUtc, bool? DeliverySucceeded);
+public sealed record ExportRetentionDto(int Years, Guid Version);
 public sealed record ExportPreview(IReadOnlyList<string> Headers, IReadOnlyList<IReadOnlyList<string>> Rows, bool HasMore);
 public sealed record ExportRow(Guid? SubdivisionId, IReadOnlyList<string> Ancestors, IReadOnlyList<ExportCell> Cells);
 public sealed record ExportCell(string Text, double? Number = null, bool? Boolean = null);
@@ -64,6 +65,6 @@ public interface IDataExportService
   Task<ExportArchivePage> SearchArchiveAsync(ExportArchiveRequest request, CancellationToken ct = default);
   Task<ExportPreview> PreviewAsync(Guid id, int part = 1, int skip = 0, CancellationToken ct = default);
   Task<ExportArchiveDetails> GetArchiveDetailsAsync(Guid id, CancellationToken ct = default);
-  Task<Guard.Core.Entities.ExportRetentionSettings> GetRetentionAsync(CancellationToken ct = default);
+  Task<ExportRetentionDto> GetRetentionAsync(CancellationToken ct = default);
   Task SaveRetentionAsync(int years, Guid version, CancellationToken ct = default);
 }

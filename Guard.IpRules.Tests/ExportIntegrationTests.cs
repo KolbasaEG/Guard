@@ -92,11 +92,36 @@ internal static class ExportIntegrationTests
       var filteredId = await service.CreateAsync(new(ExportArea.Personals, ExportFormat.Word, IncludeChildren: true, PersonalFilter: new("FirstName", "Equals", "EXPORT_CHILD")));
       await processor.RunNextAsync(default); check((await service.GetAsync(filteredId)).RowCount == 1, "applied personal filter narrows complete export");
       auth.UserId = root.Id;
+      var archiveFilter = new ExportFilter("Area", "Equals", JsonSerializer.SerializeToElement(ExportArea.IpAddresses));
+      var archiveRows = await service.SearchArchiveAsync(new(Take: 100, OrderBy: "Id", Filter: archiveFilter));
+      var archiveNext = await service.SearchArchiveAsync(new(Skip: 1, Take: 1, OrderBy: "Id", Filter: archiveFilter));
+      check(archiveRows.Count >= 2 && archiveRows.Items.All(j => j.Area == ExportArea.IpAddresses) &&
+        archiveNext.Count == archiveRows.Count && archiveNext.Items.Single().Id == archiveRows.Items[1].Id,
+        "archive SQL repeats enum-filter validation and counts before stable pagination");
+      var target = archiveRows.Items[0];
+      ExportFilter Window(DateTimeOffset start, DateTimeOffset end) => new(Children: [
+        new("Id", "Equals", JsonSerializer.SerializeToElement(target.Id)), new(Children: [
+          new("CreatedAtUtc", "GreaterThanOrEquals", JsonSerializer.SerializeToElement(start.ToOffset(TimeSpan.FromHours(3)))),
+          new("CreatedAtUtc", "LessThan", JsonSerializer.SerializeToElement(end.ToOffset(TimeSpan.FromHours(3))))])]);
+      var exactWindow = await service.SearchArchiveAsync(new(Filter: Window(target.CreatedAtUtc, target.CreatedAtUtc.AddSeconds(1))));
+      var excludedWindow = await service.SearchArchiveAsync(new(Filter: Window(target.CreatedAtUtc.AddSeconds(1), target.CreatedAtUtc.AddSeconds(2))));
+      check(exactWindow.Items.Single().Id == target.Id && excludedWindow.Count == 0,
+        "archive PostgreSQL applies nested timestamp ranges and normalizes offset values to UTC");
+      await PostgresTests.ThrowsAsync<ArgumentException>(() => service.SearchArchiveAsync(new(Filter: new("SecurityStamp", "Equals", JsonSerializer.SerializeToElement("x")))),
+        check, "archive service rejects unsupported fields without trusting UI validation");
+      await PostgresTests.ThrowsAsync<ArgumentException>(() => service.SearchArchiveAsync(new(Filter: new("CreatedAtUtc", "Equals", JsonSerializer.SerializeToElement("bad-date")))),
+        check, "archive service rejects malformed typed values");
+      await PostgresTests.ThrowsAsync<ArgumentException>(() => service.SaveRetentionAsync(0, Guid.Empty), check, "retention lower bound checked on server");
+      await PostgresTests.ThrowsAsync<ArgumentException>(() => service.SaveRetentionAsync(31, Guid.Empty), check, "retention upper bound checked on server");
       var settingValue = await service.GetRetentionAsync(); await service.SaveRetentionAsync(4, settingValue.Version);
+      var previousSetting = settingValue;
       settingValue = await service.GetRetentionAsync();
-      check(settingValue.Years == 4, "Root can configure retention");
+      check(settingValue.Years == 4 && previousSetting.Version != settingValue.Version, "Root can configure retention and receive a fresh DTO version");
       await PostgresTests.ThrowsAsync<DbUpdateConcurrencyException>(() => service.SaveRetentionAsync(5, Guid.NewGuid()), check, "stale retention version rejected");
       auth.UserId = user.Id;
+      await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => service.GetRetentionAsync(), check, "non-Root cannot read retention DTO");
+      await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => service.SaveRetentionAsync(5, settingValue.Version), check, "non-Root cannot save retention");
+      await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => service.SearchArchiveAsync(new(Filter: archiveFilter)), check, "archive filter does not bypass Root access");
       var future = await service.CreateAsync(new(ExportArea.IpAddresses, ExportFormat.Excel));
       await using (var db = await factory.CreateDbContextAsync()) {
         var job = await db.ExportJobs.SingleAsync(j => j.Id == future);

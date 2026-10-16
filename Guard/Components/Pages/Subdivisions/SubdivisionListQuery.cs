@@ -21,7 +21,7 @@ public static class SubdivisionListQuery
       foreach (var child in descriptor.Filters ?? []) Validate(child, depth + 1);
     }
     foreach (var descriptor in filter.Filters ?? []) Validate(descriptor, 0);
-    var snapshot = ExportFilters.Capture(EntityListQuery<Subdivision>.Snapshot(filter, SubdivisionSearchQuery.Fields, time), filter.LogicalFilterOperator);
+    var snapshot = ExportFilterCapture.Capture(EntityListQuery<Subdivision>.Snapshot(filter, SubdivisionSearchQuery.Fields, time), filter.LogicalFilterOperator);
     SubdivisionSearchQuery.ValidateFilter(snapshot);
     return snapshot;
   }

@@ -1,3 +1,4 @@
+using Guard.Components.Library;
 using System.Security.Cryptography;
 using System.IO.Compression;
 using System.Text;
@@ -25,7 +26,7 @@ internal static class ExportTests
     }
     var values = new List<string> { "A" };
     var descriptor = new CompositeFilterDescriptor { Property = "Address", Type = typeof(IEnumerable<string>), FilterOperator = FilterOperator.In, FilterValue = values };
-    var captured = ExportFilters.Capture([descriptor], LogicalFilterOperator.And);
+    var captured = ExportFilterCapture.Capture([descriptor], LogicalFilterOperator.And);
     descriptor.FilterValue = new[] { "B" }; values.Clear();
     captured = JsonSerializer.Deserialize<ExportFilter>(JsonSerializer.Serialize(captured))!;
     var ips = new[] { new IpAddress { Address = "A" }, new IpAddress { Address = "B" } }.AsQueryable();

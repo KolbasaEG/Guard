@@ -75,15 +75,15 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
       (j.State == ExportJobState.Queued || j.State == ExportJobState.Processing || j.State == ExportJobState.Ready || j.State == ExportJobState.Delivering))
       .OrderByDescending(j => j.CreatedAtUtc).Select(j => new ExportJobDto(j.Id, j.State, j.RowCount, j.Error, j.CreatedAtUtc)).ToListAsync(ct);
   }
-  public static readonly HashSet<string> ArchiveFields = ["Id", "AuthorName", "ClientIp", "Area", "Format", "State", "CreatedAtUtc", "ExpiresAtUtc", "RowCount"];
   public async Task<ExportArchivePage> SearchArchiveAsync(ExportArchiveRequest request, CancellationToken ct = default)
   {
     await RequireRootAsync(Permissions.Exports.ReadArchive, ct);
     if (request.Skip < 0 || request.Take is < 1 or > 100) throw new ArgumentException("Некорректные параметры поиска.");
+    ExportArchiveQuery.ValidateFilter(request.Filter);
     await using var db = await contexts.CreateDbContextAsync(ct); var q = db.ExportJobs.AsNoTracking();
-    q = ExportFilters.Apply(q, request.Filter, ArchiveFields);
+    q = ExportFilters.Apply(q, request.Filter, ExportArchiveQuery.Fields);
     var count = await q.CountAsync(ct);
-    var rows = await ExportQueries.Sort(q, string.IsNullOrWhiteSpace(request.OrderBy) ? "CreatedAtUtc desc" : request.OrderBy, ArchiveFields).Skip(request.Skip).Take(request.Take)
+    var rows = await ExportQueries.Sort(q, string.IsNullOrWhiteSpace(request.OrderBy) ? "CreatedAtUtc desc" : request.OrderBy, ExportArchiveQuery.Fields).Skip(request.Skip).Take(request.Take)
       .Select(j => new ExportArchiveItem(j.Id, j.AuthorName, j.ClientIp, j.Area, j.Format, j.State, j.CreatedAtUtc, j.ExpiresAtUtc,
         j.RowCount, j.Artifact == null ? null : j.Artifact.Size, j.Artifact == null ? null : j.Artifact.Sha256)).ToListAsync(ct);
     await RequireRootAsync(Permissions.Exports.ReadArchive, ct);
@@ -106,10 +106,13 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
     audit.LogIdentityEvent(AuditEventType.ExportArchiveViewed, actor, details: $"Export metadata {id}");
     return new(conditions, job.Artifact?.Sha256, job.Artifact?.Size, job.Delivery?.StartedAtUtc, job.Delivery?.CompletedAtUtc, job.Delivery?.Succeeded);
   }
-  public async Task<ExportRetentionSettings> GetRetentionAsync(CancellationToken ct = default)
+  public async Task<ExportRetentionDto> GetRetentionAsync(CancellationToken ct = default)
   {
     await RequireRootAsync(Permissions.Exports.ReadArchive, ct); await using var db = await contexts.CreateDbContextAsync(ct);
-    return await db.ExportRetentionSettings.AsNoTracking().SingleOrDefaultAsync(s => s.Id == 1, ct) ?? new();
+    var setting = await db.ExportRetentionSettings.AsNoTracking().Where(s => s.Id == 1)
+      .Select(s => new ExportRetentionDto(s.Years, s.Version)).SingleOrDefaultAsync(ct) ?? new(3, Guid.Empty);
+    await RequireRootAsync(Permissions.Exports.ReadArchive, ct);
+    return setting;
   }
   public async Task SaveRetentionAsync(int years, Guid version, CancellationToken ct = default)
   {
