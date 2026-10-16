@@ -65,6 +65,7 @@ internal static class ExportIntegrationTests
     var service = new DataExportService(factory, permissions, access, storage, opts, new AuditStub(), http);
     var processor = new ExportProcessor(factory, access, new ExportSnapshot(factory, storage), new ExportDocumentWriter(storage, opts), storage, new AuditStub(), opts, NullLogger<ExportProcessor>.Instance);
     try {
+      await ExportCompletionTests.RunAsync(factory, service, access, storage, opts, user.Id, check);
       foreach (var area in Enum.GetValues<ExportArea>()) foreach (var format in Enum.GetValues<ExportFormat>()) {
         var id = await service.CreateAsync(new(area, format, IncludeChildren: true));
         await processor.RunNextAsync(default);

@@ -41,7 +41,9 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
         .ExecuteUpdateAsync(u => u.SetProperty(j => j.State, ExportJobState.Ready).SetProperty(j => j.RowCount, captured.Count).SetProperty(j => j.CompletedAtUtc, DateTimeOffset.UtcNow), ct);
       if (ready == 0) throw new OperationCanceledException("Выгрузка отменена.");
       await transaction.CommitAsync(ct); published = true;
-      audit.LogIdentityEvent(AuditEventType.ExportArchived, job.AuthorId, job.ClientIp, $"Export {job.Id}; rows {captured.Count}; SHA256 {saved.Hash}");
+      // Ready and its artifact are committed. Audit delivery cannot fail generation.
+      try { audit.LogIdentityEvent(AuditEventType.ExportArchived, job.AuthorId, job.ClientIp, $"Export {job.Id}; rows {captured.Count}; SHA256 {saved.Hash}"); }
+      catch (Exception ex) { logger.LogError(ex, "Выгрузка {ExportId} готова, но событие аудита {EventType} не доставлено", job.Id, AuditEventType.ExportArchived); }
     }
     catch (OperationCanceledException) when (stopping.IsCancellationRequested) { throw; }
     catch (Exception ex) {
