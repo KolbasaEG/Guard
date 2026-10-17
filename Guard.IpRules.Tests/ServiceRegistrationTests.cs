@@ -119,7 +119,8 @@ internal static class ServiceRegistrationTests
       var b = second.ServiceProvider;
       // Resolve every Guard service interface in the actual registration set, not a hand-copied list.
       foreach (var type in services.Select(d => d.ServiceType).Distinct().Where(t => t.IsInterface && !t.IsGenericTypeDefinition &&
-        (t.Assembly == typeof(GuardServiceRegistration).Assembly || t.Assembly == typeof(ICurrentSession).Assembly)))
+        (t.Assembly == typeof(GuardServiceRegistration).Assembly || t.Assembly == typeof(ICurrentSession).Assembly ||
+         t.Assembly == typeof(InfrastructureServiceRegistration).Assembly)))
         check(a.GetRequiredService(type) != null, $"production service graph resolves {type.Name}");
       check(a.GetRequiredService<IReadRepository<Personal>>() is ReadRepository<Personal> &&
         a.GetRequiredService<IReadRepository<ApplicationUser>>() is ReadRepository<ApplicationUser>, "closed read repositories resolve after legacy cleanup");

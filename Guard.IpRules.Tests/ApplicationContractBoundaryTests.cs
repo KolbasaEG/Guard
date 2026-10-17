@@ -13,17 +13,21 @@ internal static class ApplicationContractBoundaryTests
       typeof(IApplicationRoleService), typeof(ILogService) };
     var application = typeof(ICurrentSession).Assembly;
     var host = typeof(Guard.GuardServiceRegistration).Assembly;
+    var infrastructure = typeof(Guard.Infrastructure.InfrastructureServiceRegistration).Assembly;
     check(application.GetName().Name == "Guard.Application" && application != host && application != typeof(Personal).Assembly,
       "Application has its own assembly, separate from Domain and Web");
     foreach (var reference in application.GetReferencedAssemblies())
       check(reference.Name is "Guard.Domain" or "mscorlib" or "netstandard" or "System" ||
         reference.Name?.StartsWith("System.", StringComparison.Ordinal) == true,
         $"Application depends only on Domain and BCL: {reference.Name}");
-    var hostContracts = host.GetExportedTypes().Where(t => t.IsInterface &&
+    var infrastructureContracts = infrastructure.GetExportedTypes().Where(t => t.IsInterface &&
       (t.Namespace == "Guard.Core.Services" || t.Namespace == "Guard.Core.Services.Exports")).ToHashSet();
-    check(hostContracts.SetEquals(legacy), "Only the seven transitional service contracts remain in Infrastructure/Web");
+    check(infrastructureContracts.SetEquals(legacy), "Only the seven transitional service contracts remain in Infrastructure");
+    check(!host.GetExportedTypes().Any(t => t.IsInterface && t.Namespace?.StartsWith("Guard.Core.Services", StringComparison.Ordinal) == true),
+      "Web owns no application or legacy service interfaces");
     foreach (var type in application.GetExportedTypes())
-      check(host.GetType(type.FullName!) == null, $"Application owns {type.Name} without duplicate Web definition");
+      check(host.GetType(type.FullName!) == null && infrastructure.GetType(type.FullName!) == null,
+        $"Application owns {type.Name} without duplicate Web or Infrastructure definition");
     foreach (var type in new[] { typeof(IpAccessService), typeof(PermissionService), typeof(DataAccessScopeService) })
       check(type.Assembly == application, $"Independent access decisions {type.Name} belong to Application");
     var contracts = application.GetExportedTypes()

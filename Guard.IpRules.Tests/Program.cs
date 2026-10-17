@@ -36,6 +36,7 @@ try
 await AccessEventTests.RunAsync(Check);
 await CurrentSessionTests.RunAsync(Check);
 DomainAssemblyBoundaryTests.Run(Check);
+InfrastructureAssemblyBoundaryTests.Run(Check);
 AccountPolicyTests.Run(Check);
 await AccountPolicyBoundaryTests.RunAsync(Check);
 await LoginLockoutTests.RunAsync(Check);

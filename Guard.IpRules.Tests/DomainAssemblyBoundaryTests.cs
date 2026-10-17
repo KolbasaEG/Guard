@@ -8,6 +8,7 @@ internal static class DomainAssemblyBoundaryTests
   {
     var domain = typeof(Personal).Assembly;
     var host = typeof(Guard.GuardServiceRegistration).Assembly;
+    var infrastructure = typeof(Guard.Infrastructure.InfrastructureServiceRegistration).Assembly;
     check(domain.GetName().Name == "Guard.Domain" && domain != host,
       "Domain is a separate assembly from Web and application implementations");
     Type[] expected = [typeof(BaseEntity), typeof(IHasSubdivision), typeof(HasFolderEntity), typeof(HasArchiveBatchIdEntity),
@@ -20,9 +21,10 @@ internal static class DomainAssemblyBoundaryTests
     check(domain.GetExportedTypes().ToHashSet().SetEquals(expected), "Domain inventory contains the agreed 28 model and enum types");
     foreach (var type in expected)
       check(type.Assembly == domain && type.Namespace is "Guard.Core.Entities" or "Guard.Core.Enums" &&
-        host.GetType(type.FullName!) == null, $"Domain owns {type.Name} without duplicate Web definition");
+        host.GetType(type.FullName!) == null && infrastructure.GetType(type.FullName!) == null,
+        $"Domain owns {type.Name} without duplicate Web or Infrastructure definition");
     foreach (var type in new[] { typeof(ApplicationUser), typeof(ApplicationRole), typeof(LogEntry) })
-      check(type.Assembly == host, $"Infrastructure model {type.Name} stays outside Domain");
+      check(type.Assembly == infrastructure, $"Infrastructure model {type.Name} stays outside Domain and Web");
     foreach (var reference in domain.GetReferencedAssemblies())
       check(reference.Name is "mscorlib" or "netstandard" or "System" ||
         reference.Name?.StartsWith("System.", StringComparison.Ordinal) == true,

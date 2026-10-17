@@ -18,9 +18,9 @@
 
 ## Проект и архитектура
 
-- `Guard.slnx` содержит библиотеки `Guard.Domain` и `Guard.Application`, веб-проект `Guard/Guard.csproj` и исполняемый runner `Guard.IpRules.Tests`, целевая платформа — .NET 10.
+- `Guard.slnx` содержит библиотеки `Guard.Domain`, `Guard.Application` и `Guard.Infrastructure`, веб-проект `Guard/Guard.csproj` и исполняемый runner `Guard.IpRules.Tests`, целевая платформа — .NET 10.
 - Приложение использует Blazor с интерактивным серверным режимом, Radzen, ASP.NET Core Identity, EF Core и PostgreSQL.
-- Это слоистый монолит. Независимые модели и enum выделены в `Guard.Domain` без пакетов и ссылок на другие проекты; разрешены только зависимости BCL. `Guard.Application` содержит независимые контракты, DTO и правила доступа, ссылается только на Domain и BCL. EF/Identity-реализации, транзакционные операции, legacy-контракты, Infrastructure и Web пока находятся в `Guard`. Полные имена перенесённых типов сохранены.
+- Это слоистый монолит. Независимые модели и enum выделены в `Guard.Domain` без пакетов и ссылок на другие проекты; разрешены только зависимости BCL. `Guard.Application` содержит независимые контракты, DTO и правила доступа, ссылается только на Domain и BCL. EF/Identity-реализации, транзакционные операции, legacy-контракты, контексты, конфигурации и миграции находятся в `Guard.Infrastructure`; эта сборка ссылается на Domain/Application и не зависит от Web. `Guard` остаётся веб-проектом и точкой композиции. Полные имена перенесённых типов сохранены.
 - Основной поток записи: компонент → сервис → `IUnitOfWork` → репозиторий → `ApplicationDbContext`.
 - Основной поток чтения: компонент → сервис → `IReadRepository<T>` → `IDbContextFactory<ApplicationDbContext>`.
 - `LogsDbContext` обслуживает отдельную БД логов. Serilog и Identity-аудит выполняют разные задачи.
@@ -31,28 +31,28 @@
 | --- | --- |
 | `Guard/Program.cs` | Регистрация зависимостей, настройка БД, логирования и middleware |
 | `Guard/GuardServiceRegistration.cs` | Общая композиция Infrastructure, Application и Web без запуска приложения |
-| `Guard/Core/InfrastructureServiceRegistration.cs` | Регистрация EF/Identity, реализаций операций, интеграций и workers |
+| `Guard.Infrastructure/Core/InfrastructureServiceRegistration.cs` | Регистрация EF/Identity, реализаций операций, интеграций и workers |
 | `Guard/ApplicationServiceRegistration.cs` | Регистрация независимых прикладных решений в host |
 | `Guard/WebServiceRegistration.cs`, `Guard/Web/Identity` | Регистрация Web и адаптеры Blazor circuit |
 | `Guard.Domain/Core/0-Enums` | Перечисления, статусы и режимы выборки |
 | `Guard.Domain/Core/1-Entities` | Независимые сущности и общие поля |
-| `Guard/Core/1-Entities` | Модели Identity и технического журнала |
-| `Guard/Core/2-Configurations` | Конфигурации EF: ограничения, связи, индексы |
-| `Guard/Core/3-Contexts` | Контексты, инициализация и начальные данные |
-| `Guard/Core/4-Repositories` | Репозитории чтения и записи |
-| `Guard/Core/5-UnitOfWork` | Сохранение и транзакции |
+| `Guard.Infrastructure/Core/1-Entities` | Модели Identity и технического журнала |
+| `Guard.Infrastructure/Core/2-Configurations` | Конфигурации EF: ограничения, связи, индексы |
+| `Guard.Infrastructure/Core/3-Contexts` | Контексты, инициализация и начальные данные |
+| `Guard.Infrastructure/Core/4-Repositories` | Репозитории чтения и записи |
+| `Guard.Infrastructure/Core/5-UnitOfWork` | Сохранение и транзакции |
 | `Guard.Application/Core/6-Services` | Независимые прикладные контракты, DTO и решения по доступу |
 | `Guard.Application/Core/Identity` | Независимые permissions и правила IP без ASP.NET Identity |
-| `Guard/Core/6-Services` | Реализации операций с EF/Identity, инфраструктурные helpers и legacy-контракты |
-| `Guard/Core/7-Interceptors` | Заполнение полей аудита при сохранении |
-| `Guard/Core/8-Extensions` | Общие преобразования и фильтры запросов |
-| `Guard/Core/9-Logging` | Конфигурация и управление логированием |
-| `Guard/Core/Identity` | Контекст пользователя, permissions и IP middleware |
+| `Guard.Infrastructure/Core/6-Services` | Реализации операций с EF/Identity, инфраструктурные helpers и legacy-контракты |
+| `Guard.Infrastructure/Core/7-Interceptors` | Заполнение полей аудита при сохранении |
+| `Guard.Infrastructure/Core/8-Extensions` | Общие преобразования и фильтры запросов |
+| `Guard.Infrastructure/Core/9-Logging` | Конфигурация и управление логированием |
+| `Guard.Infrastructure/Core/Identity` | Контекст пользователя, permissions и IP middleware |
 | `Guard/Components/Pages/<область>` | Маршрутизируемые страницы, списки и CRUD-формы функциональной области |
 | `Guard/Components/Layout/Navigation` | Общее левое меню и каталог разделов с условиями видимости |
 | `Guard/Components/Library` | Общие компоненты и обёртки UI |
 | `Guard/Components/Account` | Identity UI и endpoints |
-| `Guard/Migrations` | Миграции основной БД и снимок модели |
+| `Guard.Infrastructure/Migrations` | Миграции основной БД и снимок модели |
 
 Сохраняй существующие имена каталогов, включая `Abstarct` и `Concrates`; не исправляй их попутно. Namespace выбирай по соседним файлам, а не механически по имени папки.
 

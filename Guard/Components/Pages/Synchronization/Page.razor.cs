@@ -45,7 +45,7 @@ public partial class Page : IDisposable
   private string? connectionResult;
   private UserAccessSnapshot? loadedAccess;
   private bool ApiSourceChanged => settings != null &&
-    SynchronizationSettingsRules.SourceChanged(settings.ApiBaseUrl, settings.ApiUsername, form.ApiBaseUrl, form.ApiUsername);
+    SynchronizationSourceRules.SourceChanged(settings.ApiBaseUrl, settings.ApiUsername, form.ApiBaseUrl, form.ApiUsername);
 
   protected override async Task OnParametersSetAsync()
   {
