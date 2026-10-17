@@ -14,6 +14,10 @@ public class PersonalConfiguration : BaseEntityConfiguration<Personal>
     builder.Property(x => x.Version).IsConcurrencyToken();
     base.Configure(builder);
     builder.HasIndex(p => p.ExternalId).IsUnique();
+    // Порядок списка по умолчанию; архив и удалённые записи в этот индекс не входят.
+    builder.HasIndex(p => new { p.LastName, p.FirstName, p.Id })
+        .HasDatabaseName("IX_Personals_ActiveName")
+        .HasFilter("\"Status\" IN (1, 2, 3)");
 
     builder.ToTable("Personals", t =>
     {

@@ -49,6 +49,7 @@ internal static class AccountPolicyMigrationTests
       CREATE TABLE "__EFMigrationsHistory" ("MigrationId" varchar(150) PRIMARY KEY, "ProductVersion" varchar(32) NOT NULL);
       """);
     await db.Database.ExecuteSqlRawAsync("""
+      DROP INDEX "IX_Personals_ActiveName";
       ALTER TABLE "IpAddresses" DROP CONSTRAINT "CK_IpAddresses_CanonicalSource";
       ALTER TABLE "IpAddresses" DROP COLUMN "CanonicalAddress", DROP COLUMN "CanonicalSource";
       """);

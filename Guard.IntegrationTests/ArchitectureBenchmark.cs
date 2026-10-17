@@ -96,14 +96,22 @@ internal static class ArchitectureBenchmark
         check, "benchmark indexed check rejects equivalent legacy IPv6 host");
     });
     var rootScope = new DataAccessScope(root.UserId, true, []);
+    // Only the runner's disposable database: compare the same data and SQL with/without the new index.
+    await db.Database.ExecuteSqlRawAsync("DROP INDEX \"IX_Personals_ActiveName\"", ct);
+    await MeasurePersonalQueriesAsync("before index", factory, root, rootScope, check, ct);
+    await db.Database.ExecuteSqlRawAsync("""
+      CREATE INDEX "IX_Personals_ActiveName" ON "Personals" ("LastName", "FirstName", "Id")
+      WHERE "Status" IN (1, 2, 3);
+      ANALYZE "Personals";
+      """, ct);
+    await MeasurePersonalQueriesAsync("after index", factory, root, rootScope, check, ct);
+    var personalAccess = new PersonalAccess(root, rootScope);
+    var personalSearch = new PersonalService(new ReadRepository<Personal>(factory, personalAccess, personalAccess), null!,
+      NullLogger<PersonalService>.Instance, personalAccess, personalAccess, factory);
     foreach (var skip in new[] { 0, 100000 }) {
-      await MeasureAsync($"personals root skip={skip}", async () => {
-        await using var queryDb = await factory.CreateDbContextAsync(ct);
-        var q = await ExportQueries.PersonalsAsync(queryDb, new(AllSubdivisions: true), root, rootScope, ct);
-        var count = await q.CountAsync(ct);
-        var rows = await q.Skip(skip).Take(20).Select(p => new PersonalListItemDto(p.Id, p.LastName, p.FirstName,
-          p.MiddleName, p.FullName, p.Subdivision == null ? null : p.Subdivision.Name, p.Status, p.Version)).ToListAsync(ct);
-        check(count == 200000 && rows.Count == 20, "benchmark personal page");
+      await MeasureAsync($"personals SearchAsync root skip={skip}", async () => {
+        var result = await personalSearch.SearchAsync(new(AllSubdivisions: true, Skip: skip), ct);
+        check(result.Count == 200000 && result.Items.Count == 20, "benchmark personal service page");
       });
     }
     foreach (var ownOnly in new[] { false, true }) {
@@ -153,9 +161,47 @@ internal static class ArchitectureBenchmark
     Console.WriteLine($"{name}: first={samples[0].ToString("F1", CultureInfo.InvariantCulture)} ms; warm median={warm[2].ToString("F1", CultureInfo.InvariantCulture)} ms; warm max={warm[^1].ToString("F1", CultureInfo.InvariantCulture)} ms");
   }
 
+  private static async Task MeasurePersonalQueriesAsync(string label, IDbContextFactory<ApplicationDbContext> factory,
+    UserAccessSnapshot root, DataAccessScope scope, Action<bool, string> check, CancellationToken ct)
+  {
+    await using var db = await factory.CreateDbContextAsync(ct);
+    var query = await ExportQueries.PersonalsAsync(db, new(AllSubdivisions: true), root, scope, ct);
+    await MeasureAsync($"personals {label} count only", async () =>
+      check(await query.CountAsync(ct) == 200000, "benchmark isolated employee count"));
+    foreach (var skip in new[] { 0, 100000 }) {
+      var page = query.Skip(skip).Take(20).Select(p => new PersonalListItemDto(p.Id, p.LastName, p.FirstName,
+        p.MiddleName, p.FullName, p.Subdivision == null ? null : p.Subdivision.Name, p.Status, p.Version));
+      await MeasureAsync($"personals {label} page only skip={skip}", async () =>
+        check((await page.ToListAsync(ct)).Count == 20, "benchmark isolated employee page"));
+      await using var command = page.CreateDbCommand();
+      command.CommandText = "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) " + command.CommandText;
+      await db.Database.OpenConnectionAsync(ct);
+      try {
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        await reader.ReadAsync(ct);
+        Console.WriteLine($"Personal plan {label} skip={skip}: {reader.GetString(0)}");
+      }
+      finally { await db.Database.CloseConnectionAsync(); }
+    }
+  }
+
   private sealed class BenchmarkAccess(string userId) : IIpManagementAccessService
   {
     public Task<IpManagementScope> GetScopeAsync(bool write, CancellationToken ct = default) =>
       Task.FromResult(new IpManagementScope(userId, true, []));
+  }
+
+  private sealed class PersonalAccess(UserAccessSnapshot user, DataAccessScope scope) : IPermissionService, IDataAccessScopeService
+  {
+    public Task<UserAccessSnapshot> GetCurrentAsync(CancellationToken ct = default) => Task.FromResult(user);
+    public Task<UserAccessSnapshot> GetForUserAsync(string id, CancellationToken ct = default) => Task.FromResult(user);
+    public Task<bool> HasAsync(string permission, CancellationToken ct = default) => Task.FromResult(user.Has(permission));
+    public Task RequireAsync(string permission, CancellationToken ct = default)
+    {
+      ct.ThrowIfCancellationRequested();
+      if (!user.Has(permission)) throw new UnauthorizedAccessException();
+      return Task.CompletedTask;
+    }
+    public Task<DataAccessScope> GetAsync(CancellationToken ct = default) => Task.FromResult(scope);
   }
 }

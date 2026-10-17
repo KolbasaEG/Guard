@@ -662,6 +662,10 @@ namespace Guard.Migrations
                         .IsUnique()
                         .HasDatabaseName("UX_Personals_PersonalId");
 
+                    b.HasIndex("LastName", "FirstName", "Id")
+                        .HasDatabaseName("IX_Personals_ActiveName")
+                        .HasFilter("\"Status\" IN (1, 2, 3)");
+
                     b.HasIndex("PersonalSubdivisionId")
                         .HasDatabaseName("UX_Subdivisions_PersonalSubdivisionId");
 
