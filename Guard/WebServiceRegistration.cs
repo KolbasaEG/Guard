@@ -11,6 +11,7 @@ public static class WebServiceRegistration
 {
   public static IServiceCollection AddGuardWeb(this IServiceCollection services, IConfiguration configuration)
   {
+    services.AddHostedService<AccountPolicyWorker>();
     // Заголовки принимает только от явно настроенных доверенных прокси (по умолчанию — loopback).
     services.Configure<ForwardedHeadersOptions>(options =>
     {

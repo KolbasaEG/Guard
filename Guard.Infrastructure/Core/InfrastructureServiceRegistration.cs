@@ -70,7 +70,6 @@ public static class InfrastructureServiceRegistration
       options.Password.RequireUppercase = false;
       options.Password.RequireNonAlphanumeric = false;
     });
-    services.AddHostedService<AccountPolicyWorker>();
 
     // =====================================================
     // === REPOSITORIES & SERVICES (Scrutor)

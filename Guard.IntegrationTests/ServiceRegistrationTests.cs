@@ -58,6 +58,12 @@ internal static class ServiceRegistrationTests
 
       var infrastructure = new ServiceCollection();
       infrastructure.AddGuardInfrastructure(builder.Configuration, development);
+      check(!infrastructure.Any(d => d.ImplementationType == typeof(AccountPolicyWorker)),
+        "Infrastructure leaves the account policy timer to the host");
+      foreach (var worker in new[] { typeof(AccountPolicyWorker), typeof(ApiSynchronizationWorker), typeof(ExportWorker) })
+        check(services.Count(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == worker) == 1 &&
+          services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == worker).Lifetime == ServiceLifetime.Singleton,
+          $"Composition registers exactly one singleton hosted worker {worker.Name}");
       check(!infrastructure.Any(d => d.ImplementationType == typeof(PermissionAuthorizationHandler)),
         "Infrastructure does not register the Web permission handler");
       check(services.Count(d => d.ImplementationType == typeof(PermissionAuthorizationHandler)) == 1 &&

@@ -10,6 +10,12 @@ internal static class ApplicationContractBoundaryTests
     var application = typeof(ICurrentSession).Assembly;
     var host = typeof(Guard.GuardServiceRegistration).Assembly;
     var infrastructure = typeof(Guard.Infrastructure.InfrastructureServiceRegistration).Assembly;
+    check(typeof(Guard.Core.Identity.AccountPolicyWorker).Assembly == host &&
+      infrastructure.GetType("Guard.Core.Identity.AccountPolicyWorker") == null,
+      "Account policy timer belongs to Web, separate from the database sweep");
+    check(typeof(Guard.Core.Services.ApiSynchronizationWorker).Assembly == infrastructure &&
+      typeof(Guard.Core.Services.Exports.ExportWorker).Assembly == infrastructure,
+      "Database queue workers retain infrastructure ownership of recovery and leases");
     foreach (var adapter in new[] { typeof(Guard.Core.Identity.IpCheckMiddleware),
       typeof(Guard.Core.Identity.AccountPolicyMiddleware), typeof(Guard.Core.Identity.PermissionRequirement),
       typeof(Guard.Core.Identity.PermissionAuthorizationHandler) })
