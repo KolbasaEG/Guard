@@ -43,7 +43,7 @@ internal static class IpAddressReferenceTests
     var cyclic = new CompositeFilterDescriptor(); cyclic.Filters = [cyclic]; filter.Filters = [cyclic];
     await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.FromResult(IpListQuery.Capture(filter)), check, "cyclic IP filter is bounded");
 #pragma warning restore BL0005
-    var service = DispatchProxy.Create<IIpAddressService, ServiceProxy>();
+    var service = DispatchProxy.Create<IIpAddressManagementService, ServiceProxy>();
     var stub = (ServiceProxy)(object)service;
     var notifications = new NotificationService();
     using var dialogs = new DialogService(new TestNavigation(), new NoJs());
@@ -75,9 +75,9 @@ internal static class IpAddressReferenceTests
     var update = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     var updates = 0;
     stub.Handle = (method, _) => method.Name switch {
-      nameof(IIpAddressService.GetDetailsAsync) => Task.FromResult<IpAddressDetailsDto?>(new() { Address = "2001:db8::/64" }),
-      nameof(IIpAddressService.UpdateAsync) => Save(),
-      nameof(IIpAddressService.GetSubdivisionOptionsAsync) => Task.FromResult<IReadOnlyList<IpSubdivisionOptionDto>>([]),
+      nameof(IIpAddressManagementService.GetDetailsAsync) => Task.FromResult<IpAddressDetailsDto?>(new() { Address = "2001:db8::/64" }),
+      nameof(IIpAddressManagementService.UpdateAsync) => Save(),
+      nameof(IIpAddressManagementService.GetSubdivisionOptionsAsync) => Task.FromResult<IReadOnlyList<IpSubdivisionOptionDto>>([]),
       _ => throw new NotSupportedException(method.Name)
     };
     Task Save() { updates++; return update.Task; }
@@ -108,7 +108,7 @@ internal static class IpAddressReferenceTests
   }
   private sealed class AddProbe : Add
   {
-    public AddProbe(IIpAddressService service, NotificationService notifications, DialogService dialogs)
+    public AddProbe(IIpAddressManagementService service, NotificationService notifications, DialogService dialogs)
     { IpAddressService = service; NotificationService = notifications; DialogService = dialogs; Logger = NullLogger<Add>.Instance; }
     public Task Save() => FormSubmit();
     public void Cancel() => HandleCancelButtonClick();
@@ -120,7 +120,7 @@ internal static class IpAddressReferenceTests
   }
   private sealed class EditProbe : Edit
   {
-    public EditProbe(IIpAddressService service, NotificationService notifications, DialogService dialogs)
+    public EditProbe(IIpAddressManagementService service, NotificationService notifications, DialogService dialogs)
     { IpAddressService = service; NotificationService = notifications; DialogService = dialogs; Logger = NullLogger<Edit>.Instance; }
     public Task Initialize() => OnInitializedAsync();
     public Task Save() => FormSubmit();

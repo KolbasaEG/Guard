@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 internal static class IpDetailsIntegrationTests
 {
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory,
-    IIpAddressService root, IIpAddressService user, Action<bool, string> check)
+    IIpAddressManagementService root, IIpAddressManagementService user, Action<bool, string> check)
   {
     await using var db = await factory.CreateDbContextAsync();
     var own = await db.Subdivisions.SingleAsync(s => s.Name == "Own");
@@ -55,6 +55,21 @@ internal static class IpDetailsIntegrationTests
       var readonlyService = new IpAddressService(factory, new ReadOnlyAccess(), NullLogger<IpAddressService>.Instance);
       check(await readonlyService.GetDetailsAsync(common) != null, "read-only access can load detail DTO");
       await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => readonlyService.UpdateAsync(new EditIpAddressDto(common, "198.51.100.1", null, null)), check, "IP DTO write requests management permission");
+      foreach (var write in new Func<Task>[] {
+        () => readonlyService.CreateAsync(new CreateIpAddressDto("198.51.100.42", null, null)),
+        () => readonlyService.SoftDeleteAsync(common),
+        () => readonlyService.ArchiveAsync(common),
+        () => readonlyService.BlockAsync(common),
+        () => readonlyService.UnblockAsync(common),
+        () => readonlyService.RestoreAsync(common)
+      })
+        await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(write, check,
+          "IP DTO creation and lifecycle commands reject read-only actor");
+      var unchanged = await db.IpAddresses.AsNoTracking().SingleAsync(p => p.Id == common);
+      check(unchanged.Address == "2001:db8:face::/64" && unchanged.Status == Status.Inserted &&
+        unchanged.CreatedBy == "root" && unchanged.ModifiedBy == null &&
+        !await db.IpAddresses.AnyAsync(p => p.Address == "198.51.100.42"),
+        "denied IP DTO writes preserve catalog fields, status and audit and create no record");
       using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
       await PostgresTests.ThrowsAsync<OperationCanceledException>(() => root.GetDetailsAsync(common, cancelled.Token), check, "IP detail propagates cancellation");
       await PostgresTests.ThrowsAsync<OperationCanceledException>(() => root.GetSubdivisionOptionsAsync(cancelled.Token), check, "IP options propagate cancellation");

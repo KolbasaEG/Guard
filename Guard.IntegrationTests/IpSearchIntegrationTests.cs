@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 internal static class IpSearchIntegrationTests
 {
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory,
-    IIpAddressService root, IIpAddressService user, Action<bool, string> check)
+    IIpAddressManagementService root, IIpAddressManagementService user, Action<bool, string> check)
   {
     await using var db = await factory.CreateDbContextAsync();
     var own = await db.Subdivisions.SingleAsync(s => s.Name == "Own");

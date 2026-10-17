@@ -24,7 +24,7 @@ internal static class IdentityRollbackIntegrationTests
     services.AddSingleton(fault);
     services.AddScoped<IUserValidator<ApplicationUser>, FailingValidator>();
     await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
-    var service = new SecurityService(null!, null!, null!, null!, null!, null!, permissions, access, null!,
+    var service = new SecurityService(null!, null!, null!, null!, null!, permissions, access, null!,
       provider.GetRequiredService<IServiceScopeFactory>(), delivery, delivery, null!, NullLogger<SecurityService>.Instance);
     foreach (var scenario in new[] { "edit", "reset", "block", "unblock" }) {
       var name = "identity-rollback-" + Guid.NewGuid().ToString("N");

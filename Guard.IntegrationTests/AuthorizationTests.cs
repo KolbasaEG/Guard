@@ -49,7 +49,7 @@ internal static class AuthorizationTests
     services.AddScoped<ISubdivisionManagementService,SubdivisionService>();
     services.AddScoped<IClassifierManagementService,ClassifierService>();
     services.AddScoped<IIpManagementAccessService,IpManagementAccessService>();
-    services.AddScoped<IIpAddressService,IpAddressService>();
+    services.AddScoped<IIpAddressManagementService,IpAddressService>();
     services.AddScoped<IPersonalIpService,PersonalIpService>();
     services.AddScoped<IIpAccessService,IpAccessService>();
     services.AddScoped<IIpAccessReader,IpAccessReader>();
@@ -150,9 +150,9 @@ internal static class AuthorizationTests
     var viewer=await permissions.GetCurrentAsync();
     check(viewer.Has(Permissions.Personals.Read) && !viewer.Has(Permissions.Personals.ReadDetails),"list and details permissions distinct");
     check(!viewer.Has(Permissions.Roles.Manage),"individual permission cannot elevate user");
-    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => scope.ServiceProvider.GetRequiredService<IIpAddressService>().SearchAsync(new()),
+    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => scope.ServiceProvider.GetRequiredService<IIpAddressManagementService>().SearchAsync(new()),
       check, "IP SearchAsync denies callers without role-based read permission");
-    var ipService = scope.ServiceProvider.GetRequiredService<IIpAddressService>();
+    var ipService = scope.ServiceProvider.GetRequiredService<IIpAddressManagementService>();
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => ipService.GetDetailsAsync(Guid.NewGuid()), check, "IP details require role-based read permission");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => ipService.GetSubdivisionOptionsAsync(), check, "IP options require role-based read permission");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>roles.GetAsync(viewerId),check,"non-Root role management denied");

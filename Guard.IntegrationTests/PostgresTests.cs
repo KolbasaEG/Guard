@@ -3,6 +3,7 @@ using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Identity;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -70,8 +71,8 @@ internal static class PostgresTests
       var rootService = new IpAddressService(factory, rootAccess, NullLogger<IpAddressService>.Instance);
       var service = new IpAddressService(factory, userAccess, NullLogger<IpAddressService>.Instance);
       var assignments = new PersonalIpService(factory, userAccess, NullLogger<PersonalIpService>.Instance);
-      var id = await service.CreateAsync(new IpAddress { Address = "192.168.1.99/24", SubdivisionId = own.Id });
-      check((await service.GetByIdAsync(id))!.Address == "192.168.1.0/24", "catalog stores canonical subnet");
+      var id = await service.CreateAsync(new CreateIpAddressDto("192.168.1.99/24", null, own.Id));
+      check((await service.GetDetailsAsync(id))!.Address == "192.168.1.0/24", "catalog stores canonical subnet");
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "subdivision address alone does not grant access");
       await assignments.UpdateAsync(personal.Id, [id]);
       check(await gate.IsAllowedAsync(user.Id, "::ffff:192.168.1.1"), "assigned mapped client matches subnet");
@@ -89,7 +90,7 @@ internal static class PostgresTests
       check((await assignments.GetAsync(personal.Id)).Selected.SequenceEqual([id]), "assignments saved");
       await service.ArchiveAsync(id);
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "archived assigned address denied");
-      check((await service.GetAllActiveAsync()).Count == 0, "active list excludes archive");
+      check((await service.SearchAsync(new(Hierarchy: SubdivisionHierarchyMode.IncludeChildren))).Count == 0, "active list excludes archive");
       await service.RestoreAsync(id);
       await service.BlockAsync(id);
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "blocked assigned address denied");
@@ -99,22 +100,22 @@ internal static class PostgresTests
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "deleted assigned address denied");
       await service.RestoreAsync(id);
 
-      await ThrowsAsync<ArgumentException>(() => service.CreateAsync(new IpAddress { Address = "192.168.1.2/24", SubdivisionId = own.Id }), check, "equivalent duplicate rejected");
-      await ThrowsAsync<ArgumentException>(() => service.CreateAsync(new IpAddress { Address = "bad", SubdivisionId = own.Id }), check, "server rejects invalid address");
-      await ThrowsAsync<UnauthorizedAccessException>(() => service.CreateAsync(new IpAddress { Address = "1.2.3.4", SubdivisionId = other.Id }), check, "foreign subdivision write denied");
-      await ThrowsAsync<UnauthorizedAccessException>(() => service.CreateAsync(new IpAddress { Address = "1.2.3.4" }), check, "non-Root common IP write denied");
+      await ThrowsAsync<ArgumentException>(() => service.CreateAsync(new CreateIpAddressDto("192.168.1.2/24", null, own.Id)), check, "equivalent duplicate rejected");
+      await ThrowsAsync<ArgumentException>(() => service.CreateAsync(new CreateIpAddressDto("bad", null, own.Id)), check, "server rejects invalid address");
+      await ThrowsAsync<UnauthorizedAccessException>(() => service.CreateAsync(new CreateIpAddressDto("1.2.3.4", null, other.Id)), check, "foreign subdivision write denied");
+      await ThrowsAsync<UnauthorizedAccessException>(() => service.CreateAsync(new CreateIpAddressDto("1.2.3.4", null, null)), check, "non-Root common IP write denied");
       await ThrowsAsync<UnauthorizedAccessException>(() => assignments.UpdateAsync(foreignPersonal.Id, [id]), check, "foreign employee assignment denied");
       await ThrowsAsync<InvalidOperationException>(() => assignments.UpdateAsync(personal.Id, [Guid.NewGuid()]), check, "invalid assignment rejected atomically");
       check(await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "rejected assignment preserves original");
-      var common = await rootService.CreateAsync(new IpAddress { Address = "2001:db8::1/64" });
-      check(await service.GetByIdAsync(common) == null, "common address hidden from non-Root");
-      check((await rootService.GetAllActiveAsync()).Count == 2, "Root sees common addresses");
+      var common = await rootService.CreateAsync(new CreateIpAddressDto("2001:db8::1/64", null, null));
+      check(await service.GetDetailsAsync(common) == null, "common address hidden from non-Root");
+      check((await rootService.SearchAsync(new(AllSubdivisions: true))).Count == 2, "Root sees common addresses");
       await ThrowsAsync<InvalidOperationException>(() => assignments.UpdateAsync(personal.Id, [common]), check, "non-Root cannot assign inaccessible common address");
 
       var rootAssignments = new PersonalIpService(factory, rootAccess, NullLogger<PersonalIpService>.Instance);
       check((await rootAssignments.GetAsync(personal.Id)).Available.All(ip => ip.Id != common), "Root assignment selector excludes IP without employee subdivision");
       await ThrowsAsync<InvalidOperationException>(() => rootAssignments.UpdateAsync(personal.Id, [common]), check, "Root cannot assign IP outside employee subdivision");
-      var ownIpv6 = await rootService.CreateAsync(new IpAddress { Address = "2001:db8:1::/64", SubdivisionId = own.Id });
+      var ownIpv6 = await rootService.CreateAsync(new CreateIpAddressDto("2001:db8:1::/64", null, own.Id));
       await rootAssignments.UpdateAsync(personal.Id, [ownIpv6]);
       check(await gate.IsAllowedAsync(user.Id, "2001:db8:1::42"), "IPv6 assigned subnet works");
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "assignment replacement removes old permission");
@@ -132,14 +133,14 @@ internal static class PostgresTests
       // Одновременные вставки нормализуются к одному адресу; ровно одна должна пройти.
       var concurrent = await Task.WhenAll(Enumerable.Range(0, 2).Select(async _ =>
       {
-        try { await service.CreateAsync(new IpAddress { Address = "10.20.30.99/24", SubdivisionId = own.Id }); return true; }
+        try { await service.CreateAsync(new CreateIpAddressDto("10.20.30.99/24", null, own.Id)); return true; }
         catch (ArgumentException) { return false; }
       }));
       check(concurrent.Count(v => v) == 1, "concurrent duplicate insertion has one winner");
       await SignInTests.RunAsync(factory, gate, check);
       await IpDetailsIntegrationTests.RunAsync(factory, rootService, service, check);
       await IpSearchIntegrationTests.RunAsync(factory, rootService, service, check);
-      await IpIndexTests.RunAsync(rootService, factory, check);
+      await IpIndexTests.RunAsync(factory, check);
       await SubdivisionSearchIntegrationTests.RunAsync(factory, rootPermissions, userPermissions, check);
       await SubdivisionDetailsIntegrationTests.RunAsync(factory, rootPermissions, userPermissions, check);
       await ClassifierIntegrationTests.RunAsync(factory, check);

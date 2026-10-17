@@ -36,7 +36,7 @@ IntegrationTests сохраняет режимы `--postgres`, `--browser`, `--b
 
 ## Проверка разделения
 
-После [удаления legacy-контракта подразделений](architecture-subdivision-legacy-cleanup.md) текущий прогон: **4 711 unit + 20 914 integration = 25 625** с временной PostgreSQL-БД. Проверены DTO-операции, конкурирующие переносы и создание, запрет циклов, конфликты версий, отмена и откат дерева; проверки границ и DI учитывают узкий контракт подразделений.
+После [удаления legacy-контракта IP](architecture-ip-legacy-cleanup.md) текущий прогон: **4 711 unit + 20 927 integration = 25 638** с временной PostgreSQL-БД. Проверены DTO-операции, отказы создания/статусов без прав, область, назначения, конкурентные дубли, SQL-фильтры и атомарность Identity. Границы и DI учитывают единственный оставшийся legacy-контракт ISecurityService.
 
 После переноса [ApiDiagnosticAnalyzer](architecture-api-diagnostic-analysis.md) предыдущий прогон: **4 237 unit + 20 846 integration = 25 083** с временной PostgreSQL-БД. 11 прежних проверок перенесены в UnitTests, добавлены 61 unit-проверка и одна проверка границ сборок.
 

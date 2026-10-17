@@ -22,7 +22,7 @@ internal static class UserAdministrationIntegrationTests
     services.AddSingleton<IUserValidator<ApplicationUser>>(validator);
     await using var provider = services.BuildServiceProvider();
     var permissions = new MutablePermissions(); var access = new MutableScope(); var audit = new Audit();
-    var service = new SecurityService(null!, null!, null!, null!, null!, null!, permissions, access, null!,
+    var service = new SecurityService(null!, null!, null!, null!, null!, permissions, access, null!,
       provider.GetRequiredService<IServiceScopeFactory>(), audit, new AccessChangeNotifier(NullLogger<AccessChangeNotifier>.Instance), null!, NullLogger<SecurityService>.Instance);
     IUserAdministrationService forms = service;
     var person = new Personal { FirstName = "Command", LastName = "User", CreatedBy = "root" };
@@ -97,7 +97,7 @@ internal static class UserAdministrationIntegrationTests
   {
     foreach (var failure in new[] { "none", "audit", "notification", "both", "cancelled" }) {
       var delivery = new Delivery(failure);
-      var service = new SecurityService(null!, null!, null!, null!, null!, null!, new MutablePermissions(), new MutableScope(), null!,
+      var service = new SecurityService(null!, null!, null!, null!, null!, new MutablePermissions(), new MutableScope(), null!,
         provider.GetRequiredService<IServiceScopeFactory>(), delivery, delivery, null!, delivery);
       var name = "completion-user-" + Guid.NewGuid().ToString("N");
       await using var db = await factory.CreateDbContextAsync();

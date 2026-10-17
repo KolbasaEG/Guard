@@ -28,13 +28,6 @@ public interface ISecurityService : IUserAdministrationService, IUserListService
       CancellationToken ct = default);
 
   /// <summary>
-  /// Выполняет произвольный LINQ-запрос к IP-адресам (IpAddress).
-  /// </summary>
-  Task<TResult> QueryIpAddressesAsync<TResult>(
-      Func<IQueryable<IpAddress>, Task<TResult>> query,
-      CancellationToken ct = default);
-
-  /// <summary>
   /// Выполняет произвольный LINQ-запрос к сотрудникам (Personal).
   /// </summary>
   Task<TResult> QueryPersonalsAsync<TResult>(

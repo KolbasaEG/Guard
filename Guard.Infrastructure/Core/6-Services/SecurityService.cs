@@ -8,14 +8,13 @@ using Microsoft.EntityFrameworkCore;
 namespace Guard.Core.Services;
 public partial class SecurityService(
   IReadRepository<ApplicationUser> userReads, IReadRepository<ApplicationRole> roleReads, IReadRepository<Personal> personalReads,
-  IIpAddressService ips, IPersonalIpService assignments, IIpAccessService ipGate, IPermissionService permissions,
+  IPersonalIpService assignments, IIpAccessService ipGate, IPermissionService permissions,
   IDataAccessScopeService accessScopes, IRoleAccessService roles, IServiceScopeFactory scopes,
   IAuditService audit, IAccessChangeNotifier notifier, IAccountPolicyService policies, ILogger<SecurityService> logger) : ISecurityService
 {
   public Task<TResult> QueryUsersAsync<TResult>(Func<IQueryable<ApplicationUser>,Task<TResult>> query, CancellationToken ct=default) => userReads.QueryAsync(query,ct);
   public Task<TResult> QueryRolesAsync<TResult>(Func<IQueryable<ApplicationRole>,Task<TResult>> query, CancellationToken ct=default) => roleReads.QueryAsync(query,ct);
   public Task<TResult> QueryPersonalsAsync<TResult>(Func<IQueryable<Personal>,Task<TResult>> query, CancellationToken ct=default) => personalReads.QueryAsync(query,ct);
-  public Task<TResult> QueryIpAddressesAsync<TResult>(Func<IQueryable<IpAddress>,Task<TResult>> query, CancellationToken ct=default) => ips.QueryIpAddressesAsync(query,ct);
   public Task<ApplicationUser?> GetUserByIdAsync(string id, CancellationToken ct=default) => userReads.GetByIdAsync(id,ct);
   public async Task<IReadOnlyList<Guard.Core.Services.DTOs.UserPersonalOption>> GetUserPersonalOptionsAsync(CancellationToken ct=default)
   {

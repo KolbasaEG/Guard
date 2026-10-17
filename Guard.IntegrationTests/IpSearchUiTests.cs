@@ -9,11 +9,11 @@ internal static class IpSearchUiTests
 {
   public static async Task RunAsync(Action<bool, string> check)
   {
-    var service = DispatchProxy.Create<IIpAddressService, IpAddressReferenceTests.ServiceProxy>();
+    var service = DispatchProxy.Create<IIpAddressManagementService, IpAddressReferenceTests.ServiceProxy>();
     var pending = new Queue<TaskCompletionSource<IpSearchResult>>();
     var tokens = new List<CancellationToken>();
     ((IpAddressReferenceTests.ServiceProxy)(object)service).Handle = (method, arguments) => {
-      if (method.Name != nameof(IIpAddressService.SearchAsync)) throw new NotSupportedException(method.Name);
+      if (method.Name != nameof(IIpAddressManagementService.SearchAsync)) throw new NotSupportedException(method.Name);
       var request = (IpSearchRequest)arguments[0]!;
       check(request.Skip >= 0 && request.Take == 20, "IP UI sends bounded search parameters");
       tokens.Add((CancellationToken)arguments[1]!);
@@ -35,7 +35,7 @@ internal static class IpSearchUiTests
 
   private sealed class Probe : IpIndex
   {
-    public Probe(IIpAddressService service) {
+    public Probe(IIpAddressManagementService service) {
       IpAddressService = service; NotificationService = new(); Logger = NullLogger<IpIndex>.Instance;
     }
     public Task Load() => (Task)typeof(IpIndex).GetMethod("LoadData", BindingFlags.NonPublic | BindingFlags.Instance)!

@@ -9,7 +9,7 @@ using Npgsql;
 namespace Guard.Core.Services;
 
 public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
-    IIpManagementAccessService access, ILogger<IpAddressService> logger) : IIpAddressService
+    IIpManagementAccessService access, ILogger<IpAddressService> logger) : IIpAddressManagementService
 {
   public async Task<IpAddressDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default)
   {
@@ -79,32 +79,6 @@ public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
   private static IQueryable<IpAddress> Accessible(IQueryable<IpAddress> q, IpManagementScope scope) =>
       scope.IsRoot ? q : q.Where(ip => ip.SubdivisionId.HasValue && scope.SubdivisionIds.Contains(ip.SubdivisionId.Value));
 
-  public async Task<TResult> QueryIpAddressesAsync<TResult>(Func<IQueryable<IpAddress>, Task<TResult>> query, CancellationToken ct = default)
-  {
-    var scope = await access.GetScopeAsync(false, ct);
-    await using var db = await factory.CreateDbContextAsync(ct);
-    return await query(Accessible(db.IpAddresses.AsNoTracking(), scope));
-  }
-
-  public Task<IpAddress?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
-      QueryIpAddressesAsync(q => q.Include(ip => ip.Subdivision).SingleOrDefaultAsync(ip => ip.Id == id, ct), ct);
-
-  public async Task<IReadOnlyList<IpAddress>> GetAllActiveAsync(CancellationToken ct = default) =>
-      await QueryIpAddressesAsync(q => q.Where(ip => ip.Status == Status.Inserted || ip.Status == Status.Modified)
-          .OrderBy(ip => ip.Address).ToListAsync(ct), ct);
-
-  public async Task<IReadOnlyList<IpAddress>> GetBySubdivisionIdAsync(Guid subdivisionId, CancellationToken ct = default) =>
-      await QueryIpAddressesAsync(q => q.Where(ip => ip.SubdivisionId == subdivisionId &&
-          (ip.Status == Status.Inserted || ip.Status == Status.Modified)).OrderBy(ip => ip.Address).ToListAsync(ct), ct);
-
-  public async Task<bool> IsIpUniqueAsync(string address, Guid? excludeId = null, CancellationToken ct = default)
-  {
-    await access.GetScopeAsync(true, ct);
-    if (!IpAddressRule.TryParse(address, out var rule)) return false;
-    await using var db = await factory.CreateDbContextAsync(ct);
-    return await IsUniqueAsync(db, rule!.CanonicalAddress, excludeId, ct);
-  }
-
   private static async Task<bool> IsUniqueAsync(ApplicationDbContext db, string address, Guid? excludeId, CancellationToken ct)
   {
     var values = await db.IpAddresses.AsNoTracking().Where(ip => !excludeId.HasValue || ip.Id != excludeId.Value)
@@ -112,16 +86,6 @@ public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
     return !values.Any(value => IpAddressRule.TryParse(value, out var rule) && rule!.CanonicalAddress == address);
   }
 
-  public Task<Guid> CreateAsync(IpAddress ipAddress, CancellationToken ct = default)
-  {
-    ArgumentNullException.ThrowIfNull(ipAddress);
-    return CreateAsync(new CreateIpAddressDto(ipAddress.Address, ipAddress.Description, ipAddress.SubdivisionId), ct);
-  }
-  public async Task UpdateAsync(IpAddress ipAddress, CancellationToken ct = default)
-  {
-    ArgumentNullException.ThrowIfNull(ipAddress);
-    await UpdateAsync(new EditIpAddressDto(ipAddress.Id, ipAddress.Address, ipAddress.Description, ipAddress.SubdivisionId), ct);
-  }
   public Task<Guid> CreateAsync(CreateIpAddressDto input, CancellationToken ct = default)
   {
     ArgumentNullException.ThrowIfNull(input);
