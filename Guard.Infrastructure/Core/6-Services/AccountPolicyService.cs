@@ -125,7 +125,7 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
     var policy = await db.Set<AccountPolicy>().AsNoTracking().SingleOrDefaultAsync(ct) ?? new();
     var root = await (from ur in db.UserRoles join role in db.Roles on ur.RoleId equals role.Id
       where ur.UserId == userId && role.NormalizedName == "ROOT" select ur.UserId).AnyAsync(ct);
-    if (AccountPolicyRules.Inactive(policy, user, root, now))
+    if (AccountPolicyRules.Inactive(policy, user.ToAccountPolicyState(), root, now))
     {
       // Повторная проверка под тем же замком, что у административных операций.
       await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -135,7 +135,7 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
       policy = await db.Set<AccountPolicy>().AsNoTracking().SingleOrDefaultAsync(ct) ?? new();
       root = await (from ur in db.UserRoles join role in db.Roles on ur.RoleId equals role.Id
         where ur.UserId == userId && role.NormalizedName == "ROOT" select ur.UserId).AnyAsync(ct);
-      if (user.AccountBlockReason == null && AccountPolicyRules.Inactive(policy, user, root, now))
+      if (user.AccountBlockReason == null && AccountPolicyRules.Inactive(policy, user.ToAccountPolicyState(), root, now))
       {
         user.AccountBlockReason = "Inactivity";
         user.LockoutEnabled = true;
@@ -151,7 +151,7 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
       await tx.CommitAsync(ct);
     }
     return new(user.AccountBlockReason != null || user.LockoutEnabled && user.LockoutEnd > now,
-      AccountPolicyRules.PasswordExpired(policy, user, now));
+      AccountPolicyRules.PasswordExpired(policy, user.ToAccountPolicyState(), now));
   }
 
   public async Task RecordActivityAsync(string userId, CancellationToken ct = default)

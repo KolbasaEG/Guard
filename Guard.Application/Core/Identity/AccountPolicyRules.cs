@@ -4,11 +4,11 @@ namespace Guard.Core.Identity;
 
 public static class AccountPolicyRules
 {
-  public static bool PasswordExpired(AccountPolicy policy, ApplicationUser user, DateTimeOffset now) =>
+  public static bool PasswordExpired(AccountPolicy policy, AccountPolicyUserState user, DateTimeOffset now) =>
     user.MustChangePassword || (policy.PasswordExpirationEnabled &&
       (user.PasswordChangedAtUtc ?? Later(user.CreatedAtUtc, policy.PasswordEnabledAtUtc)).AddDays(policy.PasswordDays) <= now);
 
-  public static bool Inactive(AccountPolicy policy, ApplicationUser user, bool root, DateTimeOffset now) =>
+  public static bool Inactive(AccountPolicy policy, AccountPolicyUserState user, bool root, DateTimeOffset now) =>
     !root && policy.InactivityEnabled &&
       Later(Later(user.LastActivityAtUtc ?? user.CreatedAtUtc, user.UnblockedAtUtc), policy.InactivityEnabledAtUtc)
         .AddDays(policy.InactivityDays) <= now;

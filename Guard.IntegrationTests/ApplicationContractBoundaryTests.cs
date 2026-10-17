@@ -29,7 +29,8 @@ internal static class ApplicationContractBoundaryTests
       check(host.GetType(type.FullName!) == null && infrastructure.GetType(type.FullName!) == null,
         $"Application owns {type.Name} without duplicate Web or Infrastructure definition");
     foreach (var type in new[] { typeof(IpAccessService), typeof(PermissionService), typeof(DataAccessScopeService),
-      typeof(IpManagementAccessService), typeof(Guard.Core.Identity.EntityStatusTransitions), typeof(Guard.Core.Identity.IpStatusTransitions) })
+      typeof(IpManagementAccessService), typeof(Guard.Core.Identity.EntityStatusTransitions), typeof(Guard.Core.Identity.IpStatusTransitions),
+      typeof(Guard.Core.Identity.AccountPolicyRules), typeof(Guard.Core.Identity.AccountPolicyUserState) })
       check(type.Assembly == application, $"Independent access decisions {type.Name} belong to Application");
     var contracts = application.GetExportedTypes()
       .Where(t => t.IsInterface && (t.Namespace == "Guard.Core.Services" ||

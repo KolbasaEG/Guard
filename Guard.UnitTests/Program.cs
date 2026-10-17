@@ -11,6 +11,7 @@ try
   IpAddressRuleTests.Run(Check);
   EntityStatusTests.Run(Check);
   IpStatusTests.Run(Check);
+  AccountPolicyRuleTests.Run(Check);
   await IpAccessBoundaryTests.RunAsync(Check);
   await PermissionBoundaryTests.RunAsync(Check);
   await DataAccessScopeBoundaryTests.RunAsync(Check);
