@@ -1,3 +1,4 @@
+using Guard.Web.Exports;
 using System.Net;
 using System.Text.Json;
 using Guard.Core.Contexts;
@@ -33,7 +34,7 @@ internal static partial class ExportIntegrationTests
     builder.Services.AddScoped<AuthenticationStateProvider, HttpAuthentication>();
     builder.Services.AddScoped<ICurrentSession, Guard.Components.Account.CurrentSessionAdapter>();
     builder.Services.AddScoped<IPermissionReader, PermissionReader>();
-    builder.Services.AddScoped<IPermissionService, PermissionService>(); builder.Services.AddScoped<ExportAccess>();
+    builder.Services.AddScoped<IPermissionService, PermissionService>(); builder.Services.AddScoped<ExportAccess>(); builder.Services.AddScoped<IExportDeliveryService, ExportDeliveryService>();
     builder.Services.AddAuthentication("export-test").AddScheme<AuthenticationSchemeOptions, TestHandler>("export-test", _ => { });
     builder.Services.AddAuthorization(); builder.Services.AddAntiforgery();
     await using var app = builder.Build();

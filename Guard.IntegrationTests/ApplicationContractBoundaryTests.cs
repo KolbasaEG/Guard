@@ -19,6 +19,16 @@ internal static class ApplicationContractBoundaryTests
     var infrastructureContracts = infrastructure.GetExportedTypes().Where(t => t.IsInterface &&
       (t.Namespace == "Guard.Core.Services" || t.Namespace == "Guard.Core.Services.Exports")).ToHashSet();
     check(infrastructureContracts.Count == 0, "Infrastructure owns no legacy application service contracts");
+    check(typeof(Guard.Web.Exports.ExportEndpoints).Assembly == host &&
+      infrastructure.GetType("Guard.Core.Services.Exports.ExportEndpoints") == null,
+      "HTTP export endpoint belongs only to Web");
+    check(typeof(Guard.Core.Services.Exports.ExportDeliveryService).Assembly == infrastructure &&
+      typeof(Guard.Core.Services.Exports.ExportDeliveryService).GetConstructors().Single().GetParameters()
+        .All(p => p.ParameterType.Namespace?.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal) != true),
+      "Export delivery orchestration stays in Infrastructure without HTTP constructor dependencies");
+    var download = typeof(Guard.Web.Exports.ExportEndpoints).GetMethod("DownloadAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
+    check(download.GetParameters().All(p => p.ParameterType.Assembly != infrastructure),
+      "HTTP download adapter depends on independent contracts rather than EF, access or storage implementations");
     foreach (var name in new[] { "IApplicationRoleService", "ILogService", "IClassifierService", "IPersonalService", "ISubdivisionService", "IIpAddressService", "ISecurityService" })
       check(infrastructure.GetType($"Guard.Core.Services.{name}") == null,
         $"Unused legacy contract {name} is removed");
@@ -79,7 +89,7 @@ internal static class ApplicationContractBoundaryTests
     var contracts = application.GetExportedTypes()
       .Where(t => t.IsInterface && (t.Namespace == "Guard.Core.Services" ||
         t.Namespace == "Guard.Core.Services.Exports")).ToArray();
-    check(contracts.Length == 35, "Application inventory contains 32 services and three access read ports");
+    check(contracts.Length == 36, "Application inventory contains 33 services and three access read ports");
     foreach (var name in new[] { "EntityInputValidation", "EntityWriteMapping" })
     {
       var fullName = $"Guard.Core.Services.{name}";

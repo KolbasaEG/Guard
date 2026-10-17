@@ -1,3 +1,4 @@
+using Guard.Web.Exports;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -93,6 +94,8 @@ internal static partial class ExportIntegrationTests
       check((await service.GetAsync(apiJob)).State == ExportJobState.Ready, "read-only API mode permits authorized export");
       await CheckHttpDeliveryAsync(factory, policies, storage, opts, apiJob, user, check);
       await CheckHttpAuditCompletionAsync(factory, policies, storage, opts, service, processor, user, root, check);
+      await CheckDeliveryContractAsync(factory, service, processor,
+        new ExportDeliveryService(permissions, access, storage, factory, new AuditStub(), provider.GetRequiredService<ILoggerFactory>()), check);
       var filteredId = await service.CreateAsync(new(ExportArea.Personals, ExportFormat.Word, IncludeChildren: true, PersonalFilter: new("FirstName", "Equals", "EXPORT_CHILD")));
       await processor.RunNextAsync(default); check((await service.GetAsync(filteredId)).RowCount == 1, "applied personal filter narrows complete export");
       auth.UserId = root.Id;
@@ -164,7 +167,7 @@ internal static partial class ExportIntegrationTests
     builder.Services.AddScoped<AuthenticationStateProvider, HttpAuthentication>();
     builder.Services.AddScoped<ICurrentSession, Guard.Components.Account.CurrentSessionAdapter>();
     builder.Services.AddScoped<IPermissionReader, PermissionReader>();
-    builder.Services.AddScoped<IPermissionService, PermissionService>(); builder.Services.AddScoped<ExportAccess>();
+    builder.Services.AddScoped<IPermissionService, PermissionService>(); builder.Services.AddScoped<ExportAccess>(); builder.Services.AddScoped<IExportDeliveryService, ExportDeliveryService>();
     builder.Services.AddAuthentication("export-test").AddScheme<AuthenticationSchemeOptions, TestHandler>("export-test", _ => { });
     builder.Services.AddAuthorization(); builder.Services.AddAntiforgery();
     await using var app = builder.Build(); app.UseAuthentication(); app.UseAuthorization(); app.UseAntiforgery();

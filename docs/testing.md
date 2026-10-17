@@ -36,6 +36,8 @@ IntegrationTests сохраняет режимы `--postgres`, `--browser`, `--b
 
 ## Проверка разделения
 
+После [отделения HTTP-экспорта](architecture-export-http-boundary.md) текущий прогон: **4 711 unit + 20 963 integration = 25 674** с временной PostgreSQL-БД. Проверяются граница Web/Application/Infrastructure, scoped DI, точные байты, атомарная попытка, ошибка и отмена callback, повторная выдача и существующие HTTP-сценарии. Предыдущий результат приведён ниже для истории.
+
 После [удаления ISecurityService](architecture-security-legacy-cleanup.md) текущий прогон: **4 711 unit + 20 933 integration = 25 644** с временной PostgreSQL-БД. Проверки пользователей используют узкие DTO-контракты; добавлен отказ после SQL-сохранения создания. Сохранены проверки обязательных IdentityResult, версии, области, политики аккаунтов и доставки после commit. Счётчик уменьшился при удалении старого пути создания с ролями и проверок возвращаемого IdentityResult.Success; состояние БД и события проверяются после DTO-команд.
 
 После переноса [ApiDiagnosticAnalyzer](architecture-api-diagnostic-analysis.md) предыдущий прогон: **4 237 unit + 20 846 integration = 25 083** с временной PostgreSQL-БД. 11 прежних проверок перенесены в UnitTests, добавлены 61 unit-проверка и одна проверка границ сборок.

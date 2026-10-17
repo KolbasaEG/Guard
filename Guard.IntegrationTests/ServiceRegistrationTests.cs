@@ -90,7 +90,8 @@ internal static class ServiceRegistrationTests
         (typeof(IIpAccessService), typeof(IpAccessService)),
         (typeof(IPermissionService), typeof(PermissionService)),
         (typeof(IDataAccessScopeService), typeof(DataAccessScopeService)),
-        (typeof(IIpManagementAccessService), typeof(IpManagementAccessService)) })
+        (typeof(IIpManagementAccessService), typeof(IpManagementAccessService)),
+        (typeof(IExportDeliveryService), typeof(ExportDeliveryService)) })
         check(services.Count(d => d.ServiceType == contract) == 1 &&
           services.Single(d => d.ServiceType == contract).ImplementationType == implementation &&
           services.Single(d => d.ServiceType == contract).Lifetime == ServiceLifetime.Scoped,

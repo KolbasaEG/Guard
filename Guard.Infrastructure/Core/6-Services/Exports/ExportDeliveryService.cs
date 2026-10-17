@@ -2,25 +2,20 @@ using System.Text.Json;
 using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
-using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services.Exports;
 
-public static class ExportEndpoints
+public sealed class ExportDeliveryService(IPermissionService permissions, ExportAccess access, ExportStorage storage,
+  IDbContextFactory<ApplicationDbContext> contexts, IAuditService audit, ILoggerFactory logs) : IExportDeliveryService
 {
-  public static IEndpointConventionBuilder MapExportEndpoints(this IEndpointRouteBuilder routes) =>
-    routes.MapPost("/exports/{id:guid}/download", DownloadAsync).RequireAuthorization();
-
-  private static async Task DownloadAsync(Guid id, HttpContext http, IAntiforgery antiforgery,
-    IPermissionService permissions, ExportAccess access, ExportStorage storage, IDbContextFactory<ApplicationDbContext> contexts,
-    IAuditService audit, ILoggerFactory logs)
+  public async Task DeliverAsync(Guid id, Func<ExportDeliveryFile, Stream, CancellationToken, Task> deliver,
+    CancellationToken ct = default)
   {
-    var ct = http.RequestAborted; var logger = logs.CreateLogger("Guard.Core.Services.Exports.Delivery");
+    ArgumentNullException.ThrowIfNull(deliver);
+    var logger = logs.CreateLogger("Guard.Core.Services.Exports.Delivery");
     bool locked = false, claimed = false, succeeded = false; string? author = null;
     try {
-      await antiforgery.ValidateRequestAsync(http);
-      if (http.Request.Headers.ContainsKey("Range")) throw new ArgumentException("Частичное скачивание не поддерживается.");
       var actor = await permissions.GetCurrentAsync(ct); author = actor.UserId;
       await storage.ArchiveGate.WaitAsync(ct); locked = true;
       await using var db = await contexts.CreateDbContextAsync(ct);
@@ -40,21 +35,13 @@ public static class ExportEndpoints
         await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); claimed = true;
       }
       DeliverAudit(AuditEventType.ExportDeliveryStarted, job.ClientIp);
-      http.Response.ContentType = file.ContentType; http.Response.ContentLength = file.Size;
-      http.Response.Headers.CacheControl = "no-store, private";
-      http.Response.Headers["X-Content-Type-Options"] = "nosniff";
-      http.Response.Headers.ContentDisposition = "attachment; filename*=UTF-8''" + Uri.EscapeDataString(file.FileName);
-      await using var stream = storage.Open(file.StorageKey); await stream.CopyToAsync(http.Response.Body, ct);
-      await http.Response.Body.FlushAsync(ct); succeeded = true;
+      await using var stream = storage.Open(file.StorageKey);
+      await deliver(new(file.FileName, file.ContentType, file.Size), stream, ct);
+      succeeded = true;
     }
     catch (Exception ex) {
-      logger.LogWarning(ex, "Передача выгрузки {ExportId} не завершена", id);
       DeliverAudit(ex is UnauthorizedAccessException ? AuditEventType.AccessDenied : AuditEventType.ExportFailed);
-      if (!http.Response.HasStarted && !ct.IsCancellationRequested) {
-        http.Response.Clear(); http.Response.StatusCode = ex is UnauthorizedAccessException or AntiforgeryValidationException ? 403 : ex is KeyNotFoundException ? 404 : 409;
-        http.Response.Headers.CacheControl = "no-store";
-        await http.Response.WriteAsync(ex is EntityRuleException ? ex.Message : "Не удалось передать файл. Проверьте доступ и создайте новую выгрузку.", ct);
-      } else if (!succeeded) http.Abort();
+      throw;
     }
     finally {
       try {
