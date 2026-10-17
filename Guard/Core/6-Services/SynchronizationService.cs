@@ -10,14 +10,17 @@ public interface ISynchronizationService
 {
   Task<DirectoryActuality> GetActualityAsync(string readPermission, CancellationToken ct = default);
   Task<SynchronizationOverview> GetOverviewAsync(bool classifiers = false, bool includeChildren = true, CancellationToken ct = default, bool allSubdivisions = false);
+  /// <summary>Подтверждает сохранение настроек; ошибка последующей доставки аудита логируется.</summary>
   Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null, bool? completeSnapshotGuaranteed = null);
+  /// <summary>Успешно сохранённый запуск остаётся успешным при ошибке последующего аудита; очередь возвращает Queued.</summary>
   Task<SynchronizationRunDto> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false);
   Task<IReadOnlyList<SynchronizationRunDto>> GetHistoryAsync(CancellationToken ct = default);
   Task CheckConnectionAsync(CancellationToken ct = default);
 }
 
 public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContext> factory,
-  IPermissionService permissions, ApiSynchronizationRunner runner, IAuditService audit, ApiCredentialProtector credentials) : ISynchronizationService
+  IPermissionService permissions, ApiSynchronizationRunner runner, IAuditService audit, ApiCredentialProtector credentials,
+  ILogger<SynchronizationService> logger) : ISynchronizationService
 {
   public async Task CheckConnectionAsync(CancellationToken ct = default)
   {
@@ -95,8 +98,14 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
       throw new ArgumentException("Для управления из API укажите логин и пароль Basic auth.");
     settings.ModifiedBy = actor.UserId; settings.ModifiedAt = DateTime.UtcNow;
     await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-    audit.LogIdentityEvent(Guard.Core.Enums.AuditEventType.SynchronizationSettingsChanged, actor.UserId,
-      details: $"Mode={mode}; ScheduleEnabled={enabled}; DailyTime={time:HH:mm}; TimeZone={TimeZoneInfo.Local.Id}; ApiHeadSubdivisionId={apiHeadSubdivisionId}; CompleteSnapshotGuaranteed={settings.CompleteSnapshotGuaranteed}; PreviouslyConfirmed={previouslyConfirmed}; SourceChanged={sourceChanged}");
+    try {
+      audit.LogIdentityEvent(Guard.Core.Enums.AuditEventType.SynchronizationSettingsChanged, actor.UserId,
+        details: $"Mode={mode}; ScheduleEnabled={enabled}; DailyTime={time:HH:mm}; TimeZone={TimeZoneInfo.Local.Id}; ApiHeadSubdivisionId={apiHeadSubdivisionId}; CompleteSnapshotGuaranteed={settings.CompleteSnapshotGuaranteed}; PreviouslyConfirmed={previouslyConfirmed}; SourceChanged={sourceChanged}");
+    }
+    catch (Exception ex) {
+      logger.LogError(ex, "Настройки синхронизации сохранены, но событие аудита {EventType} для {SettingsId} не доставлено",
+        Guard.Core.Enums.AuditEventType.SynchronizationSettingsChanged, settings.Id);
+    }
   }
 
   public async Task<SynchronizationRunDto> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false)
@@ -291,8 +300,15 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
       logger.LogInformation("Синхронизация {RunId} завершена: добавлено {Added}, изменено {Updated}, архивировано {Archived}", run.Id, run.Added, run.Updated, run.Archived);
       logger.LogInformation("Синхронизация {RunId}: событий выхода {ExitEventCount}, повторных {RepeatedExitEvents}, неизвестных сотрудников {UnknownExitEmployees}, длительность {SyncElapsedMs} мс",
         run.Id, run.ExitEvents, run.RepeatedExitEvents, run.UnknownExitEmployees, elapsed.Elapsed.TotalMilliseconds);
-      audit.LogIdentityEvent(Guard.Core.Enums.AuditEventType.SynchronizationCompleted, actor,
-        details: $"RunId={run.Id}; PoolId={pool}; Status={run.Status}; Archived={run.Archived}; Restored={run.Restored}");
+      // The snapshot and Succeeded are committed together; audit delivery cannot undo them.
+      try {
+        audit.LogIdentityEvent(Guard.Core.Enums.AuditEventType.SynchronizationCompleted, actor,
+          details: $"RunId={run.Id}; PoolId={pool}; Status={run.Status}; Archived={run.Archived}; Restored={run.Restored}");
+      }
+      catch (Exception ex) {
+        logger.LogError(ex, "Синхронизация {RunId} сохранена успешно, но событие аудита {EventType} не доставлено",
+          run.Id, Guard.Core.Enums.AuditEventType.SynchronizationCompleted);
+      }
       return run;
     }
     catch (Exception ex) when (run != null && !committed)

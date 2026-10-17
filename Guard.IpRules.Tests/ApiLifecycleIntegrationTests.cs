@@ -17,7 +17,7 @@ internal static class ApiLifecycleIntegrationTests
     var client = new ClientStub();
     var credentials = new ApiCredentialProtector(new EphemeralDataProtectionProvider());
     var runner = new ApiSynchronizationRunner(factory, client, permissions, new AuditStub(), NullLogger<ApiSynchronizationRunner>.Instance, credentials);
-    var service = new SynchronizationService(factory, permissions, runner, new AuditStub(), credentials);
+    var service = new SynchronizationService(factory, permissions, runner, new AuditStub(), credentials, NullLogger<SynchronizationService>.Instance);
     var settings = (await service.GetOverviewAsync()).Settings;
     await service.SaveSettingsAsync(DataManagementMode.Local, false, new(2, 0), settings.Version,
       apiBaseUrl: "https://example.invalid/api", apiUsername: "test", apiPassword: "test");

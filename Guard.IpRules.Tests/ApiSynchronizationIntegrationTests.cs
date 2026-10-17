@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-internal static class ApiSynchronizationIntegrationTests
+internal static partial class ApiSynchronizationIntegrationTests
 {
   private static async Task CheckReadContractsAsync(IDbContextFactory<ApplicationDbContext> factory,
     SynchronizationService service, Action<bool, string> check)
@@ -71,7 +71,7 @@ internal static class ApiSynchronizationIntegrationTests
     var audit = new AuditStub();
     var credentials = new ApiCredentialProtector(new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider());
     var runner = new ApiSynchronizationRunner(factory, api, permissions, audit, NullLogger<ApiSynchronizationRunner>.Instance, credentials);
-    var service = new SynchronizationService(factory, permissions, runner, audit, credentials);
+    var service = new SynchronizationService(factory, permissions, runner, audit, credentials, NullLogger<SynchronizationService>.Instance);
     await using (var db = await factory.CreateDbContextAsync())
     {
       db.AddRange(new Classifier { Id = 9000000, Type = 999, Code = 1, ClassifierName = "Local", Value = "Local" },
@@ -143,6 +143,7 @@ internal static class ApiSynchronizationIntegrationTests
     await using (var db = await factory.CreateDbContextAsync())
       check((await db.Personals.SingleAsync(p => p.Id == employeeId)).Version == version, "unchanged employee version remains stable");
     var fullSnapshot = api.Snapshot;
+    await CheckCompletionAsync(factory, permissions, api, credentials, runner, service, check);
     var changedPerson = System.Text.Json.JsonSerializer.Deserialize<ApiPersonal>(System.Text.Json.JsonSerializer.Serialize(fullSnapshot.Personnel[0]))!;
     changedPerson.FirstName = "Delta";
     api.Snapshot = new ApiSnapshot([], [], [changedPerson]);
