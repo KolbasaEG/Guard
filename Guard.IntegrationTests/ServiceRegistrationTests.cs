@@ -58,7 +58,7 @@ internal static class ServiceRegistrationTests
 
       var infrastructure = new ServiceCollection();
       infrastructure.AddGuardInfrastructure(builder.Configuration, development);
-      foreach (var webType in new[] { typeof(ICurrentSession), typeof(AuthenticationStateProvider),
+      foreach (var webType in new[] { typeof(IIpManagementAccessService), typeof(ICurrentSession), typeof(AuthenticationStateProvider),
         typeof(IdentityRedirectManager), typeof(AccessRefreshCoordinator), typeof(CircuitHandler) })
         check(!infrastructure.Any(d => d.ServiceType == webType),
           $"infrastructure leaves Web adapter {webType.Name} to the host");
@@ -66,10 +66,10 @@ internal static class ServiceRegistrationTests
         "infrastructure descriptors do not register component implementations");
       var application = new ServiceCollection();
       application.AddGuardApplication();
-      check(application.Count == 3 && application.All(d => d.Lifetime == ServiceLifetime.Scoped &&
+      check(application.Count == 4 && application.All(d => d.Lifetime == ServiceLifetime.Scoped &&
         d.ServiceType.Assembly == typeof(ICurrentSession).Assembly &&
         d.ImplementationType?.Assembly == typeof(ICurrentSession).Assembly),
-        "Application composition contains only three independent scoped decisions");
+        "Application composition contains only four independent scoped decisions");
       check(services.Count(d => d.ServiceType == typeof(ICurrentSession)) == 1 &&
         services.Single(d => d.ServiceType == typeof(ICurrentSession)).ImplementationType == typeof(CurrentSessionAdapter) &&
         services.Single(d => d.ServiceType == typeof(ICurrentSession)).Lifetime == ServiceLifetime.Scoped,
@@ -89,7 +89,8 @@ internal static class ServiceRegistrationTests
       foreach (var (contract, implementation) in new[] {
         (typeof(IIpAccessService), typeof(IpAccessService)),
         (typeof(IPermissionService), typeof(PermissionService)),
-        (typeof(IDataAccessScopeService), typeof(DataAccessScopeService)) })
+        (typeof(IDataAccessScopeService), typeof(DataAccessScopeService)),
+        (typeof(IIpManagementAccessService), typeof(IpManagementAccessService)) })
         check(services.Count(d => d.ServiceType == contract) == 1 &&
           services.Single(d => d.ServiceType == contract).ImplementationType == implementation &&
           services.Single(d => d.ServiceType == contract).Lifetime == ServiceLifetime.Scoped,
@@ -117,6 +118,10 @@ internal static class ServiceRegistrationTests
       await using var second = provider.CreateAsyncScope();
       var a = first.ServiceProvider;
       var b = second.ServiceProvider;
+      check(a.GetRequiredService<IIpManagementAccessService>() is IpManagementAccessService &&
+        ReferenceEquals(a.GetRequiredService<IIpManagementAccessService>(), a.GetRequiredService<IIpManagementAccessService>()) &&
+        !ReferenceEquals(a.GetRequiredService<IIpManagementAccessService>(), b.GetRequiredService<IIpManagementAccessService>()),
+        "IP management decision resolves once per scope and is isolated between scopes");
       // Resolve every Guard service interface in the actual registration set, not a hand-copied list.
       foreach (var type in services.Select(d => d.ServiceType).Distinct().Where(t => t.IsInterface && !t.IsGenericTypeDefinition &&
         (t.Assembly == typeof(GuardServiceRegistration).Assembly || t.Assembly == typeof(ICurrentSession).Assembly ||

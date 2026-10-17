@@ -14,6 +14,7 @@ try
   await IpAccessBoundaryTests.RunAsync(Check);
   await PermissionBoundaryTests.RunAsync(Check);
   await DataAccessScopeBoundaryTests.RunAsync(Check);
+  await IpManagementAccessBoundaryTests.RunAsync(Check);
   Console.WriteLine($"Passed {checks} unit checks.");
 }
 catch (Exception error)

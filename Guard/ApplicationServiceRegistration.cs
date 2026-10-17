@@ -10,6 +10,7 @@ public static class ApplicationServiceRegistration
     services.AddScoped<IDataAccessScopeService, DataAccessScopeService>();
     services.AddScoped<IIpAccessService, IpAccessService>();
     services.AddScoped<IPermissionService, PermissionService>();
+    services.AddScoped<IIpManagementAccessService, IpManagementAccessService>();
     return services;
   }
 }
