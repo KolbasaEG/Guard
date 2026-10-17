@@ -213,6 +213,7 @@ public class SubdivisionService : ISubdivisionService
 
     return await _uow.ExecuteInTransactionAsync(async () =>
     {
+      await LockTreeAsync(_uow, ct);
       if (!(await _scopes.GetAsync(ct)).Allows(subdivision.ParentId)) throw new UnauthorizedAccessException("Родительское подразделение недоступно.");
       subdivision.Status = Status.Inserted;
       await EntityReferences.SubdivisionAsync(_uow, subdivision, null, ct);
@@ -302,6 +303,7 @@ public class SubdivisionService : ISubdivisionService
     await DirectoryManagementService.RequireLocalAsync(_uow, ct);
     await _uow.ExecuteInTransactionAsync(async () =>
     {
+      await LockTreeAsync(_uow, ct);
       var target = await GetRequiredForWriteAsync(_uow, id, ct);
       if (expectedVersion.HasValue) EntityInputValidation.CheckVersion(target.Version, expectedVersion.Value);
       if (!(await _scopes.GetAsync(ct)).Allows(newParentId)) throw new UnauthorizedAccessException("Новый родитель недоступен.");
@@ -440,6 +442,13 @@ public class SubdivisionService : ISubdivisionService
   }
 
   // ==================== Private Helpers ====================
+
+  private static async Task LockTreeAsync(IUnitOfWork work, CancellationToken ct)
+  {
+    // Та же блокировка, что при сохранении и смене режима: до чтения дерева и до commit.
+    await work.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock({0})", new object[] { ApplicationDbContext.ManagementLock }, ct);
+    await DirectoryManagementService.RequireLocalAsync(work, ct);
+  }
 
   private async Task<Subdivision> GetRequiredForWriteAsync(IUnitOfWork _uow, Guid id, CancellationToken ct)
   {

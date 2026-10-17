@@ -12,6 +12,7 @@ internal static class RefactorIntegrationTests
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory, Action<bool, string> check)
   {
     await OperationLifetimeIntegrationTests.RunAsync(factory, check);
+    await TreeConcurrencyIntegrationTests.RunAsync(factory, new RootPermissions(), new RootScope(), check);
     var registrations = new ServiceCollection();
     registrations.AddLogging(); registrations.AddSingleton(factory);
     registrations.AddScoped<IPermissionService, RootPermissions>();
