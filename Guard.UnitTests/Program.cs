@@ -14,6 +14,7 @@ try
   AccountPolicyRuleTests.Run(Check);
   EntityWriteMappingTests.Run(Check);
   EntityInputValidationTests.Run(Check);
+  ApiSnapshotValidationTests.Run(Check);
   await IpAccessBoundaryTests.RunAsync(Check);
   await PermissionBoundaryTests.RunAsync(Check);
   await DataAccessScopeBoundaryTests.RunAsync(Check);
