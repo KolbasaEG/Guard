@@ -1,4 +1,5 @@
-﻿using Guard.Core.Services;
+using Microsoft.AspNetCore.Http;
+using Guard.Core.Services;
 using System.Security.Claims;
 
 namespace Guard.Core.Identity

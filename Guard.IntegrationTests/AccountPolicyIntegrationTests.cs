@@ -78,6 +78,21 @@ internal static class AccountPolicyIntegrationTests
       context.Request.Path = "/Account/Manage/ChangePassword";
       await middleware.InvokeAsync(context, policies, manager);
       check(reached, "expired account can open password change without redirect loop");
+      foreach (var (path, ipAllowed, expectedStatus, expectedLocation, expectedReached) in new[] {
+        ("/_blazor", false, 403, (string?)null, false),
+        ("/_blazor", true, 302, "/Account/Manage/ChangePassword", false),
+        ("/Account/Manage/ChangePassword", true, 200, (string?)null, true),
+        ("/Account/Logout", false, 200, (string?)null, true) }) {
+        reached = false;
+        var request = new DefaultHttpContext { User = principal, RequestServices = middlewareScope.ServiceProvider };
+        request.Request.Path = path;
+        request.Response.Body = new MemoryStream();
+        var pipeline = new IpCheckMiddleware(http => middleware.InvokeAsync(http, policies, manager));
+        await pipeline.InvokeAsync(request, new PipelineIpAccess(ipAllowed), new AuditStub());
+        check(request.Response.StatusCode == expectedStatus &&
+          request.Response.Headers.Location.ToString() == (expectedLocation ?? "") && reached == expectedReached,
+          $"IP then account policy pipeline preserves denial, password redirect and logout: {path}, IP={ipAllowed}");
+      }
       await PostgresTests.ThrowsAsync<ArgumentException>(() => administration.SaveAsync(new SaveAccountPolicyCommand { MinimumLength = 5 }), check, "invalid policy command rejected");
       principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "root"),
         new Claim(manager.Options.ClaimsIdentity.SecurityStampClaimType, "revoked")], "test"));
@@ -115,6 +130,11 @@ internal static class AccountPolicyIntegrationTests
     check(!(await policies.CheckAsync("root")).Blocked, "inactive Root retains access");
     var policy = (await administration.GetSettingsAsync()).ToCommand() with { InactivityEnabled = false };
     await administration.SaveAsync(policy);
+  }
+
+  private sealed class PipelineIpAccess(bool allowed) : IIpAccessService
+  {
+    public Task<bool> IsAllowedAsync(string userId, string? ip, CancellationToken ct = default) => Task.FromResult(allowed);
   }
   private sealed class FixedAuthentication(ClaimsPrincipal user) : AuthenticationStateProvider {
     public override Task<AuthenticationState> GetAuthenticationStateAsync() => Task.FromResult(new AuthenticationState(user));

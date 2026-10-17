@@ -58,6 +58,11 @@ internal static class ServiceRegistrationTests
 
       var infrastructure = new ServiceCollection();
       infrastructure.AddGuardInfrastructure(builder.Configuration, development);
+      check(!infrastructure.Any(d => d.ImplementationType == typeof(PermissionAuthorizationHandler)),
+        "Infrastructure does not register the Web permission handler");
+      check(services.Count(d => d.ImplementationType == typeof(PermissionAuthorizationHandler)) == 1 &&
+        services.Single(d => d.ImplementationType == typeof(PermissionAuthorizationHandler)).Lifetime == ServiceLifetime.Scoped,
+        "Web registers exactly one scoped permission handler in both composition orders");
       foreach (var webType in new[] { typeof(IIpManagementAccessService), typeof(ICurrentSession), typeof(AuthenticationStateProvider),
         typeof(IdentityRedirectManager), typeof(AccessRefreshCoordinator), typeof(CircuitHandler) })
         check(!infrastructure.Any(d => d.ServiceType == webType),

@@ -10,6 +10,11 @@ internal static class ApplicationContractBoundaryTests
     var application = typeof(ICurrentSession).Assembly;
     var host = typeof(Guard.GuardServiceRegistration).Assembly;
     var infrastructure = typeof(Guard.Infrastructure.InfrastructureServiceRegistration).Assembly;
+    foreach (var adapter in new[] { typeof(Guard.Core.Identity.IpCheckMiddleware),
+      typeof(Guard.Core.Identity.AccountPolicyMiddleware), typeof(Guard.Core.Identity.PermissionRequirement),
+      typeof(Guard.Core.Identity.PermissionAuthorizationHandler) })
+      check(adapter.Assembly == host && infrastructure.GetType(adapter.FullName!) == null,
+        $"HTTP authorization adapter {adapter.Name} belongs only to Web");
     check(application.GetName().Name == "Guard.Application" && application != host && application != typeof(Personal).Assembly,
       "Application has its own assembly, separate from Domain and Web");
     foreach (var reference in application.GetReferencedAssemblies())

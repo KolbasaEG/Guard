@@ -47,7 +47,7 @@
 | `Guard.Infrastructure/Core/7-Interceptors` | Заполнение полей аудита при сохранении |
 | `Guard.Infrastructure/Core/8-Extensions` | Общие преобразования и фильтры запросов |
 | `Guard.Infrastructure/Core/9-Logging` | Конфигурация и управление логированием |
-| `Guard.Infrastructure/Core/Identity` | Контекст пользователя, permissions и IP middleware |
+| `Guard.Infrastructure/Core/Identity` | EF-чтение доступа, интеграция Identity, политики и workers |
 | `Guard/Components/Pages/<область>` | Маршрутизируемые страницы, списки и CRUD-формы функциональной области |
 | `Guard/Components/Layout/Navigation` | Общее левое меню и каталог разделов с условиями видимости |
 | `Guard/Components/Library` | Общие компоненты и обёртки UI |

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using Guard.Core.Entities;
 using Guard.Core.Services;
