@@ -14,7 +14,7 @@ internal static class ApplicationContractBoundaryTests
     var contracts = typeof(ICurrentSession).Assembly.GetExportedTypes()
       .Where(t => t.IsInterface && (t.Namespace == "Guard.Core.Services" ||
         t.Namespace == "Guard.Core.Services.Exports") && !legacy.Contains(t)).ToArray();
-    check(contracts.Length == 32, "Application inventory contains all 32 non-legacy service contracts");
+    check(contracts.Length == 33, "Application inventory contains 32 services and the IP access read port");
     foreach (var contract in contracts)
     {
       var violations = FindViolations(contract);

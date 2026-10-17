@@ -47,6 +47,7 @@ internal static class AuthorizationTests
     services.AddScoped<IIpAddressService,IpAddressService>();
     services.AddScoped<IPersonalIpService,PersonalIpService>();
     services.AddScoped<IIpAccessService,IpAccessService>();
+    services.AddScoped<IIpAccessReader,IpAccessReader>();
     services.AddScoped<ISecurityService,SecurityService>();
     await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes=true, ValidateOnBuild=true });
     await using var scope = provider.CreateAsyncScope();

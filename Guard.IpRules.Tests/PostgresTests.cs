@@ -50,7 +50,7 @@ internal static class PostgresTests
       await db.SaveChangesAsync();
 
       await CurrentSessionTests.RunIntegrationAsync(factory, check);
-      var gate = new IpAccessService(factory);
+      var gate = new IpAccessService(new IpAccessReader(factory));
       check(!await gate.IsAllowedAsync("missing", "192.168.1.1"), "unknown user denied");
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "empty assignments denied");
       check(await gate.IsAllowedAsync(root.Id, null), "Root bypasses IP without Personal");
@@ -72,6 +72,16 @@ internal static class PostgresTests
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "subdivision address alone does not grant access");
       await assignments.UpdateAsync(personal.Id, [id]);
       check(await gate.IsAllowedAsync(user.Id, "::ffff:192.168.1.1"), "assigned mapped client matches subnet");
+      try {
+        foreach (var status in Enum.GetValues<Status>()) {
+          await db.Personals.Where(p => p.Id == personal.Id).ExecuteUpdateAsync(s => s.SetProperty(p => p.Status, status));
+          check(await gate.IsAllowedAsync(user.Id, "192.168.1.1") == (status is Status.Inserted or Status.Modified),
+            $"IP reader reloads employee status {status} on next connection");
+        }
+      }
+      finally {
+        await db.Personals.Where(p => p.Id == personal.Id).ExecuteUpdateAsync(s => s.SetProperty(p => p.Status, personal.Status));
+      }
       check(!await gate.IsAllowedAsync(user.Id, "192.168.2.1"), "outside subnet denied");
       check((await assignments.GetAsync(personal.Id)).Selected.SequenceEqual([id]), "assignments saved");
       await service.ArchiveAsync(id);

@@ -57,6 +57,10 @@ internal static class ServiceRegistrationTests
         check(!services.Any(d => d.ServiceType == type), $"production DI has no legacy write registration {type.Name}");
       check(services.Count(d => d.ServiceType == typeof(IReadRepository<>)) == 1,
         "production DI has one open generic read repository registration after Scrutor");
+      check(services.Count(d => d.ServiceType == typeof(IIpAccessReader)) == 1 &&
+        services.Single(d => d.ServiceType == typeof(IIpAccessReader)).ImplementationType == typeof(IpAccessReader) &&
+        services.Single(d => d.ServiceType == typeof(IIpAccessReader)).Lifetime == ServiceLifetime.Scoped,
+        "production DI registers one scoped IP access reader without suffix scanning");
       check(services.Count(d => d.ServiceType == typeof(RoleManager<ApplicationRole>)) == 1,
         "Identity supplies a single RoleManager registration");
       check(services.Count(d => d.ServiceType == typeof(IDirectoryApiClient)) == 1 &&
