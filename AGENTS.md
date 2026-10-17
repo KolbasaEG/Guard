@@ -18,9 +18,9 @@
 
 ## Проект и архитектура
 
-- `Guard.slnx` содержит веб-проект `Guard/Guard.csproj` и исполняемый runner `Guard.IpRules.Tests`, целевая платформа — .NET 10.
+- `Guard.slnx` содержит независимую библиотеку `Guard.Domain`, веб-проект `Guard/Guard.csproj` и исполняемый runner `Guard.IpRules.Tests`, целевая платформа — .NET 10.
 - Приложение использует Blazor с интерактивным серверным режимом, Radzen, ASP.NET Core Identity, EF Core и PostgreSQL.
-- Это слоистый монолит. Папки слоёв находятся в одной сборке; границы зависимостей не обеспечиваются отдельными проектами.
+- Это слоистый монолит. Независимые модели и enum выделены в `Guard.Domain` без пакетов и ссылок на другие проекты; разрешены только зависимости BCL. Прикладные операции, Infrastructure и Web пока находятся в `Guard`. Полные имена перенесённых типов сохранены.
 - Основной поток записи: компонент → сервис → `IUnitOfWork` → репозиторий → `ApplicationDbContext`.
 - Основной поток чтения: компонент → сервис → `IReadRepository<T>` → `IDbContextFactory<ApplicationDbContext>`.
 - `LogsDbContext` обслуживает отдельную БД логов. Serilog и Identity-аудит выполняют разные задачи.
@@ -30,8 +30,9 @@
 | Путь | Назначение |
 | --- | --- |
 | `Guard/Program.cs` | Регистрация зависимостей, настройка БД, логирования и middleware |
-| `Guard/Core/0-Enums` | Перечисления, статусы и режимы выборки |
-| `Guard/Core/1-Entities` | Сущности и общие поля |
+| `Guard.Domain/Core/0-Enums` | Перечисления, статусы и режимы выборки |
+| `Guard.Domain/Core/1-Entities` | Независимые сущности и общие поля |
+| `Guard/Core/1-Entities` | Модели Identity и технического журнала |
 | `Guard/Core/2-Configurations` | Конфигурации EF: ограничения, связи, индексы |
 | `Guard/Core/3-Contexts` | Контексты, инициализация и начальные данные |
 | `Guard/Core/4-Repositories` | Репозитории чтения и записи |

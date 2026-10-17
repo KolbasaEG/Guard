@@ -5,7 +5,7 @@ $repoRoot = Split-Path $PSScriptRoot -Parent
 Push-Location $repoRoot
 try {
     # Только исходники: не читать конфигурацию, рабочие данные, bin/obj и секреты.
-    $sourceFiles = @(& rg --files Guard -g '*.cs' -g '*.razor' -g '!**/Migrations/**' -g '!**/obj/**' -g '!**/bin/**' | Sort-Object)
+    $sourceFiles = @(& rg --files Guard Guard.Domain -g '*.cs' -g '*.razor' -g '!**/Migrations/**' -g '!**/obj/**' -g '!**/bin/**' | Sort-Object)
     if ($LASTEXITCODE -ne 0) { throw 'Не удалось перечислить исходники через rg.' }
     $lines = [System.Collections.Generic.List[string]]::new()
     $lines.Add('# Статический инвентарь архитектуры Guard')
@@ -43,7 +43,7 @@ try {
     $lines.Add('## Контрольные суммы схемы и миграций (SHA256)')
     $lines.Add('')
     $lines.Add('```text')
-    $schemaFiles = @(& rg --files Guard/Migrations Guard/Core/2-Configurations Guard/Core/1-Entities Guard/Core/3-Contexts -g '*.cs' | Sort-Object)
+    $schemaFiles = @(& rg --files Guard/Migrations Guard/Core/2-Configurations Guard/Core/1-Entities Guard.Domain/Core/1-Entities Guard/Core/3-Contexts -g '*.cs' | Sort-Object)
     if ($LASTEXITCODE -ne 0) { throw 'Не удалось перечислить файлы схемы.' }
     foreach ($file in $schemaFiles) {
         $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash

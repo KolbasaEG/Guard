@@ -1,5 +1,7 @@
 # Реестр контрактов будущего Guard.Application
 
+Актуальное дополнение: [Guard.Domain уже выделен](architecture-domain-assembly.md). Перечисления теперь принадлежат независимой сборке, полные имена сохранены; проверка 35 прикладных контрактов прошла после переноса. Следующий участок — состав и выделение Guard.Application: контракты, DTO и независимые правила, с сохранением EF/Identity-реализаций в Guard до Infrastructure. Ниже сохранена история.
+
 Актуальное дополнение: [IDataAccessScopeReader и независимая область подразделений](architecture-data-access-scope-port.md). Автоматически проверяются 35 независимых интерфейсов. DataAccessScopeService и SubdivisionAccessPath не зависят от EF, конкретное чтение принадлежит Infrastructure. Далее — обратная навигация Personal.User перед выделением Domain. Ниже сохранена история.
 
 Актуальное дополнение: [IPermissionReader и PermissionAccessData](architecture-permission-port.md) отделяют EF-чтение от проверки сессии и ролевых полномочий. Теперь автоматически проверяются 34 независимых интерфейса. PermissionService, каталог и UserAccessSnapshot сохраняют прикладные правила; конкретный reader относится к Infrastructure. Проверки: сборка без ошибок, runner с PostgreSQL — 20 402. Далее — данные для DataAccessScopeService. Ниже сохранена история.
