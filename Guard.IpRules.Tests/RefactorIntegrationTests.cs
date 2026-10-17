@@ -13,6 +13,7 @@ internal static class RefactorIntegrationTests
   {
     await OperationLifetimeIntegrationTests.RunAsync(factory, check);
     await TreeConcurrencyIntegrationTests.RunAsync(factory, new RootPermissions(), new RootScope(), check);
+    await ManagementModeConcurrencyTests.RunAsync(factory, new RootPermissions(), new RootScope(), check);
     var registrations = new ServiceCollection();
     registrations.AddLogging(); registrations.AddSingleton(factory);
     registrations.AddScoped<IPermissionService, RootPermissions>();
