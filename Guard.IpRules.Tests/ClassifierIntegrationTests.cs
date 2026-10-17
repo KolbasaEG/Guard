@@ -13,7 +13,7 @@ internal static class ClassifierIntegrationTests
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory, Action<bool, string> check)
   {
     var root = new PermissionsStub(new("root", true, []));
-    ClassifierService Service(IPermissionService permissions) => new(new ReadRepository<Classifier>(factory, permissions, new DataAccessScopeService(permissions, factory)),
+    ClassifierService Service(IPermissionService permissions) => new(new ReadRepository<Classifier>(factory, permissions, new DataAccessScopeService(permissions, new DataAccessScopeReader(factory))),
       new UnitOfWorkFactory(factory, permissions, null!, NullLogger<UnitOfWork>.Instance), NullLogger<ClassifierService>.Instance, permissions);
     var service = Service(root);
     var fields = new ClassifierFieldsDto { Type = 998811, Code = 1, ClassifierName = "DTO test", Value = "Alpha", IsActive = true };

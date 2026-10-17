@@ -65,6 +65,10 @@ internal static class ServiceRegistrationTests
         services.Single(d => d.ServiceType == typeof(IPermissionReader)).ImplementationType == typeof(PermissionReader) &&
         services.Single(d => d.ServiceType == typeof(IPermissionReader)).Lifetime == ServiceLifetime.Scoped,
         "production DI registers one scoped permission reader without suffix scanning");
+      check(services.Count(d => d.ServiceType == typeof(IDataAccessScopeReader)) == 1 &&
+        services.Single(d => d.ServiceType == typeof(IDataAccessScopeReader)).ImplementationType == typeof(DataAccessScopeReader) &&
+        services.Single(d => d.ServiceType == typeof(IDataAccessScopeReader)).Lifetime == ServiceLifetime.Scoped,
+        "production DI registers one scoped subdivision access reader without suffix scanning");
       check(services.Count(d => d.ServiceType == typeof(RoleManager<ApplicationRole>)) == 1,
         "Identity supplies a single RoleManager registration");
       check(services.Count(d => d.ServiceType == typeof(IDirectoryApiClient)) == 1 &&

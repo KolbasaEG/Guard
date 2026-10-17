@@ -1,5 +1,7 @@
 # Реестр контрактов будущего Guard.Application
 
+Актуальное дополнение: [IDataAccessScopeReader и независимая область подразделений](architecture-data-access-scope-port.md). Автоматически проверяются 35 независимых интерфейсов. DataAccessScopeService и SubdivisionAccessPath не зависят от EF, конкретное чтение принадлежит Infrastructure. Далее — обратная навигация Personal.User перед выделением Domain. Ниже сохранена история.
+
 Актуальное дополнение: [IPermissionReader и PermissionAccessData](architecture-permission-port.md) отделяют EF-чтение от проверки сессии и ролевых полномочий. Теперь автоматически проверяются 34 независимых интерфейса. PermissionService, каталог и UserAccessSnapshot сохраняют прикладные правила; конкретный reader относится к Infrastructure. Проверки: сборка без ошибок, runner с PostgreSQL — 20 402. Далее — данные для DataAccessScopeService. Ниже сохранена история.
 
 Актуальное дополнение: [IIpAccessReader и IpAccessSubject](architecture-ip-access-port.md) отделяют данные хранения от правила допуска. Теперь проверяются 33 независимых интерфейса: прежние 32 и порт IP-чтения. IpAccessService не зависит от EF; конкретный reader относится к Infrastructure. IpAddressRule независим от ASP.NET Identity, несмотря на namespace. Проверки: сборка успешна, runner с PostgreSQL — 20 364. Следующий участок — данные для PermissionService.

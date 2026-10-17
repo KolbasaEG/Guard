@@ -51,6 +51,7 @@ internal static class PostgresTests
 
       await CurrentSessionTests.RunIntegrationAsync(factory, check);
       await PermissionReaderIntegrationTests.RunAsync(factory, check);
+      await DataAccessScopeReaderIntegrationTests.RunAsync(factory, check);
       var gate = new IpAccessService(new IpAccessReader(factory));
       check(!await gate.IsAllowedAsync("missing", "192.168.1.1"), "unknown user denied");
       check(!await gate.IsAllowedAsync(user.Id, "192.168.1.1"), "empty assignments denied");
@@ -63,8 +64,8 @@ internal static class PostgresTests
       await UserEditIntegrationTests.RunAsync(factory, rootPermissions, userPermissions, check);
       await UserAdministrationIntegrationTests.RunAsync(factory, check);
       await PersonalEditorIntegrationTests.RunAsync(factory, check);
-      var rootAccess = new IpManagementAccessService(rootPermissions, new DataAccessScopeService(rootPermissions, factory));
-      var userAccess = new IpManagementAccessService(userPermissions, new DataAccessScopeService(userPermissions, factory));
+      var rootAccess = new IpManagementAccessService(rootPermissions, new DataAccessScopeService(rootPermissions, new DataAccessScopeReader(factory)));
+      var userAccess = new IpManagementAccessService(userPermissions, new DataAccessScopeService(userPermissions, new DataAccessScopeReader(factory)));
       var rootService = new IpAddressService(factory, rootAccess, NullLogger<IpAddressService>.Instance);
       var service = new IpAddressService(factory, userAccess, NullLogger<IpAddressService>.Instance);
       var assignments = new PersonalIpService(factory, userAccess, NullLogger<PersonalIpService>.Instance);

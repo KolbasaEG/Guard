@@ -81,7 +81,7 @@ public class SubdivisionService : ISubdivisionService
     var target = await DialogSubdivisions(db, scope).Where(s => s.Id == id)
       .Select(s => new { s.Path, s.Status }).SingleOrDefaultAsync(ct) ?? throw new KeyNotFoundException("Подразделение недоступно.");
     if (target.Status is not (Status.Inserted or Status.Modified)) throw new EntityRuleException("Подразделение неактивно или заблокировано.");
-    if (!DataAccessScopeService.IsValidPath(target.Path)) throw new EntityRuleException("Путь подразделения не настроен.");
+    if (!SubdivisionAccessPath.IsValid(target.Path)) throw new EntityRuleException("Путь подразделения не настроен.");
     var result = await ParentOptions(DialogSubdivisions(db, scope).Where(s => s.Id != id && !s.Path.StartsWith(target.Path))).ToListAsync(ct);
     await EnsureDialogAccessAsync(user, scope, true, ct);
     return result;

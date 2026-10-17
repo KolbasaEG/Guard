@@ -13,7 +13,7 @@ internal static class SubdivisionDetailsIntegrationTests
     IPermissionService rootPermissions, IPermissionService userPermissions, Action<bool, string> check)
   {
     SubdivisionService Service(IPermissionService permissions, IDataAccessScopeService? scope = null) => new(null!, null!, null!,
-      NullLogger<SubdivisionService>.Instance, permissions, scope ?? new DataAccessScopeService(permissions, factory), factory);
+      NullLogger<SubdivisionService>.Instance, permissions, scope ?? new DataAccessScopeService(permissions, new DataAccessScopeReader(factory)), factory);
     var root = Service(rootPermissions); var user = Service(userPermissions);
     await using var db = await factory.CreateDbContextAsync();
     var own = await db.Subdivisions.SingleAsync(s => s.Name == "Own");

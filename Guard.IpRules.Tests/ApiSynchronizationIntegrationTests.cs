@@ -114,7 +114,7 @@ internal static partial class ApiSynchronizationIntegrationTests
     check(first.Status == SynchronizationStatus.Succeeded && first.UpdatedSince == new DateOnly(2000, 8, 10), "initial synchronization with date succeeds without prior full import");
     await CheckExportWorkerIsolationAsync(factory, permissions, api, audit, credentials, runner, service, check);
     var listService = new PersonalService(null!, null!, null!, NullLogger<PersonalService>.Instance, permissions,
-      new DataAccessScopeService(permissions, factory), factory);
+      new DataAccessScopeService(permissions, new DataAccessScopeReader(factory)), factory);
     check((await listService.SearchAsync(new(OwnSubdivision: true))).Count == 0, "Root own-personnel mode stays empty without own employee binding");
     var rootList = await listService.SearchAsync(new(AllSubdivisions: true, Take: 100));
     await using (var db = await factory.CreateDbContextAsync())
@@ -174,7 +174,7 @@ internal static partial class ApiSynchronizationIntegrationTests
     scheduledSettings = (await service.GetOverviewAsync()).Settings;
     await service.SaveSettingsAsync(DataManagementMode.Api, false, new(2, 0), scheduledSettings.Version);
     api.Snapshot = fullSnapshot;
-    var assignments = new PersonalIpService(factory, new IpManagementAccessService(permissions, new DataAccessScopeService(permissions, factory)), NullLogger<PersonalIpService>.Instance);
+    var assignments = new PersonalIpService(factory, new IpManagementAccessService(permissions, new DataAccessScopeService(permissions, new DataAccessScopeReader(factory))), NullLogger<PersonalIpService>.Instance);
     await PostgresTests.ThrowsAsync<EntityRuleException>(() => assignments.UpdateAsync(employeeId, []), check,
       "API mode rejects employee IP assignment even for Root");
     await using (var db = await factory.CreateDbContextAsync())
@@ -336,7 +336,7 @@ internal static partial class ApiSynchronizationIntegrationTests
     {
       var writes = new UnitOfWorkFactory(factory, permissions, provider, NullLogger<UnitOfWork>.Instance);
       var people = new PersonalService(null!, null!, writes, NullLogger<PersonalService>.Instance, permissions,
-        new DataAccessScopeService(permissions, factory), factory);
+        new DataAccessScopeService(permissions, new DataAccessScopeReader(factory)), factory);
       await people.SoftDeleteAsync(operatorId);
     }
     await using (var db = await factory.CreateDbContextAsync())
