@@ -10,6 +10,12 @@ internal static class ApplicationContractBoundaryTests
     var application = typeof(ICurrentSession).Assembly;
     var host = typeof(Guard.GuardServiceRegistration).Assembly;
     var infrastructure = typeof(Guard.Infrastructure.InfrastructureServiceRegistration).Assembly;
+    check(typeof(Guard.Web.Identity.ClientIpAccessor).Assembly == host &&
+      typeof(Guard.Core.Services.Exports.DataExportService).GetConstructors().SelectMany(c => c.GetParameters())
+        .All(p => p.ParameterType != typeof(IHttpContextAccessor)) &&
+      typeof(Guard.Core.Services.Exports.DataExportService).GetConstructors().SelectMany(c => c.GetParameters())
+        .Any(p => p.ParameterType == typeof(IClientIpAccessor)),
+      "Export creation consumes independent client IP metadata supplied by Web");
     check(typeof(Guard.Core.Identity.AccountPolicyWorker).Assembly == host &&
       infrastructure.GetType("Guard.Core.Identity.AccountPolicyWorker") == null,
       "Account policy timer belongs to Web, separate from the database sweep");
@@ -100,7 +106,7 @@ internal static class ApplicationContractBoundaryTests
     var contracts = application.GetExportedTypes()
       .Where(t => t.IsInterface && (t.Namespace == "Guard.Core.Services" ||
         t.Namespace == "Guard.Core.Services.Exports")).ToArray();
-    check(contracts.Length == 36, "Application inventory contains 33 services and three access read ports");
+    check(contracts.Length == 37, "Application inventory contains 34 service contracts and three access read ports");
     foreach (var name in new[] { "EntityInputValidation", "EntityWriteMapping" })
     {
       var fullName = $"Guard.Core.Services.{name}";

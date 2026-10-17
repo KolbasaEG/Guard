@@ -28,6 +28,7 @@ public static class WebServiceRegistration
     services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider<ApplicationUser>>();
     services.AddScoped<IdentityRedirectManager>();
     services.AddScoped<ICurrentSession, CurrentSessionAdapter>();
+    services.AddScoped<IClientIpAccessor, Guard.Web.Identity.ClientIpAccessor>();
     services.AddScoped<AccessRefreshCoordinator>();
     services.AddScoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, AccessCircuitHandler>();
     services.AddAuthorization(options =>

@@ -14,6 +14,7 @@ try
 TestProjectBoundaryTests.Run(Check);
 await AccessEventTests.RunAsync(Check);
 await CurrentSessionTests.RunAsync(Check);
+ClientIpAccessorTests.Run(Check);
 DomainAssemblyBoundaryTests.Run(Check);
 InfrastructureAssemblyBoundaryTests.Run(Check);
 AccountPolicyTests.Run(Check);

@@ -15,8 +15,16 @@ internal static class ExportCommandCompletionTests
       Action<string> setUser, string user, string root, Func<Task> cleanup, Action<bool, string> check)
   {
     foreach (var failure in new[] { "none", "io", "cancelled", "stopping" }) {
+      var expectedIp = failure switch { "none" => "198.18.200.1", "io" => "2001:db8::1", _ => null };
+      http.HttpContext = failure == "stopping" ? null : new DefaultHttpContext();
+      if (http.HttpContext is { } context) {
+        context.Connection.RemoteIpAddress = failure switch {
+          "none" => System.Net.IPAddress.Parse("::ffff:198.18.200.1"),
+          "io" => System.Net.IPAddress.Parse("2001:db8::1"), _ => null };
+        context.Request.Headers["X-Forwarded-For"] = "203.0.113.99";
+      }
       var delivery = new Delivery(failure);
-      var service = new DataExportService(factory, permissions, access, storage, options, delivery, http, delivery);
+      var service = new DataExportService(factory, permissions, access, storage, options, delivery, new Guard.Web.Identity.ClientIpAccessor(http), delivery);
       setUser(user);
       using var creating = new CancellationTokenSource();
       delivery.Stopping = creating;
@@ -24,10 +32,12 @@ internal static class ExportCommandCompletionTests
         var id = Guid.Parse(details!.Split(';')[0][7..]);
         await using var db = await factory.CreateDbContextAsync();
         var job = await db.ExportJobs.AsNoTracking().SingleAsync(j => j.Id == id);
-        return type == AuditEventType.ExportRequested && actor == user && job.AuthorId == user && job.State == ExportJobState.Queued;
+        return type == AuditEventType.ExportRequested && actor == user && job.AuthorId == user &&
+          job.ClientIp == expectedIp && job.State == ExportJobState.Queued;
       };
       var id = await service.CreateAsync(new(ExportArea.Personals, ExportFormat.Excel), creating.Token);
       check(delivery.SawCommit, "export request audit observes committed job and trusted author");
+      check(delivery.LastIp == expectedIp, "export request audit retains trusted normalized client IP or null without HTTP address");
       await using (var db = await factory.CreateDbContextAsync()) {
         check(await db.ExportJobs.CountAsync(j => j.Id == id && j.AuthorId == user && !j.CancelRequested) == 1,
           "export create returns saved ID despite audit delivery failure");
@@ -90,6 +100,16 @@ internal static class ExportCommandCompletionTests
       await cleanup();
     }
     setUser(user);
+    http.HttpContext = null;
+    await using var before = await factory.CreateDbContextAsync();
+    var count = await before.ExportJobs.CountAsync();
+    using var cancelled = new CancellationTokenSource();
+    cancelled.Cancel();
+    var cancelledService = new DataExportService(factory, permissions, access, storage, options, new AuditStub(),
+      new Guard.Web.Identity.ClientIpAccessor(http), Microsoft.Extensions.Logging.Abstractions.NullLogger<DataExportService>.Instance);
+    await PostgresTests.ThrowsAsync<OperationCanceledException>(() => cancelledService.CreateAsync(
+      new(ExportArea.Personals, ExportFormat.Excel), cancelled.Token), check, "cancelled export creation propagates cancellation");
+    check(await before.ExportJobs.CountAsync() == count, "cancelled export creation stores no job");
   }
 
   private sealed class Delivery(string failure) : IAuditService, ILogger<DataExportService>
@@ -99,7 +119,9 @@ internal static class ExportCommandCompletionTests
     public List<AuditEventType> Events { get; } = [];
     public List<(Exception? Exception, string Message)> Errors { get; } = [];
     public bool SawCommit;
+    public string? LastIp;
     public void LogIdentityEvent(AuditEventType type, string? user, string? ip = null, string? details = null) {
+      LastIp = ip;
       Events.Add(type);
       SawCommit = Observe(type, user, details).GetAwaiter().GetResult();
       if (failure == "stopping") Stopping.Cancel();

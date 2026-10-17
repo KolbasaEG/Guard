@@ -63,7 +63,7 @@ internal static partial class ExportIntegrationTests
     var policies = new AccountPolicyService(factory, provider, new AuditStub(), new AccessChangeNotifier(NullLogger<AccessChangeNotifier>.Instance));
     var permissions = new PermissionService(new Guard.Components.Account.CurrentSessionAdapter(auth, http), new PermissionReader(factory), new AuditStub(), policies);
     var access = new ExportAccess(factory, permissions);
-    var service = new DataExportService(factory, permissions, access, storage, opts, new AuditStub(), http, NullLogger<DataExportService>.Instance);
+    var service = new DataExportService(factory, permissions, access, storage, opts, new AuditStub(), new Guard.Web.Identity.ClientIpAccessor(http), NullLogger<DataExportService>.Instance);
     var processor = new ExportProcessor(factory, access, new ExportSnapshot(factory, storage), new ExportDocumentWriter(storage, opts), storage, new AuditStub(), opts, NullLogger<ExportProcessor>.Instance);
     try {
       await ExportCommandCompletionTests.RunAsync(factory, permissions, access, storage, opts, http,

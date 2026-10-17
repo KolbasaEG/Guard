@@ -69,7 +69,7 @@ internal static class ServiceRegistrationTests
       check(services.Count(d => d.ImplementationType == typeof(PermissionAuthorizationHandler)) == 1 &&
         services.Single(d => d.ImplementationType == typeof(PermissionAuthorizationHandler)).Lifetime == ServiceLifetime.Scoped,
         "Web registers exactly one scoped permission handler in both composition orders");
-      foreach (var webType in new[] { typeof(IIpManagementAccessService), typeof(ICurrentSession), typeof(AuthenticationStateProvider),
+      foreach (var webType in new[] { typeof(IIpManagementAccessService), typeof(ICurrentSession), typeof(IClientIpAccessor), typeof(AuthenticationStateProvider),
         typeof(IdentityRedirectManager), typeof(AccessRefreshCoordinator), typeof(CircuitHandler) })
         check(!infrastructure.Any(d => d.ServiceType == webType),
           $"infrastructure leaves Web adapter {webType.Name} to the host");
@@ -85,6 +85,10 @@ internal static class ServiceRegistrationTests
         services.Single(d => d.ServiceType == typeof(ICurrentSession)).ImplementationType == typeof(CurrentSessionAdapter) &&
         services.Single(d => d.ServiceType == typeof(ICurrentSession)).Lifetime == ServiceLifetime.Scoped,
         "host supplies one scoped Blazor/HTTP session adapter in both composition orders");
+      check(services.Count(d => d.ServiceType == typeof(IClientIpAccessor)) == 1 &&
+        services.Single(d => d.ServiceType == typeof(IClientIpAccessor)).ImplementationType == typeof(Guard.Web.Identity.ClientIpAccessor) &&
+        services.Single(d => d.ServiceType == typeof(IClientIpAccessor)).Lifetime == ServiceLifetime.Scoped,
+        "host supplies exactly one scoped client IP adapter in both composition orders");
       services.AddRazorPages();
       services.AddRazorComponents().AddInteractiveServerComponents();
       services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());

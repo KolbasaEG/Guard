@@ -14,7 +14,7 @@ using W = DocumentFormat.OpenXml.Wordprocessing;
 namespace Guard.Core.Services.Exports;
 
 public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> contexts, IPermissionService permissions,
-  ExportAccess access, ExportStorage storage, IOptions<ExportOptions> options, IAuditService audit, IHttpContextAccessor http,
+  ExportAccess access, ExportStorage storage, IOptions<ExportOptions> options, IAuditService audit, IClientIpAccessor clientIp,
   ILogger<DataExportService> logger) : IDataExportService
 {
   public static void Validate(ExportRequest request)
@@ -48,7 +48,7 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
     var job = new ExportJob { AuthorId = actor.UserId, AuthorName = name ?? actor.UserId, SecurityStamp = scope.Stamp,
       Area = request.Area, Format = request.Format, RequestJson = JsonSerializer.Serialize(request),
       ExpiresAtUtc = DateTimeOffset.UtcNow.AddYears(retention?.Years ?? 3),
-      ClientIp = http.HttpContext == null ? null : ClientIpAddress.Get(http.HttpContext) };
+      ClientIp = clientIp.GetClientIp() };
     db.ExportJobs.Add(job); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
     CompleteCommittedCommand(AuditEventType.ExportRequested, actor.UserId, job.Id.ToString(), $"Export {job.Id}; {job.Area}; {job.Format}", job.ClientIp);
     return job.Id;
