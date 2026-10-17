@@ -47,7 +47,7 @@ internal static class SignInTests
     check(authentication.Issued == 1, "Root direct sign-in issued cookie");
     // Назначение активного IP открывает обычный вход.
     await using var db = factory.CreateDbContext();
-    var personal = await db.Personals.SingleAsync(p => p.User!.Id == "user");
+    var personal = (await db.Users.Where(u => u.Id == "user").Select(u => u.Personal).SingleAsync())!;
     var ip = await db.IpAddresses.SingleAsync(ip => ip.Address == "192.168.1.0/24");
     personal.IpAddresses.Add(ip);
     await db.SaveChangesAsync();

@@ -16,7 +16,7 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
     builder.HasIndex(u => u.LastActivityAtUtc);
     // Настройка связи 1-к-1 с Personal
     builder.HasOne(u => u.Personal)
-           .WithOne(p => p.User)
+           .WithOne()
            .HasForeignKey<ApplicationUser>(u => u.PersonalId)
            .OnDelete(DeleteBehavior.SetNull);
 

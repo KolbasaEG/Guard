@@ -321,8 +321,9 @@ public class PersonalService : IPersonalService, IPersonalEditorService
     var items = await ProjectList(q.Skip(request.Skip).Take(request.Take)).ToListAsync(ct);
     return new(items, count);
   }
-  public Task<PersonalDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default) =>
-    _readPersonalRepository.QueryAsync(q => q.Where(p => p.Id == id).Select(p => new PersonalDetailsDto {
+  public async Task<PersonalDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default)
+  {
+    var result = await _readPersonalRepository.QueryAsync(q => q.Where(p => p.Id == id).Select(p => new PersonalDetailsDto {
       Id = p.Id,
       Status = p.Status,
       InsertedDate = p.InsertedDate,
@@ -360,10 +361,14 @@ public class PersonalService : IPersonalService, IPersonalEditorService
       PositionName = p.Position == null ? null : p.Position.Value,
       WorkerCategoryName = p.WorkerCategory == null ? null : p.WorkerCategory.Value,
       StatusClassifierName = p.StatusClassifier == null ? null : p.StatusClassifier.Value,
-      UserId = p.User == null ? null : p.User.Id,
-      UserName = p.User == null ? null : p.User.UserName,
       IpAddresses = p.IpAddresses.Select(ip => ip.Address).ToArray()
     }).SingleOrDefaultAsync(ct), ct);
+    if (result == null) return null;
+    await using var db = await _factory.CreateDbContextAsync(ct);
+    var account = await db.Users.AsNoTracking().Where(u => u.PersonalId == id)
+      .Select(u => new { u.Id, u.UserName }).SingleOrDefaultAsync(ct);
+    return result with { UserId = account?.Id, UserName = account?.UserName };
+  }
 
   public Task<Guid> CreateFromDtoAsync(CreatePersonalDto input, CancellationToken ct = default) {
     ArgumentNullException.ThrowIfNull(input); ArgumentNullException.ThrowIfNull(input.Fields);

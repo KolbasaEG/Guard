@@ -60,8 +60,6 @@ public class Personal : BaseEntity, IHasSubdivision
   public string? FirstNameGen { get; set; }
   public string? MiddleNameGen { get; set; }
 
-  // --- ��������� ������� ������ ������������ ---
-  public ApplicationUser? User { get; set; }
 
   // --- ������������� ������� ---
   public int? StatusType { get; set; }

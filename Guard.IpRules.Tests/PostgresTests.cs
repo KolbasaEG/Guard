@@ -35,6 +35,7 @@ internal static class PostgresTests
         return;
       }
       await AccountPolicyMigrationTests.RunAsync(db, check);
+      await PersonalIdentityBoundaryTests.RunAsync(factory, check);
       var own = new Subdivision { Name = "Own", Path = "/1/", CreatedBy = "test" };
       var other = new Subdivision { Name = "Other", Path = "/2/", CreatedBy = "test" };
       var personal = new Personal { FirstName = "Test", LastName = "User", Subdivision = own, CreatedBy = "test" };
