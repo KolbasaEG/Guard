@@ -53,6 +53,18 @@ internal static class ApplicationContractBoundaryTests
       !typeof(SecurityService).GetConstructors().SelectMany(c => c.GetParameters()).Any(p =>
         p.ParameterType == typeof(IpAddressService) || p.ParameterType == typeof(IIpAddressManagementService)),
       "SecurityService has no unused IP query proxy or catalog service dependency");
+    foreach (var name in new[] { "QueryUsersAsync", "QueryRolesAsync", "QueryPersonalsAsync", "GetUserRolesAsync",
+      "GetRoleClaimsAsync", "UpdateRoleClaimsAsync", "GetUserClaimsAsync", "UpdateUserClaimsAsync",
+      "UpdatePersonalIpAddressesAsync", "IsIpAllowedForUserAsync" })
+      check(!typeof(ISecurityService).GetMethods().Any(m => m.Name == name) &&
+        !typeof(SecurityService).GetMethods().Any(m => m.Name == name),
+        $"SecurityService removes unused legacy operation {name} from contract and implementation");
+    check(typeof(SecurityService).GetConstructors().Single().GetParameters().Select(p => p.ParameterType)
+      .SequenceEqual(new[] { typeof(IReadRepository<ApplicationUser>), typeof(IPermissionService),
+        typeof(IDataAccessScopeService), typeof(Microsoft.Extensions.DependencyInjection.IServiceScopeFactory),
+        typeof(IAuditService), typeof(IAccessChangeNotifier), typeof(IAccountPolicyService),
+        typeof(Microsoft.Extensions.Logging.ILogger<SecurityService>) }),
+      "SecurityService depends only on user reads, access, operation scopes, delivery and account policy");
     check(!host.GetExportedTypes().Any(t => t.IsInterface && t.Namespace?.StartsWith("Guard.Core.Services", StringComparison.Ordinal) == true),
       "Web owns no application or legacy service interfaces");
     foreach (var type in application.GetExportedTypes())

@@ -7,14 +7,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 namespace Guard.Core.Services;
 public partial class SecurityService(
-  IReadRepository<ApplicationUser> userReads, IReadRepository<ApplicationRole> roleReads, IReadRepository<Personal> personalReads,
-  IPersonalIpService assignments, IIpAccessService ipGate, IPermissionService permissions,
-  IDataAccessScopeService accessScopes, IRoleAccessService roles, IServiceScopeFactory scopes,
+  IReadRepository<ApplicationUser> userReads, IPermissionService permissions,
+  IDataAccessScopeService accessScopes, IServiceScopeFactory scopes,
   IAuditService audit, IAccessChangeNotifier notifier, IAccountPolicyService policies, ILogger<SecurityService> logger) : ISecurityService
 {
-  public Task<TResult> QueryUsersAsync<TResult>(Func<IQueryable<ApplicationUser>,Task<TResult>> query, CancellationToken ct=default) => userReads.QueryAsync(query,ct);
-  public Task<TResult> QueryRolesAsync<TResult>(Func<IQueryable<ApplicationRole>,Task<TResult>> query, CancellationToken ct=default) => roleReads.QueryAsync(query,ct);
-  public Task<TResult> QueryPersonalsAsync<TResult>(Func<IQueryable<Personal>,Task<TResult>> query, CancellationToken ct=default) => personalReads.QueryAsync(query,ct);
   public Task<ApplicationUser?> GetUserByIdAsync(string id, CancellationToken ct=default) => userReads.GetByIdAsync(id,ct);
   public async Task<IReadOnlyList<Guard.Core.Services.DTOs.UserPersonalOption>> GetUserPersonalOptionsAsync(CancellationToken ct=default)
   {
@@ -183,25 +179,4 @@ public partial class SecurityService(
       user.MustChangePassword = true;
       Check(await manager.UpdateAsync(user));
     },ct,userId,AuditEventType.PasswordChanged);
-  public async Task<List<string>> GetUserRolesAsync(string userId,CancellationToken ct=default) {
-    if(await userReads.GetByIdAsync(userId,ct)==null) throw new KeyNotFoundException("Пользователь недоступен.");
-    await using var scope=scopes.CreateAsyncScope();
-    var manager=scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    return (await manager.GetRolesAsync((await manager.FindByIdAsync(userId))!)).ToList();
-  }
-  public async Task<List<string>> GetRoleClaimsAsync(string roleId,CancellationToken ct=default) => (await roles.GetAsync(roleId,ct)).Permissions.ToList();
-  public async Task<IdentityResult> UpdateRoleClaimsAsync(string roleId,IEnumerable<string> values,CancellationToken ct=default) {
-    var role=await roles.GetAsync(roleId,ct); role.Permissions=values.ToHashSet(StringComparer.Ordinal);
-    await roles.SaveAsync(role,ct); return IdentityResult.Success;
-  }
-  public async Task<List<string>> GetUserClaimsAsync(string userId,CancellationToken ct=default) {
-    await permissions.RequireAsync(Permissions.Roles.Read,ct);
-    await using var scope=scopes.CreateAsyncScope();
-    var db=scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    return await db.UserClaims.Where(c=>c.UserId==userId && c.ClaimType=="Permission").Select(c=>c.ClaimValue!).ToListAsync(ct);
-  }
-  public Task<IdentityResult> UpdateUserClaimsAsync(string userId,IEnumerable<string> values,CancellationToken ct=default) =>
-    throw new NotSupportedException("Индивидуальные permissions сохранены для истории. Настраивайте права через роли.");
-  public Task UpdatePersonalIpAddressesAsync(Guid personalId,IEnumerable<Guid> ids,CancellationToken ct=default) => assignments.UpdateAsync(personalId,ids,ct);
-  public Task<bool> IsIpAllowedForUserAsync(string userId,string clientIp,CancellationToken ct=default) => ipGate.IsAllowedAsync(userId,clientIp,ct);
 }
