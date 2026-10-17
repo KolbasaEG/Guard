@@ -1,5 +1,3 @@
-using Guard.Core.Identity;
-
 var checks = 0;
 void Check(bool condition, string scenario)
 {
@@ -11,13 +9,6 @@ if (args.Length == 2 && args[0] == "--benchmark") {
   catch (Exception error) { Console.Error.WriteLine(error); Environment.ExitCode = 1; }
   return;
 }
-foreach (var status in new[] { Guard.Core.Enums.Status.Deleted, Guard.Core.Enums.Status.Blocked, Guard.Core.Enums.Status.ArchivedBlocked })
-{
-  try { IpStatusTransitions.Apply(status, "archive"); throw new Exception("invalid transition accepted"); }
-  catch (InvalidOperationException) { checks++; }
-}
-Check(IpStatusTransitions.Apply(Guard.Core.Enums.Status.Archived, "block") == Guard.Core.Enums.Status.ArchivedBlocked, "archive block");
-Check(IpStatusTransitions.Apply(Guard.Core.Enums.Status.Deleted, "restore") == Guard.Core.Enums.Status.Modified, "restore deleted");
 try
 {
 TestProjectBoundaryTests.Run(Check);
@@ -28,7 +19,6 @@ InfrastructureAssemblyBoundaryTests.Run(Check);
 AccountPolicyTests.Run(Check);
 await AccountPolicyBoundaryTests.RunAsync(Check);
 await LoginLockoutTests.RunAsync(Check);
-EntityStatusTests.Run(Check);
 EntityWriteMappingTests.Run(Check);
 IpSearchFilterTests.Run(Check);
 SearchFilterContractTests.Run(Check);

@@ -9,6 +9,8 @@ try
 {
   if (args.Length != 0) throw new ArgumentException("Unit checks do not accept database, browser or benchmark options.");
   IpAddressRuleTests.Run(Check);
+  EntityStatusTests.Run(Check);
+  IpStatusTests.Run(Check);
   await IpAccessBoundaryTests.RunAsync(Check);
   await PermissionBoundaryTests.RunAsync(Check);
   await DataAccessScopeBoundaryTests.RunAsync(Check);
