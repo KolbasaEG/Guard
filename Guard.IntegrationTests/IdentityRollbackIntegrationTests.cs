@@ -60,11 +60,11 @@ internal static class IdentityRollbackIntegrationTests
           }, scenario + ": SQL contains the expected intermediate change");
           check(JsonSerializer.Serialize(await Read()) == original, scenario + ": independent connection cannot see uncommitted SQL");
         };
-        Task<IdentityResult> Execute() => scenario switch {
-          "edit" => service.UpdateUserDetailsAsync(new() { Id = user.Id, UserName = name,
+        Task Execute() => scenario switch {
+          "edit" => service.SaveDetailsAsync(new() { Id = user.Id, UserName = name,
             Email = name + "changed@example.test", Version = before.ConcurrencyStamp! }),
-          "reset" => service.ResetPasswordAsync(user.Id, "ReplacementPassword123!"),
-          _ => service.ToggleUserLockoutAsync(user.Id, scenario == "block")
+          "reset" => service.ResetPasswordFromDtoAsync(new(user.Id, "ReplacementPassword123!")),
+          _ => service.SetUserLockoutAsync(user.Id, scenario == "block")
         };
         delivery.Audits = delivery.Notifications = 0;
         await PostgresTests.ThrowsAsync<UserSecurityException>(async () => { await Execute(); }, check,
@@ -75,7 +75,7 @@ internal static class IdentityRollbackIntegrationTests
           .Select(r => r.RoleId).Order().SequenceEqual(roles.Select(r => r.RoleId).Order()), scenario + ": rollback preserves role assignments");
         check(delivery.Audits == 0 && delivery.Notifications == 0, scenario + ": rollback emits no success audit or access notification");
         fault.FailAt = 0; fault.BeforeFailure = null;
-        check((await Execute()).Succeeded, scenario + ": same service succeeds after fault removal and scope cleanup");
+        await Execute();
         check(delivery.Audits == 1 && delivery.Notifications == 1 && JsonSerializer.Serialize(await Read()) != original,
           scenario + ": successful retry commits and publishes once");
       }

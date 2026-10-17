@@ -6,6 +6,7 @@ using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,12 @@ internal static class UserAdministrationIntegrationTests
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory, Action<bool, string> check)
   {
     var validator = new CallbackValidator();
+    var creationFault = new CreationSaveFault();
+    await using var optionsSource = await factory.CreateDbContextAsync();
+    var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+      .UseNpgsql(optionsSource.Database.GetConnectionString()).AddInterceptors(creationFault).Options;
     var services = new ServiceCollection().AddLogging();
-    services.AddScoped(_ => factory.CreateDbContext());
+    services.AddScoped(_ => new ApplicationDbContext(options));
     services.AddDataProtection().UseEphemeralDataProtectionProvider();
     services.AddIdentityCore<ApplicationUser>().AddRoles<ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
     services.AddSingleton<IUserValidator<ApplicationUser>>(validator);
@@ -36,12 +41,20 @@ internal static class UserAdministrationIntegrationTests
         new("x", "a@example.test", "", person.Id), new(new string('x', 257), "a@example.test", "Test123!", person.Id) })
         await PostgresTests.ThrowsAsync<ArgumentException>(() => forms.CreateFromDtoAsync(command), check, "create validates fields on server");
       await PostgresTests.ThrowsAsync<UserSecurityException>(() => forms.CreateFromDtoAsync(Create(prefix, "x")), check, "DTO create applies Identity password policy");
-      var legacy = new ApplicationUser { UserName = prefix, Email = prefix + "@example.test", PersonalId = person.Id };
-      var originalId = legacy.Id;
-      await PostgresTests.ThrowsAsync<InvalidOperationException>(() => service.CreateUserAsync(legacy, "InitialPassword123!", ["missing-role"]), check,
-        "failed role assignment rolls back compound Identity creation");
-      check(!await db.Users.AnyAsync(u => u.UserName == prefix) && legacy.Id == originalId && audit.Events.Count == 0,
-        "failed compound create does not return new ID or success audit");
+      string? intermediateId = null;
+      creationFault.AfterSave = async operationDb => {
+        var intermediate = await operationDb.Users.AsNoTracking().SingleAsync(u => u.UserName == prefix);
+        intermediateId = intermediate.Id;
+        check(intermediate.PersonalId == person.Id && intermediate.PasswordHash != null,
+          "DTO creation reaches SQL with employee binding and Identity password hash before injected failure");
+        check(!await db.Users.AnyAsync(u => u.UserName == prefix),
+          "independent connection cannot see uncommitted DTO creation");
+        throw new InvalidOperationException("Тестовый отказ после сохранения Identity до commit.");
+      };
+      await PostgresTests.ThrowsAsync<InvalidOperationException>(() => forms.CreateFromDtoAsync(Create(prefix)), check,
+        "DTO creation propagates failure after Identity SQL save");
+      check(intermediateId != null && !await db.Users.AnyAsync(u => u.Id == intermediateId || u.UserName == prefix) && audit.Events.Count == 0,
+        "failed DTO creation rolls back saved user and publishes no success audit");
       validator.OnValidate = () => access.Value = access.Value with { SubdivisionIds = [Guid.NewGuid()] };
       await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => forms.CreateFromDtoAsync(Create(prefix)), check, "scope change before commit rolls back created user");
       check(!await db.Users.AnyAsync(u => u.UserName == prefix) && audit.Events.Count == 0, "rolled back creation leaves no user or success audit");
@@ -118,7 +131,7 @@ internal static class UserAdministrationIntegrationTests
         delivery.Reset(() => Task.FromResult(true));
         await PostgresTests.ThrowsAsync<InvalidOperationException>(() => service.SaveDetailsAsync(edit), check, "stale user edit still fails before completion");
         check(delivery.AuditCalls == 0 && delivery.NotificationCalls == 0 && delivery.Errors.Count == 0, "rejected user edit publishes no completion events");
-        await PostgresTests.ThrowsAsync<UserSecurityException>(() => service.ResetPasswordAsync(id, "x"), check, "password validation failure still propagates");
+        await PostgresTests.ThrowsAsync<UserSecurityException>(() => service.ResetPasswordFromDtoAsync(new(id, "x")), check, "password validation failure still propagates");
         check(delivery.AuditCalls == 0 && delivery.NotificationCalls == 0, "invalid reset publishes no completion events");
 
         delivery.Reset(async () => {
@@ -127,11 +140,11 @@ internal static class UserAdministrationIntegrationTests
           var saved = (await manager.FindByIdAsync(id))!;
           return saved.MustChangePassword && await manager.CheckPasswordAsync(saved, "ReplacementPassword123!");
         });
-        check((await service.ResetPasswordAsync(id, "ReplacementPassword123!")).Succeeded, "password reset returns committed success");
+        await service.ResetPasswordFromDtoAsync(new(id, "ReplacementPassword123!"));
         delivery.Assert(check, AuditEventType.PasswordChanged, id);
 
         delivery.Reset(async () => await db.Users.AsNoTracking().AnyAsync(u => u.Id == id && u.AccountBlockReason == "Administrator" && u.LockoutEnd > DateTimeOffset.UtcNow));
-        check((await service.ToggleUserLockoutAsync(id, true)).Succeeded, "block returns committed success");
+        await service.SetUserLockoutAsync(id, true);
         delivery.Assert(check, AuditEventType.UserBlocked, id);
 
         delivery.Reset(async () => await db.Users.AsNoTracking().AnyAsync(u => u.Id == id && u.AccountBlockReason == null && u.LockoutEnd == null && u.UnblockedAtUtc != null));
@@ -179,6 +192,18 @@ internal static class UserAdministrationIntegrationTests
     public bool IsEnabled(LogLevel logLevel) => true;
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) {
       if (logLevel >= LogLevel.Error) Errors.Add(exception);
+    }
+  }
+  private sealed class CreationSaveFault : SaveChangesInterceptor
+  {
+    public Func<ApplicationDbContext, Task>? AfterSave;
+    public override async ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+      CancellationToken ct = default)
+    {
+      var callback = AfterSave;
+      AfterSave = null;
+      if (callback != null) await callback((ApplicationDbContext)eventData.Context!);
+      return result;
     }
   }
   private sealed class CallbackValidator : IUserValidator<ApplicationUser>

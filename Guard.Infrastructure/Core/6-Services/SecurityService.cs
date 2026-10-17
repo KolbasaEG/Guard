@@ -9,9 +9,8 @@ namespace Guard.Core.Services;
 public partial class SecurityService(
   IReadRepository<ApplicationUser> userReads, IPermissionService permissions,
   IDataAccessScopeService accessScopes, IServiceScopeFactory scopes,
-  IAuditService audit, IAccessChangeNotifier notifier, IAccountPolicyService policies, ILogger<SecurityService> logger) : ISecurityService
+  IAuditService audit, IAccessChangeNotifier notifier, IAccountPolicyService policies, ILogger<SecurityService> logger) : IUserAdministrationService, IUserListService
 {
-  public Task<ApplicationUser?> GetUserByIdAsync(string id, CancellationToken ct=default) => userReads.GetByIdAsync(id,ct);
   public async Task<IReadOnlyList<Guard.Core.Services.DTOs.UserPersonalOption>> GetUserPersonalOptionsAsync(CancellationToken ct=default)
   {
     var initial = await RequireUserWriteAsync(ct);
@@ -51,7 +50,7 @@ public partial class SecurityService(
       PersonalId = user.PersonalId, Version = user.ConcurrencyStamp ?? "" }, options, access.IsRoot);
   }
 
-  public Task<IdentityResult> UpdateUserDetailsAsync(Guard.Core.Services.DTOs.EditUserDto input, CancellationToken ct = default)
+  private Task<IdentityResult> UpdateUserDetailsAsync(Guard.Core.Services.DTOs.EditUserDto input, CancellationToken ct = default)
   {
     ArgumentNullException.ThrowIfNull(input);
     ValidateUserFields(input.UserName, input.Email);
@@ -123,40 +122,25 @@ public partial class SecurityService(
     }
     return IdentityResult.Success;
   }
-  public async Task<IdentityResult> CreateUserAsync(ApplicationUser user,string password,IEnumerable<string>? roles=null,CancellationToken ct=default)
+  private async Task<IdentityResult> CreateUserAsync(ApplicationUser user,string password,CancellationToken ct=default)
   {
     ArgumentNullException.ThrowIfNull(user);
     ValidateUserFields(user.UserName, user.Email);
     if (string.IsNullOrEmpty(password)) throw new ArgumentException("Укажите пароль.");
-    var selected = (roles ?? []).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     var created = new ApplicationUser { UserName = user.UserName!.Trim(), Email = user.Email!.Trim(), PersonalId = user.PersonalId };
     var result = await WriteAsync(async (db,manager)=>{
       await CheckPersonalAsync(db,created.PersonalId,ct);
       if (created.PersonalId.HasValue && await db.Users.AnyAsync(u => u.PersonalId == created.PersonalId, ct))
         throw new InvalidOperationException("У выбранного сотрудника уже есть учётная запись.");
-      if(selected.Length>0 && !(await permissions.GetCurrentAsync(ct)).IsRoot) throw new UnauthorizedAccessException("Роли назначает только Root.");
       Check(await manager.CreateAsync(created,password));
-      if(selected.Length>0) Check(await manager.AddToRolesAsync(created,selected));
     },ct,eventType: AuditEventType.UserCreated, createdId: () => created.Id);
     user.Id = created.Id;
     return result;
   }
-  public Task<IdentityResult> UpdateUserAsync(ApplicationUser user,IEnumerable<string> roles,CancellationToken ct=default) =>
-    WriteAsync(async(db,manager)=>{
-      var current=await manager.FindByIdAsync(user.Id)??throw new KeyNotFoundException("Пользователь не найден.");
-      await CheckTargetAsync(db,current,ct);
-      await CheckPersonalAsync(db,user.PersonalId,ct);
-      var old=await manager.GetRolesAsync(current);
-      var selected=roles.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-      if(!old.ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(selected))
-        throw new InvalidOperationException("Назначайте роли в отдельной форме с проверкой версии.");
-      current.Email=user.Email; current.UserName=user.UserName; current.PersonalId=user.PersonalId;
-      Check(await manager.UpdateAsync(current));
-    },ct);
   public async Task SetUserLockoutAsync(string userId, bool lockout, CancellationToken ct = default) =>
     Check(await ToggleUserLockoutAsync(userId, lockout, ct));
 
-  public Task<IdentityResult> ToggleUserLockoutAsync(string userId,bool lockout,CancellationToken ct=default) =>
+  private Task<IdentityResult> ToggleUserLockoutAsync(string userId,bool lockout,CancellationToken ct=default) =>
     WriteAsync(async(db,manager)=>{
       var user=await manager.FindByIdAsync(userId)??throw new KeyNotFoundException("Пользователь не найден.");
       await CheckTargetAsync(db,user,ct);
@@ -169,7 +153,7 @@ public partial class SecurityService(
       if (!lockout) Check(await manager.ResetAccessFailedCountAsync(user));
       Check(await manager.UpdateSecurityStampAsync(user));
     },ct,userId,lockout ? AuditEventType.UserBlocked : AuditEventType.UserUnblocked);
-  public Task<IdentityResult> ResetPasswordAsync(string userId,string newPassword,CancellationToken ct=default) =>
+  private Task<IdentityResult> ResetPasswordAsync(string userId,string newPassword,CancellationToken ct=default) =>
     WriteAsync(async(db,manager)=>{
       var user=await manager.FindByIdAsync(userId)??throw new KeyNotFoundException("Пользователь не найден.");
       await CheckTargetAsync(db,user,ct);

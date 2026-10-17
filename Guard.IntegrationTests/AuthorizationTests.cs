@@ -53,7 +53,8 @@ internal static class AuthorizationTests
     services.AddScoped<IPersonalIpService,PersonalIpService>();
     services.AddScoped<IIpAccessService,IpAccessService>();
     services.AddScoped<IIpAccessReader,IpAccessReader>();
-    services.AddScoped<ISecurityService,SecurityService>();
+    services.AddScoped<IUserAdministrationService,SecurityService>();
+    services.AddScoped<IUserListService,SecurityService>();
     await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes=true, ValidateOnBuild=true });
     await using var scope = provider.CreateAsyncScope();
     var roles=scope.ServiceProvider.GetRequiredService<IRoleAccessService>();
@@ -232,23 +233,25 @@ internal static class AuthorizationTests
     check((await roles.GetUserRolesAsync("user")).Selected.SequenceEqual(rollbackRoles.Selected),"rejected assignment preserves existing roles");
     var final=await roles.GetUserRolesAsync("user");
     await roles.SetUserRolesAsync("user",["admin-role"],final.Version);
-    var security=scope.ServiceProvider.GetRequiredService<ISecurityService>();
+    var security=scope.ServiceProvider.GetRequiredService<IUserAdministrationService>();
+    var userList=scope.ServiceProvider.GetRequiredService<IUserListService>();
     await using(var availableDb = await factory.CreateDbContextAsync()) {
       availableDb.Personals.Add(new Personal { FirstName = "Available Other", LastName = "Test", SubdivisionId = foreignId, CreatedBy = "test" });
       await availableDb.SaveChangesAsync();
     }
     check((await security.GetUserPersonalOptionsAsync()).Any(p => p.Name.Contains("Other")), "Root sees employees from all subdivisions in user creation selector");
-    await PostgresTests.ThrowsAsync<InvalidOperationException>(()=>security.CreateUserAsync(
-      new(){UserName="rollback-user",Email="rollback@example.test"},"TestPassword123!",["unknown"]),check,"user creation with invalid role fails");
-    await using(var db=await factory.CreateDbContextAsync()) check(!await db.Users.AnyAsync(u=>u.UserName=="rollback-user"),"failed compound user creation rolls back");
     authentication.Id="user";
     check(await usersReads.CountAsync()==1,"user count excludes foreign and unbound accounts");
     var subdivisions=scope.ServiceProvider.GetRequiredService<ISubdivisionManagementService>();
     check((await subdivisions.SearchAsync(new(Hierarchy:SubdivisionHierarchyMode.IncludeChildren))).Count==2,"subdivision DTO search includes own descendants only");
     await PostgresTests.ThrowsAsync<KeyNotFoundException>(()=>subdivisions.UpdateFromDtoAsync(new(foreignId,Guid.NewGuid(),new(){Name="Forbidden"})),check,"foreign subdivision DTO update rejected");
-    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>((IUserListService)security).SetUserLockoutAsync("root",true),check,"ordinary manager cannot lock Root");
-    await PostgresTests.ThrowsAsync<InvalidOperationException>(async ()=>await security.UpdateUserAsync(
-      (await security.GetUserByIdAsync("user"))!,["Root"]),check,"profile editing cannot change roles");
+    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>userList.SetUserLockoutAsync("root",true),check,"ordinary manager cannot lock Root");
+    var profile = (await security.GetUserEditAsync("user")).User;
+    profile.Email = "user@example.test";
+    await security.SaveDetailsAsync(profile);
+    await using(var profileDb=await factory.CreateDbContextAsync())
+      check((await profileDb.UserRoles.Where(r=>r.UserId=="user").Select(r=>r.RoleId).ToArrayAsync()).SequenceEqual(["admin-role"]),
+        "DTO profile editing preserves existing roles without assigning Root");
     authentication.Id="root";
     await using(var db=await factory.CreateDbContextAsync()) {
       await db.RoleClaims.Where(c=>c.RoleId=="admin-role").ExecuteDeleteAsync();
@@ -263,26 +266,25 @@ internal static class AuthorizationTests
     check(await personalDetails.GetDetailsAsync(foreignPersonalId)==null,"foreign DTO card lookup returns no record");
     var options = await security.GetUserPersonalOptionsAsync();
     check(options.Count == 1 && options.All(p => p.Id != foreignPersonalId), "user creation selector exposes only active unbound employees in allowed subdivisions");
-    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => security.CreateUserAsync(
-      new() { UserName = "outside", Email = "outside@example.test", PersonalId = foreignPersonalId }, "TestPassword123!"), check, "creating user for foreign employee is denied");
-    var createdUser = new ApplicationUser { UserName = "browser-create", Email = "browser-create@example.test", PersonalId = options[0].Id };
-    check((await security.CreateUserAsync(createdUser, "TestPassword123!")).Succeeded, "user creation succeeds for available employee");
+    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => security.CreateFromDtoAsync(
+      new("outside", "outside@example.test", "TestPassword123!", foreignPersonalId)), check, "creating user for foreign employee is denied");
+    var createdUserId = await security.CreateFromDtoAsync(new("browser-create", "browser-create@example.test", "TestPassword123!", options[0].Id));
     await using (var createdDb = await factory.CreateDbContextAsync()) {
-      check(await createdDb.Users.AnyAsync(u => u.Id == createdUser.Id && u.PersonalId == options[0].Id), "created user is stored with employee binding");
-      check(!await createdDb.UserRoles.AnyAsync(r => r.UserId == createdUser.Id), "new user has no automatically assigned roles");
+      check(await createdDb.Users.AnyAsync(u => u.Id == createdUserId && u.PersonalId == options[0].Id), "created user is stored with employee binding");
+      check(!await createdDb.UserRoles.AnyAsync(r => r.UserId == createdUserId), "new user has no automatically assigned roles");
     }
-    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.CreateUserAsync(
-      new() { UserName = "browser-create", Email = "duplicate@example.test", PersonalId = options[0].Id }, "TestPassword123!"), check, "employee with existing account cannot be assigned twice");
+    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.CreateFromDtoAsync(
+      new("browser-create", "duplicate@example.test", "TestPassword123!", options[0].Id)), check, "employee with existing account cannot be assigned twice");
     var anotherPersonalId = Guid.NewGuid();
     await using (var employeeDb = await factory.CreateDbContextAsync()) {
       var subdivisionId = await employeeDb.Personals.Where(p => p.Id == options[0].Id).Select(p => p.SubdivisionId).SingleAsync();
       employeeDb.Personals.Add(new Personal { Id = anotherPersonalId, FirstName = "New", LastName = "Test", SubdivisionId = subdivisionId, CreatedBy = "test" });
       await employeeDb.SaveChangesAsync();
     }
-    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.CreateUserAsync(
-      new() { UserName = "browser-create", Email = "duplicate@example.test", PersonalId = anotherPersonalId }, "TestPassword123!"), check, "Identity rejects duplicate login for a different employee");
-    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.CreateUserAsync(
-      new() { UserName = "weak-password", Email = "weak@example.test", PersonalId = anotherPersonalId }, "x"), check, "weak password is rejected");
+    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.CreateFromDtoAsync(
+      new("browser-create", "duplicate@example.test", "TestPassword123!", anotherPersonalId)), check, "Identity rejects duplicate login for a different employee");
+    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.CreateFromDtoAsync(
+      new("weak-password", "weak@example.test", "x", anotherPersonalId)), check, "weak password is rejected");
     await PostgresTests.ThrowsAsync<KeyNotFoundException>(()=>personalEditor.UpdateFromDtoAsync(new(foreignPersonalId,Guid.NewGuid(),new(){FirstName="X",LastName="Y"})),check,"foreign employee update denied");
     await using(var db=await factory.CreateDbContextAsync()) await db.Subdivisions.Where(s=>s.Name=="Own").ExecuteUpdateAsync(s=>s.SetProperty(p=>p.Path,"/"));
     check((await scopes.GetAsync()).SubdivisionIds.Count==0,"malformed root path fails closed");

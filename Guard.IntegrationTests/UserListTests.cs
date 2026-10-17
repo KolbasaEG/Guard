@@ -6,7 +6,7 @@ using Radzen.Blazor;
 
 internal static class UserListTests
 {
-  public static async Task RunAsync(ISecurityService service, Action<bool, string> check)
+  public static async Task RunAsync(IUserListService service, Action<bool, string> check)
   {
 #pragma warning disable BL0005
     var condition = new CompositeFilterDescriptor { Property = "UserName", FilterOperator = FilterOperator.Contains, FilterValue = "policy" };

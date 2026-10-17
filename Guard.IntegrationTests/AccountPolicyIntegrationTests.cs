@@ -17,36 +17,37 @@ internal static class AccountPolicyIntegrationTests
     var policies = services.GetRequiredService<IAccountPolicyService>();
     var administration = services.GetRequiredService<IAccountPolicyAdministrationService>();
     await AccountPolicyBoundaryTests.CheckIntegrationAsync(services, factory, check);
-    var security = services.GetRequiredService<ISecurityService>();
+    var security = services.GetRequiredService<IUserAdministrationService>();
+    var userList = services.GetRequiredService<IUserListService>();
     await using var db = await factory.CreateDbContextAsync();
     var subdivision = await db.Subdivisions.FirstAsync();
     var personal = new Personal { FirstName = "Policy", LastName = "Test", SubdivisionId = subdivision.Id, CreatedBy = "test" };
     db.Add(personal); await db.SaveChangesAsync();
     var target = new ApplicationUser { UserName = "policy-user", Email = "policy@example.test", PersonalId = personal.Id };
-    check((await security.CreateUserAsync(target, "InitialPassword123!")).Succeeded, "policy user created");
-    await UserListTests.RunAsync(security, check);
+    target.Id = await security.CreateFromDtoAsync(new(target.UserName!, target.Email!, "InitialPassword123!", personal.Id));
+    await UserListTests.RunAsync(userList, check);
     async Task<ApplicationUser> Read() {
       await using var read = await factory.CreateDbContextAsync();
       return await read.Users.AsNoTracking().SingleAsync(u => u.Id == target.Id);
     }
     var created = await Read();
     check(created.PasswordChangedAtUtc.HasValue && !created.MustChangePassword, "creation records password timestamp atomically");
-    check((await security.ResetPasswordAsync(target.Id, "TemporaryPassword123!")).Succeeded, "admin password reset succeeds");
+    await security.ResetPasswordFromDtoAsync(new(target.Id, "TemporaryPassword123!"));
     var reset = await Read();
     check(reset.MustChangePassword && reset.SecurityStamp != created.SecurityStamp, "admin reset requires change and revokes previous stamp");
     check((await policies.CheckAsync(target.Id)).PasswordExpired, "temporary password blocks application access");
-    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.ResetPasswordAsync(target.Id, "TemporaryPassword123!"), check, "same password reset rejected");
+    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.ResetPasswordFromDtoAsync(new(target.Id, "TemporaryPassword123!")), check, "same password reset rejected");
     await using (var scope = services.CreateAsyncScope()) {
       var manager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
       var user = (await manager.FindByIdAsync(target.Id))!;
       check((await manager.ChangePasswordAsync(user, "TemporaryPassword123!", "PermanentPassword456!")).Succeeded, "user changes temporary password");
     }
     check(!(await Read()).MustChangePassword && !(await policies.CheckAsync(target.Id)).PasswordExpired, "self change clears mandatory change");
-    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => ((IUserListService)security).SetUserLockoutAsync("root", true), check, "Root cannot be blocked");
-    await ((IUserListService)security).SetUserLockoutAsync(target.Id, true);
+    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => userList.SetUserLockoutAsync("root", true), check, "Root cannot be blocked");
+    await userList.SetUserLockoutAsync(target.Id, true);
     check((await policies.CheckAsync(target.Id)).Blocked && (await Read()).AccountBlockReason == "Administrator", "manual block denies account");
-    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.ResetPasswordAsync(target.Id, "AnotherPassword789!"), check, "blocked account reset denied");
-    await ((IUserListService)security).SetUserLockoutAsync(target.Id, false);
+    await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.ResetPasswordFromDtoAsync(new(target.Id, "AnotherPassword789!")), check, "blocked account reset denied");
+    await userList.SetUserLockoutAsync(target.Id, false);
     var unblocked = await Read();
     check(unblocked.UnblockedAtUtc.HasValue && unblocked.AccountBlockReason == null, "unblock clears reason and restarts activity window");
     var first = (await administration.GetSettingsAsync()).ToCommand() with { InactivityEnabled = true, InactivityDays = 20 };
@@ -103,7 +104,7 @@ internal static class AccountPolicyIntegrationTests
     var inactive = await Read();
     check(inactive.AccountBlockReason == "Inactivity" && inactive.SecurityStamp != unblocked.SecurityStamp,
       "background inactivity block changes stamp and reason");
-    await security.ToggleUserLockoutAsync(target.Id, false);
+    await userList.SetUserLockoutAsync(target.Id, false);
     check(!(await policies.CheckAsync(target.Id)).Blocked, "unblocked inactive account is not immediately blocked again");
     await policies.RecordActivityAsync(target.Id);
     check((await Read()).LastActivityAtUtc > old, "activity persisted");

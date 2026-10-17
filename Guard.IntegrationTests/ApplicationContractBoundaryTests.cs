@@ -7,8 +7,6 @@ internal static class ApplicationContractBoundaryTests
 {
   public static void Run(Action<bool, string> check)
   {
-    // These transitional contracts belong to Infrastructure, never Application.
-    var legacy = new HashSet<Type> { typeof(ISecurityService) };
     var application = typeof(ICurrentSession).Assembly;
     var host = typeof(Guard.GuardServiceRegistration).Assembly;
     var infrastructure = typeof(Guard.Infrastructure.InfrastructureServiceRegistration).Assembly;
@@ -20,8 +18,8 @@ internal static class ApplicationContractBoundaryTests
         $"Application depends only on Domain and BCL: {reference.Name}");
     var infrastructureContracts = infrastructure.GetExportedTypes().Where(t => t.IsInterface &&
       (t.Namespace == "Guard.Core.Services" || t.Namespace == "Guard.Core.Services.Exports")).ToHashSet();
-    check(infrastructureContracts.SetEquals(legacy), "Only the transitional security service contract remains in Infrastructure");
-    foreach (var name in new[] { "IApplicationRoleService", "ILogService", "IClassifierService", "IPersonalService", "ISubdivisionService", "IIpAddressService" })
+    check(infrastructureContracts.Count == 0, "Infrastructure owns no legacy application service contracts");
+    foreach (var name in new[] { "IApplicationRoleService", "ILogService", "IClassifierService", "IPersonalService", "ISubdivisionService", "IIpAddressService", "ISecurityService" })
       check(infrastructure.GetType($"Guard.Core.Services.{name}") == null,
         $"Unused legacy contract {name} is removed");
     foreach (var (implementation, contract) in new[] {
@@ -48,16 +46,14 @@ internal static class ApplicationContractBoundaryTests
       typeof(IpAddressService).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
         .ToHashSet().SetEquals(typeof(IpAddressService).GetInterfaceMap(typeof(IIpAddressManagementService)).TargetMethods),
       "IpAddressService exposes exactly DTO management, without legacy entity/query methods");
-    check(!typeof(ISecurityService).GetMethods().Any(m => m.Name == "QueryIpAddressesAsync") &&
-      !typeof(SecurityService).GetMethods().Any(m => m.Name == "QueryIpAddressesAsync") &&
+    check(!typeof(SecurityService).GetMethods().Any(m => m.Name == "QueryIpAddressesAsync") &&
       !typeof(SecurityService).GetConstructors().SelectMany(c => c.GetParameters()).Any(p =>
         p.ParameterType == typeof(IpAddressService) || p.ParameterType == typeof(IIpAddressManagementService)),
       "SecurityService has no unused IP query proxy or catalog service dependency");
     foreach (var name in new[] { "QueryUsersAsync", "QueryRolesAsync", "QueryPersonalsAsync", "GetUserRolesAsync",
       "GetRoleClaimsAsync", "UpdateRoleClaimsAsync", "GetUserClaimsAsync", "UpdateUserClaimsAsync",
       "UpdatePersonalIpAddressesAsync", "IsIpAllowedForUserAsync" })
-      check(!typeof(ISecurityService).GetMethods().Any(m => m.Name == name) &&
-        !typeof(SecurityService).GetMethods().Any(m => m.Name == name),
+      check(!typeof(SecurityService).GetMethods().Any(m => m.Name == name),
         $"SecurityService removes unused legacy operation {name} from contract and implementation");
     check(typeof(SecurityService).GetConstructors().Single().GetParameters().Select(p => p.ParameterType)
       .SequenceEqual(new[] { typeof(IReadRepository<ApplicationUser>), typeof(IPermissionService),
@@ -65,6 +61,11 @@ internal static class ApplicationContractBoundaryTests
         typeof(IAuditService), typeof(IAccessChangeNotifier), typeof(IAccountPolicyService),
         typeof(Microsoft.Extensions.Logging.ILogger<SecurityService>) }),
       "SecurityService depends only on user reads, access, operation scopes, delivery and account policy");
+    var securityContracts = new[] { typeof(IUserAdministrationService), typeof(IUserListService) };
+    check(typeof(SecurityService).GetInterfaces().ToHashSet().SetEquals(securityContracts) &&
+      typeof(SecurityService).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+        .ToHashSet().SetEquals(securityContracts.SelectMany(c => typeof(SecurityService).GetInterfaceMap(c).TargetMethods)),
+      "SecurityService exposes exactly the narrow user DTO and list contracts");
     check(!host.GetExportedTypes().Any(t => t.IsInterface && t.Namespace?.StartsWith("Guard.Core.Services", StringComparison.Ordinal) == true),
       "Web owns no application or legacy service interfaces");
     foreach (var type in application.GetExportedTypes())
@@ -77,7 +78,7 @@ internal static class ApplicationContractBoundaryTests
       check(type.Assembly == application, $"Independent access decisions {type.Name} belong to Application");
     var contracts = application.GetExportedTypes()
       .Where(t => t.IsInterface && (t.Namespace == "Guard.Core.Services" ||
-        t.Namespace == "Guard.Core.Services.Exports") && !legacy.Contains(t)).ToArray();
+        t.Namespace == "Guard.Core.Services.Exports")).ToArray();
     check(contracts.Length == 35, "Application inventory contains 32 services and three access read ports");
     foreach (var name in new[] { "EntityInputValidation", "EntityWriteMapping" })
     {
