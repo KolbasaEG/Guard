@@ -32,6 +32,7 @@ internal static partial class ExportIntegrationTests
     builder.Services.AddSingleton(options); builder.Services.AddSingleton<IAuditService>(delivery); builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<AuthenticationStateProvider, HttpAuthentication>();
     builder.Services.AddScoped<ICurrentSession, Guard.Components.Account.CurrentSessionAdapter>();
+    builder.Services.AddScoped<IPermissionReader, PermissionReader>();
     builder.Services.AddScoped<IPermissionService, PermissionService>(); builder.Services.AddScoped<ExportAccess>();
     builder.Services.AddAuthentication("export-test").AddScheme<AuthenticationSchemeOptions, TestHandler>("export-test", _ => { });
     builder.Services.AddAuthorization(); builder.Services.AddAntiforgery();

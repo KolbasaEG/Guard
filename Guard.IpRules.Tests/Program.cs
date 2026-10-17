@@ -58,6 +58,7 @@ await LocalAccountBoundaryTests.RunAsync(Check);
 ManagementBoundaryTests.Run(Check);
 ApplicationContractBoundaryTests.Run(Check);
 await IpAccessBoundaryTests.RunAsync(Check);
+await PermissionBoundaryTests.RunAsync(Check);
 await DialogInfoRenderingTests.RunAsync(Check);
 await ExportTests.RunAsync(Check);
 await ExportBoundaryTests.RunAsync(Check);

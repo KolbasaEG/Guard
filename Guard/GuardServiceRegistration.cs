@@ -113,6 +113,7 @@ public static class GuardServiceRegistration
     services.AddScoped<ICurrentUserDisplayService, CurrentUserService>();
     services.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
     services.AddScoped<IIpAccessReader, IpAccessReader>();
+    services.AddScoped<IPermissionReader, PermissionReader>();
 
     services.Configure<DirectoryApiOptions>(configuration.GetSection("DirectoryApi"));
     var dataProtection = services.AddDataProtection();

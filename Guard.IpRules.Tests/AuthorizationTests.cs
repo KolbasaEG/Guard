@@ -29,6 +29,7 @@ internal static class AuthorizationTests
     services.AddSingleton<IAccessChangeNotifier,AccessChangeNotifier>();
     services.AddIdentity<ApplicationUser,ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders().AddUserManager<PolicyUserManager>();
     services.AddScoped<IPasswordValidator<ApplicationUser>,PolicyPasswordValidator>();
+    services.AddScoped<IPermissionReader, PermissionReader>();
     services.AddScoped<IPermissionService,PermissionService>();
     services.AddScoped<IAccountPolicyService,AccountPolicyService>();
     services.AddScoped<IPasswordRequirementsService,AccountPolicyService>();
