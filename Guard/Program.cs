@@ -2,19 +2,12 @@ using Guard;
 using Guard.Components.Account;
 using Guard.Core.Contexts;
 using Guard.Core.Entities;
-using Guard.Core.Interceptors;
 using Guard.Core.Logging;
-using Guard.Core.Repositories;
 using Guard.Core.Services;
 using Guard.Core.Services.Exports;
 using Guard.Middlewares;
 using Guard.Core.Identity;
-using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using NpgsqlTypes;
 using Radzen;
 using Serilog;
@@ -113,154 +106,7 @@ var auditLogger = new LoggerConfiguration()
 
 builder.Services.AddSingleton<IAuditService>(_ => new AuditService(auditLogger));
 
-// === Регистрация Интерцептора как Scoped (Исправлено!) ===
-builder.Services.AddScoped<AuditSaveChangesInterceptor>();
-
-// =====================================================
-// === DATABASE (DbContextFactory + Scoped DbContext)
-// =====================================================
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-// 1. Фабрика контекстов для фоновых/параллельных задач
-builder.Services.AddDbContextFactory<ApplicationDbContext>((sp, options) =>
-{
-  var env = sp.GetRequiredService<IWebHostEnvironment>();
-  options.UseNpgsql(connectionString);
-  options.EnableDetailedErrors(builder.Environment.IsDevelopment());
-  options.EnableSensitiveDataLogging(builder.Environment.IsDevelopment());
-  // Включаем подробные данные ТОЛЬКО при локальной разработке
-  if (env.IsDevelopment())
-  {
-    options.EnableSensitiveDataLogging();
-    options.EnableDetailedErrors();
-  }
-});
-
-// 2. Scoped DbContext для UnitOfWork (подключаем интерцептор аудита)
-builder.Services.AddScoped<ApplicationDbContext>(sp =>
-{
-  var env = sp.GetRequiredService<IWebHostEnvironment>();
-  var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-
-  optionsBuilder.UseNpgsql(connectionString);
-  // Подключаем интерцептор из текущего Scoped-контекста
-  optionsBuilder.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
-
-  optionsBuilder.EnableDetailedErrors(builder.Environment.IsDevelopment());
-  optionsBuilder.EnableSensitiveDataLogging(builder.Environment.IsDevelopment());
-  // Включаем подробные данные ТОЛЬКО при локальной разработке
-  if (env.IsDevelopment())
-  {
-    optionsBuilder.EnableSensitiveDataLogging();
-    optionsBuilder.EnableDetailedErrors();
-  }
-  return new ApplicationDbContext(optionsBuilder.Options);
-});
-
-// 3. Фабрика для работы с изолированной БД логов
-builder.Services.AddDbContextFactory<LogsDbContext>(options =>
-{
-  options.UseNpgsql(builder.Configuration.GetConnectionString("LogsConnection"));
-});
-
-// =====================================================
-// === IDENTITY & AUTH
-// =====================================================
-builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders()
-    .AddUserManager<PolicyUserManager>()
-    .AddSignInManager<IpRestrictedSignInManager>();
-
-builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, PolicyPasswordValidator>();
-builder.Services.Configure<IdentityOptions>(options => {
-  options.Password.RequiredLength = 6;
-  options.Password.RequiredUniqueChars = 1;
-  options.Password.RequireDigit = false;
-  options.Password.RequireLowercase = false;
-  options.Password.RequireUppercase = false;
-  options.Password.RequireNonAlphanumeric = false;
-});
-builder.Services.AddHostedService<AccountPolicyWorker>();
-
-// Заголовки принимает только от явно настроенных доверенных прокси (по умолчанию — loopback).
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-  options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-  foreach (var value in builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [])
-  {
-    if (!System.Net.IPAddress.TryParse(value, out var proxy))
-      throw new InvalidOperationException("ReverseProxy:KnownProxies содержит некорректный IP-адрес.");
-    options.KnownProxies.Add(proxy);
-  }
-});
-
-builder.Services.AddScoped<RoleManager<ApplicationRole>>();
-builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider<ApplicationUser>>();
-builder.Services.AddScoped<IdentityRedirectManager>();
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IDataAccessScopeService, DataAccessScopeService>();
-builder.Services.AddSingleton<IAccessChangeNotifier, AccessChangeNotifier>();
-builder.Services.AddScoped<AccessRefreshCoordinator>();
-builder.Services.AddScoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, AccessCircuitHandler>();
-builder.Services.AddAuthorization(options =>
-{
-  foreach (var permission in PermissionCatalog.All)
-    options.AddPolicy(permission.Code, policy => policy.RequireAuthenticatedUser()
-        .AddRequirements(new PermissionRequirement(permission.Code)));
-});
-builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, PermissionAuthorizationHandler>();
-
-// =====================================================
-// === REPOSITORIES & SERVICES (Scrutor)
-// =====================================================
-builder.Services.AddScoped<ILogService, LogService>();
-builder.Services.AddScoped<ILogSearchService>(services => services.GetRequiredService<ILogService>());
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
-builder.Services.AddScoped<ICurrentSession, CurrentSessionAdapter>();
-builder.Services.AddScoped<ICurrentUserDisplayService, CurrentUserService>();
-builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-builder.Services.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
-builder.Services.AddScoped(typeof(IBasicRepository<>), typeof(BasicRepository<>));
-
-  builder.Services.Configure<DirectoryApiOptions>(builder.Configuration.GetSection("DirectoryApi"));
-  var dataProtection = builder.Services.AddDataProtection();
-  var keyDirectory = builder.Configuration["DataProtection:KeyDirectory"];
-  if (!string.IsNullOrWhiteSpace(keyDirectory)) dataProtection.PersistKeysToFileSystem(new DirectoryInfo(Path.GetFullPath(keyDirectory)));
-  var applicationName = builder.Configuration["DataProtection:ApplicationName"];
-  if (!string.IsNullOrWhiteSpace(applicationName)) dataProtection.SetApplicationName(applicationName);
-  var keyCertificate = builder.Configuration["DataProtection:CertificateThumbprint"];
-  if (!string.IsNullOrWhiteSpace(keyCertificate)) dataProtection.ProtectKeysWithCertificate(keyCertificate);
-  builder.Services.AddSingleton<ApiCredentialProtector>();
-builder.Services.AddHttpClient<IDirectoryApiClient, DirectoryApiClient>(client => client.Timeout = TimeSpan.FromSeconds(60));
-builder.Services.AddScoped<ApiSynchronizationRunner>();
-builder.Services.AddHostedService<ApiSynchronizationWorker>();
-builder.Services.AddOptions<ExportOptions>().Bind(builder.Configuration.GetSection("Exports"))
-  .Validate(o => o.RowsPerPart is >= 100 and <= 1000000 && o.MaxQueuedPerUser is >= 1 and <= 20 && o.TimeoutMinutes is >= 1 and <= 1440 && o.MinimumFreeBytes >= 0 && !string.IsNullOrWhiteSpace(o.Directory), "Некорректные настройки экспорта.")
-  .ValidateOnStart();
-builder.Services.AddSingleton<ExportStorage>();
-builder.Services.AddScoped<ExportAccess>();
-builder.Services.AddScoped<ExportSnapshot>();
-builder.Services.AddScoped<ExportDocumentWriter>();
-builder.Services.AddScoped<ExportProcessor>();
-builder.Services.AddHostedService<ExportWorker>();
-
-builder.Services.Scan(scan => scan
-    .FromAssemblies(typeof(Program).Assembly)
-    .AddClasses(classes => classes.Where(type =>
-        (type.Name.EndsWith("Repository") || type.Name.EndsWith("Service")) &&
-        !type.Name.Contains("GenericRepository") &&
-        !type.Name.Contains("BasicRepository") &&
-        !type.Name.Contains("UnitOfWork") &&
-        !type.Name.Contains("ScopeService") &&
-        !type.Name.Contains("CurrentUserService") &&
-        !type.Name.Contains("AuditService") &&
-        !type.Name.Contains("LogService") &&
-        type != typeof(DirectoryApiClient)))
-    .AsImplementedInterfaces()
-    .WithScopedLifetime());
+builder.Services.AddGuardServices(builder.Configuration, builder.Environment.IsDevelopment());
 
 // =====================================================
 // === RADZEN & BLAZOR COMPONENTS
