@@ -30,6 +30,10 @@
 | Путь | Назначение |
 | --- | --- |
 | `Guard/Program.cs` | Регистрация зависимостей, настройка БД, логирования и middleware |
+| `Guard/GuardServiceRegistration.cs` | Общая композиция Infrastructure, Application и Web без запуска приложения |
+| `Guard/Core/InfrastructureServiceRegistration.cs` | Регистрация EF/Identity, реализаций операций, интеграций и workers |
+| `Guard/ApplicationServiceRegistration.cs` | Регистрация независимых прикладных решений в host |
+| `Guard/WebServiceRegistration.cs`, `Guard/Web/Identity` | Регистрация Web и адаптеры Blazor circuit |
 | `Guard.Domain/Core/0-Enums` | Перечисления, статусы и режимы выборки |
 | `Guard.Domain/Core/1-Entities` | Независимые сущности и общие поля |
 | `Guard/Core/1-Entities` | Модели Identity и технического журнала |

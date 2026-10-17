@@ -1,4 +1,6 @@
 using Guard;
+using Guard.Components.Account;
+using Guard.Infrastructure;
 using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Identity;
@@ -8,6 +10,8 @@ using Guard.Core.Repositories;
 using Guard.Core.Services;
 using Guard.Core.Services.Exports;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -25,7 +29,7 @@ internal static class ServiceRegistrationTests
 {
   public static async Task RunAsync(Action<bool, string> check)
   {
-    foreach (var development in new[] { false, true }) {
+    foreach (var (development, separateComposition) in new[] { (false, false), (false, true), (true, false), (true, true) }) {
       // Empty host configuration: never reads working connections or secrets, builds or starts the app.
       var builder = WebApplication.CreateEmptyBuilder(new WebApplicationOptions {
         EnvironmentName = development ? Environments.Development : Environments.Production,
@@ -44,7 +48,32 @@ internal static class ServiceRegistrationTests
       using var auditLogger = new LoggerConfiguration().CreateLogger();
       services.AddSingleton(manager);
       services.AddSingleton<IAuditService>(new AuditService(auditLogger));
-      services.AddGuardServices(builder.Configuration, development);
+      if (separateComposition) {
+        // Register Web first: infrastructure must not rely on a UI registration order.
+        services.AddGuardWeb(builder.Configuration);
+        services.AddGuardApplication();
+        services.AddGuardInfrastructure(builder.Configuration, development);
+      }
+      else services.AddGuardServices(builder.Configuration, development);
+
+      var infrastructure = new ServiceCollection();
+      infrastructure.AddGuardInfrastructure(builder.Configuration, development);
+      foreach (var webType in new[] { typeof(ICurrentSession), typeof(AuthenticationStateProvider),
+        typeof(IdentityRedirectManager), typeof(AccessRefreshCoordinator), typeof(CircuitHandler) })
+        check(!infrastructure.Any(d => d.ServiceType == webType),
+          $"infrastructure leaves Web adapter {webType.Name} to the host");
+      check(!infrastructure.Any(d => d.ImplementationType?.Namespace?.StartsWith("Guard.Components", StringComparison.Ordinal) == true),
+        "infrastructure descriptors do not register component implementations");
+      var application = new ServiceCollection();
+      application.AddGuardApplication();
+      check(application.Count == 3 && application.All(d => d.Lifetime == ServiceLifetime.Scoped &&
+        d.ServiceType.Assembly == typeof(ICurrentSession).Assembly &&
+        d.ImplementationType?.Assembly == typeof(ICurrentSession).Assembly),
+        "Application composition contains only three independent scoped decisions");
+      check(services.Count(d => d.ServiceType == typeof(ICurrentSession)) == 1 &&
+        services.Single(d => d.ServiceType == typeof(ICurrentSession)).ImplementationType == typeof(CurrentSessionAdapter) &&
+        services.Single(d => d.ServiceType == typeof(ICurrentSession)).Lifetime == ServiceLifetime.Scoped,
+        "host supplies one scoped Blazor/HTTP session adapter in both composition orders");
       services.AddRazorPages();
       services.AddRazorComponents().AddInteractiveServerComponents();
       services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
