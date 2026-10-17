@@ -31,11 +31,11 @@ internal static class ClassifierUiTests
       new(Children: Enumerable.Repeat(new ExportFilter("Value", "IsNull"), 101).ToArray())
     }) await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.Run(() => ClassifierSearchQuery.ValidateFilter(invalid)), check, "classifier filter rejects invalid field, type, operator or complexity");
 
-    var service = DispatchProxy.Create<IClassifierService, IpAddressReferenceTests.ServiceProxy>();
+    var service = DispatchProxy.Create<IClassifierManagementService, IpAddressReferenceTests.ServiceProxy>();
     var proxy = (IpAddressReferenceTests.ServiceProxy)(object)service;
     var pending = new Queue<TaskCompletionSource<ClassifierSearchResult>>(); var tokens = new List<CancellationToken>();
     proxy.Handle = (method, args) => {
-      if (method.Name != nameof(IClassifierService.SearchAsync)) throw new NotSupportedException(method.Name);
+      if (method.Name != nameof(IClassifierManagementService.SearchAsync)) throw new NotSupportedException(method.Name);
       tokens.Add((CancellationToken)args[1]!);
       var completion = new TaskCompletionSource<ClassifierSearchResult>(TaskCreationOptions.RunContinuationsAsynchronously);
       pending.Enqueue(completion); return completion.Task;
@@ -69,20 +69,20 @@ internal static class ClassifierUiTests
 
   private sealed class PageProbe : Guard.Components.Pages.Classifiers.Index
   {
-    public PageProbe(IClassifierService service, BrowserTimeService time) { ClassifierService = service; Time = time; NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Classifiers.Index>.Instance; }
+    public PageProbe(IClassifierManagementService service, BrowserTimeService time) { ClassifierService = service; Time = time; NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Classifiers.Index>.Instance; }
     public Task Load() => LoadData(new() { Skip = 0, Top = 20 });
     public IEnumerable<int> Ids => filteredData.Select(c => c.Id);
   }
   private sealed class AddProbe : Add
   {
-    public AddProbe(IClassifierService service, DialogService dialogs, NotificationService notifications) { ClassifierService = service; DialogService = dialogs; NotificationService = notifications; Logger = NullLogger<Add>.Instance; }
+    public AddProbe(IClassifierManagementService service, DialogService dialogs, NotificationService notifications) { ClassifierService = service; DialogService = dialogs; NotificationService = notifications; Logger = NullLogger<Add>.Instance; }
     public string Value { set => item.Value = value; }
     public Task Save() => FormSubmit();
     public void Cancel() => HandleCancelButtonClick();
   }
   private sealed class EditProbe : Edit
   {
-    public EditProbe(IClassifierService service, DialogService dialogs, NotificationService notifications) { ClassifierService = service; DialogService = dialogs; NotificationService = notifications; Logger = NullLogger<Edit>.Instance; }
+    public EditProbe(IClassifierManagementService service, DialogService dialogs, NotificationService notifications) { ClassifierService = service; DialogService = dialogs; NotificationService = notifications; Logger = NullLogger<Edit>.Instance; }
     public bool Loaded => isLoaded;
     public Task Initialize() => OnInitializedAsync();
   }

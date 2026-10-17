@@ -157,11 +157,12 @@ internal static class ServiceRegistrationTests
         timeouts.Count == calls + 2 && timeouts.All(t => t == TimeSpan.FromSeconds(60)),
         "resolved typed clients execute named HttpClient configuration with 60 second timeout");
       foreach (var (contract, implementation) in new[] {
-        (typeof(ILogSearchService), typeof(LogService)), (typeof(IRoleSearchService), typeof(ApplicationRoleService)) }) {
+          (typeof(ILogSearchService), typeof(LogService)), (typeof(IRoleSearchService), typeof(ApplicationRoleService)),
+          (typeof(IClassifierManagementService), typeof(ClassifierService)) }) {
         check(services.Count(d => d.ServiceType == contract) == 1 &&
           services.Single(d => d.ServiceType == contract).ImplementationType == implementation &&
           services.Single(d => d.ServiceType == contract).Lifetime == ServiceLifetime.Scoped,
-          $"{contract.Name} has one scoped search registration without legacy alias");
+            $"{contract.Name} has one scoped registration without legacy alias");
         check(a.GetRequiredService(contract).GetType() == implementation &&
           ReferenceEquals(a.GetRequiredService(contract), a.GetRequiredService(contract)) &&
           !ReferenceEquals(a.GetRequiredService(contract), b.GetRequiredService(contract)),

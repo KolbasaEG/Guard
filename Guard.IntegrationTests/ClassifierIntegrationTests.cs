@@ -13,7 +13,7 @@ internal static class ClassifierIntegrationTests
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory, Action<bool, string> check)
   {
     var root = new PermissionsStub(new("root", true, []));
-    ClassifierService Service(IPermissionService permissions) => new(new ReadRepository<Classifier>(factory, permissions, new DataAccessScopeService(permissions, new DataAccessScopeReader(factory))),
+    IClassifierManagementService Service(IPermissionService permissions) => new ClassifierService(new ReadRepository<Classifier>(factory, permissions, new DataAccessScopeService(permissions, new DataAccessScopeReader(factory))),
       new UnitOfWorkFactory(factory, permissions, null!, NullLogger<UnitOfWork>.Instance), NullLogger<ClassifierService>.Instance, permissions);
     var service = Service(root);
     var fields = new ClassifierFieldsDto { Type = 998811, Code = 1, ClassifierName = "DTO test", Value = "Alpha", IsActive = true };
@@ -55,10 +55,31 @@ internal static class ClassifierIntegrationTests
         "classifier dictionary is global and read-only users can inspect inactive records");
       await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => reader.CreateFromDtoAsync(new(fields with { Code = 3 })), check,
         "classifier DTO write requires manage permission");
+      foreach (var write in new Func<Task>[] {
+        () => reader.UpdateFromDtoAsync(new(second.Id, second.Version, second.ToFields() with { Value = "Denied" })),
+        () => reader.SetActiveStatusAsync(second.Id, true, expectedVersion: second.Version),
+        () => reader.DeleteAsync(second.Id, expectedVersion: second.Version)
+      })
+        await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(write, check,
+          "classifier management contract rejects read-only actor for every existing-record write");
+      check(await service.GetDetailsAsync(second.Id) == second,
+        "denied classifier writes preserve fields, activity, version and audit timestamp");
+      await service.SetActiveStatusAsync(second.Id, true, expectedVersion: second.Version);
+      var active = (await service.GetDetailsAsync(second.Id))!;
+      check(active.IsActive && active.Version != second.Version && active.ToFields() == (second.ToFields() with { IsActive = true }),
+        "classifier management contract changes activity and version without changing other fields");
+      await PostgresTests.ThrowsAsync<EntityConflictException>(() => service.SetActiveStatusAsync(second.Id, false, expectedVersion: second.Version), check,
+        "classifier activity rejects stale version");
+      await PostgresTests.ThrowsAsync<EntityConflictException>(() => service.DeleteAsync(second.Id, expectedVersion: second.Version), check,
+        "classifier deletion rejects stale version");
+      check(await service.GetDetailsAsync(second.Id) == active, "stale classifier writes preserve current record");
+      await service.DeleteAsync(second.Id, expectedVersion: active.Version);
+      check(await service.GetDetailsAsync(second.Id) == null && (await service.SearchAsync(new(Filter: filter))).Count == 1,
+        "classifier management contract deletes current version and removes it from search");
       var denied = Service(new PermissionsStub(new("user", false, [])));
       await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => denied.SearchAsync(new()), check, "classifier search requires read permission");
       await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => denied.GetDetailsAsync(ids[0]), check, "classifier details require read permission");
-      foreach (var read in new Func<ClassifierService, Task>[] { s => s.SearchAsync(new()), s => s.GetDetailsAsync(ids[0]) })
+      foreach (var read in new Func<IClassifierManagementService, Task>[] { s => s.SearchAsync(new()), s => s.GetDetailsAsync(ids[0]) })
         await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => read(Service(new ChangingPermissions())), check,
           "classifier DTO reads reject changed actor before returning");
       foreach (var request in new ClassifierSearchRequest[] { new(Skip: -1), new(Take: 101), new(OrderBy: "Subdivisions.Count desc"),

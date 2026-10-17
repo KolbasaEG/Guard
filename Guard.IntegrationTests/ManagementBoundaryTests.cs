@@ -46,7 +46,7 @@ internal static class ManagementBoundaryTests
       var injected = page.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
         .Where(p => p.IsDefined(typeof(InjectAttribute))).Select(p => p.PropertyType).ToArray();
       check(injected.Any(contracts.Contains) && !injected.Intersect(new[] { typeof(ISecurityService), typeof(IIpAddressService),
-        typeof(IClassifierService), typeof(ISubdivisionService) }).Any(), $"{page.FullName} consumes narrow management contract");
+        typeof(ISubdivisionService) }).Any(), $"{page.FullName} consumes narrow management contract");
     }
   }
 }

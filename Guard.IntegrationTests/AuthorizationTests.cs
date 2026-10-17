@@ -44,7 +44,7 @@ internal static class AuthorizationTests
     services.AddScoped<IPersonalService,PersonalService>();
     services.AddScoped(typeof(IBasicRepository<>),typeof(BasicRepository<>));
     services.AddScoped<ISubdivisionService,SubdivisionService>();
-    services.AddScoped<IClassifierService,ClassifierService>();
+    services.AddScoped<IClassifierManagementService,ClassifierService>();
     services.AddScoped<IIpManagementAccessService,IpManagementAccessService>();
     services.AddScoped<IIpAddressService,IpAddressService>();
     services.AddScoped<IPersonalIpService,PersonalIpService>();

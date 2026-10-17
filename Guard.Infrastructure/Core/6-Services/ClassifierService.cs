@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services;
 
-public class ClassifierService : IClassifierService
+public class ClassifierService : IClassifierManagementService
 {
   private readonly IReadRepository<Classifier> _readClassifierRepository;
   private readonly IUnitOfWorkFactory _writes;
@@ -68,65 +68,9 @@ public class ClassifierService : IClassifierService
     return result;
   }
 
-  public async Task<TResult> QueryClassifiersAsync<TResult>(
-      Func<IQueryable<Classifier>, Task<TResult>> query,
-      CancellationToken ct = default)
-  {
-    return await _readClassifierRepository.QueryAsync(query, ct);
-  }
-
-  public async Task<Classifier?> GetByIdAsync(int id, CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос классификатора по ID: {ClassifierId}", id);
-    return await _readClassifierRepository.QueryAsync(query =>
-        query.FirstOrDefaultAsync(c => c.Id == id, ct), ct);
-  }
-
-  public async Task<IReadOnlyList<Classifier>> GetByTypeAsync(int type, bool activeOnly = true, CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос классификаторов по типу: {Type} (ActiveOnly: {ActiveOnly})", type, activeOnly);
-    return await _readClassifierRepository.QueryAsync(query =>
-        query.Where(c => c.Type == type && (!activeOnly || c.IsActive))
-             .OrderBy(c => c.Code)
-             .ToListAsync(ct),
-        ct);
-  }
-
-  public async Task<IReadOnlyList<Classifier>> GetByClassifierNameAsync(string classifierName, bool activeOnly = true, CancellationToken ct = default)
-  {
-    if (string.IsNullOrWhiteSpace(classifierName))
-      return Array.Empty<Classifier>();
-
-    var trimmedName = classifierName.Trim();
-
-    _logger.LogDebug("Запрос классификаторов по наименованию: '{ClassifierName}'", trimmedName);
-    return await _readClassifierRepository.QueryAsync(query =>
-        query.Where(c => c.ClassifierName == trimmedName && (!activeOnly || c.IsActive))
-             .OrderBy(c => c.Code)
-             .ToListAsync(ct),
-        ct);
-  }
-
-  public async Task<IReadOnlyList<Classifier>> GetAllAsync(CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос всех записей классификатора");
-    return await _readClassifierRepository.QueryAsync(query =>
-        query.OrderBy(c => c.Type)
-             .ThenBy(c => c.Code)
-             .ToListAsync(ct),
-        ct);
-  }
-
-  public async Task<bool> IsCodeUniqueInTypeAsync(int type, int code, int? excludeId = null, CancellationToken ct = default)
-  {
-    return await _readClassifierRepository.QueryAsync(query =>
-        query.AllAsync(c => c.Type != type || c.Code != code || (excludeId.HasValue && c.Id == excludeId.Value), ct),
-        ct);
-  }
-
   // ==================== Write (IUnitOfWork & BasicRepository) ====================
 
-  public async Task<int> CreateAsync(Classifier classifier, CancellationToken ct = default)
+  private async Task<int> CreateAsync(Classifier classifier, CancellationToken ct = default)
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Classifiers.Manage, ct);
@@ -154,7 +98,7 @@ public class ClassifierService : IClassifierService
     }, ct);
   }
 
-  public async Task UpdateAsync(Classifier classifier, CancellationToken ct = default)
+  private async Task UpdateAsync(Classifier classifier, CancellationToken ct = default)
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Classifiers.Manage, ct);
