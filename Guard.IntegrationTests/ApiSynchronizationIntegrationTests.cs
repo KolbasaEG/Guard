@@ -113,7 +113,7 @@ internal static partial class ApiSynchronizationIntegrationTests
     var first = await runner.RunAsync("test-api-root", null, false, CancellationToken.None, new DateOnly(2000, 8, 10));
     check(first.Status == SynchronizationStatus.Succeeded && first.UpdatedSince == new DateOnly(2000, 8, 10), "initial synchronization with date succeeds without prior full import");
     await CheckExportWorkerIsolationAsync(factory, permissions, api, audit, credentials, runner, service, check);
-    var listService = new PersonalService(null!, null!, null!, NullLogger<PersonalService>.Instance, permissions,
+    var listService = new PersonalService(null!, null!, NullLogger<PersonalService>.Instance, permissions,
       new DataAccessScopeService(permissions, new DataAccessScopeReader(factory)), factory);
     check((await listService.SearchAsync(new(OwnSubdivision: true))).Count == 0, "Root own-personnel mode stays empty without own employee binding");
     var rootList = await listService.SearchAsync(new(AllSubdivisions: true, Take: 100));
@@ -335,7 +335,7 @@ internal static partial class ApiSynchronizationIntegrationTests
     await using (var provider = new ServiceCollection().AddLogging().BuildServiceProvider())
     {
       var writes = new UnitOfWorkFactory(factory, permissions, provider, NullLogger<UnitOfWork>.Instance);
-      var people = new PersonalService(null!, null!, writes, NullLogger<PersonalService>.Instance, permissions,
+      var people = new PersonalService(null!, writes, NullLogger<PersonalService>.Instance, permissions,
         new DataAccessScopeService(permissions, new DataAccessScopeReader(factory)), factory);
       await people.SoftDeleteAsync(operatorId);
     }

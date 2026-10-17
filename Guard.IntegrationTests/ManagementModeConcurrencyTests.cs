@@ -3,6 +3,7 @@ using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -44,12 +45,13 @@ internal static class ManagementModeConcurrencyTests
       registrations.AddSingleton(permissions); registrations.AddSingleton(access);
       registrations.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
       registrations.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
-      registrations.AddScoped<IPersonalService, PersonalService>();
+      registrations.AddScoped<IPersonalEditorService, PersonalService>();
       await using var provider = registrations.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
       await using var scope = provider.CreateAsyncScope();
-      var people = scope.ServiceProvider.GetRequiredService<IPersonalService>();
-      var person = new Personal { LastName = "Mode race", FirstName = scenario };
-      Task<Guid> manual = people.CreateAsync(person, ct);
+      var people = scope.ServiceProvider.GetRequiredService<IPersonalEditorService>();
+      var marker = Guid.NewGuid().ToString("N");
+      var person = new PersonalFieldsDto { LastName = "Mode race", FirstName = scenario, PersonalNumber = marker };
+      Task<Guid> manual = people.CreateFromDtoAsync(new(person), ct);
       Task? changing = null;
       try {
         // The manual operation has already passed its preliminary Local check in both orders.
@@ -64,7 +66,7 @@ internal static class ManagementModeConcurrencyTests
         else await WaitForLockAsync(await settingsProbe.Ready.Task.WaitAsync(ct), changing);
         var pending = await observer.SynchronizationSettings.AsNoTracking().SingleAsync(ct);
         check(pending.Mode == DataManagementMode.Local && pending.Version == before.Version &&
-          !await observer.Personals.AnyAsync(p => p.Id == person.Id, ct),
+          !await observer.Personals.AnyAsync(p => p.PersonalNumber == marker, ct),
           $"{scenario}: independent observer sees no partial settings or employee before commit");
         check(events.Count == 0, $"{scenario}: settings audit is not emitted before commit");
         if (scenario == "mode cancelled") {
@@ -87,7 +89,7 @@ internal static class ManagementModeConcurrencyTests
         else if (scenario == "manual wins") await changing!;
       }
       var after = await observer.SynchronizationSettings.AsNoTracking().SingleAsync(ct);
-      var persisted = await observer.Personals.AsNoTracking().SingleOrDefaultAsync(p => p.Id == person.Id, ct);
+      var persisted = await observer.Personals.AsNoTracking().SingleOrDefaultAsync(p => p.PersonalNumber == marker, ct);
       var switched = scenario is "mode wins" or "manual wins";
       check(after.Mode == (switched ? DataManagementMode.Api : DataManagementMode.Local) &&
         (switched ? after.Version != before.Version && after.ModifiedBy == "test-root" && after.ModifiedAt?.Kind == DateTimeKind.Utc :
@@ -95,13 +97,15 @@ internal static class ManagementModeConcurrencyTests
         $"{scenario}: mode, version and audit describe only committed settings");
       check(scenario == "mode wins" ? persisted == null : persisted != null && persisted.CreatedBy == "test-root" && persisted.InsertedDate.Kind == DateTimeKind.Utc,
         $"{scenario}: employee and captured UTC actor agree with transaction ordering");
+      if (scenario != "mode wins")
+        check(persisted!.Id == await manual, $"{scenario}: DTO create returns the committed employee identifier");
       check(events.Count == (switched ? 1 : 0), $"{scenario}: only committed mode switch emits one settings event");
       await normal.SaveSettingsAsync(DataManagementMode.Local, false, new(2, 0), after.Version, ct);
       // A fresh application operation also proves lock/connection cleanup after rejection or cancellation.
-      var later = new Personal { LastName = "Mode race", FirstName = "After race" };
-      var laterId = await people.CreateAsync(later, ct);
+      var later = new PersonalFieldsDto { LastName = "Mode race", FirstName = "After race" };
+      var laterId = await people.CreateFromDtoAsync(new(later), ct);
       check(await observer.Personals.AnyAsync(p => p.Id == laterId, ct), $"{scenario}: same service can write again with a fresh operation context");
-      await observer.Personals.Where(p => p.Id == person.Id || p.Id == laterId).ExecuteDeleteAsync(ct);
+      await observer.Personals.Where(p => p.PersonalNumber == marker || p.Id == laterId).ExecuteDeleteAsync(ct);
 
       async Task WaitForLockAsync(int pid, Task operation)
       {

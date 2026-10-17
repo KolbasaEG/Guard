@@ -41,7 +41,10 @@ internal static class AuthorizationTests
     services.AddScoped<IUnitOfWork,UnitOfWork>();
     services.AddScoped<IUnitOfWorkFactory,UnitOfWorkFactory>();
     services.AddScoped(typeof(IGenericRepository<>),typeof(Guard.Core.Repositories.GenericRepository<>));
-    services.AddScoped<IPersonalService,PersonalService>();
+    services.AddScoped<IPersonalSearchService,PersonalService>();
+    services.AddScoped<IPersonalDetailsService,PersonalService>();
+    services.AddScoped<IPersonalEditorService,PersonalService>();
+    services.AddScoped<IPersonalStatusService,PersonalService>();
     services.AddScoped(typeof(IBasicRepository<>),typeof(BasicRepository<>));
     services.AddScoped<ISubdivisionService,SubdivisionService>();
     services.AddScoped<IClassifierManagementService,ClassifierService>();
@@ -63,7 +66,10 @@ internal static class AuthorizationTests
     });
     var permissions=scope.ServiceProvider.GetRequiredService<IPermissionService>();
     var scopes=scope.ServiceProvider.GetRequiredService<IDataAccessScopeService>();
-    var personals=scope.ServiceProvider.GetRequiredService<IPersonalService>();
+    var personals=scope.ServiceProvider.GetRequiredService<IPersonalSearchService>();
+    var personalDetails=scope.ServiceProvider.GetRequiredService<IPersonalDetailsService>();
+    var personalEditor=scope.ServiceProvider.GetRequiredService<IPersonalEditorService>();
+    var personalStatuses=scope.ServiceProvider.GetRequiredService<IPersonalStatusService>();
     var reads=scope.ServiceProvider.GetRequiredService<IReadRepository<Personal>>();
     var usersReads=scope.ServiceProvider.GetRequiredService<IReadRepository<ApplicationUser>>();
     await using(var db = await factory.CreateDbContextAsync()) {
@@ -161,7 +167,24 @@ internal static class AuthorizationTests
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>personals.SearchAsync(new(SubdivisionId:foreignId)),check,"foreign filter rejected");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>reads.GetAllAsync(),check,"raw entity read requires full-card permission");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>new ExportAccess(factory, permissions).ForUserAsync("user", new(Guard.Core.Enums.ExportArea.Personals, Guard.Core.Enums.ExportFormat.Excel), default),check,"export needs explicit permission");
-    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>personals.CreateAsync(new(){FirstName="X",LastName="Y"}),check,"read-only employee write denied");
+    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>personalEditor.CreateFromDtoAsync(new(new(){FirstName="X",LastName="Y"})),check,"read-only employee write denied");
+    var readOnlyTarget = list.Items[0];
+    foreach (var write in new Func<Task>[] {
+      () => personalEditor.UpdateFromDtoAsync(new(readOnlyTarget.Id, readOnlyTarget.Version, new() { FirstName = "Denied", LastName = "Edit" })),
+      () => personalStatuses.ArchiveAsync(readOnlyTarget.Id, expectedVersion: readOnlyTarget.Version),
+      () => personalStatuses.BlockAsync(readOnlyTarget.Id, expectedVersion: readOnlyTarget.Version),
+      () => personalStatuses.UnblockAsync(readOnlyTarget.Id, expectedVersion: readOnlyTarget.Version),
+      () => personalStatuses.SoftDeleteAsync(readOnlyTarget.Id, expectedVersion: readOnlyTarget.Version),
+      () => personalStatuses.RestoreAsync(readOnlyTarget.Id, expectedVersion: readOnlyTarget.Version)
+    })
+      await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(write, check,
+        "narrow personal editor/status contracts reject read-only actor before changing employee");
+    await using (var unchanged = await factory.CreateDbContextAsync()) {
+      var row = await unchanged.Personals.AsNoTracking().SingleAsync(p => p.Id == readOnlyTarget.Id);
+      check(row.Version == readOnlyTarget.Version && row.Status == readOnlyTarget.Status &&
+        row.FirstName == readOnlyTarget.FirstName && row.LastName == readOnlyTarget.LastName,
+        "denied personal DTO and status writes preserve fields, status and version");
+    }
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>usersReads.GetAllAsync(),check,"user module read needs permission");
     var handler=new PermissionAuthorizationHandler(permissions, new AuditStub());
     var principal=(await authentication.GetAuthenticationStateAsync()).User;
@@ -186,7 +209,7 @@ internal static class AuthorizationTests
     await PostgresTests.ThrowsAsync<InvalidOperationException>(()=>roles.SaveAsync(editor),check,"stale role version rejected");
     authentication.Id="user";
     check((await reads.GetAllAsync()).Count==2,"full-card entity access remains scoped");
-    var card=await personals.GetDetailsAsync(list.Items[0].Id);
+    var card=await personalDetails.GetDetailsAsync(list.Items[0].Id);
     check(card!=null && typeof(PersonalDetailsDto).GetProperty("PersonalNumber") != null && typeof(PersonalDetailsDto).GetProperty("PasswordHash") == null,"full-card DTO includes employee fields without Identity secrets");
     authentication.Id="root";
     var revoke=await roles.GetAsync(viewerId); revoke.Permissions.Clear(); await roles.SaveAsync(revoke);
@@ -237,7 +260,7 @@ internal static class AuthorizationTests
     authentication.Id="user";
     var foreignPersonalId=Guid.Empty;
     await using(var db=await factory.CreateDbContextAsync()) foreignPersonalId=await db.Personals.Where(p=>p.FirstName=="Other").Select(p=>p.Id).SingleAsync();
-    check(await personals.GetByIdAsync(foreignPersonalId)==null,"foreign full-card lookup returns no record");
+    check(await personalDetails.GetDetailsAsync(foreignPersonalId)==null,"foreign DTO card lookup returns no record");
     var options = await security.GetUserPersonalOptionsAsync();
     check(options.Count == 1 && options.All(p => p.Id != foreignPersonalId), "user creation selector exposes only active unbound employees in allowed subdivisions");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => security.CreateUserAsync(
@@ -260,7 +283,7 @@ internal static class AuthorizationTests
       new() { UserName = "browser-create", Email = "duplicate@example.test", PersonalId = anotherPersonalId }, "TestPassword123!"), check, "Identity rejects duplicate login for a different employee");
     await PostgresTests.ThrowsAsync<InvalidOperationException>(() => security.CreateUserAsync(
       new() { UserName = "weak-password", Email = "weak@example.test", PersonalId = anotherPersonalId }, "x"), check, "weak password is rejected");
-    await PostgresTests.ThrowsAsync<KeyNotFoundException>(()=>personals.UpdateAsync(new(){Id=foreignPersonalId,FirstName="X",LastName="Y"}),check,"foreign employee update denied");
+    await PostgresTests.ThrowsAsync<KeyNotFoundException>(()=>personalEditor.UpdateFromDtoAsync(new(foreignPersonalId,Guid.NewGuid(),new(){FirstName="X",LastName="Y"})),check,"foreign employee update denied");
     await using(var db=await factory.CreateDbContextAsync()) await db.Subdivisions.Where(s=>s.Name=="Own").ExecuteUpdateAsync(s=>s.SetProperty(p=>p.Path,"/"));
     check((await scopes.GetAsync()).SubdivisionIds.Count==0,"malformed root path fails closed");
     check((await personals.SearchAsync(new())).Count==0,"malformed scope cannot expose all records");

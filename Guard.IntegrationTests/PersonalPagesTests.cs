@@ -85,9 +85,9 @@ internal static class PersonalPagesTests
       .AddClasses(classes => classes.Where(type => type == typeof(PersonalService)))
       .AsImplementedInterfaces().WithScopedLifetime());
     check(new[] { typeof(IPersonalSearchService), typeof(IPersonalDetailsService), typeof(IPersonalStatusService),
-      typeof(IPersonalEditorService), typeof(IPersonalService) }.All(contract => registrations.Any(d =>
+      typeof(IPersonalEditorService) }.All(contract => registrations.Any(d =>
         d.ServiceType == contract && d.ImplementationType == typeof(PersonalService) && d.Lifetime == ServiceLifetime.Scoped)),
-      "Scrutor registers narrow personal interfaces and compatible legacy service");
+      "Scrutor registers only narrow personal interfaces");
 
     var lowId = Guid.Parse("00000000-0000-0000-0000-000000000001");
     var highId = Guid.Parse("00000000-0000-0000-0000-000000000002");
@@ -119,7 +119,7 @@ internal static class PersonalPagesTests
       var factory = new Contexts(options);
       await using var provider = new ServiceCollection().BuildServiceProvider();
       var writes = new UnitOfWorkFactory(factory, new PermissionStub(), provider, NullLogger<UnitOfWork>.Instance);
-      var service = new PersonalService(null!, null!, writes, NullLogger<PersonalService>.Instance,
+      var service = new PersonalService(null!, writes, NullLogger<PersonalService>.Instance,
         new PermissionStub(), null!, factory);
       foreach (var year in new[] { 1899, 2101 })
       {
@@ -129,8 +129,8 @@ internal static class PersonalPagesTests
       }
     }
 
-    var proxy = DispatchProxy.Create<IPersonalService, ServiceProxy>();
-    var modeProxy = DispatchProxy.Create<IPersonalService, ServiceProxy>();
+    var proxy = DispatchProxy.Create<IPersonalSearchService, ServiceProxy>();
+    var modeProxy = DispatchProxy.Create<IPersonalSearchService, ServiceProxy>();
     PersonalSearchRequest? requestedMode = null;
     ((ServiceProxy)modeProxy).Handle = (method, args) => {
       requestedMode = (PersonalSearchRequest)args[0]!;
@@ -152,7 +152,7 @@ internal static class PersonalPagesTests
     var tokens = new List<CancellationToken>();
     fake.Handle = (method, args) =>
     {
-      if (method.Name != nameof(IPersonalService.SearchAsync)) throw new NotSupportedException(method.Name);
+      if (method.Name != nameof(IPersonalSearchService.SearchAsync)) throw new NotSupportedException(method.Name);
       var completion = new TaskCompletionSource<PersonalSearchResult>(TaskCreationOptions.RunContinuationsAsynchronously);
       pending.Add(completion);
       tokens.Add((CancellationToken)args[1]!);
@@ -231,18 +231,20 @@ internal static class PersonalPagesTests
           "nested IP refresh does not accept version covering another editor's field changes");
       }
     }
-    fake.Handle = (method, _) => method.Name == nameof(IPersonalService.GetDetailsAsync)
+    var detailsProxy = DispatchProxy.Create<IPersonalDetailsService, ServiceProxy>();
+    var detailsFake = (ServiceProxy)detailsProxy;
+    detailsFake.Handle = (method, _) => method.Name == nameof(IPersonalDetailsService.GetDetailsAsync)
       ? Task.FromResult<PersonalDetailsDto?>(null) : throw new NotSupportedException();
-    using (var details = new DetailsHarness(proxy, lowId))
+    using (var details = new DetailsHarness(detailsProxy, lowId))
     {
       await details.Initialize();
       check(details.Error != null && !details.Busy, "unavailable personal card remains with readable error");
     }
     check(Enum.GetValues<Status>().All(status => !PersonalPages.Details.StatusName(status).Contains(status.ToString())),
       "personal lifecycle names are localized");
-    fake.Handle = (method, _) => method.Name switch
+    detailsFake.Handle = (method, _) => method.Name switch
     {
-      nameof(IPersonalService.GetDetailsAsync) => Task.FromResult<PersonalDetailsDto?>(new()
+      nameof(IPersonalDetailsService.GetDetailsAsync) => Task.FromResult<PersonalDetailsDto?>(new()
       {
         Id = lowId, FirstName = "Иван", LastName = "Тестовый", Status = Status.Blocked,
         PersonalNumber = "card-123", CreatedBy = "audit-only", UserName = "account-test", IpAddresses = ["192.0.2.1"]
@@ -262,7 +264,7 @@ internal static class PersonalPagesTests
     await using var renderServices = new ServiceCollection().AddLogging()
       .AddSingleton<IDirectoryManagementService, LocalManagement>()
       .AddSingleton(editorProxy).AddSingleton<IPermissionService, PermissionStub>()
-      .AddSingleton(proxy).AddSingleton<IPersonalDetailsService>(proxy).AddSingleton<NotificationService>().AddScoped<DialogService>()
+      .AddSingleton(proxy).AddSingleton(detailsProxy).AddSingleton<NotificationService>().AddScoped<DialogService>()
       .AddSingleton<IJSRuntime, NoJs>().AddSingleton<NavigationManager, TestNavigation>().BuildServiceProvider();
     await using var renderer = new HtmlRenderer(renderServices, renderServices.GetRequiredService<ILoggerFactory>());
     await renderer.Dispatcher.InvokeAsync(async () =>
@@ -369,10 +371,10 @@ internal static class PersonalPagesTests
 
   private sealed class IndexHarness : PersonalPages.Index
   {
-    public IndexHarness(IPersonalService service)
+    public IndexHarness(IPersonalSearchService service)
     {
       Service = service;
-      StatusService = service;
+      StatusService = DispatchProxy.Create<IPersonalStatusService, ServiceProxy>();
       PermissionService = new PermissionStub();
       Logger = NullLogger<PersonalPages.Index>.Instance;
       Notifications = new();
@@ -426,7 +428,7 @@ internal static class PersonalPagesTests
 
   private sealed class DetailsHarness : PersonalPages.Details
   {
-    public DetailsHarness(IPersonalService service, Guid id)
+    public DetailsHarness(IPersonalDetailsService service, Guid id)
     {
       Service = service;
       Logger = NullLogger<PersonalPages.Details>.Instance;

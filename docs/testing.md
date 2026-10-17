@@ -36,7 +36,7 @@ IntegrationTests сохраняет режимы `--postgres`, `--browser`, `--b
 
 ## Проверка разделения
 
-После [удаления legacy-контракта классификаторов](architecture-classifier-legacy-cleanup.md) текущий прогон: **4 711 unit + 20 863 integration = 25 574** с временной PostgreSQL-БД. Проверены DTO-операции записи, отказы в доступе и конфликты версий; проверки границ и DI учитывают прямые узкие контракты.
+После [удаления legacy-контракта сотрудников](architecture-personal-legacy-cleanup.md) текущий прогон: **4 711 unit + 20 902 integration = 25 613** с временной PostgreSQL-БД. Проверены DTO-операции и статусы, отказы в доступе, гонки режима Local/API, конфликты версий и IP-назначения; проверки границ и DI учитывают четыре узких контракта сотрудников.
 
 После переноса [ApiDiagnosticAnalyzer](architecture-api-diagnostic-analysis.md) предыдущий прогон: **4 237 unit + 20 846 integration = 25 083** с временной PostgreSQL-БД. 11 прежних проверок перенесены в UnitTests, добавлены 61 unit-проверка и одна проверка границ сборок.
 

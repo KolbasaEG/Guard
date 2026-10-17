@@ -158,7 +158,9 @@ internal static class ServiceRegistrationTests
         "resolved typed clients execute named HttpClient configuration with 60 second timeout");
       foreach (var (contract, implementation) in new[] {
           (typeof(ILogSearchService), typeof(LogService)), (typeof(IRoleSearchService), typeof(ApplicationRoleService)),
-          (typeof(IClassifierManagementService), typeof(ClassifierService)) }) {
+          (typeof(IClassifierManagementService), typeof(ClassifierService)),
+          (typeof(IPersonalSearchService), typeof(PersonalService)), (typeof(IPersonalDetailsService), typeof(PersonalService)),
+          (typeof(IPersonalEditorService), typeof(PersonalService)), (typeof(IPersonalStatusService), typeof(PersonalService)) }) {
         check(services.Count(d => d.ServiceType == contract) == 1 &&
           services.Single(d => d.ServiceType == contract).ImplementationType == implementation &&
           services.Single(d => d.ServiceType == contract).Lifetime == ServiceLifetime.Scoped,

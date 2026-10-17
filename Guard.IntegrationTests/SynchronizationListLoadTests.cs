@@ -14,7 +14,7 @@ internal static class SynchronizationListLoadTests
     var time = new BrowserTimeService(new Js()); await time.InitializeAsync();
     var classifiers = DispatchProxy.Create<IClassifierManagementService, QueryProxy>();
     var subdivisions = DispatchProxy.Create<ISubdivisionService, QueryProxy>();
-    var personals = DispatchProxy.Create<IPersonalService, QueryProxy>();
+    var personals = DispatchProxy.Create<IPersonalSearchService, QueryProxy>();
     var pages = new (string Name, Page Page, QueryProxy Query)[] {
       ("classifiers", new ClassifiersPage(classifiers, time), (QueryProxy)(object)classifiers),
       ("subdivisions", new SubdivisionsPage(subdivisions, time), (QueryProxy)(object)subdivisions),
@@ -92,7 +92,7 @@ internal static class SynchronizationListLoadTests
   }
   private sealed class PersonalsPage : Guard.Components.Pages.Personals.Index, Page
   {
-    public PersonalsPage(IPersonalService service)
+    public PersonalsPage(IPersonalSearchService service)
     { Service = service; PermissionService = new PermissionsStub(); Notifications = new(); Logger = NullLogger<Guard.Components.Pages.Personals.Index>.Instance; Access = new("root", true, []); }
     public Task<bool> Reload() => ReloadForSynchronizationAsync();
     public Task LoadOther() => LoadData(new() { Skip = 0, Top = 20 });

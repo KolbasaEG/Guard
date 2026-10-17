@@ -21,12 +21,16 @@ internal static class RefactorIntegrationTests
     registrations.AddScoped<IDataAccessScopeService, RootScope>();
     registrations.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
     registrations.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
-    registrations.AddScoped<IPersonalService, PersonalService>();
+    registrations.AddScoped<IPersonalEditorService, PersonalService>();
+    registrations.AddScoped<IPersonalStatusService, PersonalService>();
+    registrations.AddScoped<IPersonalDetailsService, PersonalService>();
     registrations.AddScoped<ISubdivisionService, SubdivisionService>();
     await using var provider = registrations.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     await using var scope = provider.CreateAsyncScope();
     var writes = scope.ServiceProvider.GetRequiredService<IUnitOfWorkFactory>();
-    var people = scope.ServiceProvider.GetRequiredService<IPersonalService>();
+    var people = scope.ServiceProvider.GetRequiredService<IPersonalEditorService>();
+    var statuses = scope.ServiceProvider.GetRequiredService<IPersonalStatusService>();
+    var details = scope.ServiceProvider.GetRequiredService<IPersonalDetailsService>();
     var subdivisions = scope.ServiceProvider.GetRequiredService<ISubdivisionService>();
     var parent = new Subdivision { Name = "Refactor parent", SubdivisionId = 900001, Path = "/900001/", CreatedBy = "seed" };
     var child = new Subdivision { Name = "Refactor child", SubdivisionId = 900002, Path = "/900001/900002/", ParentId = parent.Id, CreatedBy = "seed" };
@@ -62,10 +66,10 @@ internal static class RefactorIntegrationTests
       check(result.ParentId == null && result.Path == $"/{result.SubdivisionId}/",
         "subdivision DTO move preserves agreement of parent and materialized path");
     }
-    var original = await people.GetByIdAsync(personal.Id) ?? throw new Exception("missing test employee");
-    await people.UpdateFromDtoAsync(new(original.Id, original.Version, EntityWriteMapping.From(original) with { FirstName = "Changed" }));
+    var original = await people.GetEditorAsync(personal.Id) ?? throw new Exception("missing test employee");
+    await people.UpdateFromDtoAsync(new(original.Id, original.Version, original.ToFields() with { FirstName = "Changed" }));
     await PostgresTests.ThrowsAsync<EntityConflictException>(() => people.UpdateFromDtoAsync(
-      new(original.Id, original.Version, EntityWriteMapping.From(original))), check, "stale command cannot overwrite newer employee fields");
+      new(original.Id, original.Version, original.ToFields())), check, "stale command cannot overwrite newer employee fields");
     await using (var first = await writes.CreateAsync())
     await using (var second = await writes.CreateAsync()) {
       var a = (await first.BaseEntityRepository<Personal>().GetByIdAsync(personal.Id))!;
@@ -88,10 +92,10 @@ internal static class RefactorIntegrationTests
       check(result.FirstName == "Winner" && result.CreatedBy == "seed" && result.ModifiedBy == "test-root",
         "winning update preserves creation audit and records current actor");
     }
-    await people.ArchiveAsync(personal.Id); await people.BlockAsync(personal.Id);
-    await PostgresTests.ThrowsAsync<EntityRuleException>(() => people.RestoreAsync(personal.Id), check, "archived blocked employee must be unblocked before restore");
-    await people.UnblockAsync(personal.Id); await people.SoftDeleteAsync(personal.Id); await people.RestoreAsync(personal.Id);
-    check((await people.GetByIdAsync(personal.Id))!.Status == Status.Modified, "Root restores deleted employee through server operation");
+    await statuses.ArchiveAsync(personal.Id); await statuses.BlockAsync(personal.Id);
+    await PostgresTests.ThrowsAsync<EntityRuleException>(() => statuses.RestoreAsync(personal.Id), check, "archived blocked employee must be unblocked before restore");
+    await statuses.UnblockAsync(personal.Id); await statuses.SoftDeleteAsync(personal.Id); await statuses.RestoreAsync(personal.Id);
+    check((await details.GetDetailsAsync(personal.Id))!.Status == Status.Modified, "Root restores deleted employee through server operation");
     await using (var cleanup = await factory.CreateDbContextAsync()) {
       cleanup.Personals.Remove((await cleanup.Personals.FindAsync(personal.Id))!);
       cleanup.Subdivisions.Remove((await cleanup.Subdivisions.FindAsync(child.Id))!);

@@ -3,15 +3,13 @@ using Guard.Core.Contexts;
 using Guard.Core.Services.DTOs;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
-using Guard.Core.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services;
 
-public class PersonalService : IPersonalService, IPersonalEditorService
+public class PersonalService : IPersonalSearchService, IPersonalDetailsService, IPersonalStatusService, IPersonalEditorService
 {
   private readonly IReadRepository<Personal> _readPersonalRepository;
-  private readonly IReadRepository<Subdivision> _readSubdivisionRepository;
   private readonly IUnitOfWorkFactory _writes;
   private readonly ILogger<PersonalService> _logger;
   private readonly IDbContextFactory<ApplicationDbContext> _factory;
@@ -20,11 +18,10 @@ public class PersonalService : IPersonalService, IPersonalEditorService
 
   public PersonalService(
       IReadRepository<Personal> readPersonalRepository,
-      IReadRepository<Subdivision> readSubdivisionRepository, IUnitOfWorkFactory unitOfWork,
+      IUnitOfWorkFactory unitOfWork,
       ILogger<PersonalService> logger, IPermissionService permissions, IDataAccessScopeService scopes, IDbContextFactory<ApplicationDbContext> factory)
   {
     _readPersonalRepository = readPersonalRepository;
-    _readSubdivisionRepository = readSubdivisionRepository;
 
     _writes = unitOfWork;
     _logger = logger;
@@ -32,17 +29,6 @@ public class PersonalService : IPersonalService, IPersonalEditorService
     _permissions = permissions;
     _scopes = scopes;
   }
-  public async Task<IReadOnlyList<Subdivision>> GetAllActiveSubdivisionsAsync(CancellationToken ct = default)
-  {
-    await _permissions.RequireAsync(Permissions.Personals.Write, ct);
-    var scope = await _scopes.GetAsync(ct);
-    await using var db = await _factory.CreateDbContextAsync(ct);
-    return await db.Set<Subdivision>().AsNoTracking()
-      .Where(s => (scope.IsRoot || scope.SubdivisionIds.Contains(s.Id)) &&
-        (s.Status == Status.Inserted || s.Status == Status.Modified))
-      .OrderBy(s => s.Name).ToListAsync(ct);
-  }
-
   public async Task<PersonalEditorDto?> GetEditorAsync(Guid id, CancellationToken ct = default)
   {
     var actor = await SearchAccess.RequireAsync(_permissions, Permissions.Personals.Write, ct);
@@ -98,65 +84,9 @@ public class PersonalService : IPersonalService, IPersonalEditorService
     ct.ThrowIfCancellationRequested();
     return result;
   }
-  // ==================== Read (Изолированный IReadRepository) ====================
-
-  public async Task<TResult> QueryPersonalsAsync<TResult>(
-      Func<IQueryable<Personal>, Task<TResult>> query,
-      CancellationToken ct = default)
-  {
-    return await _readPersonalRepository.QueryAsync(query, ct);
-  }
-
-  public async Task<Personal?> GetByIdAsync(Guid id, CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос персонала по ID: {PersonalId}", id);
-    return await _readPersonalRepository.QueryAsync(q => q.Include(p => p.Subdivision)
-      .Include(p => p.PersonnelCategory).Include(p => p.SpecialRank).Include(p => p.Position)
-      .Include(p => p.WorkerCategory).Include(p => p.StatusClassifier).Include(p => p.IpAddresses)
-      .SingleOrDefaultAsync(p => p.Id == id, ct), ct);
-  }
-
-  public async Task<IReadOnlyList<Personal>> GetAllActiveAsync(CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос всех активных сотрудников");
-    return await _readPersonalRepository.QueryAsync(query =>
-        query.Where(p => p.Status == Status.Inserted || p.Status == Status.Modified)
-             .OrderBy(p => p.LastName)
-             .ThenBy(p => p.FirstName)
-             .ToListAsync(ct),
-        ct);
-  }
-
-  public async Task<IReadOnlyList<Personal>> GetBySubdivisionIdAsync(Guid subdivisionId, CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос персонала для подразделения с ID: {SubdivisionId}", subdivisionId);
-    return await _readPersonalRepository.QueryAsync(query =>
-        query.Where(p => p.SubdivisionId == subdivisionId && p.Status != Status.Deleted)
-             .OrderBy(p => p.LastName)
-             .ThenBy(p => p.FirstName)
-             .ToListAsync(ct),
-        ct);
-  }
-
-  public async Task<IReadOnlyList<Personal>> GetBySubdivisionPathAsync(
-      string targetPath,
-      SubdivisionHierarchyMode mode = SubdivisionHierarchyMode.IncludeChildren,
-      CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос персонала для пути подразделения '{TargetPath}' с режимом {HierarchyMode}", targetPath, mode);
-    return await _readPersonalRepository.QueryAsync(query =>
-        query.Where(p => p.Status == Status.Inserted || p.Status == Status.Modified)
-             .Where(p => IsValidPath(targetPath))
-             .FilterBySubdivision(targetPath, mode)
-             .OrderBy(p => p.LastName)
-             .ThenBy(p => p.FirstName)
-             .ToListAsync(ct),
-        ct);
-  }
-
   // ==================== Write (IUnitOfWork & ChangeTracker) ====================
 
-  public async Task<Guid> CreateAsync(Personal Personal, CancellationToken ct = default)
+  private async Task<Guid> CreateAsync(Personal Personal, CancellationToken ct = default)
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
@@ -179,7 +109,7 @@ public class PersonalService : IPersonalService, IPersonalEditorService
     return Personal.Id;
   }
 
-  public async Task UpdateAsync(Personal Personal, CancellationToken ct = default)
+  private async Task UpdateAsync(Personal Personal, CancellationToken ct = default)
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Personals.Write, ct);
@@ -307,10 +237,6 @@ public class PersonalService : IPersonalService, IPersonalEditorService
   private static IQueryable<PersonalListItemDto> ProjectList(IQueryable<Personal> query) =>
     query.Select(p => new PersonalListItemDto(p.Id, p.LastName, p.FirstName, p.MiddleName, p.FullName,
         p.Subdivision != null ? p.Subdivision.Name : null, p.Status, p.Version));
-
-  private static bool IsValidPath(string? path) => path != null && path.StartsWith('/') && path.EndsWith('/') &&
-    path.Split('/', StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } segments &&
-    segments.All(s => long.TryParse(s, out var id) && id > 0);
 
   public async Task<PersonalSearchResult> SearchAsync(PersonalSearchRequest request, CancellationToken ct = default)
   {

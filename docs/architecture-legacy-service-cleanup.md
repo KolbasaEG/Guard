@@ -1,6 +1,6 @@
 # Удаление невостребованных контрактов ролей и логов
 
-Актуальное продолжение: [IClassifierService также удалён](architecture-classifier-legacy-cleanup.md); в Infrastructure осталось четыре legacy-интерфейса. Следующий участок — IPersonalService. Ниже сохранён отчёт о предыдущем срезе `268c5e0`.
+Актуальное продолжение: удалены [IClassifierService](architecture-classifier-legacy-cleanup.md) и [IPersonalService](architecture-personal-legacy-cleanup.md); в Infrastructure осталось три legacy-интерфейса. Следующий участок — ISubdivisionService. Ниже сохранён отчёт о предыдущем срезе `268c5e0`.
 
 Ветка: `codex/architecture-ip-search`. Семь инфраструктурных legacy-контрактов проверены поиском обращений в производственном коде, тестах и регистрации DI. Два удалены; пять остаются для следующего участка. Этапы 1–2 целиком не закрыты.
 

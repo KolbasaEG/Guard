@@ -28,7 +28,7 @@ internal static class PersonalEditorIntegrationTests
     {
       var permissions = new Access();
       var scopes = new Scope(own.Id, permissions);
-      var service = new PersonalService(new ReadRepository<Personal>(factory, permissions, scopes), null!, null!,
+      var service = new PersonalService(new ReadRepository<Personal>(factory, permissions, scopes), null!,
         NullLogger<PersonalService>.Instance, permissions, scopes, factory);
       var result = await service.GetEditorAsync(person.Id);
       check(result != null && result.Id == person.Id && result.Version == person.Version &&

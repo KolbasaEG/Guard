@@ -41,7 +41,7 @@ internal static class PersonalIdentityBoundaryTests
     {
       var access = new Access();
       var scopes = new Scope(own.Id, access);
-      var service = new PersonalService(new ReadRepository<Personal>(factory, access, scopes), null!, null!,
+      var service = new PersonalService(new ReadRepository<Personal>(factory, access, scopes), null!,
         NullLogger<PersonalService>.Instance, access, scopes, factory);
       var card = await service.GetDetailsAsync(employeeRow.Id);
       check(card?.UserId == account.Id && card.UserName == account.UserName && card.FirstName == employeeRow.FirstName,
