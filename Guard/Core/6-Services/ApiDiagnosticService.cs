@@ -7,11 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services;
 
-public interface IApiDiagnosticService
-{
-  Task<ApiDiagnosticResult> RunAsync(DateOnly updatedSince, CancellationToken ct = default, IProgress<string>? progress = null);
-}
-
 public sealed class ApiDiagnosticService(IDbContextFactory<ApplicationDbContext> factory,
   IPermissionService permissions, IDirectoryApiClient client, ApiCredentialProtector credentials,
   ILogger<ApiDiagnosticService> logger) : IApiDiagnosticService

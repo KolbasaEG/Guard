@@ -56,6 +56,7 @@ await OwnPasswordCompletionTests.RunAsync(Check);
 await OwnPasswordUiCompletionTests.RunAsync(Check);
 await LocalAccountBoundaryTests.RunAsync(Check);
 ManagementBoundaryTests.Run(Check);
+ApplicationContractBoundaryTests.Run(Check);
 await DialogInfoRenderingTests.RunAsync(Check);
 await ExportTests.RunAsync(Check);
 await ExportBoundaryTests.RunAsync(Check);

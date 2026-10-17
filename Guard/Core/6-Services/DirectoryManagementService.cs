@@ -4,11 +4,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services;
 
-public interface IDirectoryManagementService
-{
-  Task<bool> IsApiManagedAsync(CancellationToken ct = default);
-}
-
 public sealed class DirectoryManagementService(IDbContextFactory<ApplicationDbContext> factory) : IDirectoryManagementService
 {
   public async Task<bool> IsApiManagedAsync(CancellationToken ct = default)
