@@ -39,7 +39,7 @@ public static class ExportEndpoints
         db.ExportDeliveryAttempts.Add(new() { JobId = id, StartedAtUtc = DateTimeOffset.UtcNow });
         await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); claimed = true;
       }
-      audit.LogIdentityEvent(AuditEventType.ExportDeliveryStarted, author, job.ClientIp, $"Export {id}");
+      DeliverAudit(AuditEventType.ExportDeliveryStarted, job.ClientIp);
       http.Response.ContentType = file.ContentType; http.Response.ContentLength = file.Size;
       http.Response.Headers.CacheControl = "no-store, private";
       http.Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -49,7 +49,7 @@ public static class ExportEndpoints
     }
     catch (Exception ex) {
       logger.LogWarning(ex, "Передача выгрузки {ExportId} не завершена", id);
-      audit.LogIdentityEvent(ex is UnauthorizedAccessException ? AuditEventType.AccessDenied : AuditEventType.ExportFailed, author, details: $"Export {id}");
+      DeliverAudit(ex is UnauthorizedAccessException ? AuditEventType.AccessDenied : AuditEventType.ExportFailed);
       if (!http.Response.HasStarted && !ct.IsCancellationRequested) {
         http.Response.Clear(); http.Response.StatusCode = ex is UnauthorizedAccessException or AntiforgeryValidationException ? 403 : ex is KeyNotFoundException ? 404 : 409;
         http.Response.Headers.CacheControl = "no-store";
@@ -68,10 +68,18 @@ public static class ExportEndpoints
             .SetProperty(j => j.State, succeeded ? ExportJobState.Delivered : ExportJobState.Failed)
             .SetProperty(j => j.Error, succeeded ? null : "Передача прервана. Создайте новую выгрузку."), finish.Token);
           await transaction.CommitAsync(finish.Token);
-          audit.LogIdentityEvent(succeeded ? AuditEventType.ExportDeliveryCompleted : AuditEventType.ExportFailed, author, details: $"Export {id}");
+          DeliverAudit(succeeded ? AuditEventType.ExportDeliveryCompleted : AuditEventType.ExportFailed);
         }
       } catch (Exception ex) { logger.LogError(ex, "Не удалось записать результат передачи {ExportId}", id); }
       finally { if (locked) storage.ArchiveGate.Release(); }
+    }
+
+    void DeliverAudit(AuditEventType eventType, string? ip = null)
+    {
+      try { audit.LogIdentityEvent(eventType, author, ip, $"Export {id}"); }
+      catch (Exception ex) {
+        logger.LogError(ex, "Событие аудита {EventType} для передачи выгрузки {ExportId} не доставлено", eventType, id);
+      }
     }
   }
 }

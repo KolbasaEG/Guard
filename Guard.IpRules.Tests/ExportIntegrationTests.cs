@@ -23,7 +23,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
-internal static class ExportIntegrationTests
+internal static partial class ExportIntegrationTests
 {
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory, Action<bool, string> check)
   {
@@ -92,6 +92,7 @@ internal static class ExportIntegrationTests
       await processor.RunNextAsync(default);
       check((await service.GetAsync(apiJob)).State == ExportJobState.Ready, "read-only API mode permits authorized export");
       await CheckHttpDeliveryAsync(factory, policies, storage, opts, apiJob, user, check);
+      await CheckHttpAuditCompletionAsync(factory, policies, storage, opts, service, processor, user, root, check);
       var filteredId = await service.CreateAsync(new(ExportArea.Personals, ExportFormat.Word, IncludeChildren: true, PersonalFilter: new("FirstName", "Equals", "EXPORT_CHILD")));
       await processor.RunNextAsync(default); check((await service.GetAsync(filteredId)).RowCount == 1, "applied personal filter narrows complete export");
       auth.UserId = root.Id;
