@@ -14,7 +14,8 @@ using W = DocumentFormat.OpenXml.Wordprocessing;
 namespace Guard.Core.Services.Exports;
 
 public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> contexts, IPermissionService permissions,
-  ExportAccess access, ExportStorage storage, IOptions<ExportOptions> options, IAuditService audit, IHttpContextAccessor http) : IDataExportService
+  ExportAccess access, ExportStorage storage, IOptions<ExportOptions> options, IAuditService audit, IHttpContextAccessor http,
+  ILogger<DataExportService> logger) : IDataExportService
 {
   public static void Validate(ExportRequest request)
   {
@@ -49,7 +50,7 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
       ExpiresAtUtc = DateTimeOffset.UtcNow.AddYears(retention?.Years ?? 3),
       ClientIp = http.HttpContext == null ? null : ClientIpAddress.Get(http.HttpContext) };
     db.ExportJobs.Add(job); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-    audit.LogIdentityEvent(AuditEventType.ExportRequested, actor.UserId, job.ClientIp, $"Export {job.Id}; {job.Area}; {job.Format}");
+    CompleteCommittedCommand(AuditEventType.ExportRequested, actor.UserId, job.Id.ToString(), $"Export {job.Id}; {job.Area}; {job.Format}", job.ClientIp);
     return job.Id;
   }
   public async Task<ExportJobDto> GetAsync(Guid id, CancellationToken ct = default)
@@ -66,7 +67,7 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
       (j.State == ExportJobState.Queued || j.State == ExportJobState.Processing || j.State == ExportJobState.Ready))
       .ExecuteUpdateAsync(u => u.SetProperty(j => j.CancelRequested, true), ct);
     if (changed == 0) throw new EntityRuleException("Выгрузку уже нельзя отменить.");
-    audit.LogIdentityEvent(AuditEventType.ExportCancelled, actor.UserId, details: $"Export {id}");
+    CompleteCommittedCommand(AuditEventType.ExportCancelled, actor.UserId, id.ToString(), $"Export {id}");
   }
   public async Task<IReadOnlyList<ExportJobDto>> GetActiveAsync(ExportArea area, CancellationToken ct = default)
   {
@@ -122,7 +123,16 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
     if (setting == null) { setting = new(); db.ExportRetentionSettings.Add(setting); }
     else if (setting.Version != version) throw new DbUpdateConcurrencyException("Настройка уже изменена.");
     setting.Years = years; setting.Version = Guid.NewGuid(); setting.ModifiedBy = actor; setting.ModifiedAtUtc = DateTimeOffset.UtcNow;
-    await db.SaveChangesAsync(ct); audit.LogIdentityEvent(AuditEventType.ExportRetentionChanged, actor, details: $"Years {years}");
+    await db.SaveChangesAsync(ct);
+    CompleteCommittedCommand(AuditEventType.ExportRetentionChanged, actor, "1", $"Years {years}");
+  }
+  private void CompleteCommittedCommand(AuditEventType eventType, string actor, string targetId, string details, string? ip = null)
+  {
+    // Only confirmed writes reach this point; failed audit delivery cannot undo them.
+    try { audit.LogIdentityEvent(eventType, actor, ip, details); }
+    catch (Exception ex) {
+      logger.LogError(ex, "Команда экспорта сохранена, но событие аудита {EventType} для {TargetId} не доставлено", eventType, targetId);
+    }
   }
   public async Task<ExportPreview> PreviewAsync(Guid id, int part = 1, int skip = 0, CancellationToken ct = default)
   {

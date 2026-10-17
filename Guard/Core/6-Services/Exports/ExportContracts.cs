@@ -58,13 +58,16 @@ public sealed class ExportOptions
 
 public interface IDataExportService
 {
+  /// <summary>Возвращает ID после подтверждённого сохранения; сбой последующей доставки аудита логируется.</summary>
   Task<Guid> CreateAsync(ExportRequest request, CancellationToken ct = default);
   Task<ExportJobDto> GetAsync(Guid id, CancellationToken ct = default);
   Task<IReadOnlyList<ExportJobDto>> GetActiveAsync(ExportArea area, CancellationToken ct = default);
+  /// <summary>Подтверждает сохранённый запрос отмены; сбой последующего аудита не отменяет результат.</summary>
   Task CancelAsync(Guid id, CancellationToken ct = default);
   Task<ExportArchivePage> SearchArchiveAsync(ExportArchiveRequest request, CancellationToken ct = default);
   Task<ExportPreview> PreviewAsync(Guid id, int part = 1, int skip = 0, CancellationToken ct = default);
   Task<ExportArchiveDetails> GetArchiveDetailsAsync(Guid id, CancellationToken ct = default);
   Task<ExportRetentionDto> GetRetentionAsync(CancellationToken ct = default);
+  /// <summary>Подтверждает сохранение настройки; ошибки доступа, версии и БД выходят вызывающему коду.</summary>
   Task SaveRetentionAsync(int years, Guid version, CancellationToken ct = default);
 }

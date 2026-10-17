@@ -62,9 +62,11 @@ internal static class ExportIntegrationTests
     var policies = new AccountPolicyService(factory, provider, new AuditStub(), new AccessChangeNotifier(NullLogger<AccessChangeNotifier>.Instance));
     var permissions = new PermissionService(new Guard.Components.Account.CurrentSessionAdapter(auth, http), factory, new AuditStub(), policies);
     var access = new ExportAccess(factory, permissions);
-    var service = new DataExportService(factory, permissions, access, storage, opts, new AuditStub(), http);
+    var service = new DataExportService(factory, permissions, access, storage, opts, new AuditStub(), http, NullLogger<DataExportService>.Instance);
     var processor = new ExportProcessor(factory, access, new ExportSnapshot(factory, storage), new ExportDocumentWriter(storage, opts), storage, new AuditStub(), opts, NullLogger<ExportProcessor>.Instance);
     try {
+      await ExportCommandCompletionTests.RunAsync(factory, permissions, access, storage, opts, http,
+        id => auth.UserId = id, user.Id, root.Id, () => processor.CleanupAsync(default), check);
       await ExportCompletionTests.RunAsync(factory, service, access, storage, opts, user.Id, check);
       foreach (var area in Enum.GetValues<ExportArea>()) foreach (var format in Enum.GetValues<ExportFormat>()) {
         var id = await service.CreateAsync(new(area, format, IncludeChildren: true));
