@@ -22,7 +22,7 @@ PersonalService, SubdivisionService и IpAddressService продолжают в�
 | Сессия и доступ | ICurrentSession и три сервиса решений в Application; EF-чтение за узкими портами. Web получает доверенный principal |
 | Статусы | Оба класса в Application; независимая матрица в UnitTests. Этот участок завершён |
 | IP-полномочия | Перенесён в Application с явной DI-регистрацией и проверками отказов/отмены; см. architecture-ip-management-access.md |
-| Валидация и маппинг | EntityInputValidation/EntityWriteMapping перенесены в Application и остаются internal; см. architecture-entity-input-rules.md. ApiSnapshotValidator также перенесён без изменения правил; см. architecture-api-snapshot-validation.md |
+| Валидация и маппинг | EntityInputValidation/EntityWriteMapping перенесены в Application и остаются internal; см. architecture-entity-input-rules.md. ApiSnapshotValidator и ApiDiagnosticAnalyzer также перенесены без изменения правил; см. architecture-api-snapshot-validation.md и architecture-api-diagnostic-analysis.md |
 | Политика аккаунтов | AccountPolicyRules в Application использует независимый снимок AccountPolicyUserState. Повторное чтение и блокировка остаются в Infrastructure; см. architecture-account-policy-rules.md |
 | Дерево, Identity, синхронизация | Транзакции и locks остаются специализированными адаптерами Infrastructure; не дробить их на вызовы репозиториев из Application |
 | Экспорт, HTTP, workers | DTO независимы; файловое хранение, OpenXml, HTTP и часть оркестрации в Infrastructure. Расположение транспортных адаптеров/BackgroundService отличается от целевой карты и требует отдельной поставки |

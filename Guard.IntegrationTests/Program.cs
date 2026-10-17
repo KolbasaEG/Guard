@@ -41,7 +41,6 @@ await ExportTests.RunAsync(Check);
 await ExportBoundaryTests.RunAsync(Check);
 await ApiSynchronizationTests.RunAsync(Check);
 await ApiDependencyHttpTests.RunAsync(Check);
-ApiDiagnosticTests.Run(Check);
 ApiHeadSubdivisionTests.Run(Check);
 await ApiDiagnosticTests.CheckAccessAsync(Check);
 await SynchronizationUiTests.RunAsync(Check);
