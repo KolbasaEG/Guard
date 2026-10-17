@@ -29,11 +29,12 @@
 
 ```powershell
 dotnet build Guard.slnx
-dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj --no-build
-dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj --no-build -- --postgres Guard/appsettings.json
+dotnet run --project Guard.UnitTests/Guard.UnitTests.csproj --no-build
+dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj --no-build
+dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj --no-build -- --postgres Guard/appsettings.json
 ```
 
-Тестовый проект — исполняемый набор проверок без отдельного test framework; запускайте его через `dotnet run`, а не `dotnet test`. Ошибка проверки завершает процесс с ненулевым кодом.
+Оба тестовых проекта — исполняемые наборы проверок без отдельного test framework; запускайте их через `dotnet run`, а не `dotnet test`. Ошибка проверки завершает процесс с ненулевым кодом. Общий запуск: `./scripts/Test-Guard.ps1 -Mode Postgres`. Разделение и все режимы описаны в [руководстве](testing.md).
 
 Режим `--postgres` читает строку подключения из указанного файла без вывода секретов. Он допускает только localhost, создаёт отдельную БД `guard_ip_test_<uuid>`, применяет модель через `EnsureCreated` и удаляет только эту БД в `finally`. Учётной записи нужны права создания БД. Рабочие базы и их данные не изменяются. Проверяются серверная валидация, права, назначения, статусы, IPv6/CIDR, конкурентные дубликаты и отказ выдачи cookie.
 

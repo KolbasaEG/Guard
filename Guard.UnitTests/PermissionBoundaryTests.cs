@@ -64,7 +64,7 @@ internal static class PermissionBoundaryTests
     try { await service.HasAsync(Permissions.Personals.Read, token); check(false, "cancellation propagates"); }
     catch (OperationCanceledException error) { check(error.CancellationToken == token, "Has does not hide cancellation"); }
 
-    async Task Denied(Func<Task> action, string name) => await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(action, check, name);
+    async Task Denied(Func<Task> action, string name) => await TestAssertions.ThrowsAsync<UnauthorizedAccessException>(action, check, name);
   }
 
   private sealed class Session : ICurrentSession

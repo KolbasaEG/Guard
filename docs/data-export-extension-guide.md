@@ -61,7 +61,7 @@ worker, а не в момент нажатия кнопки. За время о�
 | `Guard/Core/6-Services/Exports/ExportSnapshot.cs` | Выборка ID подразделений и проекция строк в DTO |
 | `Guard/Core/6-Services/Exports/ExportProcessor.cs` | Русские названия новых полей в описании условий |
 | `Guard/Components/Pages/<область>/Index.razor(.cs)` | Меню, применённый фильтр, построение ExportRequest |
-| `Guard.IpRules.Tests/ExportTests.cs`, `ExportIntegrationTests.cs` | Проверки схемы, данных и доступа |
+| `Guard.IntegrationTests/ExportTests.cs`, `ExportIntegrationTests.cs` | Проверки схемы, данных и доступа |
 
 Архив выбирает области через `Enum.GetValues<ExportArea>()` и
 `ExportSchema.Title`, поэтому отдельная страница архива для сущности не нужна.

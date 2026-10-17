@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Guard.IpRules.Tests")]
+[assembly: InternalsVisibleTo("Guard.IntegrationTests")]

@@ -39,7 +39,7 @@
 
 ```powershell
 dotnet build Guard.slnx --no-restore -m:1 -v quiet -p:OutputPath=bin/PersonalsReview/
-dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj --no-restore -p:OutputPath=bin/PersonalsReview/
+dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj --no-restore -p:OutputPath=bin/PersonalsReview/
 ```
 
 Отдельный OutputPath нужен, когда запущенный Guard блокирует обычный каталог сборки.

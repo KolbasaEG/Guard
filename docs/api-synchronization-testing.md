@@ -2,7 +2,7 @@
 
 ## Проверки восстановления страницы без БД и API
 
-Запустите `dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj`.
+Запустите `dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj`.
 `SynchronizationRecoveryTests` использует подставные сервисы и HtmlRenderer:
 проверяет независимость загрузки настроек и истории, ручное и автоматическое
 повторение после ошибки, сохранение версии и введённых полей, блокировку

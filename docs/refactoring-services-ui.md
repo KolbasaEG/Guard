@@ -31,7 +31,7 @@
 
 ```powershell
 dotnet build Guard.slnx --no-restore
-dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj
+dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj
 ```
 
 Подготовлен `RefactorIntegrationTests`, подключённый к существующему режиму `--postgres` из `docs/ip-access.md`. Он проверяет отсутствие каскада статусов, stale-команды, конфликт двух контекстов, откат после сохранения, аудит и последовательное создание типов органов. Эти сценарии **не запускались**: пользователь сообщил об отсутствии тестовой БД.

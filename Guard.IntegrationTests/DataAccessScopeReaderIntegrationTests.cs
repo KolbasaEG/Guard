@@ -2,6 +2,7 @@ using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Services;
+using Guard.Core.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 internal static class DataAccessScopeReaderIntegrationTests
@@ -14,7 +15,7 @@ internal static class DataAccessScopeReaderIntegrationTests
     var sibling = new Subdivision { Name = id + " sibling", Path = "/900001/123/", CreatedBy = "test" };
     var personal = new Personal { FirstName = id, LastName = "Test", SubdivisionId = own.Id, CreatedBy = "test" };
     var reader = new DataAccessScopeReader(factory);
-    var permissions = new DataAccessScopeBoundaryTests.Permissions { User = new(id, false, []) };
+    var permissions = new Permissions(id);
     var service = new DataAccessScopeService(permissions, reader);
     await using var db = await factory.CreateDbContextAsync();
     db.AddRange(own, child, sibling, personal, new ApplicationUser { Id = id, UserName = id, PersonalId = personal.Id });
@@ -46,5 +47,13 @@ internal static class DataAccessScopeReaderIntegrationTests
       await db.Subdivisions.Where(s => s.Id == child.Id).ExecuteDeleteAsync();
       await db.Subdivisions.Where(s => s.Id == own.Id || s.Id == sibling.Id).ExecuteDeleteAsync();
     }
+  }
+  private sealed class Permissions(string userId) : IPermissionService
+  {
+    public Task<UserAccessSnapshot> GetCurrentAsync(CancellationToken ct = default)
+    { ct.ThrowIfCancellationRequested(); return Task.FromResult(new UserAccessSnapshot(userId, false, [])); }
+    public Task<UserAccessSnapshot> GetForUserAsync(string userId, CancellationToken ct = default) => throw new NotSupportedException();
+    public Task<bool> HasAsync(string permission, CancellationToken ct = default) => throw new NotSupportedException();
+    public Task RequireAsync(string permission, CancellationToken ct = default) => throw new NotSupportedException();
   }
 }

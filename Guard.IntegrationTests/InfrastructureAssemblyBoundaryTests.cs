@@ -17,7 +17,7 @@ internal static class InfrastructureAssemblyBoundaryTests
       infrastructure != typeof(ICurrentSession).Assembly && infrastructure != typeof(Personal).Assembly,
       "Infrastructure is a fourth independent production assembly");
     foreach (var reference in infrastructure.GetReferencedAssemblies())
-      check(reference.Name != host.GetName().Name && reference.Name != "Guard.IpRules.Tests",
+      check(reference.Name != host.GetName().Name && reference.Name != "Guard.IntegrationTests",
         $"Infrastructure has no reverse assembly reference: {reference.Name}");
     check(!infrastructure.GetTypes().Any(t => t.Namespace?.StartsWith("Guard.Components", StringComparison.Ordinal) == true ||
       t.Namespace?.StartsWith("Guard.Web", StringComparison.Ordinal) == true),

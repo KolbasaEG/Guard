@@ -3,5 +3,6 @@
   <Project Path="Guard.Application/Guard.Application.csproj" />
   <Project Path="Guard.Infrastructure/Guard.Infrastructure.csproj" />
   <Project Path="Guard/Guard.csproj" />
-  <Project Path="Guard.IpRules.Tests/Guard.IpRules.Tests.csproj" />
+  <Project Path="Guard.IntegrationTests/Guard.IntegrationTests.csproj" />
+  <Project Path="Guard.UnitTests/Guard.UnitTests.csproj" />
 </Solution>

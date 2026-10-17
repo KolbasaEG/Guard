@@ -205,9 +205,9 @@ ExportDeliveryAttempts и ExportRetentionSettings с индексами и вн�
 ```powershell
 dotnet restore Guard.slnx
 dotnet build Guard.slnx --no-restore
-dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj
+dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj
 # Только localhost: набор создаёт и удаляет собственную guard_ip_test_<UUID>.
-dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj -- --postgres Guard/appsettings.json
+dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj -- --postgres Guard/appsettings.json
 ```
 
 Проверки включают Open XML schema validation, пустые и составные документы,

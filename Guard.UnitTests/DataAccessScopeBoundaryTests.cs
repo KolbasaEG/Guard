@@ -36,7 +36,7 @@ internal static class DataAccessScopeBoundaryTests
       "new empty scope cannot mutate earlier snapshot");
     var before = reader.PathReads;
     permissions.Failure = new UnauthorizedAccessException();
-    await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => service.GetAsync(token), check, "permission denial propagates");
+    await TestAssertions.ThrowsAsync<UnauthorizedAccessException>(() => service.GetAsync(token), check, "permission denial propagates");
     check(reader.PathReads == before, "denied actor does not read employee path");
     permissions.Failure = null;
     foreach (var failIds in new[] { false, true }) {
@@ -49,10 +49,10 @@ internal static class DataAccessScopeBoundaryTests
     }
     reader.Failure = null;
     cancellation.Cancel();
-    await PostgresTests.ThrowsAsync<OperationCanceledException>(() => service.GetAsync(token), check, "permission cancellation propagates");
+    await TestAssertions.ThrowsAsync<OperationCanceledException>(() => service.GetAsync(token), check, "permission cancellation propagates");
   }
 
-  internal sealed class Permissions : IPermissionService
+  private sealed class Permissions : IPermissionService
   {
     public UserAccessSnapshot User = new("trusted-user", false, []);
     public Exception? Failure; public CancellationToken Token;

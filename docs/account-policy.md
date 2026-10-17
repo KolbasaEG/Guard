@@ -104,9 +104,9 @@ PostgreSQL-набор дополнен сохранением параметро
 
 ```powershell
 dotnet build Guard.slnx --no-restore
-dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj --no-build
-dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj --no-build -- --postgres Guard/appsettings.json
-dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj --no-build -- --browser Guard/appsettings.json
+dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj --no-build
+dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj --no-build -- --postgres Guard/appsettings.json
+dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj --no-build -- --browser Guard/appsettings.json
 ```
 
 Режимы PostgreSQL и браузера допускают только localhost и создают собственную

@@ -207,10 +207,10 @@ Worker проверяет расписание каждые 30 секунд. П�
 
 Сборка: `dotnet build Guard.slnx --no-restore`.
 
-Проверки без БД: `dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj`.
+Проверки без БД: `dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj`.
 
 Интеграционные проверки:
-`dotnet run --project Guard.IpRules.Tests/Guard.IpRules.Tests.csproj -- --postgres <путь-к-настройкам>`.
+`dotnet run --project Guard.IntegrationTests/Guard.IntegrationTests.csproj -- --postgres <путь-к-настройкам>`.
 Этот режим допускает только localhost и создаёт собственную временную БД с
 префиксом guard_ip_test_ и UUID; она удаляется в finally. Исходная база из настроек
 не используется для проверок или очистки.
