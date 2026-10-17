@@ -9,8 +9,7 @@ internal static class ApplicationContractBoundaryTests
   {
     // These transitional contracts belong to Infrastructure, never Application.
     var legacy = new HashSet<Type> { typeof(IPersonalService), typeof(IIpAddressService),
-      typeof(ISubdivisionService), typeof(IClassifierService), typeof(ISecurityService),
-      typeof(IApplicationRoleService), typeof(ILogService) };
+      typeof(ISubdivisionService), typeof(IClassifierService), typeof(ISecurityService) };
     var application = typeof(ICurrentSession).Assembly;
     var host = typeof(Guard.GuardServiceRegistration).Assembly;
     var infrastructure = typeof(Guard.Infrastructure.InfrastructureServiceRegistration).Assembly;
@@ -22,7 +21,16 @@ internal static class ApplicationContractBoundaryTests
         $"Application depends only on Domain and BCL: {reference.Name}");
     var infrastructureContracts = infrastructure.GetExportedTypes().Where(t => t.IsInterface &&
       (t.Namespace == "Guard.Core.Services" || t.Namespace == "Guard.Core.Services.Exports")).ToHashSet();
-    check(infrastructureContracts.SetEquals(legacy), "Only the seven transitional service contracts remain in Infrastructure");
+    check(infrastructureContracts.SetEquals(legacy), "Only five transitional service contracts remain in Infrastructure");
+    foreach (var name in new[] { "IApplicationRoleService", "ILogService" })
+      check(infrastructure.GetType($"Guard.Core.Services.{name}") == null,
+        $"Unused legacy contract {name} is removed");
+    foreach (var (implementation, contract) in new[] {
+      (typeof(ApplicationRoleService), typeof(IRoleSearchService)), (typeof(LogService), typeof(ILogSearchService)) })
+      check(implementation.GetInterfaces().SequenceEqual(new[] { contract }) &&
+        implementation.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+          .Select(m => m.Name).SequenceEqual(new[] { "SearchAsync" }),
+        $"{implementation.Name} exposes only DTO search, without legacy entity/query methods");
     check(!host.GetExportedTypes().Any(t => t.IsInterface && t.Namespace?.StartsWith("Guard.Core.Services", StringComparison.Ordinal) == true),
       "Web owns no application or legacy service interfaces");
     foreach (var type in application.GetExportedTypes())

@@ -75,8 +75,7 @@ public static class InfrastructureServiceRegistration
     // =====================================================
     // === REPOSITORIES & SERVICES (Scrutor)
     // =====================================================
-    services.AddScoped<ILogService, LogService>();
-    services.AddScoped<ILogSearchService>(services => services.GetRequiredService<ILogService>());
+    services.AddScoped<ILogSearchService, LogService>();
     services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
     services.AddHttpContextAccessor();
     services.AddSingleton<IAccessChangeNotifier, AccessChangeNotifier>();

@@ -156,8 +156,17 @@ internal static class ServiceRegistrationTests
       check(a.GetRequiredService<IDirectoryApiClient>() is DirectoryApiClient && b.GetRequiredService<IDirectoryApiClient>() is DirectoryApiClient &&
         timeouts.Count == calls + 2 && timeouts.All(t => t == TimeSpan.FromSeconds(60)),
         "resolved typed clients execute named HttpClient configuration with 60 second timeout");
-      check(ReferenceEquals(a.GetRequiredService<ILogService>(), a.GetRequiredService<ILogSearchService>()),
-        "log search alias reuses the same scoped service");
+      foreach (var (contract, implementation) in new[] {
+        (typeof(ILogSearchService), typeof(LogService)), (typeof(IRoleSearchService), typeof(ApplicationRoleService)) }) {
+        check(services.Count(d => d.ServiceType == contract) == 1 &&
+          services.Single(d => d.ServiceType == contract).ImplementationType == implementation &&
+          services.Single(d => d.ServiceType == contract).Lifetime == ServiceLifetime.Scoped,
+          $"{contract.Name} has one scoped search registration without legacy alias");
+        check(a.GetRequiredService(contract).GetType() == implementation &&
+          ReferenceEquals(a.GetRequiredService(contract), a.GetRequiredService(contract)) &&
+          !ReferenceEquals(a.GetRequiredService(contract), b.GetRequiredService(contract)),
+          $"{contract.Name} reuses its scope and stays isolated between scopes");
+      }
       var identity = a.GetRequiredService<IOptions<IdentityOptions>>().Value;
       check(identity.Password.RequiredLength == 6 && identity.Password.RequiredUniqueChars == 1 &&
         !identity.Password.RequireDigit && !identity.Password.RequireLowercase && !identity.Password.RequireUppercase && !identity.Password.RequireNonAlphanumeric &&

@@ -14,14 +14,14 @@ internal static class AdministrationSearchIntegrationTests
   {
     var permissions = new PermissionsStub();
     var roles = new ApplicationRoleService(new ReadRepository<ApplicationRole>(factory, permissions, null!),
-      NullLogger<ApplicationRoleService>.Instance, null!, permissions);
+      permissions);
     await using var db = await factory.CreateDbContextAsync();
     var entries = Enumerable.Range(1, 24).Select(n => new ApplicationRole { Name = $"search-role-{n:00}", NormalizedName = $"SEARCH-ROLE-{n:00}" }).ToArray();
     db.Roles.AddRange(entries); await db.SaveChangesAsync();
     // This database is created and dropped by PostgresTests. No schema changes run against application databases.
     await db.Database.ExecuteSqlRawAsync("CREATE TABLE logs (timestamp timestamp without time zone, level text, layer text, message text, exception text, user_id text, ip_address text)");
     await db.Database.ExecuteSqlRawAsync("INSERT INTO logs SELECT timestamp '2026-01-01', CASE WHEN n % 2 = 0 THEN 'Error' ELSE 'Information' END, 'Service', 'search-log-' || lpad(n::text, 2, '0'), NULL, 'test', NULL FROM generate_series(1, 24) n");
-    var logs = new LogService(new LogFactory(db.Database.GetConnectionString()!), NullLogger<LogService>.Instance, permissions);
+    var logs = new LogService(new LogFactory(db.Database.GetConnectionString()!), permissions);
     ExportFilter Text(string field, string op, object value) => new(field, op, JsonSerializer.SerializeToElement(value));
     var roleFilter = Text("Name", "StartsWith", "SEARCH-ROLE-");
     try {
