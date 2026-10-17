@@ -11,6 +11,7 @@ internal static class RefactorIntegrationTests
   // Invoked only by the existing harness against its own temporary database.
   public static async Task RunAsync(IDbContextFactory<ApplicationDbContext> factory, Action<bool, string> check)
   {
+    await OperationLifetimeIntegrationTests.RunAsync(factory, check);
     var registrations = new ServiceCollection();
     registrations.AddLogging(); registrations.AddSingleton(factory);
     registrations.AddScoped<IPermissionService, RootPermissions>();
@@ -33,6 +34,7 @@ internal static class RefactorIntegrationTests
         new Classifier { Type = 906, Code = 99002, ClassifierName = "Test", Value = "Second", IsActive = true });
       await seed.SaveChangesAsync();
     }
+    await OperationLifetimeIntegrationTests.CheckTreeRollbackAsync(factory, new RootPermissions(), new RootScope(), parent.Id, child.Id, check);
     await subdivisions.BlockAsync(parent.Id, expectedVersion: parent.Version);
     await PostgresTests.ThrowsAsync<EntityRuleException>(() => subdivisions.ArchiveAsync(parent.Id), check, "blocked subdivision cannot be archived");
     await using (var db = await factory.CreateDbContextAsync()) {
