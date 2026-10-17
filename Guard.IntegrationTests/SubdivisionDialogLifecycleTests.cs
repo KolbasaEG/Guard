@@ -11,12 +11,12 @@ internal static class SubdivisionDialogLifecycleTests
 {
   public static async Task RunAsync(Action<bool, string> check)
   {
-    var service = DispatchProxy.Create<ISubdivisionService, IpAddressReferenceTests.ServiceProxy>();
+    var service = DispatchProxy.Create<ISubdivisionManagementService, IpAddressReferenceTests.ServiceProxy>();
     var proxy = (IpAddressReferenceTests.ServiceProxy)(object)service;
     using var dialogs = new DialogService(new Navigation(), new NoJs());
     var notifications = new NotificationService(); var closes = 0;
     dialogs.OnClose += _ => closes++;
-    proxy.Handle = (method, _) => method.Name == nameof(ISubdivisionService.GetEditorOptionsAsync)
+    proxy.Handle = (method, _) => method.Name == nameof(ISubdivisionManagementService.GetEditorOptionsAsync)
       ? Task.FromResult(new SubdivisionEditorOptionsDto([], [], [])) : throw new NotSupportedException(method.Name);
     using var add = new AddProbe(service, dialogs, notifications);
     await add.Initialize();
@@ -41,7 +41,7 @@ internal static class SubdivisionDialogLifecycleTests
     loading.SetResult(new() { Name = "Late" }); await initializing;
     check(!edit.Loaded && token.IsCancellationRequested && closes == 0, "disposed subdivision editor ignores late details and supports repeated dispose");
 
-    proxy.Handle = (method, _) => method.Name == nameof(ISubdivisionService.GetDetailsAsync)
+    proxy.Handle = (method, _) => method.Name == nameof(ISubdivisionManagementService.GetDetailsAsync)
       ? Task.FromResult<SubdivisionDetailsDto?>(new() { Id = Guid.NewGuid(), Name = "Move" })
       : Task.FromException<IReadOnlyList<SubdivisionParentOptionDto>>(new UnauthorizedAccessException());
     using var move = new MoveProbe(service, dialogs, notifications);
@@ -53,7 +53,7 @@ internal static class SubdivisionDialogLifecycleTests
 
   private sealed class AddProbe : Pages.Add
   {
-    public AddProbe(ISubdivisionService service, DialogService dialogs, NotificationService notifications) {
+    public AddProbe(ISubdivisionManagementService service, DialogService dialogs, NotificationService notifications) {
       SubdivisionService = service; DialogService = dialogs; NotificationService = notifications; Logger = NullLogger<Pages.Add>.Instance;
     }
     public string Name { set => item.Name = value; }
@@ -63,7 +63,7 @@ internal static class SubdivisionDialogLifecycleTests
   }
   private sealed class EditProbe : Pages.Edit
   {
-    public EditProbe(ISubdivisionService service, DialogService dialogs, NotificationService notifications) {
+    public EditProbe(ISubdivisionManagementService service, DialogService dialogs, NotificationService notifications) {
       SubdivisionService = service; DialogService = dialogs; NotificationService = notifications; Logger = NullLogger<Pages.Edit>.Instance;
     }
     public bool Loaded => isLoaded;
@@ -71,7 +71,7 @@ internal static class SubdivisionDialogLifecycleTests
   }
   private sealed class MoveProbe : Pages.Move
   {
-    public MoveProbe(ISubdivisionService service, DialogService dialogs, NotificationService notifications) {
+    public MoveProbe(ISubdivisionManagementService service, DialogService dialogs, NotificationService notifications) {
       SubdivisionService = service; DialogService = dialogs; NotificationService = notifications; Logger = NullLogger<Pages.Move>.Instance;
     }
     public bool Loaded => isLoaded;

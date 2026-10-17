@@ -18,7 +18,7 @@ PersonalService, SubdivisionService и IpAddressService продолжают в�
 
 | Участок | Текущее состояние и следующий шаг |
 | --- | --- |
-| UI и контракты | Поиски/редакторы используют DTO. Четыре legacy-контракта ролей, логов, классификаторов и сотрудников удалены; три остаются в Infrastructure. Аудит и следующий участок: architecture-legacy-service-cleanup.md |
+| UI и контракты | Поиски/редакторы используют DTO. Пять legacy-контрактов ролей, логов, классификаторов, сотрудников и подразделений удалены; два остаются в Infrastructure. Аудит и следующий участок: architecture-legacy-service-cleanup.md |
 | Сессия и доступ | ICurrentSession и три сервиса решений в Application; EF-чтение за узкими портами. Web получает доверенный principal |
 | Статусы | Оба класса в Application; независимая матрица в UnitTests. Этот участок завершён |
 | IP-полномочия | Перенесён в Application с явной DI-регистрацией и проверками отказов/отмены; см. architecture-ip-management-access.md |
@@ -28,7 +28,7 @@ PersonalService, SubdivisionService и IpAddressService продолжают в�
 | Экспорт, HTTP, workers | DTO независимы; файловое хранение, OpenXml, HTTP и часть оркестрации в Infrastructure. Расположение транспортных адаптеров/BackgroundService отличается от целевой карты и требует отдельной поставки |
 | Владение контекстами | Описано в architecture-context-ownership.md; проверки покрывают откат, конкуренцию и обязательные IdentityResult. Неопределённый исход commit и гарантированная доставка событий остаются открытыми |
 
-Оставшиеся три legacy-интерфейса: IIpAddressService, ISubdivisionService, ISecurityService. IApplicationRoleService, ILogService, IClassifierService и IPersonalService удалены после сверки потребителей; см. architecture-legacy-service-cleanup.md, architecture-classifier-legacy-cleanup.md и architecture-personal-legacy-cleanup.md. Generic ReadRepository сохраняет серверную защиту до появления эквивалентной проверки всех заменяющих путей. Наличие EF в атомарном адаптере само по себе не требует нового слоя прокси.
+Оставшиеся два legacy-интерфейса: IIpAddressService и ISecurityService. IApplicationRoleService, ILogService, IClassifierService, IPersonalService и ISubdivisionService удалены после сверки потребителей; актуальный отчёт — architecture-subdivision-legacy-cleanup.md, предыдущие связаны из architecture-legacy-service-cleanup.md. Generic ReadRepository сохраняет серверную защиту до появления эквивалентной проверки всех заменяющих путей. Наличие EF в атомарном адаптере само по себе не требует нового слоя прокси.
 
 ## Проверки
 

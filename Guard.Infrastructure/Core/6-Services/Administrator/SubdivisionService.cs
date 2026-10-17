@@ -7,10 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services;
 
-public class SubdivisionService : ISubdivisionService
+public class SubdivisionService : ISubdivisionManagementService
 {
   private readonly IReadRepository<Subdivision> _readSubdivisionRepository;
-  private readonly IReadRepository<Classifier> _readClassifierRepository;
   private readonly IUnitOfWorkFactory _writes;
   private readonly ILogger<SubdivisionService> _logger;
   private readonly IDbContextFactory<ApplicationDbContext> _factory;
@@ -19,12 +18,10 @@ public class SubdivisionService : ISubdivisionService
 
   public SubdivisionService(
       IReadRepository<Subdivision> readSubdivisionRepository,
-      IReadRepository<Classifier> readClassifierRepository,
       IUnitOfWorkFactory unitOfWork,
       ILogger<SubdivisionService> logger, IPermissionService permissions, IDataAccessScopeService scopes, IDbContextFactory<ApplicationDbContext> factory)
   {
     _readSubdivisionRepository = readSubdivisionRepository;
-    _readClassifierRepository = readClassifierRepository;
     _writes = unitOfWork;
     _logger = logger;
     _factory = factory;
@@ -157,51 +154,15 @@ public class SubdivisionService : ISubdivisionService
         mode == DataViewMode.Deleted && !user.IsRoot) throw new UnauthorizedAccessException("Недостаточно прав для выбранного режима подразделений.");
   }
 
-  public async Task<string?> GetOwnSubdivisionPathAsync(CancellationToken ct = default)
-  {
-    await _permissions.RequireAsync(Permissions.Subdivisions.Read, ct);
-    var user = await _permissions.GetCurrentAsync(ct);
-    await using var db = await _factory.CreateDbContextAsync(ct);
-    return await db.Users.Where(u => u.Id == user.UserId)
-      .Select(u => u.Personal == null || u.Personal.Subdivision == null ? null : u.Personal.Subdivision.Path)
-      .SingleOrDefaultAsync(ct);
-  }
-
-  public async Task<TResult> QuerySubdivisionsAsync<TResult>(
-        Func<IQueryable<Subdivision>, Task<TResult>> query,
-        CancellationToken ct = default)
-  {
-    return await _readSubdivisionRepository.QueryAsync(query, ct);
-  }
-
-  public async Task<Subdivision?> GetByIdAsync(Guid id, CancellationToken ct = default)
+  private async Task<Subdivision?> GetByIdAsync(Guid id, CancellationToken ct = default)
   {
     _logger.LogDebug("Запрос подразделения по ID: {SubdivisionId}", id);
     return await _readSubdivisionRepository.QueryAsync(q => q.Include(s => s.Parent).Include(s => s.OrganType).Include(s => s.StatusClassifier).SingleOrDefaultAsync(s => s.Id == id, ct), ct);
   }
 
-  public async Task<IReadOnlyList<Subdivision>> GetAllActiveAsync(CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос всех активных подразделений");
-    return await _readSubdivisionRepository.QueryAsync(query =>
-        query.Where(s => (s.Status == Status.Inserted || s.Status == Status.Modified))
-             .OrderBy(s => s.Name)
-             .ToListAsync(ct),
-        ct);
-  }
-
-  public async Task<IReadOnlyList<Subdivision>> GetByParentIdAsync(Guid? parentId, CancellationToken ct = default)
-  {
-    _logger.LogDebug("Запрос дочерних подразделений для ParentId: {ParentId}", parentId);
-    return await _readSubdivisionRepository.QueryAsync(query =>
-        query.Where(s => s.ParentId == parentId && (s.Status == Status.Inserted || s.Status == Status.Modified))
-             .ToListAsync(ct),
-        ct);
-  }
-
   // ==================== Write (IUnitOfWork & ChangeTracker) ====================
 
-  public async Task<Guid> CreateAsync(Subdivision subdivision, CancellationToken ct = default)
+  private async Task<Guid> CreateAsync(Subdivision subdivision, CancellationToken ct = default)
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
@@ -273,7 +234,7 @@ public class SubdivisionService : ISubdivisionService
       return subdivision.Id;
     }, ct);
   }
-  public async Task UpdateAsync(Subdivision subdivision, CancellationToken ct = default)
+  private async Task UpdateAsync(Subdivision subdivision, CancellationToken ct = default)
   {
     await using var _uow = await _writes.CreateAsync(ct);
     await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
@@ -548,22 +509,6 @@ public class SubdivisionService : ISubdivisionService
 
       _logger.LogInformation("Успешно перестроена иерархия и Path для {Count} подразделений.", allSubdivisions.Count);
     }, ct);
-  }
-
-  // ==================== Справочники (Read) ====================
-
-  public async Task<IReadOnlyList<Classifier>> GetOrganTypesAsync(CancellationToken ct = default)
-  {
-    await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
-    await using var db = await _factory.CreateDbContextAsync(ct);
-    return await db.Classifiers.AsNoTracking().Where(c => c.Type == 363 && c.IsActive).OrderBy(c => c.Value).ToListAsync(ct);
-  }
-
-  public async Task<IReadOnlyList<Classifier>> GetClassifiersByTypeAsync(ClassifierType type, CancellationToken ct = default)
-  {
-    await _permissions.RequireAsync(Permissions.Subdivisions.Write, ct);
-    await using var db = await _factory.CreateDbContextAsync(ct);
-    return await db.Set<Classifier>().AsNoTracking().Where(c => c.Type == (int)type).OrderBy(c => c.Value).ToListAsync(ct);
   }
 
   public Task<Guid> CreateFromDtoAsync(CreateSubdivisionDto input, CancellationToken ct = default) {

@@ -46,7 +46,7 @@ internal static class AuthorizationTests
     services.AddScoped<IPersonalEditorService,PersonalService>();
     services.AddScoped<IPersonalStatusService,PersonalService>();
     services.AddScoped(typeof(IBasicRepository<>),typeof(BasicRepository<>));
-    services.AddScoped<ISubdivisionService,SubdivisionService>();
+    services.AddScoped<ISubdivisionManagementService,SubdivisionService>();
     services.AddScoped<IClassifierManagementService,ClassifierService>();
     services.AddScoped<IIpManagementAccessService,IpManagementAccessService>();
     services.AddScoped<IIpAddressService,IpAddressService>();
@@ -243,9 +243,9 @@ internal static class AuthorizationTests
     await using(var db=await factory.CreateDbContextAsync()) check(!await db.Users.AnyAsync(u=>u.UserName=="rollback-user"),"failed compound user creation rolls back");
     authentication.Id="user";
     check(await usersReads.CountAsync()==1,"user count excludes foreign and unbound accounts");
-    var subdivisions=scope.ServiceProvider.GetRequiredService<ISubdivisionService>();
-    check((await subdivisions.GetAllActiveAsync()).Count==2,"subdivision reads include own descendants only");
-    await PostgresTests.ThrowsAsync<KeyNotFoundException>(()=>subdivisions.UpdateAsync(new(){Id=foreignId,Name="Forbidden"}),check,"foreign subdivision update rejected");
+    var subdivisions=scope.ServiceProvider.GetRequiredService<ISubdivisionManagementService>();
+    check((await subdivisions.SearchAsync(new(Hierarchy:SubdivisionHierarchyMode.IncludeChildren))).Count==2,"subdivision DTO search includes own descendants only");
+    await PostgresTests.ThrowsAsync<KeyNotFoundException>(()=>subdivisions.UpdateFromDtoAsync(new(foreignId,Guid.NewGuid(),new(){Name="Forbidden"})),check,"foreign subdivision DTO update rejected");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(()=>((IUserListService)security).SetUserLockoutAsync("root",true),check,"ordinary manager cannot lock Root");
     await PostgresTests.ThrowsAsync<InvalidOperationException>(async ()=>await security.UpdateUserAsync(
       (await security.GetUserByIdAsync("user"))!,["Root"]),check,"profile editing cannot change roles");

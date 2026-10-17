@@ -160,7 +160,8 @@ internal static class ServiceRegistrationTests
           (typeof(ILogSearchService), typeof(LogService)), (typeof(IRoleSearchService), typeof(ApplicationRoleService)),
           (typeof(IClassifierManagementService), typeof(ClassifierService)),
           (typeof(IPersonalSearchService), typeof(PersonalService)), (typeof(IPersonalDetailsService), typeof(PersonalService)),
-          (typeof(IPersonalEditorService), typeof(PersonalService)), (typeof(IPersonalStatusService), typeof(PersonalService)) }) {
+          (typeof(IPersonalEditorService), typeof(PersonalService)), (typeof(IPersonalStatusService), typeof(PersonalService)),
+          (typeof(ISubdivisionManagementService), typeof(SubdivisionService)) }) {
         check(services.Count(d => d.ServiceType == contract) == 1 &&
           services.Single(d => d.ServiceType == contract).ImplementationType == implementation &&
           services.Single(d => d.ServiceType == contract).Lifetime == ServiceLifetime.Scoped,

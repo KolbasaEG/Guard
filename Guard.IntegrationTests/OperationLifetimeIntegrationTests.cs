@@ -90,11 +90,11 @@ internal static class OperationLifetimeIntegrationTests
     registrations.AddSingleton(permissions); registrations.AddSingleton(access);
     registrations.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
     registrations.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
-    registrations.AddScoped<ISubdivisionService, SubdivisionService>();
+    registrations.AddScoped<ISubdivisionManagementService, SubdivisionService>();
     await using var provider = registrations.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     await using var scope = provider.CreateAsyncScope();
     await PostgresTests.ThrowsAsync<OperationCanceledException>(
-      () => scope.ServiceProvider.GetRequiredService<ISubdivisionService>().MoveAsync(parentId, destination.Id), check,
+      () => scope.ServiceProvider.GetRequiredService<ISubdivisionManagementService>().MoveAsync(parentId, destination.Id), check,
       "tree move propagates cancellation after SQL save before commit");
     check(failure.Rows == 2, "fault injection observes both root and descendant changed before rollback");
     var after = await source.Subdivisions.AsNoTracking().Where(s => ids.Contains(s.Id)).ToListAsync();

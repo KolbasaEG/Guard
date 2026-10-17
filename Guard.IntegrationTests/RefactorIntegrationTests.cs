@@ -24,14 +24,14 @@ internal static class RefactorIntegrationTests
     registrations.AddScoped<IPersonalEditorService, PersonalService>();
     registrations.AddScoped<IPersonalStatusService, PersonalService>();
     registrations.AddScoped<IPersonalDetailsService, PersonalService>();
-    registrations.AddScoped<ISubdivisionService, SubdivisionService>();
+    registrations.AddScoped<ISubdivisionManagementService, SubdivisionService>();
     await using var provider = registrations.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     await using var scope = provider.CreateAsyncScope();
     var writes = scope.ServiceProvider.GetRequiredService<IUnitOfWorkFactory>();
     var people = scope.ServiceProvider.GetRequiredService<IPersonalEditorService>();
     var statuses = scope.ServiceProvider.GetRequiredService<IPersonalStatusService>();
     var details = scope.ServiceProvider.GetRequiredService<IPersonalDetailsService>();
-    var subdivisions = scope.ServiceProvider.GetRequiredService<ISubdivisionService>();
+    var subdivisions = scope.ServiceProvider.GetRequiredService<ISubdivisionManagementService>();
     var parent = new Subdivision { Name = "Refactor parent", SubdivisionId = 900001, Path = "/900001/", CreatedBy = "seed" };
     var child = new Subdivision { Name = "Refactor child", SubdivisionId = 900002, Path = "/900001/900002/", ParentId = parent.Id, CreatedBy = "seed" };
     var personal = new Personal { FirstName = "Refactor", LastName = "Test", SubdivisionId = parent.Id, CreatedBy = "seed" };

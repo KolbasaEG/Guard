@@ -41,10 +41,10 @@ internal static class SubdivisionSearchTests
       new("Name", "In", JsonSerializer.SerializeToElement(new[] { 1 })),
       new(Children: Enumerable.Repeat(new ExportFilter("Name", "IsNull"), 101).ToArray())
     }) await PostgresTests.ThrowsAsync<ArgumentException>(() => Task.Run(() => SubdivisionSearchQuery.ValidateFilter(invalid)), check, "subdivision filter validates field, operation, value and complexity");
-    var service = DispatchProxy.Create<ISubdivisionService, IpAddressReferenceTests.ServiceProxy>();
+    var service = DispatchProxy.Create<ISubdivisionManagementService, IpAddressReferenceTests.ServiceProxy>();
     var pending = new Queue<TaskCompletionSource<SubdivisionSearchResult>>(); var tokens = new List<CancellationToken>();
     ((IpAddressReferenceTests.ServiceProxy)(object)service).Handle = (method, args) => {
-      if (method.Name != nameof(ISubdivisionService.SearchAsync)) throw new NotSupportedException(method.Name);
+      if (method.Name != nameof(ISubdivisionManagementService.SearchAsync)) throw new NotSupportedException(method.Name);
       var request = (SubdivisionSearchRequest)args[0]!;
       check(request.Skip == 0 && request.Take == 20, "subdivision UI sends explicit search parameters");
       tokens.Add((CancellationToken)args[1]!);
@@ -65,7 +65,7 @@ internal static class SubdivisionSearchTests
   }
   private sealed class Probe : Guard.Components.Pages.Subdivisions.Index
   {
-    public Probe(ISubdivisionService service, BrowserTimeService time) {
+    public Probe(ISubdivisionManagementService service, BrowserTimeService time) {
       SubdivisionService = service; Time = time; NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Subdivisions.Index>.Instance;
     }
     public Task Load() => LoadData(new() { Skip = 0, Top = 20 });

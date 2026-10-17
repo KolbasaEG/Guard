@@ -1,6 +1,6 @@
 # Удаление legacy-контракта классификаторов
 
-Актуальное продолжение: [IPersonalService также удалён](architecture-personal-legacy-cleanup.md); осталось три legacy-интерфейса. Следующий участок — ISubdivisionService. Ниже сохранён отчёт о срезе `51348ce`.
+Актуальное продолжение: удалены также контракты сотрудников и [подразделений](architecture-subdivision-legacy-cleanup.md); осталось два legacy-интерфейса. Далее — IIpAddressService. Ниже сохранён отчёт о срезе `51348ce`.
 
 Ветка: `codex/architecture-ip-search`. База: `268c5e0`. IClassifierService удалён; ClassifierService реализует только IClassifierManagementService из Application. В Infrastructure остаются четыре legacy-интерфейса. Этапы 1–2 целиком не закрыты.
 

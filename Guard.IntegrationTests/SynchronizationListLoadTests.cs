@@ -13,7 +13,7 @@ internal static class SynchronizationListLoadTests
   {
     var time = new BrowserTimeService(new Js()); await time.InitializeAsync();
     var classifiers = DispatchProxy.Create<IClassifierManagementService, QueryProxy>();
-    var subdivisions = DispatchProxy.Create<ISubdivisionService, QueryProxy>();
+    var subdivisions = DispatchProxy.Create<ISubdivisionManagementService, QueryProxy>();
     var personals = DispatchProxy.Create<IPersonalSearchService, QueryProxy>();
     var pages = new (string Name, Page Page, QueryProxy Query)[] {
       ("classifiers", new ClassifiersPage(classifiers, time), (QueryProxy)(object)classifiers),
@@ -62,7 +62,7 @@ internal static class SynchronizationListLoadTests
     public CancellationToken LastToken { get; private set; }
     protected override object? Invoke(MethodInfo? method, object?[]? args)
     {
-      if (method!.Name == nameof(ISubdivisionService.GetOwnSubdivisionPathAsync)) return Task.FromResult<string?>("/1/");
+      ArgumentNullException.ThrowIfNull(method);
       LastToken = (CancellationToken)args![^1]!;
       return typeof(QueryProxy).GetMethod(nameof(Respond), BindingFlags.NonPublic | BindingFlags.Instance)!
         .MakeGenericMethod(method.ReturnType.GenericTypeArguments[0]).Invoke(this, null);
@@ -84,7 +84,7 @@ internal static class SynchronizationListLoadTests
   }
   private sealed class SubdivisionsPage : Guard.Components.Pages.Subdivisions.Index, Page
   {
-    public SubdivisionsPage(ISubdivisionService service, BrowserTimeService time)
+    public SubdivisionsPage(ISubdivisionManagementService service, BrowserTimeService time)
     { SubdivisionService = service; Time = time; NotificationService = new(); Logger = NullLogger<Guard.Components.Pages.Subdivisions.Index>.Instance; Access = new("root", true, []); }
     public Task<bool> Reload() => ReloadForSynchronizationAsync();
     public Task LoadOther() => LoadData(new() { Skip = 0, Top = 20 });

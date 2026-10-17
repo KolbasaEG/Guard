@@ -31,16 +31,17 @@ internal static class TreeConcurrencyIntegrationTests
       await using var secondProvider = Provider(secondGate);
       await using var firstScope = firstProvider.CreateAsyncScope();
       await using var secondScope = secondProvider.CreateAsyncScope();
-      var firstService = firstScope.ServiceProvider.GetRequiredService<ISubdivisionService>();
-      var secondService = secondScope.ServiceProvider.GetRequiredService<ISubdivisionService>();
+      var firstService = firstScope.ServiceProvider.GetRequiredService<ISubdivisionManagementService>();
+      var secondService = secondScope.ServiceProvider.GetRequiredService<ISubdivisionManagementService>();
       var first = firstService.MoveAsync(scenario == "ancestor" ? b.Id : a.Id, c.Id, ct);
       Task? second = null;
+      Task<Guid>? creating = null;
       try {
         await firstGate.Ready.Task.WaitAsync(ct);
         second = scenario switch {
           "stale descendant" => secondService.MoveAsync(child.Id, b.Id, ct, child.Version),
           "cycle" => secondService.MoveAsync(c.Id, a.Id, ct),
-          "create" => secondService.CreateAsync(new Subdivision { Name = "Concurrent child", SubdivisionId = 910005, ParentId = a.Id }, ct),
+          "create" => creating = secondService.CreateFromDtoAsync(new(new() { Name = "Concurrent child" }, a.Id), ct),
           "ancestor" => secondService.MoveAsync(d.Id, a.Id, ct),
           "cancelled" => secondService.MoveAsync(b.Id, a.Id, competingCancellation.Token),
           _ => secondService.MoveAsync(b.Id, a.Id, ct)
@@ -65,7 +66,10 @@ internal static class TreeConcurrencyIntegrationTests
       else if (scenario == "cycle")
         await PostgresTests.ThrowsAsync<EntityRuleException>(() => second!, check, $"{scenario}: cycle check uses committed ancestor paths");
       else if (scenario != "cancelled") await second!;
-      var rows = await observer.Subdivisions.AsNoTracking().Where(s => s.SubdivisionId >= 910001 && s.SubdivisionId <= 910006).ToDictionaryAsync(s => s.Id, ct);
+      var fixtureIds = new List<Guid> { a.Id, b.Id, c.Id, d.Id, child.Id };
+      if (creating != null) fixtureIds.Add(await creating);
+      var rows = await observer.Subdivisions.AsNoTracking().Where(s => fixtureIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id, ct);
+      check(rows.Count == fixtureIds.Count, $"{scenario}: observer loads all fixture rows including any DTO-created child");
       check(rows.Values.All(s => s.Path == (s.ParentId.HasValue ? rows[s.ParentId.Value].Path : "/") + s.SubdivisionId + "/"),
         $"{scenario}: every persisted parent and descendant path agrees after concurrent operations");
       check(rows[a.Id].ModifiedBy == "test-root" && rows[child.Id].ModifiedBy == "test-root" &&
@@ -73,9 +77,15 @@ internal static class TreeConcurrencyIntegrationTests
         $"{scenario}: moved subtree retains operation audit and fresh versions");
       if (scenario == "cancelled") check(rows[b.Id].ParentId == null && rows[b.Id].Path == b.Path && rows[b.Id].Version == b.Version,
         "cancelled waiting move leaves its target unchanged while predecessor commits");
+      if (creating != null) {
+        var created = rows[await creating];
+        check(created.ParentId == a.Id && created.Path == rows[a.Id].Path + created.SubdivisionId + "/" &&
+          created.CreatedBy == "test-root" && created.InsertedDate.Kind == DateTimeKind.Utc,
+          "DTO-created child uses committed parent path and captured operation audit after waiting for concurrent move");
+      }
       observer.ChangeTracker.Clear();
       // Remove all fixture rows in one statement so self-referencing FKs see the final set.
-      await observer.Subdivisions.Where(s => s.SubdivisionId >= 910001 && s.SubdivisionId <= 910006).ExecuteDeleteAsync(ct);
+      await observer.Subdivisions.Where(s => fixtureIds.Contains(s.Id)).ExecuteDeleteAsync(ct);
 
       ServiceProvider Provider(IInterceptor interceptor)
       {
@@ -85,7 +95,7 @@ internal static class TreeConcurrencyIntegrationTests
         services.AddSingleton(permissions); services.AddSingleton(access);
         services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
         services.AddScoped(typeof(IReadRepository<>), typeof(ReadRepository<>));
-        services.AddScoped<ISubdivisionService, SubdivisionService>();
+        services.AddScoped<ISubdivisionManagementService, SubdivisionService>();
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
       }
     }

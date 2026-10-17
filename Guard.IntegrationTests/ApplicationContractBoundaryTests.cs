@@ -9,7 +9,7 @@ internal static class ApplicationContractBoundaryTests
   {
     // These transitional contracts belong to Infrastructure, never Application.
     var legacy = new HashSet<Type> { typeof(IIpAddressService),
-      typeof(ISubdivisionService), typeof(ISecurityService) };
+      typeof(ISecurityService) };
     var application = typeof(ICurrentSession).Assembly;
     var host = typeof(Guard.GuardServiceRegistration).Assembly;
     var infrastructure = typeof(Guard.Infrastructure.InfrastructureServiceRegistration).Assembly;
@@ -21,8 +21,8 @@ internal static class ApplicationContractBoundaryTests
         $"Application depends only on Domain and BCL: {reference.Name}");
     var infrastructureContracts = infrastructure.GetExportedTypes().Where(t => t.IsInterface &&
       (t.Namespace == "Guard.Core.Services" || t.Namespace == "Guard.Core.Services.Exports")).ToHashSet();
-    check(infrastructureContracts.SetEquals(legacy), "Only three transitional service contracts remain in Infrastructure");
-    foreach (var name in new[] { "IApplicationRoleService", "ILogService", "IClassifierService", "IPersonalService" })
+    check(infrastructureContracts.SetEquals(legacy), "Only two transitional service contracts remain in Infrastructure");
+    foreach (var name in new[] { "IApplicationRoleService", "ILogService", "IClassifierService", "IPersonalService", "ISubdivisionService" })
       check(infrastructure.GetType($"Guard.Core.Services.{name}") == null,
         $"Unused legacy contract {name} is removed");
     foreach (var (implementation, contract) in new[] {
@@ -41,6 +41,10 @@ internal static class ApplicationContractBoundaryTests
       typeof(PersonalService).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
         .ToHashSet().SetEquals(personalContracts.SelectMany(c => typeof(PersonalService).GetInterfaceMap(c).TargetMethods)),
       "PersonalService exposes exactly the narrow DTO and status contracts, without entity/query methods");
+    check(typeof(SubdivisionService).GetInterfaces().SequenceEqual(new[] { typeof(ISubdivisionManagementService) }) &&
+      typeof(SubdivisionService).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+        .ToHashSet().SetEquals(typeof(SubdivisionService).GetInterfaceMap(typeof(ISubdivisionManagementService)).TargetMethods),
+      "SubdivisionService exposes exactly DTO management and tree operations, without legacy entity/query methods");
     check(!host.GetExportedTypes().Any(t => t.IsInterface && t.Namespace?.StartsWith("Guard.Core.Services", StringComparison.Ordinal) == true),
       "Web owns no application or legacy service interfaces");
     foreach (var type in application.GetExportedTypes())

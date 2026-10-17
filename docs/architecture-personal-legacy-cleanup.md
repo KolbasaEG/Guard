@@ -1,5 +1,7 @@
 # Удаление legacy-контракта сотрудников
 
+Актуальное продолжение: [ISubdivisionService также удалён](architecture-subdivision-legacy-cleanup.md); осталось два legacy-интерфейса. Далее — IIpAddressService. Ниже сохранён отчёт о срезе `3b88377`.
+
 Ветка: `codex/architecture-ip-search`. База: `51348ce`. IPersonalService удалён. PersonalService реализует четыре существующих контракта Application: IPersonalSearchService, IPersonalDetailsService, IPersonalEditorService и IPersonalStatusService. В Infrastructure остаются IIpAddressService, ISubdivisionService и ISecurityService. Этапы 1–2 целиком не закрыты.
 
 ## Аудит и изменения
