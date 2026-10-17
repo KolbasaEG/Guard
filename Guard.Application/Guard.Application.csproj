@@ -6,5 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Guard.Domain/Guard.Domain.csproj" />
+    <InternalsVisibleTo Include="Guard.Infrastructure" />
+    <InternalsVisibleTo Include="Guard.UnitTests" />
+    <InternalsVisibleTo Include="Guard.IntegrationTests" />
   </ItemGroup>
 </Project>

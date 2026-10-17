@@ -36,6 +36,17 @@ internal static class ApplicationContractBoundaryTests
       .Where(t => t.IsInterface && (t.Namespace == "Guard.Core.Services" ||
         t.Namespace == "Guard.Core.Services.Exports") && !legacy.Contains(t)).ToArray();
     check(contracts.Length == 35, "Application inventory contains 32 services and three access read ports");
+    foreach (var name in new[] { "EntityInputValidation", "EntityWriteMapping" })
+    {
+      var fullName = $"Guard.Core.Services.{name}";
+      check(application.GetType(fullName) is { IsNotPublic: true } &&
+        infrastructure.GetType(fullName) == null && host.GetType(fullName) == null,
+        $"{name} belongs to Application and stays internal");
+    }
+    var friends = application.GetCustomAttributes<System.Runtime.CompilerServices.InternalsVisibleToAttribute>()
+      .Select(a => a.AssemblyName).ToHashSet(StringComparer.Ordinal);
+    check(friends.SetEquals(new[] { "Guard.Infrastructure", "Guard.UnitTests", "Guard.IntegrationTests" }),
+      "Application internal helpers are shared only with Infrastructure and both test runners");
     foreach (var contract in contracts)
     {
       var violations = FindViolations(contract);

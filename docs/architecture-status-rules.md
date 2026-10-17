@@ -21,9 +21,9 @@ PersonalService, SubdivisionService и IpAddressService продолжают в�
 | UI и контракты | Поиски/редакторы используют DTO. Семь legacy-контрактов остаются в Infrastructure; перед удалением проверить внутренних потребителей, а не только UI |
 | Сессия и доступ | ICurrentSession и три сервиса решений в Application; EF-чтение за узкими портами. Web получает доверенный principal |
 | Статусы | Оба класса в Application; независимая матрица в UnitTests. Этот участок завершён |
-| IP-полномочия | IpManagementAccessService зависит только от IPermissionService/IDataAccessScopeService, но ещё в Infrastructure. Следующий небольшой участок — перенос с явной регистрацией и проверкой отказов/отмены |
-| Валидация и маппинг | EntityInputValidation/EntityWriteMapping используют Domain/DTO, но остаются внутренними в Infrastructure. Отдельно оценить ответственность и доступность; не расширять публичный API ради перемещения |
-| Политика аккаунтов | AccountPolicyRules зависит от ApplicationUser. Для отделения правил нужны минимальные независимые данные; сохранить даты активации, Root и запись блокировки в AccountPolicyService |
+| IP-полномочия | Перенесён в Application с явной DI-регистрацией и проверками отказов/отмены; см. architecture-ip-management-access.md |
+| Валидация и маппинг | EntityInputValidation/EntityWriteMapping перенесены в Application и остаются internal; см. architecture-entity-input-rules.md. Следующий участок — ApiSnapshotValidator |
+| Политика аккаунтов | AccountPolicyRules в Application использует независимый снимок AccountPolicyUserState. Повторное чтение и блокировка остаются в Infrastructure; см. architecture-account-policy-rules.md |
 | Дерево, Identity, синхронизация | Транзакции и locks остаются специализированными адаптерами Infrastructure; не дробить их на вызовы репозиториев из Application |
 | Экспорт, HTTP, workers | DTO независимы; файловое хранение, OpenXml, HTTP и часть оркестрации в Infrastructure. Расположение транспортных адаптеров/BackgroundService отличается от целевой карты и требует отдельной поставки |
 | Владение контекстами | Описано в architecture-context-ownership.md; проверки покрывают откат, конкуренцию и обязательные IdentityResult. Неопределённый исход commit и гарантированная доставка событий остаются открытыми |

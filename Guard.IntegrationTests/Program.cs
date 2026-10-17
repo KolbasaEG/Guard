@@ -19,7 +19,6 @@ InfrastructureAssemblyBoundaryTests.Run(Check);
 AccountPolicyTests.Run(Check);
 await AccountPolicyBoundaryTests.RunAsync(Check);
 await LoginLockoutTests.RunAsync(Check);
-EntityWriteMappingTests.Run(Check);
 IpSearchFilterTests.Run(Check);
 SearchFilterContractTests.Run(Check);
 await IpSearchUiTests.RunAsync(Check);
