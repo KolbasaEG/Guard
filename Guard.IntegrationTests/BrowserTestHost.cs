@@ -22,6 +22,9 @@ internal static class BrowserTestHost
     }
     await using (var db = await factory.CreateDbContextAsync()) {
       db.IsSynchronization = true; // Только подготовка синтетических данных изолированного стенда.
+      // Предыдущие интеграционные сценарии оставляют режим API; браузерный стенд начинает с ручного режима.
+      await db.SynchronizationSettings.ExecuteUpdateAsync(s => s
+        .SetProperty(x => x.Mode, DataManagementMode.Local).SetProperty(x => x.ScheduleEnabled, false));
       var subdivisions = Enumerable.Range(1, 27).Select(n => new Subdivision {
         Name = n == 26 ? "Архив отдела" : n == 27 ? "Удалённый отдел" : $"Поиск отдела {n:00}",
         Status = n == 26 ? Guard.Core.Enums.Status.Archived : n == 27 ? Guard.Core.Enums.Status.Deleted : Guard.Core.Enums.Status.Inserted,
@@ -41,6 +44,20 @@ internal static class BrowserTestHost
         AccountBlockReason = n % 2 == 0 ? "Administrator" : null
       }));
       foreach (var subdivision in subdivisions) subdivision.Path = $"/{subdivision.SubdivisionId}/";
+      subdivisions[1].ParentId = subdivisions[0].Id;
+      subdivisions[1].Path = subdivisions[0].Path + subdivisions[1].SubdivisionId + "/";
+      var people = Enumerable.Range(1, 27).Select(n => new Personal {
+        LastName = $"Проверка {n:00}", FirstName = "Браузер", MiddleName = "Тест",
+        SubdivisionId = subdivisions[n % 3].Id, CreatedBy = "root",
+        Status = n == 26 ? Guard.Core.Enums.Status.Archived : n == 27 ? Guard.Core.Enums.Status.Deleted : Guard.Core.Enums.Status.Inserted
+      }).ToArray();
+      db.Personals.AddRange(people);
+      var browserRoot = await db.Users.SingleAsync(u => u.Id == "root");
+      browserRoot.PersonalId = people[2].Id;
+      db.IpAddresses.AddRange(Enumerable.Range(0, 3).Select(n => new IpAddress {
+        Address = $"198.51.100.{n + 1}", Description = $"Область браузера {n + 1}",
+        SubdivisionId = subdivisions[n].Id, CreatedBy = "root"
+      }));
       db.IpAddresses.AddRange(Enumerable.Range(1, 25).Select(n => new IpAddress {
         Address = $"203.0.113.{n}", Description = $"Проверка пагинации {n:00}", CreatedBy = "root"
       }));

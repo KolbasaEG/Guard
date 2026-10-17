@@ -1,6 +1,7 @@
 
 @using Guard.Core.Services.DTOs
 @using Guard.Core.Enums
+<div class="personals-list">
 <TableWrapperWithFilterAndAnalytics>
 <Table>
 
@@ -17,7 +18,7 @@
   GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
   PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" ShowPagingSummary="true" PagingSummaryFormat="@PagingSummaryFormat">
   <HeaderTemplate>
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="8px" AlignItems="AlignItems.Center" Style="width:100%;position:relative;min-height:36px;">
+    <RadzenStack Class="personal-list-toolbar" Orientation="Orientation.Horizontal" Gap="8px" AlignItems="AlignItems.Center" Style="width:100%;position:relative;min-height:36px;">
           @if (Access?.Has(Permissions.Personals.Export) == true) {
             <RadzenMenu>
               <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
@@ -26,14 +27,16 @@
             </RadzenMenu>
           }
 
-      <RadzenSelectBar Size="ButtonSize.Medium" Style="position:absolute;left:50%;transform:translateX(-50%);background-color:var(--rz-menu-top-item-background-color);border-radius:0px;" TValue="DataViewMode" @bind-Value="mode" Change="@(() => ResetPageAsync())">
+      <RadzenStack Class="personal-list-status" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="position:absolute;left:50%;transform:translateX(-50%);">
+      <RadzenSelectBar Size="ButtonSize.Medium" Style="background-color:var(--rz-menu-top-item-background-color);border-radius:0px;" TValue="DataViewMode" @bind-Value="mode" Change="@(() => ResetPageAsync())">
         <Items>
           <RadzenSelectBarItem Value="@DataViewMode.Active" Text="Активные" Style="border-radius:0px;width:105px;text-align:center;" />
           @if (Access?.Has(Permissions.Personals.ReadArchive) == true) { <RadzenSelectBarItem Value="@DataViewMode.Archived" Text="Архив" Style="border-radius:0px;width:105px;text-align:center;" /> }
           @if (Access?.IsRoot == true) { <RadzenSelectBarItem Value="@DataViewMode.Deleted" Text="Удалённые" Style="border-radius:0px;width:105px;text-align:center;" /> }
         </Items>
       </RadzenSelectBar>
-      <RadzenStack Orientation="Orientation.Horizontal" Gap="0" Style="margin-left:auto;background-color:var(--rz-menu-top-item-background-color);border:var(--rz-selectbar-border);">
+      </RadzenStack>
+      <RadzenStack Class="personal-list-actions" Orientation="Orientation.Horizontal" Gap="0" Style="margin-left:auto;background-color:var(--rz-menu-top-item-background-color);border:var(--rz-selectbar-border);">
       @if (Access?.IsRoot == true)
       {
         <RadzenToggleButton Text="Весь персонал" Value="ShowAll" Change="OnAllRecordsChanged" Icon="groups" Variant="Variant.Text" Size="ButtonSize.Medium" Style="border-radius:0px;" />
@@ -88,6 +91,7 @@
 <Analitycs>
   <Guard.Components.Pages.Synchronization.ActualityPanel ReadPermission="@Permissions.Personals.Read" ApiModeChanged="@((bool value) => apiManaged = value)" ReloadData="ReloadForSynchronizationAsync" />
   <RadzenText>Найдено сотрудников: @count</RadzenText>
-  <RadzenText>Режим отображения: @(hierarchy == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")</RadzenText>
+  <RadzenText>Режим отображения: @(ShowAll ? "Весь персонал" : hierarchy == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")</RadzenText>
 </Analitycs>
 </TableWrapperWithFilterAndAnalytics>
+</div>

@@ -1,0 +1,9 @@
+.analytics-wrapper {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.analytics-wrapper ::deep .analytics-header-buttons .rz-button.rz-light.rz-variant-text {
+  color: var(--rz-menu-top-item-color);
+}
