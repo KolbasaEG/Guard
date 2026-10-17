@@ -24,7 +24,7 @@ PersonalService, SubdivisionService и IpAddressService продолжают в�
 | IP-полномочия | Перенесён в Application с явной DI-регистрацией и проверками отказов/отмены; см. architecture-ip-management-access.md |
 | Валидация и маппинг | EntityInputValidation/EntityWriteMapping перенесены в Application и остаются internal; см. architecture-entity-input-rules.md. ApiSnapshotValidator и ApiDiagnosticAnalyzer также перенесены без изменения правил; см. architecture-api-snapshot-validation.md и architecture-api-diagnostic-analysis.md |
 | Политика аккаунтов | AccountPolicyRules в Application использует независимый снимок AccountPolicyUserState. Повторное чтение и блокировка остаются в Infrastructure; см. architecture-account-policy-rules.md |
-| Дерево, Identity, синхронизация | Транзакции и locks остаются специализированными адаптерами Infrastructure; не дробить их на вызовы репозиториев из Application |
+| Дерево, Identity, синхронизация | SynchronizationSchedule перенесён в Application; см. architecture-synchronization-schedule.md. Транзакции и locks остаются специализированными адаптерами Infrastructure; не дробить их на вызовы репозиториев из Application |
 | Экспорт, HTTP, workers | DTO независимы; файловое хранение, OpenXml, HTTP и часть оркестрации в Infrastructure. Расположение транспортных адаптеров/BackgroundService отличается от целевой карты и требует отдельной поставки |
 | Владение контекстами | Описано в architecture-context-ownership.md; проверки покрывают откат, конкуренцию и обязательные IdentityResult. Неопределённый исход commit и гарантированная доставка событий остаются открытыми |
 

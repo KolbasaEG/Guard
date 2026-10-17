@@ -41,16 +41,6 @@ internal static class ApiSynchronizationTests
     Reject(snapshot with { Personnel = [new() { Id = 1, SubdivisionId = 999, FirstName = "A", LastName = "B", UpdatedAt = Stamp }] }, "unknown employee subdivision rejected");
     Reject(snapshot with { Personnel = [new() { Id = 1, SubdivisionId = 200, FirstName = "A", LastName = new string('x', 101), UpdatedAt = Stamp }] }, "API input respects database length limits");
     Reject(snapshot with { Classifiers = [new() { Type = 6, Code = 1, IsActive = 2, UpdatedAt = Stamp }] }, "unknown active state rejected");
-    var settings = new SynchronizationSettings { Mode = DataManagementMode.Api, CompleteSnapshotGuaranteed = true, ScheduleEnabled = true, DailyTime = new(2, 0) };
-    var localDay = new DateTime(2026, 10, 9);
-    DateTimeOffset Utc(DateTime local) => new(TimeZoneInfo.ConvertTimeToUtc(local, TimeZoneInfo.Local));
-    check(!SynchronizationSchedule.IsDue(settings, Utc(localDay.AddHours(1))), "schedule waits for server local time");
-    check(SynchronizationSchedule.IsDue(settings, Utc(localDay.AddHours(2))), "schedule runs at server 02:00");
-    settings.LastScheduledDate = DateOnly.FromDateTime(localDay);
-    check(!SynchronizationSchedule.IsDue(settings, Utc(localDay.AddHours(3))), "successful scheduled date prevents duplicate execution");
-    settings.Mode = DataManagementMode.Local;
-    check(!SynchronizationSchedule.IsDue(settings, Utc(localDay.AddDays(1).AddHours(3))), "local mode disables schedule");
-
     using var handler = new Handler(snapshot);
     using var http = new HttpClient(handler);
     var options = Options.Create(new DirectoryApiOptions { BaseUrl = "https://example.invalid/api", Username = "test", Password = "test", PageSize = 2 });

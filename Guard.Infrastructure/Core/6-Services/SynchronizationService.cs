@@ -341,19 +341,6 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
   }
 }
 
-public static class SynchronizationSchedule
-{
-  public static DateOnly UpdatedSince(DateTime startedAtUtc) =>
-    DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(startedAtUtc, TimeZoneInfo.Local)).AddDays(-1);
-  public static bool IsDue(SynchronizationSettings settings, DateTimeOffset utcNow)
-  {
-    var local = TimeZoneInfo.ConvertTime(utcNow, TimeZoneInfo.Local);
-    return settings.Mode == DataManagementMode.Api && settings.CompleteSnapshotGuaranteed && settings.ScheduleEnabled &&
-      TimeOnly.FromDateTime(local.DateTime) >= settings.DailyTime &&
-      (!settings.LastScheduledDate.HasValue || settings.LastScheduledDate.Value < DateOnly.FromDateTime(local.DateTime));
-  }
-}
-
 public sealed class ApiSynchronizationWorker(IServiceScopeFactory scopes, ILogger<ApiSynchronizationWorker> logger) : BackgroundService
 {
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
