@@ -35,6 +35,7 @@
 | `Guard/ApplicationServiceRegistration.cs` | Регистрация независимых прикладных решений в host |
 | `Guard/WebServiceRegistration.cs`, `Guard/Web/Identity` | Регистрация Web и адаптеры Blazor circuit |
 | `Guard/Web/Workers` | Host-таймер политики аккаунтов; EF-workers синхронизации и экспорта остаются в Infrastructure |
+| `Guard/Web/Maintenance` | Явный CLI подготовки ключей IP; не запускает HTTP-host, миграции, создание БД или seeding. Выпуск и окно обслуживания описаны в docs/ip-catalog-canonical-keys.md |
 | `Guard.Domain/Core/0-Enums` | Перечисления, статусы и режимы выборки |
 | `Guard.Domain/Core/1-Entities` | Независимые сущности и общие поля |
 | `Guard.Infrastructure/Core/1-Entities` | Модели Identity и технического журнала |

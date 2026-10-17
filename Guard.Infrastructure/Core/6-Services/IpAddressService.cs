@@ -81,9 +81,10 @@ public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
 
   private static async Task<bool> IsUniqueAsync(ApplicationDbContext db, string address, Guid? excludeId, CancellationToken ct)
   {
-    var values = await db.IpAddresses.AsNoTracking().Where(ip => !excludeId.HasValue || ip.Id != excludeId.Value)
-        .Select(ip => ip.Address).ToListAsync(ct);
-    return !values.Any(value => IpAddressRule.TryParse(value, out var rule) && rule!.CanonicalAddress == address);
+    if (await db.IpAddresses.AnyAsync(ip => EF.Property<string>(ip, IpCatalogKeys.Canonical) == null, ct))
+      throw new EntityRuleException("Каталог IP проходит подготовку. Обратитесь к администратору и повторите изменение позже.");
+    return !await db.IpAddresses.AnyAsync(ip => EF.Property<string>(ip, IpCatalogKeys.Canonical) == address &&
+      (!excludeId.HasValue || ip.Id != excludeId.Value), ct);
   }
 
   public Task<Guid> CreateAsync(CreateIpAddressDto input, CancellationToken ct = default)

@@ -16,6 +16,8 @@ using Serilog.Core;
 using Serilog.Sinks.PostgreSQL;
 using Serilog.Sinks.Syslog;
 
+if (await Guard.Web.Maintenance.IpCatalogMaintenanceCommand.TryRunAsync(args)) return;
+
 var builder = WebApplication.CreateBuilder(args);
 // =====================================================
 // ПРОВЕРКА И СОЗДАНИЕ ФИЗИЧЕСКИХ БАЗ ДАННЫХ

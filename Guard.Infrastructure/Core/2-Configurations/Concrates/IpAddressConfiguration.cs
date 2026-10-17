@@ -1,5 +1,6 @@
 ﻿using Guard.Core.Entities;
 using Microsoft.EntityFrameworkCore;
+using Guard.Core.Contexts;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Guard.Core.Configurations;
@@ -36,5 +37,12 @@ public class IpAddressConfiguration : IEntityTypeConfiguration<IpAddress>
         .OnDelete(DeleteBehavior.Restrict);
 
     builder.HasIndex(x => x.Address).IsUnique();
+    // Non-unique: preserve equivalent legacy rows and their assignments during backfill.
+    builder.Property<string>(IpCatalogKeys.Canonical).HasMaxLength(50);
+    builder.Property<string>(IpCatalogKeys.Source).HasMaxLength(50);
+    builder.HasIndex(IpCatalogKeys.Canonical);
+    builder.HasIndex(x => x.Id).HasDatabaseName("IX_IpAddresses_MissingCanonicalAddress")
+      .HasFilter("\"CanonicalAddress\" IS NULL");
+    builder.ToTable(t => t.HasCheckConstraint(IpCatalogKeys.SourceConstraint, IpCatalogKeys.SourceCheck));
   }
 }

@@ -84,6 +84,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
   private void PrepareVersions()
   {
+    IpCatalogKeys.Prepare(this);
     foreach (var entry in ChangeTracker.Entries().Where(e =>
         e.State is EntityState.Added or EntityState.Modified &&
         e.Entity is Personal or Subdivision or Classifier or Guard.Core.Entities.SynchronizationSettings))

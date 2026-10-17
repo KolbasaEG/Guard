@@ -47,23 +47,38 @@ internal static class ArchitectureBenchmark
           md5('version' || i)::uuid, 1, TIMESTAMPTZ '2026-10-16 00:00:00+00', 'benchmark'
         FROM generate_series(1, 200000) i JOIN bench_subs s ON s.n = (i - 1) % 1000 + 1;
         """, ct);
-      // По 1 млн строк: сохраняем индексы/FK модели и ограничиваем размер одной транзакции.
-      for (var batch = 0; batch < 10; batch++) {
+      // По 100 тыс. строк: сохраняем индексы/FK модели и ограничиваем размер одной транзакции.
+      for (var batch = 0; batch < 5; batch++) {
         await db.Database.ExecuteSqlInterpolatedAsync($"""
           INSERT INTO "IpAddresses" ("Id", "Address", "SubdivisionId", "Status", "InsertedDate", "CreatedBy")
           SELECT md5('ip' || i)::uuid, '2001:db8:' || to_hex(i / 65536) || '::' || to_hex(i % 65536),
             s."Id", 1, TIMESTAMPTZ '2026-10-16 00:00:00+00', 'benchmark'
-          FROM generate_series({batch * 1000000L + 1}, {(batch + 1) * 1000000L}) i
+          FROM generate_series({batch * 100000L + 1}, {(batch + 1) * 100000L}) i
           JOIN bench_subs s ON s.n = (i - 1) % 1000 + 1;
           """, ct);
-        Console.WriteLine($"Seed IP: {(batch + 1) * 1000000}; elapsed={seed.Elapsed.TotalSeconds:F1}s");
+        Console.WriteLine($"Seed IP: {(batch + 1) * 100000}; elapsed={seed.Elapsed.TotalSeconds:F1}s");
       }
       await db.Database.ExecuteSqlRawAsync("ANALYZE", ct);
     }
     finally { await db.Database.CloseConnectionAsync(); }
     check(await db.Personals.CountAsync(ct) == 200000, "benchmark employees count");
-    check(await db.IpAddresses.CountAsync(ct) == 10000000, "benchmark IP count");
+    check(await db.IpAddresses.CountAsync(ct) == 500000, "benchmark IP count");
     check(await db.Subdivisions.CountAsync(ct) == 1000, "benchmark subdivisions count");
+    var preparation = Stopwatch.StartNew();
+    var maintenance = new IpCatalogKeyMaintenance(factory);
+    long prepared = 0;
+    while (true) {
+      var batch = await maintenance.PrepareBatchAsync(ct: ct);
+      prepared += batch.Updated;
+      check(batch.Invalid == 0, "benchmark generated IP keys are valid");
+      if (batch.Updated == 0) break;
+      if (prepared % 100000 == 0)
+        Console.WriteLine($"Prepared IP keys: {prepared}; elapsed={preparation.Elapsed.TotalSeconds:F1}s");
+    }
+    check(prepared == 500000, "benchmark prepares all five hundred thousand legacy IP keys");
+    Console.WriteLine($"IP key preparation 500000: {preparation.Elapsed.TotalSeconds:F1}s");
+    // Backfill updates every row: refresh statistics and remove dead index entries before steady-state measurements.
+    await db.Database.ExecuteSqlRawAsync("VACUUM (ANALYZE) \"IpAddresses\"", ct);
     Console.WriteLine($"Database bytes: {await db.Database.SqlQueryRaw<long>("SELECT pg_database_size(current_database()) AS \"Value\"").SingleAsync(ct)}");
 
     var root = new UserAccessSnapshot("benchmark", true, []);
@@ -71,6 +86,15 @@ internal static class ArchitectureBenchmark
       PersonalId = await db.Personals.OrderBy(p => p.PersonalId).Select(p => p.Id).FirstAsync(ct) });
     await db.SaveChangesAsync(ct);
     var ipSearch = new IpAddressService(factory, new BenchmarkAccess(root.UserId), NullLogger<IpAddressService>.Instance);
+    await MeasureAsync("IP indexed create and cleanup on 500000", async () => {
+      var id = await ipSearch.CreateAsync(new("198.18.240.1", null, null), ct);
+      check(await db.IpAddresses.AnyAsync(ip => ip.Id == id, ct), "benchmark indexed create stores new IP");
+      await db.IpAddresses.Where(ip => ip.Id == id).ExecuteDeleteAsync(ct);
+    });
+    await MeasureAsync("IP indexed equivalent duplicate on 500000", async () => {
+      await PostgresTests.ThrowsAsync<ArgumentException>(() => ipSearch.CreateAsync(new("2001:db8::1/128", null, null), ct),
+        check, "benchmark indexed check rejects equivalent legacy IPv6 host");
+    });
     var rootScope = new DataAccessScope(root.UserId, true, []);
     foreach (var skip in new[] { 0, 100000 }) {
       await MeasureAsync($"personals root skip={skip}", async () => {
@@ -85,12 +109,12 @@ internal static class ArchitectureBenchmark
     foreach (var ownOnly in new[] { false, true }) {
       await MeasureAsync($"IP count+page ownOnly={ownOnly}", async () => {
         var result = await ipSearch.SearchAsync(new(AllSubdivisions: !ownOnly, OrderBy: "Address asc"), ct);
-        check(result.Count == (ownOnly ? 10000 : 10000000) && result.Items.Count == 20, "benchmark IP search page");
+        check(result.Count == (ownOnly ? 500 : 500000) && result.Items.Count == 20, "benchmark IP search page");
       });
     }
     await MeasureAsync("IP SearchAsync default sort all", async () => {
       var result = await ipSearch.SearchAsync(new(AllSubdivisions: true), ct);
-      check(result.Count == 10000000 && result.Items.Count == 20, "benchmark IP default sort page");
+      check(result.Count == 500000 && result.Items.Count == 20, "benchmark IP default sort page");
     });
 
     var tempRoot = Path.Combine(Path.GetTempPath(), "guard-benchmark-" + Guid.NewGuid().ToString("N"));

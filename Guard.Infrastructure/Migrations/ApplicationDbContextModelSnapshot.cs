@@ -461,6 +461,14 @@ namespace Guard.Migrations
                         .HasColumnType("character varying(50)")
                         .HasComment("IP-адрес или CIDR-нотация");
 
+                    b.Property<string>("CanonicalAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("CanonicalSource")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("text");
@@ -489,10 +497,17 @@ namespace Guard.Migrations
                     b.HasIndex("Address")
                         .IsUnique();
 
+                    b.HasIndex("CanonicalAddress");
+
+                    b.HasIndex("Id")
+                        .HasDatabaseName("IX_IpAddresses_MissingCanonicalAddress")
+                        .HasFilter("\"CanonicalAddress\" IS NULL");
+
                     b.HasIndex("SubdivisionId");
 
                     b.ToTable("IpAddresses", null, t =>
                         {
+                            t.HasCheckConstraint("CK_IpAddresses_CanonicalSource", "(\"CanonicalAddress\" IS NULL AND \"CanonicalSource\" IS NULL) OR (\"CanonicalAddress\" IS NOT NULL AND \"CanonicalSource\" IS NOT NULL AND \"CanonicalSource\" = \"Address\")");
                             t.HasComment("Справочник IP-адресов и CIDR-подсетей системы Guard. Центральный каталог всех известных IP-адресов и подсетей, которые могут быть назначены пользователям, подразделениям и другим сущностям.");
                         });
                 });

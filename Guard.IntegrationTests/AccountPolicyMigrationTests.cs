@@ -48,6 +48,10 @@ internal static class AccountPolicyMigrationTests
         DROP COLUMN "MustChangePassword", DROP COLUMN "PasswordChangedAtUtc", DROP COLUMN "UnblockedAtUtc";
       CREATE TABLE "__EFMigrationsHistory" ("MigrationId" varchar(150) PRIMARY KEY, "ProductVersion" varchar(32) NOT NULL);
       """);
+    await db.Database.ExecuteSqlRawAsync("""
+      ALTER TABLE "IpAddresses" DROP CONSTRAINT "CK_IpAddresses_CanonicalSource";
+      ALTER TABLE "IpAddresses" DROP COLUMN "CanonicalAddress", DROP COLUMN "CanonicalSource";
+      """);
     var migrations = db.Database.GetMigrations().ToArray();
     check(migrations.Any(m => m.EndsWith("_AddAccountPolicy")), "account policy migration exists");
     foreach (var migration in migrations.TakeWhile(m => !m.EndsWith("_AddAccountPolicy")))
@@ -66,7 +70,8 @@ internal static class AccountPolicyMigrationTests
     await db.Database.ExecuteSqlRawAsync("""
       UPDATE "SynchronizationSettings" SET "ApiBaseUrl" = 'https://migration.example.invalid/api', "ApiUsername" = 'migration-account';
       """);
-    await db.Database.MigrateAsync();
+    await db.GetService<IMigrator>().MigrateAsync("20261015174116_AddApiSnapshotConfirmation");
+    await IpCanonicalKeyTests.CheckMigrationAsync(db, check);
     var migratedSettings = await db.SynchronizationSettings.AsNoTracking().SingleAsync();
     check(!migratedSettings.CompleteSnapshotGuaranteed && migratedSettings.ApiBaseUrl == "https://migration.example.invalid/api" &&
       migratedSettings.ApiUsername == "migration-account", "snapshot confirmation migration defaults to false and preserves existing source settings");
