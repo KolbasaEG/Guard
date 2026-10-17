@@ -5,7 +5,7 @@ $repoRoot = Split-Path $PSScriptRoot -Parent
 Push-Location $repoRoot
 try {
     # Только исходники: не читать конфигурацию, рабочие данные, bin/obj и секреты.
-    $sourceFiles = @(& rg --files Guard Guard.Domain -g '*.cs' -g '*.razor' -g '!**/Migrations/**' -g '!**/obj/**' -g '!**/bin/**' | Sort-Object)
+    $sourceFiles = @(& rg --files Guard Guard.Domain Guard.Application -g '*.cs' -g '*.razor' -g '!**/Migrations/**' -g '!**/obj/**' -g '!**/bin/**' | Sort-Object)
     if ($LASTEXITCODE -ne 0) { throw 'Не удалось перечислить исходники через rg.' }
     $lines = [System.Collections.Generic.List[string]]::new()
     $lines.Add('# Статический инвентарь архитектуры Guard')

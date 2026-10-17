@@ -7,7 +7,7 @@ internal static class DomainAssemblyBoundaryTests
   public static void Run(Action<bool, string> check)
   {
     var domain = typeof(Personal).Assembly;
-    var host = typeof(ICurrentSession).Assembly;
+    var host = typeof(Guard.GuardServiceRegistration).Assembly;
     check(domain.GetName().Name == "Guard.Domain" && domain != host,
       "Domain is a separate assembly from Web and application implementations");
     Type[] expected = [typeof(BaseEntity), typeof(IHasSubdivision), typeof(HasFolderEntity), typeof(HasArchiveBatchIdEntity),

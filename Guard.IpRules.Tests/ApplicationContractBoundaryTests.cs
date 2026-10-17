@@ -11,7 +11,22 @@ internal static class ApplicationContractBoundaryTests
     var legacy = new HashSet<Type> { typeof(IPersonalService), typeof(IIpAddressService),
       typeof(ISubdivisionService), typeof(IClassifierService), typeof(ISecurityService),
       typeof(IApplicationRoleService), typeof(ILogService) };
-    var contracts = typeof(ICurrentSession).Assembly.GetExportedTypes()
+    var application = typeof(ICurrentSession).Assembly;
+    var host = typeof(Guard.GuardServiceRegistration).Assembly;
+    check(application.GetName().Name == "Guard.Application" && application != host && application != typeof(Personal).Assembly,
+      "Application has its own assembly, separate from Domain and Web");
+    foreach (var reference in application.GetReferencedAssemblies())
+      check(reference.Name is "Guard.Domain" or "mscorlib" or "netstandard" or "System" ||
+        reference.Name?.StartsWith("System.", StringComparison.Ordinal) == true,
+        $"Application depends only on Domain and BCL: {reference.Name}");
+    var hostContracts = host.GetExportedTypes().Where(t => t.IsInterface &&
+      (t.Namespace == "Guard.Core.Services" || t.Namespace == "Guard.Core.Services.Exports")).ToHashSet();
+    check(hostContracts.SetEquals(legacy), "Only the seven transitional service contracts remain in Infrastructure/Web");
+    foreach (var type in application.GetExportedTypes())
+      check(host.GetType(type.FullName!) == null, $"Application owns {type.Name} without duplicate Web definition");
+    foreach (var type in new[] { typeof(IpAccessService), typeof(PermissionService), typeof(DataAccessScopeService) })
+      check(type.Assembly == application, $"Independent access decisions {type.Name} belong to Application");
+    var contracts = application.GetExportedTypes()
       .Where(t => t.IsInterface && (t.Namespace == "Guard.Core.Services" ||
         t.Namespace == "Guard.Core.Services.Exports") && !legacy.Contains(t)).ToArray();
     check(contracts.Length == 35, "Application inventory contains 32 services and three access read ports");
@@ -21,6 +36,9 @@ internal static class ApplicationContractBoundaryTests
       check(violations.Count == 0,
         $"Application boundary {contract.Name}: {string.Join(", ", violations)}");
     }
+    foreach (var dto in application.GetExportedTypes().Where(t => t.Namespace is
+      "Guard.Core.Services.DTOs" or "Guard.Core.Services.Exports" && !t.IsInterface))
+      check(FindViolations(dto).Count == 0, $"Application DTO boundary {dto.Name}");
 
     // Ensure the guard follows indirect signatures, rather than only inspecting direct return types.
     foreach (var fixture in new[] { typeof(INestedQuery), typeof(IEntityMethod),

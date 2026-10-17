@@ -57,6 +57,14 @@ internal static class ServiceRegistrationTests
         check(!services.Any(d => d.ServiceType == type), $"production DI has no legacy write registration {type.Name}");
       check(services.Count(d => d.ServiceType == typeof(IReadRepository<>)) == 1,
         "production DI has one open generic read repository registration after Scrutor");
+      foreach (var (contract, implementation) in new[] {
+        (typeof(IIpAccessService), typeof(IpAccessService)),
+        (typeof(IPermissionService), typeof(PermissionService)),
+        (typeof(IDataAccessScopeService), typeof(DataAccessScopeService)) })
+        check(services.Count(d => d.ServiceType == contract) == 1 &&
+          services.Single(d => d.ServiceType == contract).ImplementationType == implementation &&
+          services.Single(d => d.ServiceType == contract).Lifetime == ServiceLifetime.Scoped,
+          $"production DI registers one scoped Application implementation for {contract.Name}");
       check(services.Count(d => d.ServiceType == typeof(IIpAccessReader)) == 1 &&
         services.Single(d => d.ServiceType == typeof(IIpAccessReader)).ImplementationType == typeof(IpAccessReader) &&
         services.Single(d => d.ServiceType == typeof(IIpAccessReader)).Lifetime == ServiceLifetime.Scoped,
@@ -82,7 +90,7 @@ internal static class ServiceRegistrationTests
       var b = second.ServiceProvider;
       // Resolve every Guard service interface in the actual registration set, not a hand-copied list.
       foreach (var type in services.Select(d => d.ServiceType).Distinct().Where(t => t.IsInterface && !t.IsGenericTypeDefinition &&
-        t.Assembly == typeof(GuardServiceRegistration).Assembly))
+        (t.Assembly == typeof(GuardServiceRegistration).Assembly || t.Assembly == typeof(ICurrentSession).Assembly)))
         check(a.GetRequiredService(type) != null, $"production service graph resolves {type.Name}");
       check(a.GetRequiredService<IReadRepository<Personal>>() is ReadRepository<Personal> &&
         a.GetRequiredService<IReadRepository<ApplicationUser>>() is ReadRepository<ApplicationUser>, "closed read repositories resolve after legacy cleanup");

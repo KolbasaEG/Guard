@@ -18,9 +18,9 @@
 
 ## Проект и архитектура
 
-- `Guard.slnx` содержит независимую библиотеку `Guard.Domain`, веб-проект `Guard/Guard.csproj` и исполняемый runner `Guard.IpRules.Tests`, целевая платформа — .NET 10.
+- `Guard.slnx` содержит библиотеки `Guard.Domain` и `Guard.Application`, веб-проект `Guard/Guard.csproj` и исполняемый runner `Guard.IpRules.Tests`, целевая платформа — .NET 10.
 - Приложение использует Blazor с интерактивным серверным режимом, Radzen, ASP.NET Core Identity, EF Core и PostgreSQL.
-- Это слоистый монолит. Независимые модели и enum выделены в `Guard.Domain` без пакетов и ссылок на другие проекты; разрешены только зависимости BCL. Прикладные операции, Infrastructure и Web пока находятся в `Guard`. Полные имена перенесённых типов сохранены.
+- Это слоистый монолит. Независимые модели и enum выделены в `Guard.Domain` без пакетов и ссылок на другие проекты; разрешены только зависимости BCL. `Guard.Application` содержит независимые контракты, DTO и правила доступа, ссылается только на Domain и BCL. EF/Identity-реализации, транзакционные операции, legacy-контракты, Infrastructure и Web пока находятся в `Guard`. Полные имена перенесённых типов сохранены.
 - Основной поток записи: компонент → сервис → `IUnitOfWork` → репозиторий → `ApplicationDbContext`.
 - Основной поток чтения: компонент → сервис → `IReadRepository<T>` → `IDbContextFactory<ApplicationDbContext>`.
 - `LogsDbContext` обслуживает отдельную БД логов. Serilog и Identity-аудит выполняют разные задачи.
@@ -37,7 +37,9 @@
 | `Guard/Core/3-Contexts` | Контексты, инициализация и начальные данные |
 | `Guard/Core/4-Repositories` | Репозитории чтения и записи |
 | `Guard/Core/5-UnitOfWork` | Сохранение и транзакции |
-| `Guard/Core/6-Services` | Прикладные операции и интерфейсы; DTO в `DTOs` |
+| `Guard.Application/Core/6-Services` | Независимые прикладные контракты, DTO и решения по доступу |
+| `Guard.Application/Core/Identity` | Независимые permissions и правила IP без ASP.NET Identity |
+| `Guard/Core/6-Services` | Реализации операций с EF/Identity, инфраструктурные helpers и legacy-контракты |
 | `Guard/Core/7-Interceptors` | Заполнение полей аудита при сохранении |
 | `Guard/Core/8-Extensions` | Общие преобразования и фильтры запросов |
 | `Guard/Core/9-Logging` | Конфигурация и управление логированием |

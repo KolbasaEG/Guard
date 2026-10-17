@@ -92,6 +92,8 @@ public static class GuardServiceRegistration
     services.AddScoped<IdentityRedirectManager>();
     services.AddHttpContextAccessor();
     services.AddScoped<IDataAccessScopeService, DataAccessScopeService>();
+    services.AddScoped<IIpAccessService, IpAccessService>();
+    services.AddScoped<IPermissionService, PermissionService>();
     services.AddSingleton<IAccessChangeNotifier, AccessChangeNotifier>();
     services.AddScoped<AccessRefreshCoordinator>();
     services.AddScoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, AccessCircuitHandler>();
