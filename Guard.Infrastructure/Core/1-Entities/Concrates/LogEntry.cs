@@ -2,6 +2,9 @@
 
 public class LogEntry
 {
+  public Guid Id { get; set; }
+  public string? Properties { get; set; }
+  public string? MessageTemplate { get; set; }
   public DateTime Timestamp { get; set; }
   public string? Level { get; set; }
   public string? Layer { get; set; }

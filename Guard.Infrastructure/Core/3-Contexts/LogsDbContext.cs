@@ -16,7 +16,10 @@ public class LogsDbContext : DbContext
     modelBuilder.Entity<LogEntry>(entity =>
     {
       entity.ToTable("logs");
-      entity.HasNoKey(); 
+      entity.HasKey(e => e.Id);
+      entity.Property(e => e.Id).HasColumnName("id").HasDefaultValueSql("gen_random_uuid()");
+      entity.Property(e => e.Properties).HasColumnName("properties").HasColumnType("jsonb");
+      entity.Property(e => e.MessageTemplate).HasColumnName("message_template");
       entity.Property(e => e.Timestamp).HasColumnName("timestamp")
         .HasColumnType("timestamp without time zone")
         .HasConversion(value => DateTime.SpecifyKind(value.Kind == DateTimeKind.Unspecified ? value : value.ToUniversalTime(), DateTimeKind.Unspecified),

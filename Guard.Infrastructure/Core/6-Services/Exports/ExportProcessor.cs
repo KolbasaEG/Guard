@@ -4,20 +4,28 @@ using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Guard.Core.Logging;
 
 namespace Guard.Core.Services.Exports;
 
 public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> contexts, ExportAccess access, ExportSnapshot snapshot,
-  ExportDocumentWriter writer, ExportStorage storage, IAuditService audit, IOptions<ExportOptions> options, ILogger<ExportProcessor> logger)
+  ExportDocumentWriter writer, ExportStorage storage, IAuditService audit, IOptions<ExportOptions> options, ILogger<ExportProcessor> logger,
+  IOperationAvailability? availability = null)
 {
   public async Task<bool> RunNextAsync(CancellationToken stopping)
   {
+    if (availability != null) await availability.RequireWorkingAsync(stopping);
     await using var db = await contexts.CreateDbContextAsync(stopping);
     var job = await db.ExportJobs.AsNoTracking().Where(j => j.State == ExportJobState.Queued).OrderBy(j => j.CreatedAtUtc).ThenBy(j => j.Id).FirstOrDefaultAsync(stopping);
     if (job == null) return false;
-    var claimed = await db.ExportJobs.Where(j => j.Id == job.Id && j.State == ExportJobState.Queued)
-      .ExecuteUpdateAsync(u => u.SetProperty(j => j.State, ExportJobState.Processing).SetProperty(j => j.StartedAtUtc, DateTimeOffset.UtcNow), stopping);
-    if (claimed == 0) return true;
+    await using (var claim = await db.Database.BeginTransactionAsync(stopping)) {
+      var claimed = await db.ExportJobs.Where(j => j.Id == job.Id && j.State == ExportJobState.Queued)
+        .ExecuteUpdateAsync(u => u.SetProperty(j => j.State, ExportJobState.Processing).SetProperty(j => j.StartedAtUtc, DateTimeOffset.UtcNow), stopping);
+      if (claimed == 0) return true;
+      await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.ExportProcessingStarted, null,
+        details: $"RequestedBy={job.AuthorId}") with { Actor = null, ActorKind = "system", ObjectType = "Export", ObjectId = job.Id.ToString() }, stopping);
+      await AuditTransaction.CommitAsync(claim, stopping);
+    }
     using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stopping); timeout.CancelAfter(TimeSpan.FromMinutes(options.Value.TimeoutMinutes));
     var ct = timeout.Token; string? key = null; bool published = false;
     try {
@@ -40,20 +48,24 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
       var ready = await db.ExportJobs.Where(j => j.Id == job.Id && j.State == ExportJobState.Processing && !j.CancelRequested && j.ExpiresAtUtc > DateTimeOffset.UtcNow)
         .ExecuteUpdateAsync(u => u.SetProperty(j => j.State, ExportJobState.Ready).SetProperty(j => j.RowCount, captured.Count).SetProperty(j => j.CompletedAtUtc, DateTimeOffset.UtcNow), ct);
       if (ready == 0) throw new OperationCanceledException("Выгрузка отменена.");
-      await transaction.CommitAsync(ct); published = true;
-      // Ready and its artifact are committed. Audit delivery cannot fail generation.
-      try { audit.LogIdentityEvent(AuditEventType.ExportArchived, job.AuthorId, job.ClientIp, $"Export {job.Id}; rows {captured.Count}; SHA256 {saved.Hash}"); }
-      catch (Exception ex) { logger.LogError(ex, "Выгрузка {ExportId} готова, но событие аудита {EventType} не доставлено", job.Id, AuditEventType.ExportArchived); }
+      await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.ExportArchived, null, job.ClientIp,
+        $"RequestedBy={job.AuthorId}; rows={captured.Count}; bytes={saved.Size}; SHA256={saved.Hash}")
+        with { Actor = null, ActorKind = "system", ObjectType = "Export", ObjectId = job.Id.ToString() }, ct);
+      await AuditTransaction.CommitAsync(transaction, ct); published = true;
     }
+    catch (OperationCommitUnknownException) { throw; }
     catch (OperationCanceledException) when (stopping.IsCancellationRequested) { throw; }
     catch (Exception ex) {
       logger.LogError(ex, "Формирование выгрузки {ExportId} завершилось ошибкой", job.Id);
       var cancelled = await db.ExportJobs.Where(j => j.Id == job.Id).Select(j => j.CancelRequested).SingleAsync(stopping);
       var error = cancelled ? "Выгрузка отменена." : ex is UnauthorizedAccessException ? "Доступ изменился. Создайте новую выгрузку." :
         ex is OperationCanceledException ? "Превышено время формирования. Сузьте фильтры и повторите выгрузку." : "Не удалось сформировать выгрузку. Обратитесь к администратору.";
+      await using var failed = await db.Database.BeginTransactionAsync(stopping);
       await db.ExportJobs.Where(j => j.Id == job.Id && j.State == ExportJobState.Processing).ExecuteUpdateAsync(u =>
         u.SetProperty(j => j.State, cancelled ? ExportJobState.Cancelled : ExportJobState.Failed).SetProperty(j => j.Error, error).SetProperty(j => j.CompletedAtUtc, DateTimeOffset.UtcNow), stopping);
-      audit.LogIdentityEvent(cancelled ? AuditEventType.ExportCancelled : AuditEventType.ExportFailed, job.AuthorId, job.ClientIp, $"Export {job.Id}");
+      await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(cancelled ? AuditEventType.ExportCancelled : AuditEventType.ExportFailed,
+        null, job.ClientIp, $"RequestedBy={job.AuthorId}") with { Actor = null, ActorKind = "system", ObjectType = "Export", ObjectId = job.Id.ToString() }, stopping);
+      await AuditTransaction.CommitAsync(failed, stopping);
     }
     finally {
       if (!published && key != null) try {
@@ -68,6 +80,7 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
   }
   private async Task CheckpointAsync(Guid id, CancellationToken ct)
   {
+    if (availability != null) await availability.RequireWorkingAsync(ct);
     ct.ThrowIfCancellationRequested(); await using var db = await contexts.CreateDbContextAsync(ct);
     if (await db.ExportJobs.AnyAsync(j => j.Id == id && (j.CancelRequested || j.ExpiresAtUtc <= DateTimeOffset.UtcNow), ct)) throw new OperationCanceledException("Выгрузка отменена.");
   }
@@ -100,10 +113,20 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
     await storage.ArchiveGate.WaitAsync(ct);
     try {
     await using var db = await contexts.CreateDbContextAsync(ct);
+    db.IsAuditMaintenance = true;
+    await using var transaction = await db.Database.BeginTransactionAsync(ct);
+    var processing = await db.ExportJobs.Where(j => j.State == ExportJobState.Processing).Select(j => j.Id).ToListAsync(ct);
+    var delivering = await db.ExportJobs.Where(j => j.State == ExportJobState.Delivering).Select(j => j.Id).ToListAsync(ct);
     await db.ExportJobs.Where(j => j.State == ExportJobState.Processing).ExecuteUpdateAsync(u => u.SetProperty(j => j.State, ExportJobState.Queued), ct);
     await db.ExportJobs.Where(j => j.State == ExportJobState.Delivering).ExecuteUpdateAsync(u => u.SetProperty(j => j.State, ExportJobState.Failed)
-      .SetProperty(j => j.Error, "Передача прервана перезапуском сервера. Создайте новую выгрузку."), ct);
-    await db.ExportDeliveryAttempts.Where(d => d.CompletedAtUtc == null).ExecuteUpdateAsync(u => u.SetProperty(d => d.CompletedAtUtc, DateTimeOffset.UtcNow), ct);
+      .SetProperty(j => j.Error, "Результат передачи неизвестен после перезапуска сервера. Создайте новую выгрузку."), ct);
+    await db.ExportDeliveryAttempts.Where(d => d.CompletedAtUtc == null).ExecuteUpdateAsync(u => u
+      .SetProperty(d => d.CompletedAtUtc, DateTimeOffset.UtcNow).SetProperty(d => d.Succeeded, (bool?)null), ct);
+    foreach (var id in processing.Concat(delivering))
+      await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.ExportRecoveryCompleted, null)
+        with { Actor = null, ActorKind = "system", Outcome = "unknown", ObjectType = "Export", ObjectId = id.ToString(),
+          ReasonCode = delivering.Contains(id) ? "DeliveryOutcomeUnknown" : "GenerationRequeuedAfterRestart" }, ct);
+    await AuditTransaction.CommitAsync(transaction, ct);
     foreach (var id in storage.WorkIds()) storage.DeleteWork(id);
     } finally { storage.ArchiveGate.Release(); }
   }
@@ -112,6 +135,7 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
     await storage.ArchiveGate.WaitAsync(ct);
     try {
       await using var db = await contexts.CreateDbContextAsync(ct);
+      db.IsAuditMaintenance = true;
       var cancelled = await db.ExportJobs.Where(j => j.CancelRequested && (j.State == ExportJobState.Ready || j.State == ExportJobState.Queued)).ToListAsync(ct);
       foreach (var job in cancelled) { job.State = ExportJobState.Cancelled; job.CompletedAtUtc = DateTimeOffset.UtcNow; }
       await db.SaveChangesAsync(ct);
@@ -120,14 +144,17 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
       foreach (var job in expired) {
         ct.ThrowIfCancellationRequested();
         var actor = job.AuthorId;
-        if (job.Artifact != null) storage.Delete(job.Artifact.StorageKey);
+        var expiredKey = job.Artifact?.StorageKey;
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         if (job.Artifact != null) db.ExportArtifacts.Remove(job.Artifact);
         await db.ExportDeliveryAttempts.Where(d => d.JobId == job.Id).ExecuteDeleteAsync(ct);
         job.State = ExportJobState.Expired; job.RequestJson = "{}"; job.SecurityStamp = "";
         job.AuthorId = ""; job.AuthorName = "Удалено по сроку хранения"; job.ClientIp = null; job.RowCount = 0; job.Error = null;
-        await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-        audit.LogIdentityEvent(AuditEventType.ExportExpired, actor, details: $"Export {job.Id}");
+        await db.SaveChangesAsync(ct);
+        await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.ExportExpired, null,
+          details: $"RequestedBy={actor}") with { Actor = null, ActorKind = "system", ObjectType = "Export", ObjectId = job.Id.ToString() }, ct);
+        await AuditTransaction.CommitAsync(transaction, ct);
+        if (expiredKey != null) storage.Delete(expiredKey);
       }
       if (scanOrphans) {
       foreach (var key in storage.Orphans(DateTimeOffset.UtcNow.AddDays(-1)))

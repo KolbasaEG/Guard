@@ -26,6 +26,9 @@ public class UserContextLoggingMiddleware
     // Переменные "ClientIp" и "UserId" автоматически попадут в одноименные столбцы БД PostgreSQL.
     using (LogContext.PushProperty("ClientIp", ipAddress))
     using (LogContext.PushProperty("UserId", userId))
+    using (LogContext.PushProperty("CorrelationId", context.TraceIdentifier))
+    using (Guard.Core.Services.AuditOperationContext.Push(new(userId == "anonymous" ? null : userId,
+      ipAddress == "unknown" ? null : ipAddress, context.TraceIdentifier, userId == "anonymous" ? "anonymous" : "user")))
     {
       // Передаем управление следующему компоненту в пайплайне
       await _next(context);

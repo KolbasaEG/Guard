@@ -5,6 +5,8 @@ using Guard.Core.Identity;
 using Guard.Core.Services.DTOs;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Guard.Core.Logging;
+using System.Text.Json;
 
 namespace Guard.Core.Services;
 
@@ -84,7 +86,9 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
     policy.RequireSymbol = command.RequireSymbol;
   }
 
-  public async Task<AccountPolicySettingsDto> SaveAsync(SaveAccountPolicyCommand command, CancellationToken ct = default)
+  public Task<AccountPolicySettingsDto> SaveAsync(SaveAccountPolicyCommand command, CancellationToken ct = default) =>
+    AuditOperation.RunAsync(audit, Guard.Core.Enums.AuditEventType.AccountPolicyChanged, "AccountPolicy", "1", () => SaveCoreAsync(command, ct));
+  private async Task<AccountPolicySettingsDto> SaveCoreAsync(SaveAccountPolicyCommand command, CancellationToken ct)
   {
     var actor = await RequireRootAsync(ct);
     ArgumentNullException.ThrowIfNull(command);
@@ -92,10 +96,12 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
     Apply(command, policy);
     if (!AccountPolicyRules.Valid(policy)) throw new ArgumentException("Проверьте число попыток входа (1–100), блокировку (1–10080 минут), периоды (1–3650 дней), длину пароля (6–100) и число различных символов.");
     await using var db = await factory.CreateDbContextAsync(ct);
+    db.AuditActorId = actor.UserId;
     await using var tx = await db.Database.BeginTransactionAsync(ct);
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)", ct);
     if ((await RequireRootAsync(ct)).UserId != actor.UserId) throw new UnauthorizedAccessException("Сессия изменилась. Повторите сохранение.");
     var existing = await db.Set<AccountPolicy>().SingleOrDefaultAsync(ct);
+    var before = existing == null ? null : Snapshot(existing);
     if (existing != null && existing.Version != command.Version)
       throw new AccountPolicyConflictException();
     var now = DateTimeOffset.UtcNow;
@@ -110,8 +116,10 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
     saved.Version = Guid.NewGuid();
     if (existing == null) db.Add(saved);
     await db.SaveChangesAsync(ct);
-    await tx.CommitAsync(ct);
-    audit.LogIdentityEvent(AuditEventType.AccountPolicyChanged, actor.UserId, details: $"Version={saved.Version}");
+    await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.AccountPolicyChanged, actor.UserId,
+      details: JsonSerializer.Serialize(new { Before = before, After = Snapshot(saved) }))
+      with { ObjectType = "AccountPolicy", ObjectId = "1" }, ct);
+    await AuditTransaction.CommitAsync(tx, ct);
     return Snapshot(saved);
   }
 
@@ -127,6 +135,8 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
       where ur.UserId == userId && role.NormalizedName == "ROOT" select ur.UserId).AnyAsync(ct);
     if (AccountPolicyRules.Inactive(policy, user.ToAccountPolicyState(), root, now))
     {
+      try { if (services.GetService<IOperationAvailability>() is { } available) await available.RequireWorkingAsync(ct); }
+      catch (AuditUnavailableException) { return new(true, false); }
       // Повторная проверка под тем же замком, что у административных операций.
       await using var tx = await db.Database.BeginTransactionAsync(ct);
       var acquired = await db.Database.SqlQueryRaw<bool>("SELECT pg_try_advisory_xact_lock(74162002) AS \"Value\"").SingleAsync(ct);
@@ -143,12 +153,13 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
         user.SecurityStamp = Guid.NewGuid().ToString();
         user.ConcurrencyStamp = Guid.NewGuid().ToString();
         await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        audit.LogIdentityEvent(AuditEventType.UserBlocked, userId, details: "Reason=Inactivity");
+        await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.UserBlocked, null,
+          details: "Reason=Inactivity") with { Actor = null, ActorKind = "system", ObjectType = "Account", ObjectId = userId, ReasonCode = "Inactivity" }, ct);
+        await AuditTransaction.CommitAsync(tx, ct);
         // Уведомление выполняет фоновая проверка, чтобы не вызвать рекурсивную проверку circuit.
         return new(true, false);
       }
-      await tx.CommitAsync(ct);
+      await AuditTransaction.CommitAsync(tx, ct);
     }
     return new(user.AccountBlockReason != null || user.LockoutEnabled && user.LockoutEnd > now,
       AccountPolicyRules.PasswordExpired(policy, user.ToAccountPolicyState(), now));
@@ -160,11 +171,12 @@ public class AccountPolicyService(IDbContextFactory<ApplicationDbContext> factor
     var now = DateTimeOffset.UtcNow;
     await using var tx = await db.Database.BeginTransactionAsync(ct);
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)", ct);
+    if (db.AuditWriter != null) await db.AuditWriter.RequireWorkingTransactionAsync(db, ct);
     await db.Users.Where(u => u.Id == userId && u.AccountBlockReason == null &&
       (!u.LockoutEnabled || u.LockoutEnd == null || u.LockoutEnd <= now) &&
       (u.LastActivityAtUtc == null || u.LastActivityAtUtc < now.AddMinutes(-5)))
       .ExecuteUpdateAsync(s => s.SetProperty(u => u.LastActivityAtUtc, now), ct);
-    await tx.CommitAsync(ct);
+    await AuditTransaction.CommitAsync(tx, ct);
   }
 
   public async Task SweepAsync(CancellationToken ct = default)

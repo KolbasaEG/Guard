@@ -1,0 +1,225 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2152.0 1054.0" width="2152.0" height="1054.0">
+  <rect x="0" y="0" width="2152.0" height="1054.0" fill="white"/>
+  <text x="28" y="35" fill="#16313a" font-family="Arial, sans-serif" font-size="23" text-anchor="start">
+    <tspan x="28" dy="0">P04 Доставка обязательной очереди в RuSIEM</tspan>
+  </text>
+  <text x="28" y="63" fill="#16313a" font-family="Arial, sans-serif" font-size="13" text-anchor="start">
+    <tspan x="28" dy="0">Описательная BPMN 2.0 | Guard | 20 октября 2026</tspan>
+  </text>
+  <rect x="10" y="100" width="2132.0" height="230" fill="#f4f7f8" stroke="#c5d2d7" stroke-width="1"/>
+  <text x="32" y="215" fill="#3b5965" transform="rotate(-90 32 215)" text-anchor="middle" font-family="Arial" font-size="14">Worker и PostgreSQL</text>
+  <rect x="10" y="330" width="2132.0" height="230" fill="#ffffff" stroke="#c5d2d7" stroke-width="1"/>
+  <text x="32" y="445" fill="#3b5965" transform="rotate(-90 32 445)" text-anchor="middle" font-family="Arial" font-size="14">TLS транспорт</text>
+  <rect x="10" y="560" width="2132.0" height="230" fill="#f4f7f8" stroke="#c5d2d7" stroke-width="1"/>
+  <text x="32" y="675" fill="#3b5965" transform="rotate(-90 32 675)" text-anchor="middle" font-family="Arial" font-size="14">Фиксация попытки</text>
+  <polyline points="190.0,170.0 310.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="310.0,170.0 300.78939005997114,173.8941834230865 300.78939005997114,166.1058165769135" fill="#526b77"/>
+  <polyline points="470.0,170.0 580.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="580.0,170.0 570.7893900599712,173.8941834230865 570.7893900599712,166.1058165769135" fill="#526b77"/>
+  <polyline points="640.0,170.0 750.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="750.0,170.0 740.7893900599712,173.8941834230865 740.7893900599712,166.1058165769135" fill="#526b77"/>
+  <rect x="623.0" y="94.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="695.0" y="108.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="695.0" dy="0">Да</tspan>
+  </text>
+  <polyline points="640.0,170.0 660,170 660,120 500,120 500,280 590.0,280.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="590.0,280.0 580.7893900599712,283.89418342308653 580.7893900599712,276.10581657691347" fill="#526b77"/>
+  <rect x="428.0" y="254.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="500.0" y="268.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="500.0" dy="0">Нет</tspan>
+  </text>
+  <polyline points="910.0,170.0 1020.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1020.0,170.0 1010.7893900599712,173.8941834230865 1010.7893900599712,166.1058165769135" fill="#526b77"/>
+  <polyline points="1080.0,170.0 1190.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1190.0,170.0 1180.789390059971,173.8941834230865 1180.789390059971,166.1058165769135" fill="#526b77"/>
+  <rect x="1063.0" y="94.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1135.0" y="108.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1135.0" dy="0">Да</tspan>
+  </text>
+  <polyline points="1080.0,170.0 1170,170 1170,280 1910.0,280.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1910.0,280.0 1900.789390059971,283.89418342308653 1900.789390059971,276.10581657691347" fill="#526b77"/>
+  <rect x="1468.0" y="251.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1540.0" y="265.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1540.0" dy="0">Нет</tspan>
+  </text>
+  <polyline points="1350.0,170.0 1370,170 1370,340 1170,340 1170,400 1190.0,400.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1190.0,400.0 1180.789390059971,403.89418342308653 1180.789390059971,396.10581657691347" fill="#526b77"/>
+  <polyline points="1350.0,400.0 1460.0,400.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1460.0,400.0 1450.789390059971,403.89418342308653 1450.789390059971,396.10581657691347" fill="#526b77"/>
+  <polyline points="1520.0,400.0 1600,400 1600,700 1450,700 1450,740 1470.0,740.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1470.0,740.0 1460.789390059971,743.8941834230865 1460.789390059971,736.1058165769135" fill="#526b77"/>
+  <rect x="1528.0" y="521.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1600.0" y="535.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1600.0" dy="0">Отмена процесса</tspan>
+  </text>
+  <polyline points="1520.0,400.0 1540,400 1540,170 1630.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1630.0,170.0 1620.789390059971,173.8941834230865 1620.789390059971,166.1058165769135" fill="#526b77"/>
+  <rect x="1468.0" y="294.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1540.0" y="308.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1540.0" dy="0">Да</tspan>
+  </text>
+  <polyline points="1520.0,400.0 1610,400 1610,630 1630.0,630.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1630.0,630.0 1620.789390059971,633.8941834230865 1620.789390059971,626.1058165769135" fill="#526b77"/>
+  <rect x="1538.0" y="486.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1610.0" y="500.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1610.0" dy="0">Нет</tspan>
+  </text>
+  <polyline points="1790.0,170.0 1900.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1900.0,170.0 1890.789390059971,173.8941834230865 1890.789390059971,166.1058165769135" fill="#526b77"/>
+  <polyline points="1790.0,630.0 1810,630 1810,170 1900.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1900.0,170.0 1890.789390059971,173.8941834230865 1890.789390059971,166.1058165769135" fill="#526b77"/>
+  <polyline points="1960.0,170.0 1980,170 1980,110 730,110 730,170 750.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="750.0,170.0 740.7893900599712,173.8941834230865 740.7893900599712,166.1058165769135" fill="#526b77"/>
+  <rect x="1908.0" y="111.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1980.0" y="125.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1980.0" dy="0">Да</tspan>
+  </text>
+  <polyline points="1960.0,170.0 1980,170 1980,120 1820,120 1820,280 1910.0,280.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1910.0,280.0 1900.789390059971,283.89418342308653 1900.789390059971,276.10581657691347" fill="#526b77"/>
+  <rect x="1748.0" y="254.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1820.0" y="268.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1820.0" dy="0">Нет</tspan>
+  </text>
+  <circle cx="170.0" cy="170.0" r="20.0" fill="white" stroke="#274d59" stroke-width="1.8"/>
+  <circle cx="170.0" cy="170.0" r="12" fill="none" stroke="#274d59"/>
+  <path d="M 170.0 162.0 V 170.0 L 177.0 174.0" fill="none" stroke="#274d59"/>
+  <text x="170.0" y="212.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="170.0" dy="0">Цикл каждые 2 секунды</tspan>
+  </text>
+  <rect x="310.0" y="130.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="329.0" y1="144.0" x2="333.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="327.53553390593277" y1="147.53553390593274" x2="330.3639610306789" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="324.0" y1="149.0" x2="324.0" y2="153.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="320.4644660940673" y1="147.53553390593274" x2="317.6360389693211" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="319.0" y1="144.0" x2="315.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="320.46446609406723" y1="140.46446609406726" x2="317.6360389693211" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <line x1="324.0" y1="139.0" x2="324.0" y2="135.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="327.5355339059327" y1="140.46446609406726" x2="330.3639610306789" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <circle cx="324.0" cy="144.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="324.0" cy="144.0" r="2" fill="#315b67"/>
+  <text x="390.0" y="166.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="390.0" dy="0">Прочитать настройки</tspan>
+    <tspan x="390.0" dy="15">под QueueLock</tspan>
+  </text>
+  <polygon points="610.0,140.0 640.0,170.0 610.0,200.0 580.0,170.0" fill="#fff8e8" stroke="#8b7341" stroke-width="1.8"/>
+  <path d="M 602.0 162.0 L 618.0 178.0 M 618.0 162.0 L 602.0 178.0" stroke="#8b7341" stroke-width="2"/>
+  <text x="610.0" y="222.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="610.0" dy="0">SIEM включён и</tspan>
+    <tspan x="610.0" dy="17">настроен</tspan>
+  </text>
+  <circle cx="610.0" cy="280.0" r="20.0" fill="white" stroke="#274d59" stroke-width="3.5"/>
+  <text x="610.0" y="322.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="610.0" dy="0">В Local очередь</tspan>
+    <tspan x="610.0" dy="17">сохранена и</tspan>
+    <tspan x="610.0" dy="17">приостановлена</tspan>
+  </text>
+  <rect x="750.0" y="130.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="769.0" y1="144.0" x2="773.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="767.5355339059328" y1="147.53553390593274" x2="770.363961030679" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="764.0" y1="149.0" x2="764.0" y2="153.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="760.4644660940672" y1="147.53553390593274" x2="757.636038969321" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="759.0" y1="144.0" x2="755.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="760.4644660940672" y1="140.46446609406726" x2="757.636038969321" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <line x1="764.0" y1="139.0" x2="764.0" y2="135.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="767.5355339059328" y1="140.46446609406726" x2="770.363961030679" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <circle cx="764.0" cy="144.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="764.0" cy="144.0" r="2" fill="#315b67"/>
+  <text x="830.0" y="159.0" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="830.0" dy="0">Выбрать pending SKIP</tspan>
+    <tspan x="830.0" dy="15">LOCKED и выдать</tspan>
+    <tspan x="830.0" dy="15">lease на 2 минуты</tspan>
+  </text>
+  <polygon points="1050.0,140.0 1080.0,170.0 1050.0,200.0 1020.0,170.0" fill="#fff8e8" stroke="#8b7341" stroke-width="1.8"/>
+  <path d="M 1042.0 162.0 L 1058.0 178.0 M 1058.0 162.0 L 1042.0 178.0" stroke="#8b7341" stroke-width="2"/>
+  <text x="1050.0" y="222.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="1050.0" dy="0">Событие найдено</tspan>
+  </text>
+  <rect x="1190.0" y="130.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="1209.0" y1="144.0" x2="1213.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1207.5355339059327" y1="147.53553390593274" x2="1210.3639610306789" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="1204.0" y1="149.0" x2="1204.0" y2="153.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1200.4644660940673" y1="147.53553390593274" x2="1197.6360389693211" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="1199.0" y1="144.0" x2="1195.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1200.4644660940673" y1="140.46446609406726" x2="1197.6360389693211" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <line x1="1204.0" y1="139.0" x2="1204.0" y2="135.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1207.5355339059327" y1="140.46446609406726" x2="1210.3639610306789" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <circle cx="1204.0" cy="144.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="1204.0" cy="144.0" r="2" fill="#315b67"/>
+  <text x="1270.0" y="159.0" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1270.0" dy="0">Сохранить начало</tspan>
+    <tspan x="1270.0" dy="15">попытки адресат и</tspan>
+    <tspan x="1270.0" dy="15">Attempts</tspan>
+  </text>
+  <rect x="1190.0" y="360.0" width="160" height="80" rx="9" fill="#edf5ff" stroke="#315b67" stroke-width="1.6"/>
+  <rect x="1195.0" y="368.0" width="18" height="12" fill="#315b67" stroke="#315b67"/>
+  <path d="M 1195.0 368.0 L 1204.0 375.0 L 1213.0 368.0" fill="none" stroke="white"/>
+  <text x="1270.0" y="396.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1270.0" dy="0">Проверить TLS и</tspan>
+    <tspan x="1270.0" dy="15">записать Syslog CEF</tspan>
+  </text>
+  <polygon points="1490.0,370.0 1520.0,400.0 1490.0,430.0 1460.0,400.0" fill="#fff8e8" stroke="#8b7341" stroke-width="1.8"/>
+  <path d="M 1482.0 392.0 L 1498.0 408.0 M 1498.0 392.0 L 1482.0 408.0" stroke="#8b7341" stroke-width="2"/>
+  <text x="1490.0" y="452.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="1490.0" dy="0">Запись по TLS</tspan>
+    <tspan x="1490.0" dy="17">завершена</tspan>
+  </text>
+  <rect x="1630.0" y="130.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="1649.0" y1="144.0" x2="1653.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1647.5355339059327" y1="147.53553390593274" x2="1650.3639610306789" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="1644.0" y1="149.0" x2="1644.0" y2="153.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1640.4644660940673" y1="147.53553390593274" x2="1637.6360389693211" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="1639.0" y1="144.0" x2="1635.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1640.4644660940673" y1="140.46446609406726" x2="1637.6360389693211" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <line x1="1644.0" y1="139.0" x2="1644.0" y2="135.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1647.5355339059327" y1="140.46446609406726" x2="1650.3639610306789" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <circle cx="1644.0" cy="144.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="1644.0" cy="144.0" r="2" fill="#315b67"/>
+  <text x="1710.0" y="166.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1710.0" dy="0">Записать SentAtUtc и</tspan>
+    <tspan x="1710.0" dy="15">успешную попытку</tspan>
+  </text>
+  <rect x="1630.0" y="590.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="1649.0" y1="604.0" x2="1653.0" y2="604.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1647.5355339059327" y1="607.5355339059328" x2="1650.3639610306789" y2="610.363961030679" stroke="#315b67" stroke-width="3"/>
+  <line x1="1644.0" y1="609.0" x2="1644.0" y2="613.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1640.4644660940673" y1="607.5355339059328" x2="1637.6360389693211" y2="610.363961030679" stroke="#315b67" stroke-width="3"/>
+  <line x1="1639.0" y1="604.0" x2="1635.0" y2="604.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1640.4644660940673" y1="600.4644660940672" x2="1637.6360389693211" y2="597.636038969321" stroke="#315b67" stroke-width="3"/>
+  <line x1="1644.0" y1="599.0" x2="1644.0" y2="595.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1647.5355339059327" y1="600.4644660940672" x2="1650.3639610306789" y2="597.636038969321" stroke="#315b67" stroke-width="3"/>
+  <circle cx="1644.0" cy="604.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="1644.0" cy="604.0" r="2" fill="#315b67"/>
+  <text x="1710.0" y="619.0" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1710.0" dy="0">Записать ошибку и</tspan>
+    <tspan x="1710.0" dy="15">следующую попытку 10</tspan>
+    <tspan x="1710.0" dy="15">с до 1 ч</tspan>
+  </text>
+  <polygon points="1930.0,140.0 1960.0,170.0 1930.0,200.0 1900.0,170.0" fill="#fff8e8" stroke="#8b7341" stroke-width="1.8"/>
+  <path d="M 1922.0 162.0 L 1938.0 178.0 M 1938.0 162.0 L 1922.0 178.0" stroke="#8b7341" stroke-width="2"/>
+  <text x="1930.0" y="222.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="1930.0" dy="0">Менее 25 событий и нет</tspan>
+    <tspan x="1930.0" dy="17">отмены</tspan>
+  </text>
+  <circle cx="1930.0" cy="280.0" r="20.0" fill="white" stroke="#274d59" stroke-width="3.5"/>
+  <text x="1930.0" y="322.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="1930.0" dy="0">Ожидать следующий цикл</tspan>
+  </text>
+  <circle cx="1490.0" cy="740.0" r="20.0" fill="white" stroke="#274d59" stroke-width="3.5"/>
+  <text x="1490.0" y="782.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="1490.0" dy="0">При обрыве lease</tspan>
+    <tspan x="1490.0" dy="17">истечёт и исход</tspan>
+    <tspan x="1490.0" dy="17">попытки останется</tspan>
+    <tspan x="1490.0" dy="17">неизвестным</tspan>
+  </text>
+  <rect x="35" y="884.0" width="2082.0" height="70" fill="#f1f5fa" stroke="#516a79"/>
+  <text x="1076.0" y="925.0" fill="#16313a" font-family="Arial, sans-serif" font-size="15" text-anchor="middle">
+    <tspan x="1076.0" dy="0">RuSIEM Внешняя система Приём и разбор события подтверждаются отдельно</tspan>
+  </text>
+  <polyline points="1350.0,400.0 1370,400 1370,880 1230,880 1250.0,884.5" fill="none" stroke="#6e7e94" stroke-width="1.6" stroke-dasharray="7 5"/>
+  <circle cx="1350.0" cy="400.0" r="4" fill="white" stroke="#6e7e94"/>
+  <polyline points="1240.1592183314895,886.2773621332487 1250.0,884.5 1241.8688598343078,878.6789554540557" fill="none" stroke="#6e7e94" stroke-width="1.6"/>
+  <text x="28" y="1029.0" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="start">
+    <tspan x="28" dy="0">Шестерёнка автоматическая задача Человек действие Root Конверт сообщение Толстая рамка вызов процесса X исключающий шлюз</tspan>
+  </text>
+</svg>

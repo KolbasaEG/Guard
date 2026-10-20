@@ -16,7 +16,8 @@ internal static class LogConfigurationTests
       builds++; return new LoggerConfiguration().CreateLogger();
     });
     var access = new Access();
-    var service = new LogConfigurationService(access, manager, NullLogger<LogConfigurationService>.Instance);
+    var audit = new AuditCapture();
+    var service = new LogConfigurationService(access, manager, NullLogger<LogConfigurationService>.Instance, audit);
     foreach (var level in Enum.GetValues<LogEventLevel>()) {
       manager.ApplyConfiguration(217, level);
       var result = await service.GetAsync();
@@ -67,6 +68,12 @@ internal static class LogConfigurationTests
     check(slow.Token.IsCancellationRequested && closed.Values == (100, ApplicationLogLevel.Information), "disposed log settings cancel read and ignore late DTO");
   }
 
+  private sealed class AuditCapture : IAuditService
+  {
+    public readonly List<string?> Events = [];
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
+    public void LogIdentityEvent(Guard.Core.Enums.AuditEventType type, string? actor, string? ip = null, string? details = null) => Events.Add(details);
+  }
   private sealed class Access : IPermissionService
   {
     public bool Allowed = true;

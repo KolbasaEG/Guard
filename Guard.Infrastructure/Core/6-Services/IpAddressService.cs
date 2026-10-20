@@ -5,11 +5,12 @@ using Guard.Core.Identity;
 using Guard.Core.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Guard.Core.Logging;
 
 namespace Guard.Core.Services;
 
 public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
-    IIpManagementAccessService access, ILogger<IpAddressService> logger) : IIpAddressManagementService
+    IIpManagementAccessService access, ILogger<IpAddressService> logger, IAuditService? audit = null) : IIpAddressManagementService
 {
   public async Task<IpAddressDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default)
   {
@@ -107,6 +108,7 @@ public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
   {
     var scope = await access.GetScopeAsync(true, ct);
     await using var db = await factory.CreateDbContextAsync(ct);
+    AuditTransaction.Attach(db, audit); db.AuditActorId = scope.UserId;
     await using var transaction = await db.Database.BeginTransactionAsync(ct);
     await LockCatalogAsync(db, ct);
     var entity = id.HasValue ? await Accessible(db.IpAddresses, scope).SingleOrDefaultAsync(ip => ip.Id == id.Value, ct)
@@ -145,10 +147,12 @@ public class IpAddressService(IDbContextFactory<ApplicationDbContext> factory,
       db.IpAddresses.Add(entity);
     }
     // Фабрика не подключает scoped-интерцептор: метаданные задаются явно.
+    var auditChanges = EntityChangeAudit.TryCapture(db, audit);
     try { await db.SaveChangesAsync(ct); }
     catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
     { throw new ArgumentException("Этот IP-адрес или подсеть уже есть в справочнике.", ex); }
-    await transaction.CommitAsync(ct);
+    await EntityChangeAudit.PublishAsync(auditChanges, scope.UserId, audit, ct);
+    await AuditTransaction.CommitAsync(transaction, ct);
     logger.LogInformation("Сохранён IP {IpAddressId}, статус {Status}, пользователь {UserId}", entity.Id, entity.Status, scope.UserId);
     return entity.Id;
   }

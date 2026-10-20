@@ -1,0 +1,28 @@
+@using Guard.Core.Services
+  <ViewEntity TItem="AuditDetailsDto" Data="data" Name="СОБЫТИЕ АУДИТА" IsLoading="loading" OnCancelButtonClick="Close">
+    @if (data != null) {
+      <InfoBlock Title="Событие">
+        <p>Идентификатор: @data.Entry.EventId; версия: @data.SchemaVersion</p>
+        <p>Время UTC: @data.Entry.OccurredAtUtc.ToString("O")</p>
+        <p>Тип: @data.Entry.EventType; результат: @Index.OutcomeText(data.Entry.Outcome) (@data.Entry.Outcome)</p>
+        <p>Автор: @data.Entry.Actor (@data.Entry.ActorKind); IP: @data.Entry.ClientIp</p>
+        <p>Объект: @data.Entry.ObjectType @data.Entry.ObjectId</p>
+        <p>Причина: @data.Entry.ReasonCode; введённый аккаунт: @data.Entry.AttemptedAccount</p>
+        <p>Связь событий: @data.Entry.CorrelationId</p>
+      </InfoBlock>
+      <InfoBlock Title="Изменения и подробности"><pre class="audit-payload">@data.Details</pre></InfoBlock>
+      <InfoBlock Title="Отправка">
+        <p>@(data.Entry.DeliveryRequired ? "Обязательная отправка" : "Отправка не требуется"); попытки: @data.Entry.Attempts; ошибка: @(data.Entry.LastError ?? "Нет")</p>
+        <p>Следующая попытка UTC: @data.Entry.NextAttemptAtUtc.ToString("O")</p>
+        <p>Отправлено по TLS (UTC): @(data.Entry.SentAtUtc?.ToString("O") ?? "Нет")</p>
+        @if (data.DeliveryAttempts is { Count: > 0 }) {
+          <p>Последние 100 попыток доставки:</p>
+          @foreach (var attempt in data.DeliveryAttempts) {
+            <p @key="attempt.Id">@attempt.StartedAtUtc.ToString("O") — @attempt.CompletedAtUtc?.ToString("O"); @attempt.Destination;
+              @(attempt.Succeeded == true ? "Отправлено по TLS" : attempt.Succeeded == false ? "Ошибка" : "Исход неизвестен"); @attempt.Error</p>
+          }
+        }
+      </InfoBlock>
+    }
+    else if (!loading) { <RadzenText>Событие недоступно. Обновите журнал и повторите попытку.</RadzenText> }
+  </ViewEntity>

@@ -31,7 +31,7 @@
         ShowSaveButton="@(ShowSaveButton && !ReadOnly && AccessState?.CanWrite != false && CanView)"
         IsBusy="@(IsLoading || IsSaving || submitting)"
         ShowInfoButton="@(ShowInfoButton && CanView)"
-        ShowCancelButton="@(StaticFormName == null)"
+        ShowCancelButton="@(ShowCancelButton && StaticFormName == null)"
         OnInfoClick="InfoButtonClick"
         OnCancelButtonClick="CancelButtonClick" />
 
@@ -59,6 +59,7 @@
   private string FieldStyle => "border:0;margin:0;padding:0;width:100%;" + (EffectiveReadOnly ? "pointer-events:none;" : "");
   [Parameter] public bool ReadOnly { get; set; }
   [Parameter] public bool ShowSaveButton { get; set; } = true;
+  [Parameter] public bool ShowCancelButton { get; set; } = true;
   [Parameter] public bool ShowInfoButton { get; set; } = false;
 
   [Parameter] public TItem? Data { get; set; }

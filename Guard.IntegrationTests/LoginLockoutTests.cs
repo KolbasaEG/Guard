@@ -1,5 +1,6 @@
 using Guard.Core.Contexts;
 using Guard.Core.Entities;
+using Guard.Core.Enums;
 using Guard.Core.Identity;
 using Guard.Core.Services;
 using Guard.Core.Services.DTOs;
@@ -48,7 +49,8 @@ internal static class LoginLockoutTests
     var registrations = new ServiceCollection();
     registrations.AddLogging(); registrations.AddHttpContextAccessor(); registrations.AddAuthentication();
     registrations.AddSingleton<IAuthenticationService>(authentication);
-    registrations.AddSingleton<IAuditService, AuditStub>();
+    var audit = new LoginAudit();
+    registrations.AddSingleton<IAuditService>(audit);
     registrations.AddSingleton<IIpAccessService>(access);
     registrations.AddSingleton<IAccountPolicyService>(policies);
     registrations.AddIdentityCore<ApplicationUser>().AddUserManager<PolicyUserManager>().AddSignInManager<IpRestrictedSignInManager>();
@@ -95,6 +97,16 @@ internal static class LoginLockoutTests
     access.Allowed = true; user.AccessFailedCount = 1; store.FailNextUpdate = true;
     check(!(await manager.PasswordSignInAsync(user, "CorrectPassword123!", false, true)).Succeeded && authentication.Issued == 1,
       "failed Identity reset cannot produce successful authentication or cookie");
+    user.LockoutEnabled = true; user.LockoutEnd = null; user.AccessFailedCount = 0; store.FailNextUpdate = true;
+    audit.Events.Clear();
+    var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    check(!(await users.AccessFailedAsync(user)).Succeeded && audit.Events.Count == 1 &&
+      audit.Events[0] is { EventType: AuditEventType.UserDetailsChanged, Outcome: "failure", ReasonCode: "TestFailure" },
+      "failed counter update has its own account failure, not a password change or a duplicate login outcome");
+  }
+  private sealed class LoginAudit : IAuditService {
+    public List<AuditEventData> Events = [];
+    public Task RecordAsync(AuditEventData entry, CancellationToken ct = default) { Events.Add(entry); return Task.CompletedTask; }
   }
 
   private sealed class IpAccess : IIpAccessService

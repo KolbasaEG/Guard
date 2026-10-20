@@ -7,6 +7,7 @@
       Icon="@Icon" 
       Name="@Name" 
       ShowSaveButton="false" 
+      ShowCancelButton="ShowCancelButton"
       ShowInfoButton="@(ShowInfoButton && AccessState?.CanView != false)"
       OnInfoClick="InfoButtonClick" 
       OnCancelButtonClick="CancelButtonClick" />
@@ -28,6 +29,7 @@
 @code {
   [CascadingParameter] public Guard.Components.Library.Authorization.DialogAccessState? AccessState { get; set; }
   [Parameter] public bool ShowInfoButton { get; set; } = false;
+  [Parameter] public bool ShowCancelButton { get; set; } = true;
   [Parameter] public bool IsLoading { get; set; }
 
   [Parameter] public TItem? Data { get; set; }

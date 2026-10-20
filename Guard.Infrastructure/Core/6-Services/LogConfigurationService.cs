@@ -1,4 +1,5 @@
 using Guard.Core.Identity;
+using Guard.Core.Enums;
 using Guard.Core.Logging;
 using Guard.Core.Services.DTOs;
 using Serilog.Events;
@@ -6,8 +7,9 @@ using Serilog.Events;
 namespace Guard.Core.Services;
 
 public sealed class LogConfigurationService(IPermissionService permissions, DynamicLoggerManager manager,
-    ILogger<LogConfigurationService> logger) : ILogConfigurationService
+    ILogger<LogConfigurationService> logger, IAuditService audit) : ILogConfigurationService
 {
+  private static readonly SemaphoreSlim configurationGate = new(1, 1);
   public async Task<LogConfigurationDto> GetAsync(CancellationToken ct = default)
   {
     await permissions.RequireAsync(Permissions.Logs.Read, ct);
@@ -26,7 +28,33 @@ public sealed class LogConfigurationService(IPermissionService permissions, Dyna
       throw new ArgumentException("Укажите число сессий от 1 до 10000.");
     var level = ToSerilog(settings.MinimumLevel);
     ct.ThrowIfCancellationRequested();
-    manager.ApplyConfiguration(settings.MaxSessions, level, () => LogLevelPersistenceService.SaveState(new() { MaxSessions = settings.MaxSessions, MinimumLevel = level }));
+    await configurationGate.WaitAsync(ct);
+    try {
+      var previous = manager.GetConfiguration();
+      var intent = AuditEventData.Create(AuditEventType.LoggingConfigurationChangeRequested, actor.UserId,
+        details: $"MinimumLevel={previous.MinimumLevel}->{level}; MaxSessions={previous.MaxSessions}->{settings.MaxSessions}")
+        with { Outcome = "started", ObjectType = "LoggingConfiguration", ObjectId = "1" };
+      // Файл и PostgreSQL не имеют общей транзакции: сначала долговечное намерение, затем результат.
+      await audit.RecordAsync(intent, ct);
+      try {
+        manager.ApplyConfiguration(settings.MaxSessions, level, () => LogLevelPersistenceService.SaveState(new() { MaxSessions = settings.MaxSessions, MinimumLevel = level }));
+      }
+      catch (Exception error) {
+        await audit.RecordAsync(intent with { EventId = Guid.NewGuid(), EventType = AuditEventType.LoggingConfigurationChanged,
+          Outcome = "failure", ReasonCode = "ConfigurationApplyFailed" }, ct);
+        logger.LogError(error, "Не удалось изменить настройки логирования");
+        throw;
+      }
+      try {
+        await audit.RecordAsync(intent with { EventId = Guid.NewGuid(), EventType = AuditEventType.LoggingConfigurationChanged,
+          Outcome = "success", ReasonCode = "ConfigurationApplied" }, ct);
+      }
+      catch (Exception error) {
+        logger.LogError(error, "Настройки логирования применены, но результат не подтверждён аудитом");
+        throw new OperationCommitUnknownException(intent.CorrelationId, error);
+      }
+    }
+    finally { configurationGate.Release(); }
     logger.LogWarning("Настройки логирования изменены пользователем {UserId}: {Level}, {MaxSessions}", actor.UserId, level, settings.MaxSessions);
     return settings;
   }

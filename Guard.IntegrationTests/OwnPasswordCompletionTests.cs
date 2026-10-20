@@ -14,7 +14,7 @@ internal static class OwnPasswordCompletionTests
 {
   public static async Task RunAsync(Action<bool, string> check)
   {
-    foreach (var failure in new[] { "none", "cookie", "audit", "both", "rejected", "unknown", "unknown-commit", "cancelled-cookie" }) {
+    foreach (var failure in new[] { "none", "cookie", "rejected", "unknown", "unknown-commit", "cancelled-cookie" }) {
       var user = new ApplicationUser { Id = "password-user", UserName = "password-user", NormalizedUserName = "PASSWORD-USER",
         SecurityStamp = "old-stamp", MustChangePassword = true, PasswordChangedAtUtc = DateTimeOffset.UtcNow.AddDays(-100) };
       var hasher = new PasswordHasher<ApplicationUser>();
@@ -40,8 +40,8 @@ internal static class OwnPasswordCompletionTests
       var originalHash = store.Saved.PasswordHash;
       var originalDate = store.Saved.PasswordChangedAtUtc;
       var result = await service.ChangeAsync("wrong", "NewPassword123!", "NewPassword123!");
-      check(result.Status == OwnPasswordChangeStatus.Rejected && store.Writes == 0 && refresh.Calls == 0 && audit.Calls == 0,
-        $"{failure}: wrong password cannot write, refresh or emit audit");
+      check(result.Status == OwnPasswordChangeStatus.Rejected && store.Writes == 0 && refresh.Calls == 0 && audit.Calls == 1,
+        $"{failure}: wrong password emits a refusal without writing or refreshing");
       result = await service.ChangeAsync("OldPassword123!", "NewPassword123!", "different");
       check(result.Status == OwnPasswordChangeStatus.Rejected && store.Writes == 0, $"{failure}: confirmation rejected before write");
       result = await service.ChangeAsync("OldPassword123!", "weak", "weak");
@@ -60,16 +60,16 @@ internal static class OwnPasswordCompletionTests
       var saved = store.Saved;
       if (failure == "unknown-commit") {
         check(store.Writes == 1 && saved.PasswordHash != originalHash && saved.SecurityStamp != "old-stamp" &&
-          refresh.Calls == 0 && audit.Calls == 0, "lost store acknowledgement can persist password without claiming confirmed completion");
+          refresh.Calls == 0 && audit.Calls == 3, "lost store acknowledgement can persist password without claiming confirmed completion");
       } else if (failure is "rejected" or "unknown") {
         check(saved.PasswordHash == originalHash && saved.SecurityStamp == "old-stamp" && saved.MustChangePassword &&
-          saved.PasswordChangedAtUtc == originalDate && refresh.Calls == 0 && audit.Calls == 0,
+          saved.PasswordChangedAtUtc == originalDate && refresh.Calls == 0 && audit.Calls == (failure == "rejected" ? 4 : 3),
           $"{failure}: unsuccessful store cannot produce cookie or success audit");
       } else {
-        check(store.Writes == 1 && refresh.Calls == 1 && audit.Calls == 1, $"{failure}: no retry of password write or post-write actions");
+        check(store.Writes == 1 && refresh.Calls == 1 && audit.Calls == 4, $"{failure}: no retry of password write or post-write actions");
         check(hasher.VerifyHashedPassword(saved, saved.PasswordHash!, "NewPassword123!") != PasswordVerificationResult.Failed &&
           hasher.VerifyHashedPassword(saved, saved.PasswordHash!, "OldPassword123!") == PasswordVerificationResult.Failed,
-          $"{failure}: persisted password changes even if cookie or audit fails");
+          $"{failure}: persisted password survives a later cookie failure");
         check(saved.SecurityStamp != "old-stamp" && !saved.MustChangePassword && saved.PasswordChangedAtUtc > originalDate &&
           saved.PasswordChangedAtUtc?.Offset == TimeSpan.Zero, $"{failure}: stamp and UTC policy fields persist with password");
       }
@@ -79,6 +79,7 @@ internal static class OwnPasswordCompletionTests
   private sealed class Audit : IAuditService
   {
     public bool Fail; public int Calls;
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
     public void LogIdentityEvent(Guard.Core.Enums.AuditEventType eventType, string? userName, string? ipAddress = null, string? details = null)
     {
       Calls++;

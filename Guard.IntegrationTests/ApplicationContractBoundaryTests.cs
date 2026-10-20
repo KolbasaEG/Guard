@@ -106,7 +106,7 @@ internal static class ApplicationContractBoundaryTests
     var contracts = application.GetExportedTypes()
       .Where(t => t.IsInterface && (t.Namespace == "Guard.Core.Services" ||
         t.Namespace == "Guard.Core.Services.Exports")).ToArray();
-    check(contracts.Length == 37, "Application inventory contains 34 service contracts and three access read ports");
+    check(contracts.Length == 40, "Application inventory includes mandatory audit administration and operation availability contracts");
     foreach (var name in new[] { "EntityInputValidation", "EntityWriteMapping" })
     {
       var fullName = $"Guard.Core.Services.{name}";

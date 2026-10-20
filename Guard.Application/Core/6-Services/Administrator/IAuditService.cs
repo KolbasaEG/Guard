@@ -8,12 +8,18 @@ namespace Guard.Core.Services;
 /// </summary>
 public interface IAuditService
 {
+  void Record(AuditEventData entry) => RecordAsync(entry).GetAwaiter().GetResult();
+
+  /// <summary>Возврат подтверждает обязательное локальное сохранение; ошибка не подавляется.</summary>
+  Task RecordAsync(AuditEventData entry, CancellationToken ct = default);
+
   /// <summary>
-  /// Логирование события Identity в RuSIEM (через TcpSyslog + TLS + CEF).
+  /// Совместимый адаптер события аккаунта: обязательное локальное сохранение,
+  /// а в режиме SIEM — постановка на последующую отправку Syslog/TLS/CEF.
   /// </summary>
   void LogIdentityEvent(
       AuditEventType eventType,
       string? userName,
       string? ipAddress = null,
-      string? details = null);
+      string? details = null) => Record(AuditEventData.ForAccount(eventType, userName, ipAddress, details));
 }

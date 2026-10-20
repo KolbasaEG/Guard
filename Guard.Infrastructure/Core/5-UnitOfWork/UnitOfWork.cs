@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Guard.Core.Services;
 using Npgsql;
+using Guard.Core.Logging;
 
 public class UnitOfWork : IUnitOfWork
 {
@@ -13,12 +14,16 @@ public class UnitOfWork : IUnitOfWork
   private readonly Dictionary<Type, object> _repositories = [];
   private readonly Dictionary<Type, object> _basicRepositories = [];
   private IDbContextTransaction? _currentTransaction;
+  private readonly IAuditService? audit;
+  private readonly List<AuditEventData> pendingAudit = [];
 
 
   public UnitOfWork(ApplicationDbContext context, IServiceProvider serviceProvider, ILogger<UnitOfWork> logger)
   {
     _context = context;
     _logger = logger;
+    audit = serviceProvider?.GetService<IAuditService>();
+    AuditTransaction.Attach(_context, audit);
   }
 
   // ==================== Репозитории ====================
@@ -62,7 +67,10 @@ public class UnitOfWork : IUnitOfWork
     _logger.LogDebug("Асинхронное сохранение изменений в БД...");
     try
     {
+      var captured = CaptureAudit();
       var result = await _context.SaveChangesAsync(ct);
+      CompleteAudit(captured);
+      if (_currentTransaction == null) await PublishAuditAsync();
       _logger.LogDebug("Успешно сохранено сущностей в БД: {Count}", result);
       return result;
     }
@@ -82,7 +90,10 @@ public class UnitOfWork : IUnitOfWork
     _logger.LogDebug("Синхронное сохранение изменений в БД...");
     try
     {
+      var captured = CaptureAudit();
       var result = _context.SaveChanges();
+      CompleteAudit(captured);
+      if (_currentTransaction == null) PublishAudit();
       _logger.LogDebug("Успешно сохранено сущностей в БД: {Count}", result);
       return result;
     }
@@ -131,7 +142,8 @@ public class UnitOfWork : IUnitOfWork
       await SaveChangesAsync(ct);
 
       _logger.LogInformation("Фиксация асинхронной транзакции...");
-      await _currentTransaction.CommitAsync(ct);
+      await PublishAuditAsync();
+      await AuditTransaction.CommitAsync(_currentTransaction, ct);
     }
     catch (Exception ex)
     {
@@ -146,6 +158,7 @@ public class UnitOfWork : IUnitOfWork
   }
   public async Task RollbackTransactionAsync(CancellationToken ct = default)
   {
+    pendingAudit.Clear();
     if (_currentTransaction is null)
       return;
 
@@ -191,7 +204,8 @@ public class UnitOfWork : IUnitOfWork
       SaveChanges();
 
       _logger.LogInformation("Фиксация синхронной транзакции...");
-      _currentTransaction.Commit();
+      PublishAudit();
+      AuditTransaction.CommitAsync(_currentTransaction, CancellationToken.None).GetAwaiter().GetResult();
     }
     catch (Exception ex)
     {
@@ -207,6 +221,7 @@ public class UnitOfWork : IUnitOfWork
 
   public void RollbackTransaction()
   {
+    pendingAudit.Clear();
     if (_currentTransaction is null)
       return;
 
@@ -265,6 +280,34 @@ public class UnitOfWork : IUnitOfWork
   }
 
   // ==================== Dispose ====================
+  private EntityChangeAudit? CaptureAudit()
+  {
+    return audit == null || _context.AuditWriter != null ? null : new EntityChangeAudit(_context);
+  }
+
+  private void CompleteAudit(EntityChangeAudit? captured)
+  {
+    if (captured != null) pendingAudit.AddRange(captured.Complete(_context.AuditActorId));
+  }
+
+  private static void AuditFailure(Exception error) => new InternalLogWriter().Write($"EntityAuditFailed ErrorType={error.GetType().Name}");
+
+  private void PublishAudit()
+  {
+    var events = pendingAudit.ToArray(); pendingAudit.Clear();
+    foreach (var entry in events) {
+      audit?.Record(entry);
+    }
+  }
+
+  private async Task PublishAuditAsync()
+  {
+    var events = pendingAudit.ToArray(); pendingAudit.Clear();
+    foreach (var entry in events) {
+      if (audit != null) await audit.RecordAsync(entry);
+    }
+  }
+
   private async Task DisposeTransactionAsync()
   {
     if (_currentTransaction is not null)

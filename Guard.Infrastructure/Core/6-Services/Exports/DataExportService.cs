@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using S = DocumentFormat.OpenXml.Spreadsheet;
 using W = DocumentFormat.OpenXml.Wordprocessing;
+using Guard.Core.Logging;
 
 namespace Guard.Core.Services.Exports;
 
@@ -49,8 +50,11 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
       Area = request.Area, Format = request.Format, RequestJson = JsonSerializer.Serialize(request),
       ExpiresAtUtc = DateTimeOffset.UtcNow.AddYears(retention?.Years ?? 3),
       ClientIp = clientIp.GetClientIp() };
-    db.ExportJobs.Add(job); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-    CompleteCommittedCommand(AuditEventType.ExportRequested, actor.UserId, job.Id.ToString(), $"Export {job.Id}; {job.Area}; {job.Format}", job.ClientIp);
+    db.ExportJobs.Add(job); await db.SaveChangesAsync(ct);
+    await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.ExportRequested, actor.UserId, job.ClientIp,
+      $"Export {job.Id}; Area={job.Area}; Format={job.Format}") with { ObjectType = "Export", ObjectId = job.Id.ToString() }, ct);
+    await AuditTransaction.CommitAsync(transaction, ct);
+    logger.LogDebug("Запрос выгрузки {ExportId} сохранён", job.Id);
     return job.Id;
   }
   public async Task<ExportJobDto> GetAsync(Guid id, CancellationToken ct = default)
@@ -58,23 +62,29 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
     var actor = await permissions.GetCurrentAsync(ct); await using var db = await contexts.CreateDbContextAsync(ct);
     var job = await db.ExportJobs.AsNoTracking().SingleOrDefaultAsync(j => j.Id == id && j.AuthorId == actor.UserId, ct)
       ?? throw new KeyNotFoundException("Выгрузка не найдена.");
+    if ((await permissions.GetCurrentAsync(ct)).UserId != actor.UserId) throw new UnauthorizedAccessException();
     return new(job.Id, job.State, job.RowCount, job.Error, job.CreatedAtUtc);
   }
   public async Task CancelAsync(Guid id, CancellationToken ct = default)
   {
     var actor = await permissions.GetCurrentAsync(ct); await using var db = await contexts.CreateDbContextAsync(ct);
+    await using var transaction = await db.Database.BeginTransactionAsync(ct);
     var changed = await db.ExportJobs.Where(j => j.Id == id && j.AuthorId == actor.UserId &&
       (j.State == ExportJobState.Queued || j.State == ExportJobState.Processing || j.State == ExportJobState.Ready))
       .ExecuteUpdateAsync(u => u.SetProperty(j => j.CancelRequested, true), ct);
     if (changed == 0) throw new EntityRuleException("Выгрузку уже нельзя отменить.");
-    CompleteCommittedCommand(AuditEventType.ExportCancelled, actor.UserId, id.ToString(), $"Export {id}");
+    await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.ExportCancelled, actor.UserId, details: $"Export {id}")
+      with { ObjectType = "Export", ObjectId = id.ToString() }, ct);
+    await AuditTransaction.CommitAsync(transaction, ct);
   }
   public async Task<IReadOnlyList<ExportJobDto>> GetActiveAsync(ExportArea area, CancellationToken ct = default)
   {
     var actor = await permissions.GetCurrentAsync(ct); await using var db = await contexts.CreateDbContextAsync(ct);
-    return await db.ExportJobs.AsNoTracking().Where(j => j.AuthorId == actor.UserId && j.Area == area && !j.CancelRequested &&
+    var result = await db.ExportJobs.AsNoTracking().Where(j => j.AuthorId == actor.UserId && j.Area == area && !j.CancelRequested &&
       (j.State == ExportJobState.Queued || j.State == ExportJobState.Processing || j.State == ExportJobState.Ready || j.State == ExportJobState.Delivering))
       .OrderByDescending(j => j.CreatedAtUtc).Select(j => new ExportJobDto(j.Id, j.State, j.RowCount, j.Error, j.CreatedAtUtc)).ToListAsync(ct);
+    if ((await permissions.GetCurrentAsync(ct)).UserId != actor.UserId) throw new UnauthorizedAccessException();
+    return result;
   }
   public async Task<ExportArchivePage> SearchArchiveAsync(ExportArchiveRequest request, CancellationToken ct = default)
   {
@@ -104,7 +114,6 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
     var conditions = job.State == ExportJobState.Expired ? "Срок хранения истёк, параметры удалены." :
       ExportProcessor.Conditions(JsonSerializer.Deserialize<ExportRequest>(job.RequestJson) ?? throw new InvalidDataException("Параметры повреждены."));
     await RequireRootAsync(Permissions.Exports.ReadArchive, ct);
-    audit.LogIdentityEvent(AuditEventType.ExportArchiveViewed, actor, details: $"Export metadata {id}");
     return new(conditions, job.Artifact?.Sha256, job.Artifact?.Size, job.Delivery?.StartedAtUtc, job.Delivery?.CompletedAtUtc, job.Delivery?.Succeeded);
   }
   public async Task<ExportRetentionDto> GetRetentionAsync(CancellationToken ct = default)
@@ -119,20 +128,16 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
   {
     var actor = await RequireRootAsync(Permissions.Exports.Configure, ct);
     if (years is < 1 or > 30) throw new ArgumentException("Укажите срок от 1 до 30 лет.");
-    await using var db = await contexts.CreateDbContextAsync(ct); var setting = await db.ExportRetentionSettings.SingleOrDefaultAsync(s => s.Id == 1, ct);
+    await using var db = await contexts.CreateDbContextAsync(ct);
+    await using var transaction = await db.Database.BeginTransactionAsync(ct);
+    var setting = await db.ExportRetentionSettings.SingleOrDefaultAsync(s => s.Id == 1, ct);
     if (setting == null) { setting = new(); db.ExportRetentionSettings.Add(setting); }
     else if (setting.Version != version) throw new DbUpdateConcurrencyException("Настройка уже изменена.");
     setting.Years = years; setting.Version = Guid.NewGuid(); setting.ModifiedBy = actor; setting.ModifiedAtUtc = DateTimeOffset.UtcNow;
     await db.SaveChangesAsync(ct);
-    CompleteCommittedCommand(AuditEventType.ExportRetentionChanged, actor, "1", $"Years {years}");
-  }
-  private void CompleteCommittedCommand(AuditEventType eventType, string actor, string targetId, string details, string? ip = null)
-  {
-    // Only confirmed writes reach this point; failed audit delivery cannot undo them.
-    try { audit.LogIdentityEvent(eventType, actor, ip, details); }
-    catch (Exception ex) {
-      logger.LogError(ex, "Команда экспорта сохранена, но событие аудита {EventType} для {TargetId} не доставлено", eventType, targetId);
-    }
+    await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.ExportRetentionChanged, actor,
+      details: $"Years {years}") with { ObjectType = "ExportRetention", ObjectId = "1" }, ct);
+    await AuditTransaction.CommitAsync(transaction, ct);
   }
   public async Task<ExportPreview> PreviewAsync(Guid id, int part = 1, int skip = 0, CancellationToken ct = default)
   {
@@ -158,7 +163,6 @@ public sealed class DataExportService(IDbContextFactory<ApplicationDbContext> co
       var format = await db.ExportJobs.Where(j => j.Id == id).Select(j => j.Format).SingleAsync(ct);
       var result = ReadPreview(documentPath, format, skip, ct);
       await RequireRootAsync(Permissions.Exports.ReadArchive, ct);
-      audit.LogIdentityEvent(AuditEventType.ExportArchiveViewed, actor, details: $"Export {id}; part {part}; offset {skip}");
       return result;
     }
     finally { try { storage.DeleteWork(previewId); } finally { storage.ArchiveGate.Release(); } }

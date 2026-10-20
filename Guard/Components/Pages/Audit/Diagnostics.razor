@@ -1,0 +1,13 @@
+@page "/audit/diagnostics"
+@attribute [Authorize]
+@layout Guard.Components.Layout.AuditRecoveryLayout
+@inject IAuditAdministrationService Administration
+<PageTitle>Диагностический журнал аудита</PageTitle>
+@if (allowed) { <Index Diagnostic="true" /> } else { <AccessDenied /> }
+@code {
+  private bool allowed;
+  protected override async Task OnInitializedAsync() {
+    try { await Administration.RequireRootAsync(); allowed = true; }
+    catch (Exception) { allowed = false; }
+  }
+}

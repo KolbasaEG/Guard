@@ -52,6 +52,15 @@ internal static class BrowserTestHost
         Status = n == 26 ? Guard.Core.Enums.Status.Archived : n == 27 ? Guard.Core.Enums.Status.Deleted : Guard.Core.Enums.Status.Inserted
       }).ToArray();
       db.Personals.AddRange(people);
+      db.AuditEvents.AddRange(Enumerable.Range(1, 125).Select(n => new AuditEventRecord {
+        EventId = Guid.NewGuid(), OccurredAtUtc = DateTime.UtcNow.AddMinutes(-n), SchemaVersion = 1,
+        EventType = n % 2 == 0 ? Guard.Core.Enums.AuditEventType.LoginFailed : Guard.Core.Enums.AuditEventType.EntityChanged,
+        Actor = $"browser-audit-{n:000}", ActorKind = "user", Outcome = n % 2 == 0 ? "failure" : "success",
+        ObjectType = "Проверка", ObjectId = n.ToString(), CorrelationId = $"browser-operation-{n:000}",
+        Details = "{\"Operation\":\"Modified\",\"Fields\":{\"IsActive\":{\"Before\":true,\"After\":false}}}",
+        Attempts = n % 3, LastError = n % 3 == 2 ? "IOException" : null,
+        SentAtUtc = n % 3 == 1 ? DateTime.UtcNow.AddMinutes(-n + 1) : null, NextAttemptAtUtc = DateTime.UtcNow.AddHours(1)
+      }));
       var browserRoot = await db.Users.SingleAsync(u => u.Id == "root");
       browserRoot.PersonalId = people[2].Id;
       db.IpAddresses.AddRange(Enumerable.Range(0, 3).Select(n => new IpAddress {
@@ -65,20 +74,20 @@ internal static class BrowserTestHost
         new IpAddress { Address = "203.0.113.101", Description = "Архивная запись", Status = Guard.Core.Enums.Status.Archived, CreatedBy = "root" },
         new IpAddress { Address = "203.0.113.102", Description = "Удалённая запись", Status = Guard.Core.Enums.Status.Deleted, CreatedBy = "root" });
       await db.SaveChangesAsync();
-      await db.Database.ExecuteSqlRawAsync("CREATE TABLE logs (timestamp timestamp without time zone, level varchar, layer varchar, message text, message_template text, exception text, properties jsonb, user_id varchar, ip_address varchar)");
-      await db.Database.ExecuteSqlRawAsync("INSERT INTO logs SELECT timestamp '2026-01-01', CASE WHEN n % 2 = 0 THEN 'Error' ELSE 'Information' END, 'Service', 'DTO log ' || lpad(n::text, 3, '0'), 'DTO log', NULL, jsonb_build_object(), 'test', '192.0.2.1' FROM generate_series(1, 125) n");
+      await db.Database.ExecuteSqlRawAsync("CREATE TABLE logs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), timestamp timestamp without time zone, level varchar, layer varchar, message text, message_template text, exception text, properties jsonb, user_id varchar, ip_address varchar)");
+      await db.Database.ExecuteSqlRawAsync("INSERT INTO logs (timestamp, level, layer, message, message_template, exception, properties, user_id, ip_address) SELECT timestamp '2026-01-01', CASE WHEN n % 2 = 0 THEN 'Error' ELSE 'Information' END, 'Service', 'DTO log ' || lpad(n::text, 3, '0'), 'DTO log', NULL, jsonb_build_object(), 'test', '192.0.2.1' FROM generate_series(1, 125) n");
     }
+    var exportDirectory = Path.Combine(Path.GetTempPath(), "guard-browser-export-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(exportDirectory);
     var start = new ProcessStartInfo("dotnet") {
-      UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
+      UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
+      WorkingDirectory = exportDirectory
     };
     var testAssembly = Environment.GetEnvironmentVariable("GUARD_TEST_APP_DLL");
-    if (string.IsNullOrEmpty(testAssembly)) {
-      foreach (var argument in new[] { "run", "--project", "Guard/Guard.csproj", "--no-build", "--no-launch-profile", "--urls", "http://127.0.0.1:5079" }) start.ArgumentList.Add(argument);
-    } else {
-      start.ArgumentList.Add(Path.GetFullPath(testAssembly));
-      start.ArgumentList.Add("--urls"); start.ArgumentList.Add("http://127.0.0.1:5079");
-      start.WorkingDirectory = Path.GetFullPath("Guard");
-    }
+    var appAssembly = Path.GetFullPath(testAssembly ?? "Guard/bin/Debug/net10.0/Guard.dll");
+    start.ArgumentList.Add(appAssembly);
+    start.ArgumentList.Add("--urls"); start.ArgumentList.Add("http://127.0.0.1:5079");
+    start.ArgumentList.Add("--contentRoot"); start.ArgumentList.Add(Path.GetFullPath("Guard"));
     start.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
     start.Environment["ASPNETCORE_STATICWEBASSETS"] = string.IsNullOrEmpty(testAssembly)
       ? Path.GetFullPath("Guard/bin/Debug/net10.0/Guard.staticwebassets.runtime.json")
@@ -87,7 +96,6 @@ internal static class BrowserTestHost
     start.Environment["ConnectionStrings__LogsConnection"] = isolatedConnection;
     start.Environment["Audit__Syslog__Host"] = "127.0.0.1";
     start.Environment["Audit__Syslog__Port"] = "9";
-    var exportDirectory = Path.Combine(Path.GetTempPath(), "guard-browser-export-" + Guid.NewGuid().ToString("N"));
     start.Environment["Exports__Directory"] = exportDirectory;
     start.Environment["DataProtection__KeyDirectory"] = Path.Combine(exportDirectory, "keys");
     using var process = Process.Start(start) ?? throw new InvalidOperationException("Не удалось запустить тестовый сервер.");
@@ -105,6 +113,7 @@ internal static class BrowserTestHost
       if (!ready) throw new InvalidOperationException("Тестовый сервер не готов. См. Guard/obj/account-policy-browser.log.");
       await OwnPasswordHttpTests.RunAsync(factory);
       await LocalAccountHttpTests.RunAsync(factory);
+      await AuditAvailabilityHttpTests.RunAsync(factory);
       Console.WriteLine("Isolated browser server: http://127.0.0.1:5079 ; Root: root@browser.test / BrowserRoot123! ; press Enter to stop and remove temporary DB.");
       await Console.In.ReadLineAsync();
     }

@@ -43,7 +43,7 @@ public sealed class DynamicLoggerManager : IDisposable
       .WriteTo.Sink(new ForwardingSink(this)).CreateLogger();
   }
 
-  public void ApplyConfiguration(int maxSessions, LogEventLevel newLevel, Action? persist = null)
+  public (int MaxSessions, LogEventLevel MinimumLevel) ApplyConfiguration(int maxSessions, LogEventLevel newLevel, Action? persist = null)
   {
     if (maxSessions is < 1 or > 10000 || !Enum.IsDefined(newLevel)) throw new ArgumentException("Укажите корректный уровень и число сессий от 1 до 10000.");
     Logger? replacement = create(maxSessions, newLevel);
@@ -51,11 +51,13 @@ public sealed class DynamicLoggerManager : IDisposable
       lock (gate) {
         ObjectDisposedException.ThrowIf(disposed, this);
         persist?.Invoke();
+        var previousConfiguration = (this.maxSessions, _levelSwitch.MinimumLevel);
         var previous = current;
         current = replacement; replacement = null;
         this.maxSessions = maxSessions;
         _levelSwitch.MinimumLevel = newLevel;
         previous?.Dispose();
+        return previousConfiguration;
       }
     }
     finally { replacement?.Dispose(); }
@@ -72,12 +74,15 @@ public sealed class DynamicLoggerManager : IDisposable
       // 2. Подключаем определение слоя (Components, Service, Database, System)
       .Enrich.With<LayerEnricher>()
 
-      // 3. ФАЛЛБЭК: Локальный файл
+      // Локальная копия всех принятых событий; это не очередь повторной отправки в БД.
       .WriteTo.File(
+          formatter: new Serilog.Formatting.Json.JsonFormatter(),
           path: "logs/app-fallback-.txt",
           rollingInterval: RollingInterval.Day,
-          retainedFileCountLimit: 7,
-          restrictedToMinimumLevel: LogEventLevel.Warning)
+          fileSizeLimitBytes: 10 * 1024 * 1024,
+          rollOnFileSizeLimit: true,
+          retainedFileCountLimit: null,
+          retainedFileTimeLimit: null)
 
       // 4. ОСНОВНОЙ SINK: PostgreSQL
       .WriteTo.PostgreSQL(

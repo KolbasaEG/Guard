@@ -39,7 +39,7 @@ public static class ExportEndpoints
         }
       }
       if (!http.Response.HasStarted && !ct.IsCancellationRequested) {
-        http.Response.Clear(); http.Response.StatusCode = ex is UnauthorizedAccessException or AntiforgeryValidationException ? 403 : ex is KeyNotFoundException ? 404 : 409;
+        http.Response.Clear(); http.Response.StatusCode = ex is AuditUnavailableException or OperationCommitUnknownException ? 503 : ex is UnauthorizedAccessException or AntiforgeryValidationException ? 403 : ex is KeyNotFoundException ? 404 : 409;
         http.Response.Headers.CacheControl = "no-store";
         await http.Response.WriteAsync(ex is EntityRuleException ? ex.Message : "Не удалось передать файл. Проверьте доступ и создайте новую выгрузку.", ct);
       } else http.Abort();

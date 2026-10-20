@@ -36,5 +36,19 @@ public enum AuditEventType
   ExportRetentionChanged = 29,
   ExportExpired = 30,
   UserDetailsChanged = 31,
-  UserCreated = 32
+  UserCreated = 32,
+  LoggingConfigurationChanged = 33,
+  EntityChanged = 34,
+  AuditConfigurationChanged = 35,
+  AuditStateChanged = 36,
+  AuditConnectionTest = 37,
+  PasswordChangeFailed = 38,
+  SessionRevoked = 39,
+  RoleDeleted = 40,
+  RoleCreated = 41,
+  AuditCleanupCompleted = 42,
+  ExportProcessingStarted = 43,
+  LoggingConfigurationChangeRequested = 44,
+  ExportRecoveryCompleted = 45,
+  SessionRefreshed = 46
 }

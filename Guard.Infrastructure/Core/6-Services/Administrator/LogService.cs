@@ -28,7 +28,7 @@ public class LogService : ILogSearchService
     var query = LogSearchQuery.Filter(context.Logs.AsNoTracking(), request.Filter);
     var count = await query.CountAsync(ct);
     var items = await LogSearchQuery.Sort(query, request.OrderBy).Skip(request.Skip).Take(request.Take)
-      .Select(e => new LogEntryDto(e.Timestamp, e.Level, e.Layer, e.Message, e.Exception, e.UserId, e.ClientIp)).ToListAsync(ct);
+      .Select(e => new LogEntryDto(e.Timestamp, e.Level, e.Layer, e.Message, e.Exception, e.UserId, e.ClientIp, e.Id, e.Properties, e.MessageTemplate)).ToListAsync(ct);
     await SearchAccess.RecheckAsync(_permissions, Permissions.Logs.Read, actor, ct);
     return new LogSearchResult(items, count);
   }

@@ -4,6 +4,8 @@ using Guard.Core.Identity;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 
 namespace Guard;
 
@@ -11,6 +13,12 @@ public static class WebServiceRegistration
 {
   public static IServiceCollection AddGuardWeb(this IServiceCollection services, IConfiguration configuration)
   {
+    services.PostConfigure<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme, options => {
+      var validate = options.Events.OnValidatePrincipal;
+      var sliding = options.Events.OnCheckSlidingExpiration;
+      options.Events.OnCheckSlidingExpiration = context => AuditCookieValidation.DeferRefreshAsync(context, sliding);
+      options.Events.OnValidatePrincipal = context => AuditCookieValidation.ValidateAsync(context, validate);
+    });
     services.AddHostedService<AccountPolicyWorker>();
     // Заголовки принимает только от явно настроенных доверенных прокси (по умолчанию — loopback).
     services.Configure<ForwardedHeadersOptions>(options =>

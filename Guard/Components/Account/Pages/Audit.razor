@@ -1,0 +1,22 @@
+@page "/Account/Audit"
+@attribute [Authorize]
+@layout AccountLayout
+@inject IAuditAdministrationService Administration
+<PageTitle>Диагностика аудита</PageTitle>
+<AccountCard Title="Диагностика аудита" Icon="health_and_safety">
+  @if (allowed) {
+    <p>Доступ Root подтверждён. Диагностика и настройки доступны отдельно от рабочих операций.</p>
+    <a href="/audit/settings">Открыть состояние и настройки аудита</a>
+  } else { <p>Не удалось подтвердить действующие полномочия Root. При недоступной БД Identity требуется обслуживание сервера.</p> }
+  <form method="post" action="/Account/Logout">
+    <AntiforgeryToken /><input type="hidden" name="returnUrl" value="Account/Login" />
+    <button type="submit" class="btn btn-secondary">Выйти</button>
+  </form>
+</AccountCard>
+@code {
+  private bool allowed;
+  protected override async Task OnInitializedAsync() {
+    try { await Administration.RequireRootAsync(); allowed = true; }
+    catch (Exception) { allowed = false; }
+  }
+}

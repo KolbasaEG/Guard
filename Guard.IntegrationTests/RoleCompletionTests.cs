@@ -27,6 +27,14 @@ internal static class RoleCompletionTests
           await using var db = await factory.CreateDbContextAsync();
           return await db.Roles.AnyAsync(r => r.Name == name);
         };
+        if (failure is "audit" or "both" or "cancelled") {
+          if (failure == "cancelled") await PostgresTests.ThrowsAsync<OperationCanceledException>(() => service.SaveAsync(new() { Name = name, Permissions = [Permissions.Personals.Read] }), check, "cancelled mandatory audit rolls back role creation");
+          else await PostgresTests.ThrowsAsync<IOException>(() => service.SaveAsync(new() { Name = name, Permissions = [Permissions.Personals.Read] }), check, "failed mandatory audit rolls back role creation");
+          await using var absent = await factory.CreateDbContextAsync();
+          check(!await absent.Roles.AnyAsync(r => r.Name == name) && delivery.NotificationCalls == 0 && delivery.AuditCalls == 1,
+            "failed role audit leaves no role and sends no committed notification");
+          continue;
+        }
         var id = await service.SaveAsync(new() { Name = name, Permissions = [Permissions.Personals.Read] });
         created.Add(id);
         delivery.Assert(check, "create");
@@ -69,7 +77,7 @@ internal static class RoleCompletionTests
         });
         await service.DeleteAsync(id);
         delivery.Assert(check, "delete");
-        check(delivery.Targets.SequenceEqual(["unassigned"]) && delivery.EventType == AuditEventType.RolePermissionsChanged,
+        check(delivery.Targets.SequenceEqual(["unassigned"]) && delivery.EventType == AuditEventType.RoleDeleted,
             "deletion notifies previously assigned users after committed cascade deletion");
         await using var verify = await factory.CreateDbContextAsync();
         check(!await verify.Roles.AnyAsync(r => r.Id == id), $"role deletion remains persisted after {failure} delivery");
@@ -99,6 +107,14 @@ internal static class RoleCompletionTests
             PermissionCatalog.All.Count(p => !p.RootOnly);
       };
       var service = Service(provider, delivery);
+      if (failure is "audit" or "both" or "cancelled") {
+        if (failure == "cancelled") await PostgresTests.ThrowsAsync<OperationCanceledException>(() => service.InitializeAdministratorAsync(), check, "cancelled audit rolls back permission initialization");
+        else await PostgresTests.ThrowsAsync<IOException>(() => service.InitializeAdministratorAsync(), check, "failed audit rolls back permission initialization");
+        await using var absent = await factory.CreateDbContextAsync();
+        check(!await absent.RoleClaims.AnyAsync(c => c.RoleId == "admin-role") && delivery.NotificationCalls == 0,
+          "permission initialization is atomic with its mandatory audit");
+        continue;
+      }
       await service.InitializeAdministratorAsync();
       delivery.Assert(check, "initialization");
       delivery.Reset(() => Task.FromResult(true));
@@ -106,6 +122,9 @@ internal static class RoleCompletionTests
           "initialization retry is rejected after committed write despite delivery failure");
       check(delivery.NotificationCalls == 0 && delivery.AuditCalls == 0, "rejected initialization publishes no completion events");
     }
+    await using var final = await factory.CreateDbContextAsync();
+    if (!await final.RoleClaims.AnyAsync(c => c.RoleId == "admin-role"))
+      await provider.GetRequiredService<IRoleAccessService>().InitializeAdministratorAsync();
   }
 
   private static RoleAccessService Service(IServiceProvider provider, Delivery delivery) => new(
@@ -137,6 +156,8 @@ internal static class RoleCompletionTests
       if (failure == "cancelled") throw new OperationCanceledException("Synthetic notification cancellation after commit");
       if (failure is "notification" or "both") throw new IOException("Synthetic notification delivery failure");
     }
+    public List<AuditEventData> Rejected = [];
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); if (entry.Outcome != "success") Rejected.Add(entry); else LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
     public void LogIdentityEvent(AuditEventType eventType, string? userName, string? ipAddress = null, string? details = null)
     {
       AuditCalls++;
@@ -149,7 +170,7 @@ internal static class RoleCompletionTests
     public void Assert(Action<bool, string> check, string operation)
     {
       check(NotificationCalls == 1 && AuditCalls == 1, $"{operation}: both deliveries attempted once with {failure}");
-      check(NotificationSawCommit && AuditSawCommit, $"{operation}: separate contexts see commit before delivery with {failure}");
+      check(NotificationSawCommit && !AuditSawCommit, $"{operation}: mandatory audit precedes commit and notification follows commit with {failure}");
       var expected = failure switch { "none" => 0, "both" or "cancelled" => 2, _ => 1 };
       check(Errors.Count == expected && Errors.All(e => e != null), $"{operation}: each delivery failure logged with exception");
     }

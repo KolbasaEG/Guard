@@ -32,6 +32,8 @@ public static class NavigationCatalog
       new("Классификаторы", "/classifiers", "library_books", Permissions.Classifiers.Read),
       new("Синхронизация", "/synchronization", "sync", RootOnly: true),
       new("Журнал событий", "/Logs", "receipt_long", Permissions.Logs.Read),
+      new("Журнал аудита", "/audit", "policy", Permissions.Audit.Read),
+      new("Состояние и настройки аудита", "/audit/settings", "health_and_safety", RootOnly: true),
       new("Архив выгрузок", "/export-archive", "inventory_2", Permissions.Exports.ReadArchive)
     ], "settings")
   ];

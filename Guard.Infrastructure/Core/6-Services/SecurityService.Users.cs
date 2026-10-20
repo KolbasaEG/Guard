@@ -1,11 +1,15 @@
 using Guard.Core.Entities;
 using Guard.Core.Services.DTOs;
+using Guard.Core.Enums;
+using Guard.Core.Logging;
 
 namespace Guard.Core.Services;
 
 public partial class SecurityService
 {
-  public async Task<string> CreateFromDtoAsync(CreateUserCommand input, CancellationToken ct = default)
+  public Task<string> CreateFromDtoAsync(CreateUserCommand input, CancellationToken ct = default) =>
+    AuditOperation.RunAsync(audit, AuditEventType.UserCreated, "Account", null, () => CreateFromDtoCoreAsync(input, ct));
+  private async Task<string> CreateFromDtoCoreAsync(CreateUserCommand input, CancellationToken ct)
   {
     ArgumentNullException.ThrowIfNull(input);
     ValidateUserFields(input.UserName, input.Email);
@@ -16,7 +20,9 @@ public partial class SecurityService
     return user.Id;
   }
 
-  public async Task SaveDetailsAsync(EditUserDto input, CancellationToken ct = default)
+  public Task SaveDetailsAsync(EditUserDto input, CancellationToken ct = default) =>
+    AuditOperation.RunAsync(audit, AuditEventType.UserDetailsChanged, "Account", input?.Id, () => SaveDetailsCoreAsync(input!, ct));
+  private async Task SaveDetailsCoreAsync(EditUserDto input, CancellationToken ct)
   {
     ArgumentNullException.ThrowIfNull(input);
     // Форма может изменить модель, пока прикладная операция ожидает доступ/БД.
@@ -25,7 +31,9 @@ public partial class SecurityService
     Check(await UpdateUserDetailsAsync(snapshot, ct));
   }
 
-  public async Task ResetPasswordFromDtoAsync(ResetUserPasswordCommand input, CancellationToken ct = default)
+  public Task ResetPasswordFromDtoAsync(ResetUserPasswordCommand input, CancellationToken ct = default) =>
+    AuditOperation.RunAsync(audit, AuditEventType.PasswordChangeFailed, "Account", input?.UserId, () => ResetPasswordCoreAsync(input!, ct));
+  private async Task ResetPasswordCoreAsync(ResetUserPasswordCommand input, CancellationToken ct)
   {
     ArgumentNullException.ThrowIfNull(input);
     if (string.IsNullOrWhiteSpace(input.UserId)) throw new ArgumentException("Не выбран пользователь.");

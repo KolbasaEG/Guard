@@ -10,6 +10,7 @@ internal static class LocalAccountHttpTests
     var checks = 0;
     using var handler = new HttpClientHandler { CookieContainer = new CookieContainer(), AllowAutoRedirect = false };
     using var client = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:5079") };
+    var loginNumber = 0;
     void Check(bool value, string scenario) {
       if (!value) throw new InvalidOperationException($"Local account HTTP: {scenario}");
       checks++;
@@ -17,6 +18,8 @@ internal static class LocalAccountHttpTests
     string Token(string html) => WebUtility.HtmlDecode(Regex.Match(html,
       "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
     async Task<HttpResponseMessage> Login(string password, string returnUrl = "/Logs", bool csrf = true) {
+      client.DefaultRequestHeaders.Remove("X-Forwarded-For");
+      client.DefaultRequestHeaders.Add("X-Forwarded-For", "198.18.10." + ++loginNumber);
       var html = await client.GetStringAsync("/Account/Login");
       var values = new Dictionary<string, string> {
         ["_handler"] = "login", ["Input.Email"] = "ROOT@browser.test", ["Input.Password"] = password

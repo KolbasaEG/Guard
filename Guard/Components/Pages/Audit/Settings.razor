@@ -1,0 +1,121 @@
+@page "/audit/settings"
+@attribute [Authorize]
+@layout Guard.Components.Layout.AuditRecoveryLayout
+@using Guard.Core.Enums
+<PageTitle>Состояние и настройки аудита</PageTitle>
+<div class="audit-settings-page">
+  @if (!allowed && !loading) {
+    <RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false">Состояние недоступно: не удалось подтвердить полномочия Root.</RadzenAlert>
+  }
+  else if (loading && state == null) {
+    <RadzenText Text="Загрузка состояния аудита…" />
+  }
+  else {
+    @if (message != null) { <RadzenAlert AlertStyle="@(success ? AlertStyle.Success : AlertStyle.Warning)" AllowClose="false">@message</RadzenAlert> }
+    <div class="audit-settings-grid">
+      @if (state != null) {
+        <section class="audit-state" aria-label="Состояние аудита">
+          <ViewEntity TItem="AuditSystemState" Data="state" Name="СОСТОЯНИЕ АУДИТА" Icon="health_and_safety" ShowCancelButton="false">
+            <div class="audit-state-content">
+              <RadzenAlert AlertStyle="@(state.Available ? AlertStyle.Success : AlertStyle.Danger)" AllowClose="false">@state.Message</RadzenAlert>
+              <InfoBlock Title="Доступность" Icon="verified_user" Style="">
+                <dl class="audit-facts">
+                  <dt>Действующий режим</dt><dd>@(state.Code == "StorageUnavailable" || state.Mode is not (AuditMode.Local or AuditMode.Siem) ? "Неизвестен" : state.Mode == AuditMode.Local ? "Локальный" : "RuSIEM")</dd>
+                  <dt>Код состояния</dt><dd><span class="audit-code">@state.Code</span></dd>
+                  <dt>Последняя проверка, UTC</dt><dd>@Format(state.CheckedAtUtc)</dd>
+                  <dt>Возраст показателей</dt><dd>@Math.Max(0, (int)(DateTime.UtcNow - state.CheckedAtUtc).TotalSeconds) сек.</dd>
+                  <dt>Локальная запись исправна, UTC</dt><dd>@Format(state.LastStorageSuccessUtc)</dd>
+                  <dt>Последний сбой, UTC</dt><dd>@Format(state.LastFailureUtc)</dd>
+                  <dt>Причина сбоя</dt><dd>@(state.LastFailure ?? "Нет")</dd>
+                  <dt>Сбоев с запуска</dt><dd>@state.StorageFailures</dd>
+                </dl>
+              </InfoBlock>
+              <InfoBlock Title="Очередь и доставка" Icon="sync_alt" Style="">
+                @if (state.Code == "StorageUnavailable") { <RadzenText>Данные очереди неизвестны. Нулевое значение не подтверждено.</RadzenText> }
+                <dl class="audit-facts">
+                  @if (state.Code != "StorageUnavailable") {
+                    <dt>Ожидают отправки</dt><dd>@state.Pending событий</dd>
+                    <dt>Объём очереди</dt><dd>@FormatBytes(state.PendingBytes)</dd>
+                    <dt>Старейшее событие, UTC</dt><dd>@Format(state.OldestQueuedAtUtc)</dd>
+                    <dt>Возраст старейшего</dt><dd>@(state.OldestQueuedAtUtc is {} oldest ? Math.Max(0, (long)(DateTime.UtcNow - oldest).TotalSeconds) + " сек." : "Нет")</dd>
+                  }
+                  <dt>Отправка по TLS, UTC</dt><dd>@Format(state.LastSentUtc)</dd>
+                  <dt>Цикл отправителя, UTC</dt><dd>@Format(state.WorkerCompletedAtUtc)</dd>
+                  <dt>Сертификат действует до, UTC</dt><dd>@Format(state.CertificateExpiresAtUtc)</dd>
+                  @if (state.Mode == AuditMode.Siem && state.Code != "StorageUnavailable") {
+                    <dt>Предельный возраст</dt><dd>@state.MaxQueueAgeMinutes мин.</dd>
+                    <dt>Предельный объём</dt><dd>@FormatBytes(state.MaxQueueBytes)</dd>
+                    <dt>Предельное количество</dt><dd>@(state.MaxQueueCount > 0 ? state.MaxQueueCount.ToString() : "Без дополнительного ограничения")</dd>
+                    @if (state.MaxQueueBytes > 0) { <dt>Использовано объёма</dt><dd>@((state.PendingBytes * 100.0 / state.MaxQueueBytes).ToString("F1")) %</dd> }
+                    <dt>Версия конфигурации</dt><dd class="audit-code">@state.ConfigurationVersion</dd>
+                  }
+                </dl>
+                <RadzenText TextStyle="TextStyle.Caption" class="audit-note">В локальном режиме прежняя очередь сохранена, отправка приостановлена. Отправка по TLS не подтверждает сохранение в RuSIEM.</RadzenText>
+              </InfoBlock>
+              <InfoBlock Title="Хранение и очистка" Icon="inventory_2" Style="">
+                <dl class="audit-facts">
+                  <dt>Последняя очистка, UTC</dt><dd>@Format(state.LastCleanupUtc)</dd>
+                  <dt>Ошибка очистки</dt><dd>@(state.CleanupError ?? "Нет")</dd>
+                </dl>
+              </InfoBlock>
+            </div>
+          </ViewEntity>
+        </section>
+      }
+      @if (allowed && model != null) {
+        <section class="audit-configuration" aria-label="Настройки аудита">
+          <EditEntity TItem="AuditConfiguration" Data="model" Name="НАСТРОЙКИ АУДИТА" IsLoading="loading" IsSaving="saving" ShowCancelButton="false" Submit="SaveAsync">
+            <div class="audit-form-content">
+              <InfoBlock Title="Режим и хранение" Icon="settings" Style="">
+                <div class="audit-fields">
+                  <div class="audit-field audit-field-wide">
+                    <RadzenLabel Text="Режим аудита" Component="AuditMode" />
+                    <RadzenSelectBar Name="AuditMode" TValue="AuditMode" @bind-Value="model.Mode"><Items>
+                      <RadzenSelectBarItem Text="Локальный" Value="AuditMode.Local" />
+                      <RadzenSelectBarItem Text="С RuSIEM" Value="AuditMode.Siem" />
+                    </Items></RadzenSelectBar>
+                  </div>
+                  <div class="audit-field audit-field-wide">
+                    <RadzenLabel Text="Срок хранения, календарных лет (1–30)" Component="RetentionYears" />
+                    <RadzenNumeric Name="RetentionYears" TValue="int" @bind-Value="model.RetentionYears" Min="1" Max="30" />
+                  </div>
+                </div>
+                <RadzenText TextStyle="TextStyle.Caption" class="audit-note">Срок действует для журнала и технических логов. Неотправленные обязательные события сохраняются до доставки. Уменьшение срока разрешает очистку более старых локальных и доставленных записей.</RadzenText>
+              </InfoBlock>
+              @if (model.Mode == AuditMode.Siem) {
+                <InfoBlock Title="Соединение RuSIEM" Icon="lan" Style="">
+                  <div class="audit-fields">
+                    <div class="audit-field audit-field-wide"><RadzenLabel Text="Сервер — имя или IP" Component="SiemHost" /><RadzenTextBox Name="SiemHost" @bind-Value="model.Host" MaxLength="253" /></div>
+                    <div class="audit-field"><RadzenLabel Text="Порт TLS" Component="SiemPort" /><RadzenNumeric Name="SiemPort" TValue="int" @bind-Value="model.Port" Min="1" Max="65535" /></div>
+                    <div class="audit-field audit-field-wide"><RadzenLabel Text="Публичный PEM-сертификат CA" Component="SiemCa" /><RadzenTextArea Name="SiemCa" @bind-Value="model.CaCertificatePem" Rows="4" MaxLength="16384" /></div>
+                  </div>
+                  <RadzenText TextStyle="TextStyle.Caption" class="audit-note">Пустой сертификат — системное доверие. Приватный ключ не требуется.</RadzenText>
+                  <RadzenButton Text="Проверить соединение и отправить тест" Icon="network_check" Click="TestAsync" Disabled="saving" ButtonStyle="ButtonStyle.Light" />
+                </InfoBlock>
+                <InfoBlock Title="Обязательная очередь" Icon="hourglass_top" Style="">
+                  <div class="audit-fields">
+                    <div class="audit-field"><RadzenLabel Text="Максимальный возраст, минут" Component="QueueAge" /><RadzenNumeric Name="QueueAge" TValue="int" @bind-Value="model.MaxQueueAgeMinutes" Min="1" Max="525600" /></div>
+                    <div class="audit-field"><RadzenLabel Text="Максимальный объём, байт" Component="QueueBytes" /><RadzenNumeric Name="QueueBytes" TValue="long" @bind-Value="model.MaxQueueBytes" Min="1024" /></div>
+                    <div class="audit-field audit-field-wide"><RadzenLabel Text="Максимальное число событий" Component="QueueCount" /><RadzenNumeric Name="QueueCount" TValue="int" @bind-Value="model.MaxQueueCount" Min="0" /></div>
+                  </div>
+                  <RadzenText TextStyle="TextStyle.Caption" class="audit-note">Возраст и объём обязательны; минимальный объём — 1024 байта. Количество 0 отключает только дополнительный предел числа событий.</RadzenText>
+                  <div class="audit-confirmation"><RadzenCheckBox Name="TransferPending" @bind-Value="transferPending" /><RadzenLabel Component="TransferPending" Text="Подтверждаю перенос обязательной очереди на новое назначение при смене сервера или доверия" /></div>
+                </InfoBlock>
+              }
+              <RadzenText TextStyle="TextStyle.Caption" class="audit-note">Снижение пределов может сразу заблокировать работу. Локальный режим приостанавливает отправку SIEM; локальные события задним числом не отправляются.</RadzenText>
+              <div class="audit-form-actions">
+                <RadzenButton Text="Сохранить настройки" Icon="save" ButtonType="ButtonType.Submit" Disabled="@(saving || loading)" />
+                <RadzenButton Text="Обновить" Icon="refresh" Click="ReloadAsync" Disabled="@(saving || loading)" ButtonStyle="ButtonStyle.Light" />
+              </div>
+              <dl class="audit-facts audit-version">
+                <dt>Версия</dt><dd class="audit-code">@model.Version</dd>
+                <dt>Изменил</dt><dd>@(model.ModifiedBy ?? "Ещё не настроено")</dd>
+                <dt>Изменено, UTC</dt><dd>@Format(model.ModifiedAtUtc)</dd>
+              </dl>
+            </div>
+          </EditEntity>
+        </section>
+      }
+    </div>
+  }
+</div>

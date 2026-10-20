@@ -91,6 +91,12 @@
         }
       }
       catch (OperationCanceledException) when (stop.IsCancellationRequested) { return; }
+      catch (AuditUnavailableException) {
+        snapshot = new("", false, []);
+        var path = new Uri(Navigation.Uri).AbsolutePath;
+        if (!path.StartsWith("/Account/", StringComparison.OrdinalIgnoreCase) && !path.StartsWith("/audit/", StringComparison.OrdinalIgnoreCase))
+          Navigation.NavigateTo("/Account/AuditUnavailable", forceLoad: true);
+      }
       catch (Exception ex) { Logger.LogError(ex, "Не удалось обновить состояние доступа"); snapshot = new("", false, []); }
       if (previous.UserId == snapshot.UserId && previous.IsRoot == snapshot.IsRoot &&
           previous.Permissions.SetEquals(snapshot.Permissions)) snapshot = previous;

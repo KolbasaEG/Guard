@@ -9,12 +9,14 @@ namespace Guard.Core.Services.Exports;
 
 public sealed record ExportAccessScope(UserAccessSnapshot User, Guid? OwnId, string? OwnPath, HashSet<Guid> AllowedIds, string Stamp);
 
-public sealed class ExportAccess(IDbContextFactory<ApplicationDbContext> factory, IPermissionService permissions)
+public sealed class ExportAccess(IDbContextFactory<ApplicationDbContext> factory, IPermissionService permissions,
+  IOperationAvailability? availability = null)
 {
   public static bool ValidPath(string? path) => path != null && path.StartsWith('/') && path.EndsWith('/') &&
     path.Split('/', StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } parts && parts.All(p => long.TryParse(p, out var n) && n > 0);
   public async Task<ExportAccessScope> ForUserAsync(string id, ExportRequest request, CancellationToken ct)
   {
+    if (availability != null) await availability.RequireWorkingAsync(ct);
     var user = await permissions.GetForUserAsync(id, ct);
     if (!user.Has(ExportSchema.Permission(request.Area))) throw new UnauthorizedAccessException("Недостаточно прав для экспорта.");
     if (request.AllSubdivisions && !user.IsRoot) throw new UnauthorizedAccessException("Все подразделения доступны только Root.");

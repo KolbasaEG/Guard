@@ -6,6 +6,7 @@ using Guard.Core.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Guard.Core.Logging;
 
 namespace Guard.Core.Services;
 
@@ -36,11 +37,6 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     {
       logger.LogError(ex, "Изменение ролей сохранено, но уведомление не доставлено. EventType={EventType}; TargetId={TargetId}", eventType, targetId);
     }
-    try { audit.LogIdentityEvent(eventType, actor, details: details); }
-    catch (Exception ex)
-    {
-      logger.LogError(ex, "Изменение ролей сохранено, но аудит не доставлен. EventType={EventType}; TargetId={TargetId}", eventType, targetId);
-    }
   }
 
   public async Task<RoleEditDto> GetAsync(string id, CancellationToken ct = default)
@@ -50,11 +46,14 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     var manager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
     var role = await manager.FindByIdAsync(id) ?? throw new KeyNotFoundException("Роль не найдена.");
     var claims = await manager.GetClaimsAsync(role);
+    await RequireRootAsync(ct);
     return new() { Id = role.Id, Name = role.Name ?? "", Version = role.ConcurrencyStamp,
       IsSystem = role.NormalizedName == "ROOT", Permissions = claims.Where(c => c.Type == "Permission" && c.Value != Permissions.Synchronization.Run).Select(c => c.Value).ToHashSet() };
   }
 
-  public async Task<string> SaveAsync(RoleEditDto input, CancellationToken ct = default)
+  public Task<string> SaveAsync(RoleEditDto input, CancellationToken ct = default) =>
+    AuditOperation.RunAsync(audit, AuditEventType.RolePermissionsChanged, "Role", input?.Id, () => SaveCoreAsync(input!, ct));
+  private async Task<string> SaveCoreAsync(RoleEditDto input, CancellationToken ct)
   {
     ArgumentNullException.ThrowIfNull(input);
     // Форма может менять DTO, пока операция ожидает проверку доступа или блокировку.
@@ -72,6 +71,7 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)", ct);
     actor = await RequireRootAsync(ct);
     var create = string.IsNullOrEmpty(id);
+    db.AuditActorId = actor;
     var role = create ? new ApplicationRole() :
       await manager.FindByIdAsync(id) ?? throw new KeyNotFoundException("Роль не найдена.");
     if (!create && role.ConcurrencyStamp != version)
@@ -86,13 +86,18 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     var affectedUsers = await db.UserRoles.Where(r => r.RoleId == role.Id).Select(r => r.UserId).ToListAsync(ct);
     // Обновление stamp фиксирует также изменения только набора claims.
     Check(await manager.UpdateAsync(role));
-    await tx.CommitAsync(ct);
+    await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.RolePermissionsChanged, actor,
+      details: $"added={string.Join(",", selected.Except(old.Select(c => c.Value)))}; removed={string.Join(",", old.Select(c => c.Value).Except(selected))}")
+      with { ObjectType = "Role", ObjectId = role.Id }, ct);
+    await AuditTransaction.CommitAsync(tx, ct);
     await CompleteCommittedAsync(affectedUsers, AuditEventType.RolePermissionsChanged, actor, role.Id,
         $"RoleId={role.Id}; added={string.Join(",", selected.Except(old.Select(c => c.Value)))}; removed={string.Join(",", old.Select(c => c.Value).Except(selected))}");
     return role.Id;
   }
 
-  public async Task DeleteAsync(string id, CancellationToken ct = default)
+  public Task DeleteAsync(string id, CancellationToken ct = default) =>
+    AuditOperation.RunAsync(audit, AuditEventType.RoleDeleted, "Role", id, () => DeleteCoreAsync(id, ct));
+  private async Task DeleteCoreAsync(string id, CancellationToken ct)
   {
     var actor = await RequireRootAsync(ct);
     await using var scope = scopes.CreateAsyncScope();
@@ -102,10 +107,13 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)", ct);
     actor = await RequireRootAsync(ct);
     var role = await manager.FindByIdAsync(id) ?? throw new KeyNotFoundException("Роль не найдена.");
+    db.AuditActorId = actor;
     if (role.NormalizedName == "ROOT") throw new InvalidOperationException("Нельзя удалить Root.");
     var affectedUsers = await db.UserRoles.Where(r => r.RoleId == id).Select(r => r.UserId).ToListAsync(ct);
     Check(await manager.DeleteAsync(role));
-    await tx.CommitAsync(ct);
+    await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.RoleDeleted, actor)
+      with { ObjectType = "Role", ObjectId = id }, ct);
+    await AuditTransaction.CommitAsync(tx, ct);
     await CompleteCommittedAsync(affectedUsers, AuditEventType.RolePermissionsChanged, actor, id, $"Deleted role {id}");
   }
 
@@ -118,10 +126,13 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
         ?? throw new KeyNotFoundException("Пользователь не найден.");
     var roles = await db.Roles.OrderBy(r => r.Name).Select(r => new RoleOptionDto(r.Id, r.Name!)).ToListAsync(ct);
     var selected = await db.UserRoles.Where(r => r.UserId == userId).Select(r => r.RoleId).ToListAsync(ct);
+    await RequireRootAsync(ct);
     return new(roles, selected, UserVersion(user.ConcurrencyStamp, selected));
   }
 
-  public async Task SetUserRolesAsync(string userId, IEnumerable<string> roles, string version, CancellationToken ct = default)
+  public Task SetUserRolesAsync(string userId, IEnumerable<string> roles, string version, CancellationToken ct = default) =>
+    AuditOperation.RunAsync(audit, AuditEventType.UserRolesChanged, "Account", userId, () => SetUserRolesCoreAsync(userId, roles, version, ct));
+  private async Task SetUserRolesCoreAsync(string userId, IEnumerable<string> roles, string version, CancellationToken ct)
   {
     ArgumentNullException.ThrowIfNull(roles);
     var selected = roles.Distinct().ToArray();
@@ -133,6 +144,7 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)", ct);
     actor = await RequireRootAsync(ct);
     var user = await users.FindByIdAsync(userId) ?? throw new KeyNotFoundException("Пользователь не найден.");
+    db.AuditActorId = actor;
     var current = await db.UserRoles.Where(r => r.UserId == userId).Select(r => r.RoleId).ToListAsync(ct);
     if (UserVersion(user.ConcurrencyStamp, current) != version)
       throw new InvalidOperationException("Назначения уже изменены. Откройте форму заново.");
@@ -148,7 +160,10 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     var addNames = found.Where(r => !current.Contains(r.Id)).Select(r => r.Name!).ToArray();
     Check(await users.RemoveFromRolesAsync(user, removeNames));
     Check(await users.AddToRolesAsync(user, addNames));
-    await tx.CommitAsync(ct);
+    await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.UserRolesChanged, actor,
+      details: $"added={string.Join(",", addNames)}; removed={string.Join(",", removeNames)}")
+      with { ObjectType = "Account", ObjectId = userId }, ct);
+    await AuditTransaction.CommitAsync(tx, ct);
     await CompleteCommittedAsync([userId], AuditEventType.UserRolesChanged, actor, userId,
         $"UserId={userId}; added={string.Join(",", addNames)}; removed={string.Join(",", removeNames)}");
   }
@@ -161,10 +176,13 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     var count = await db.UserClaims.CountAsync(c => c.ClaimType == "Permission", ct);
     var roles = await db.Roles.Where(r => r.NormalizedName != "ROOT" &&
         !db.RoleClaims.Any(c => c.RoleId == r.Id && c.ClaimType == "Permission")).Select(r => r.Name!).ToListAsync(ct);
+    await RequireRootAsync(ct);
     return new(count, roles);
   }
 
-  public async Task InitializeAdministratorAsync(CancellationToken ct = default)
+  public Task InitializeAdministratorAsync(CancellationToken ct = default) =>
+    AuditOperation.RunAsync(audit, AuditEventType.RolePermissionsChanged, "Role", null, () => InitializeAdministratorCoreAsync(ct));
+  private async Task InitializeAdministratorCoreAsync(CancellationToken ct)
   {
     var actor = await RequireRootAsync(ct);
     await using var scope = scopes.CreateAsyncScope();
@@ -174,13 +192,16 @@ public class RoleAccessService(IPermissionService permissions, IServiceScopeFact
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)", ct);
     actor = await RequireRootAsync(ct);
     var role = await manager.FindByNameAsync("Администратор") ?? throw new KeyNotFoundException("Роль Администратор не найдена.");
+    db.AuditActorId = actor;
     if ((await manager.GetClaimsAsync(role)).Any(c => c.Type == "Permission"))
       throw new InvalidOperationException("Роль уже настроена. Начальные права не перезаписывают существующие.");
     var affectedUsers = await db.UserRoles.Where(r => r.RoleId == role.Id).Select(r => r.UserId).ToListAsync(ct);
     foreach (var p in PermissionCatalog.All.Where(p => !p.RootOnly))
       Check(await manager.AddClaimAsync(role, new Claim("Permission", p.Code)));
     Check(await manager.UpdateAsync(role));
-    await tx.CommitAsync(ct);
+    await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.RolePermissionsChanged, actor,
+      details: "Initialized Administrator permissions") with { ObjectType = "Role", ObjectId = role.Id }, ct);
+    await AuditTransaction.CommitAsync(tx, ct);
     await CompleteCommittedAsync(affectedUsers, AuditEventType.RolePermissionsChanged, actor, role.Id, "Initialized Administrator permissions");
   }
 }

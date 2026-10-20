@@ -24,6 +24,8 @@ public static class DatabaseSeeder
   {
     // Применяем миграции автоматически в Development (удобно)
     await context.Database.MigrateAsync();
+    context.IsAuditInitialization = true;
+    try {
 
     // === 1. Создание ролей ===
     await EnsureRoleAsync(roleManager, "Root");
@@ -54,6 +56,8 @@ public static class DatabaseSeeder
 
     if (!await context.SynchronizationSettings.AnyAsync(s => s.Id == 1 && s.Mode == DataManagementMode.Api))
       await SeedSubdivisionsAsync(context);
+    }
+    finally { context.IsAuditInitialization = false; }
   }
 
   private static async Task EnsureRoleAsync(RoleManager<ApplicationRole> roleManager, string roleName)

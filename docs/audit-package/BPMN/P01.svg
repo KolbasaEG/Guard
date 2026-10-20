@@ -1,0 +1,261 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2115.0 900.0" width="2115.0" height="900.0">
+  <rect x="0" y="0" width="2115.0" height="900.0" fill="white"/>
+  <text x="28" y="35" fill="#16313a" font-family="Arial, sans-serif" font-size="23" text-anchor="start">
+    <tspan x="28" dy="0">P01 Обычный вход и отказ в доступе</tspan>
+  </text>
+  <text x="28" y="63" fill="#16313a" font-family="Arial, sans-serif" font-size="13" text-anchor="start">
+    <tspan x="28" dy="0">Описательная BPMN 2.0 | Guard | 20 октября 2026</tspan>
+  </text>
+  <rect x="10" y="100" width="2095.0" height="230" fill="#f4f7f8" stroke="#c5d2d7" stroke-width="1"/>
+  <text x="32" y="215" fill="#3b5965" transform="rotate(-90 32 215)" text-anchor="middle" font-family="Arial" font-size="14">Клиент и HTTP</text>
+  <rect x="10" y="330" width="2095.0" height="230" fill="#ffffff" stroke="#c5d2d7" stroke-width="1"/>
+  <text x="32" y="445" fill="#3b5965" transform="rotate(-90 32 445)" text-anchor="middle" font-family="Arial" font-size="14">Identity и доступ</text>
+  <rect x="10" y="560" width="2095.0" height="230" fill="#f4f7f8" stroke="#c5d2d7" stroke-width="1"/>
+  <text x="32" y="675" fill="#3b5965" transform="rotate(-90 32 675)" text-anchor="middle" font-family="Arial" font-size="14">Обязательный аудит</text>
+  <polyline points="190.0,170.0 310.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="310.0,170.0 300.78939005997114,173.8941834230865 300.78939005997114,166.1058165769135" fill="#526b77"/>
+  <polyline points="470.0,170.0 580.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="580.0,170.0 570.7893900599712,173.8941834230865 570.7893900599712,166.1058165769135" fill="#526b77"/>
+  <polyline points="640.0,170.0 750.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="750.0,170.0 740.7893900599712,173.8941834230865 740.7893900599712,166.1058165769135" fill="#526b77"/>
+  <rect x="623.0" y="94.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="695.0" y="108.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="695.0" dy="0">Да</tspan>
+  </text>
+  <polyline points="640.0,170.0 660,170 660,120 500,120 500,510 530.0,510.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="530.0,510.0 520.7893900599712,513.8941834230865 520.7893900599712,506.10581657691347" fill="#526b77"/>
+  <rect x="428.0" y="286.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="500.0" y="300.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="500.0" dy="0">Нет HTTP 429</tspan>
+  </text>
+  <polyline points="1130.0,170.0 1240.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1240.0,170.0 1230.789390059971,173.8941834230865 1230.789390059971,166.1058165769135" fill="#526b77"/>
+  <polyline points="1300.0,170.0 1320,170 1320,110 950,110 950,400 970.0,400.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="970.0,400.0 960.7893900599712,403.89418342308653 960.7893900599712,396.10581657691347" fill="#526b77"/>
+  <rect x="878.0" y="226.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="950.0" y="240.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="950.0" dy="0">Да</tspan>
+  </text>
+  <polyline points="1300.0,170.0 1410.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1410.0,170.0 1400.789390059971,173.8941834230865 1400.789390059971,166.1058165769135" fill="#526b77"/>
+  <rect x="1283.0" y="94.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1355.0" y="108.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1355.0" dy="0">Нет</tspan>
+  </text>
+  <polyline points="1570.0,170.0 1590,170 1590,340 940,340 940,470 790,470 790,510 810.0,510.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="810.0,510.0 800.7893900599712,513.8941834230865 800.7893900599712,506.10581657691347" fill="#526b77"/>
+  <rect x="1193.0" y="303.5" width="144" height="37" fill="white" opacity=".95"/>
+  <text x="1265.0" y="317.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1265.0" dy="0">Обычная cookie не</tspan>
+    <tspan x="1265.0" dy="15">выдаётся</tspan>
+  </text>
+  <polyline points="1130.0,400.0 1240.0,400.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1240.0,400.0 1230.789390059971,403.89418342308653 1230.789390059971,396.10581657691347" fill="#526b77"/>
+  <polyline points="1300.0,400.0 1320,400 1320,350 1160,350 1160,630 1190.0,630.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1190.0,630.0 1180.789390059971,633.8941834230865 1180.789390059971,626.1058165769135" fill="#526b77"/>
+  <rect x="1088.0" y="499.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1160.0" y="513.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1160.0" dy="0">Да</tspan>
+  </text>
+  <polyline points="1300.0,400.0 1320,400 1320,340 940,340 940,450 510,450 510,510 530.0,510.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="530.0,510.0 520.7893900599712,513.8941834230865 520.7893900599712,506.10581657691347" fill="#526b77"/>
+  <rect x="653.0" y="421.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="725.0" y="435.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="725.0" dy="0">Нет</tspan>
+  </text>
+  <polyline points="690.0,510.0 810.0,510.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="810.0,510.0 800.7893900599712,513.8941834230865 800.7893900599712,506.10581657691347" fill="#526b77"/>
+  <polyline points="1350.0,630.0 1460.0,630.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1460.0,630.0 1450.789390059971,633.8941834230865 1450.789390059971,626.1058165769135" fill="#526b77"/>
+  <polyline points="1520.0,630.0 1540,630 1540,400 1630.0,400.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1630.0,400.0 1620.789390059971,403.89418342308653 1620.789390059971,396.10581657691347" fill="#526b77"/>
+  <rect x="1468.0" y="486.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1540.0" y="500.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1540.0" dy="0">Да</tspan>
+  </text>
+  <polyline points="1520.0,630.0 1540,630 1540,490 870,490 870,470 790,470 790,510 810.0,510.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="810.0,510.0 800.7893900599712,513.8941834230865 800.7893900599712,506.10581657691347" fill="#526b77"/>
+  <rect x="1133.0" y="544.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="1205.0" y="558.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1205.0" dy="0">Доказанный отказ</tspan>
+  </text>
+  <polyline points="1520.0,630.0 1670,630 1670,740 1690.0,740.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1690.0,740.0 1680.789390059971,743.8941834230865 1680.789390059971,736.1058165769135" fill="#526b77"/>
+  <rect x="1598.0" y="648.5" width="144" height="37" fill="white" opacity=".95"/>
+  <text x="1670.0" y="662.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1670.0" dy="0">Подтверждение</tspan>
+    <tspan x="1670.0" dy="15">потеряно</tspan>
+  </text>
+  <polyline points="1790.0,400.0 1910.0,400.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="1910.0,400.0 1900.789390059971,403.89418342308653 1900.789390059971,396.10581657691347" fill="#526b77"/>
+  <polyline points="910.0,170.0 930,170 930,230 780,230 780,280 800.0,280.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="800.0,280.0 790.7893900599712,283.89418342308653 790.7893900599712,276.10581657691347" fill="#526b77"/>
+  <polyline points="860.0,280.0 950,280 950,170 970.0,170.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="970.0,170.0 960.7893900599712,173.8941834230865 960.7893900599712,166.1058165769135" fill="#526b77"/>
+  <rect x="878.0" y="254.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="950.0" y="268.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="950.0" dy="0">Да</tspan>
+  </text>
+  <polyline points="860.0,280.0 940,280 940,450 510,450 510,510 530.0,510.0" fill="none" stroke="#526b77" stroke-width="1.6"/>
+  <polygon points="530.0,510.0 520.7893900599712,513.8941834230865 520.7893900599712,506.10581657691347" fill="#526b77"/>
+  <rect x="653.0" y="374.5" width="144" height="21" fill="white" opacity=".95"/>
+  <text x="725.0" y="388.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="725.0" dy="0">Нет InvalidInput</tspan>
+  </text>
+  <circle cx="170.0" cy="170.0" r="20.0" fill="white" stroke="#274d59" stroke-width="1.8"/>
+  <text x="170.0" y="212.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="170.0" dy="0">POST входа</tspan>
+  </text>
+  <rect x="310.0" y="130.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="329.0" y1="144.0" x2="333.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="327.53553390593277" y1="147.53553390593274" x2="330.3639610306789" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="324.0" y1="149.0" x2="324.0" y2="153.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="320.4644660940673" y1="147.53553390593274" x2="317.6360389693211" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="319.0" y1="144.0" x2="315.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="320.46446609406723" y1="140.46446609406726" x2="317.6360389693211" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <line x1="324.0" y1="139.0" x2="324.0" y2="135.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="327.5355339059327" y1="140.46446609406726" x2="330.3639610306789" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <circle cx="324.0" cy="144.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="324.0" cy="144.0" r="2" fill="#315b67"/>
+  <text x="390.0" y="166.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="390.0" dy="0">Лимит 5 запросов на</tspan>
+    <tspan x="390.0" dy="15">IP в минуту</tspan>
+  </text>
+  <polygon points="610.0,140.0 640.0,170.0 610.0,200.0 580.0,170.0" fill="#fff8e8" stroke="#8b7341" stroke-width="1.8"/>
+  <path d="M 602.0 162.0 L 618.0 178.0 M 618.0 162.0 L 602.0 178.0" stroke="#8b7341" stroke-width="2"/>
+  <text x="610.0" y="222.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="610.0" dy="0">Лимит соблюдён</tspan>
+  </text>
+  <rect x="750.0" y="130.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="769.0" y1="144.0" x2="773.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="767.5355339059328" y1="147.53553390593274" x2="770.363961030679" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="764.0" y1="149.0" x2="764.0" y2="153.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="760.4644660940672" y1="147.53553390593274" x2="757.636038969321" y2="150.36396103067892" stroke="#315b67" stroke-width="3"/>
+  <line x1="759.0" y1="144.0" x2="755.0" y2="144.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="760.4644660940672" y1="140.46446609406726" x2="757.636038969321" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <line x1="764.0" y1="139.0" x2="764.0" y2="135.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="767.5355339059328" y1="140.46446609406726" x2="770.363961030679" y2="137.63603896932108" stroke="#315b67" stroke-width="3"/>
+  <circle cx="764.0" cy="144.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="764.0" cy="144.0" r="2" fill="#315b67"/>
+  <text x="830.0" y="166.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="830.0" dy="0">Проверить форму и</tspan>
+    <tspan x="830.0" dy="15">обязательные поля</tspan>
+  </text>
+  <rect x="970.0" y="130.0" width="160" height="80" rx="9" fill="#e7f1ee" stroke="#315b67" stroke-width="3"/>
+  <rect x="1044.0" y="195.0" width="12" height="12" fill="white" stroke="#315b67"/>
+  <path d="M 1046.0 201.0 H 1054.0 M 1050.0 197.0 V 205.0" stroke="#315b67"/>
+  <text x="1050.0" y="174.0" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1050.0" dy="0">Проверить аудит P03</tspan>
+  </text>
+  <polygon points="1270.0,140.0 1300.0,170.0 1270.0,200.0 1240.0,170.0" fill="#fff8e8" stroke="#8b7341" stroke-width="1.8"/>
+  <path d="M 1262.0 162.0 L 1278.0 178.0 M 1278.0 162.0 L 1262.0 178.0" stroke="#8b7341" stroke-width="2"/>
+  <text x="1270.0" y="222.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="1270.0" dy="0">Обычная работа</tspan>
+    <tspan x="1270.0" dy="17">разрешена</tspan>
+  </text>
+  <rect x="1410.0" y="130.0" width="160" height="80" rx="9" fill="#e7f1ee" stroke="#315b67" stroke-width="3"/>
+  <rect x="1484.0" y="195.0" width="12" height="12" fill="white" stroke="#315b67"/>
+  <path d="M 1486.0 201.0 H 1494.0 M 1490.0 197.0 V 205.0" stroke="#315b67"/>
+  <text x="1490.0" y="166.5" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1490.0" dy="0">Ограниченный вход</tspan>
+    <tspan x="1490.0" dy="15">Root P06</tspan>
+  </text>
+  <rect x="970.0" y="360.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="989.0" y1="374.0" x2="993.0" y2="374.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="987.5355339059328" y1="377.53553390593277" x2="990.363961030679" y2="380.3639610306789" stroke="#315b67" stroke-width="3"/>
+  <line x1="984.0" y1="379.0" x2="984.0" y2="383.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="980.4644660940672" y1="377.53553390593277" x2="977.636038969321" y2="380.3639610306789" stroke="#315b67" stroke-width="3"/>
+  <line x1="979.0" y1="374.0" x2="975.0" y2="374.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="980.4644660940672" y1="370.4644660940673" x2="977.636038969321" y2="367.6360389693211" stroke="#315b67" stroke-width="3"/>
+  <line x1="984.0" y1="369.0" x2="984.0" y2="365.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="987.5355339059328" y1="370.46446609406723" x2="990.363961030679" y2="367.6360389693211" stroke="#315b67" stroke-width="3"/>
+  <circle cx="984.0" cy="374.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="984.0" cy="374.0" r="2" fill="#315b67"/>
+  <text x="1050.0" y="389.0" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1050.0" dy="0">Найти аккаунт и</tspan>
+    <tspan x="1050.0" dy="15">проверить пароль</tspan>
+    <tspan x="1050.0" dy="15">политику IP и 2FA</tspan>
+  </text>
+  <polygon points="1270.0,370.0 1300.0,400.0 1270.0,430.0 1240.0,400.0" fill="#fff8e8" stroke="#8b7341" stroke-width="1.8"/>
+  <path d="M 1262.0 392.0 L 1278.0 408.0 M 1278.0 392.0 L 1262.0 408.0" stroke="#8b7341" stroke-width="2"/>
+  <text x="1270.0" y="452.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="1270.0" dy="0">Вход разрешён</tspan>
+  </text>
+  <rect x="530.0" y="470.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="549.0" y1="484.0" x2="553.0" y2="484.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="547.5355339059328" y1="487.53553390593277" x2="550.363961030679" y2="490.3639610306789" stroke="#315b67" stroke-width="3"/>
+  <line x1="544.0" y1="489.0" x2="544.0" y2="493.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="540.4644660940672" y1="487.53553390593277" x2="537.636038969321" y2="490.3639610306789" stroke="#315b67" stroke-width="3"/>
+  <line x1="539.0" y1="484.0" x2="535.0" y2="484.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="540.4644660940672" y1="480.4644660940673" x2="537.636038969321" y2="477.6360389693211" stroke="#315b67" stroke-width="3"/>
+  <line x1="544.0" y1="479.0" x2="544.0" y2="475.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="547.5355339059328" y1="480.46446609406723" x2="550.363961030679" y2="477.6360389693211" stroke="#315b67" stroke-width="3"/>
+  <circle cx="544.0" cy="484.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="544.0" cy="484.0" r="2" fill="#315b67"/>
+  <text x="610.0" y="499.0" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="610.0" dy="0">Попытаться сохранить</tspan>
+    <tspan x="610.0" dy="15">итог отказа и</tspan>
+    <tspan x="610.0" dy="15">причину</tspan>
+  </text>
+  <circle cx="830.0" cy="510.0" r="20.0" fill="white" stroke="#274d59" stroke-width="3.5"/>
+  <text x="830.0" y="552.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="830.0" dy="0">Обычный доступ не</tspan>
+    <tspan x="830.0" dy="17">предоставлен</tspan>
+  </text>
+  <rect x="1190.0" y="590.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="1209.0" y1="604.0" x2="1213.0" y2="604.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1207.5355339059327" y1="607.5355339059328" x2="1210.3639610306789" y2="610.363961030679" stroke="#315b67" stroke-width="3"/>
+  <line x1="1204.0" y1="609.0" x2="1204.0" y2="613.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1200.4644660940673" y1="607.5355339059328" x2="1197.6360389693211" y2="610.363961030679" stroke="#315b67" stroke-width="3"/>
+  <line x1="1199.0" y1="604.0" x2="1195.0" y2="604.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1200.4644660940673" y1="600.4644660940672" x2="1197.6360389693211" y2="597.636038969321" stroke="#315b67" stroke-width="3"/>
+  <line x1="1204.0" y1="599.0" x2="1204.0" y2="595.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1207.5355339059327" y1="600.4644660940672" x2="1210.3639610306789" y2="597.636038969321" stroke="#315b67" stroke-width="3"/>
+  <circle cx="1204.0" cy="604.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="1204.0" cy="604.0" r="2" fill="#315b67"/>
+  <text x="1270.0" y="619.0" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1270.0" dy="0">Сохранить</tspan>
+    <tspan x="1270.0" dy="15">LoginSuccess до</tspan>
+    <tspan x="1270.0" dy="15">cookie</tspan>
+  </text>
+  <polygon points="1490.0,600.0 1520.0,630.0 1490.0,660.0 1460.0,630.0" fill="#fff8e8" stroke="#8b7341" stroke-width="1.8"/>
+  <path d="M 1482.0 622.0 L 1498.0 638.0 M 1498.0 622.0 L 1482.0 638.0" stroke="#8b7341" stroke-width="2"/>
+  <text x="1490.0" y="682.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="1490.0" dy="0">Запись подтверждена</tspan>
+  </text>
+  <rect x="1630.0" y="360.0" width="160" height="80" rx="9" fill="#ffffff" stroke="#315b67" stroke-width="1.6"/>
+  <line x1="1649.0" y1="374.0" x2="1653.0" y2="374.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1647.5355339059327" y1="377.53553390593277" x2="1650.3639610306789" y2="380.3639610306789" stroke="#315b67" stroke-width="3"/>
+  <line x1="1644.0" y1="379.0" x2="1644.0" y2="383.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1640.4644660940673" y1="377.53553390593277" x2="1637.6360389693211" y2="380.3639610306789" stroke="#315b67" stroke-width="3"/>
+  <line x1="1639.0" y1="374.0" x2="1635.0" y2="374.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1640.4644660940673" y1="370.4644660940673" x2="1637.6360389693211" y2="367.6360389693211" stroke="#315b67" stroke-width="3"/>
+  <line x1="1644.0" y1="369.0" x2="1644.0" y2="365.0" stroke="#315b67" stroke-width="3"/>
+  <line x1="1647.5355339059327" y1="370.46446609406723" x2="1650.3639610306789" y2="367.6360389693211" stroke="#315b67" stroke-width="3"/>
+  <circle cx="1644.0" cy="374.0" r="5" fill="white" stroke="#315b67"/>
+  <circle cx="1644.0" cy="374.0" r="2" fill="#315b67"/>
+  <text x="1710.0" y="389.0" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
+    <tspan x="1710.0" dy="0">Выдать обычную</tspan>
+    <tspan x="1710.0" dy="15">cookie и обновить</tspan>
+    <tspan x="1710.0" dy="15">активность</tspan>
+  </text>
+  <circle cx="1930.0" cy="400.0" r="20.0" fill="white" stroke="#274d59" stroke-width="3.5"/>
+  <text x="1930.0" y="442.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="1930.0" dy="0">Обычная сессия</tspan>
+  </text>
+  <circle cx="1710.0" cy="740.0" r="20.0" fill="white" stroke="#274d59" stroke-width="3.5"/>
+  <text x="1710.0" y="782.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="1710.0" dy="0">Исход сохранения</tspan>
+    <tspan x="1710.0" dy="17">неизвестен проверить</tspan>
+    <tspan x="1710.0" dy="17">состояние</tspan>
+  </text>
+  <polygon points="830.0,250.0 860.0,280.0 830.0,310.0 800.0,280.0" fill="#fff8e8" stroke="#8b7341" stroke-width="1.8"/>
+  <path d="M 822.0 272.0 L 838.0 288.0 M 838.0 272.0 L 822.0 288.0" stroke="#8b7341" stroke-width="2"/>
+  <text x="830.0" y="332.0" fill="#16313a" font-family="Arial, sans-serif" font-size="14" text-anchor="middle">
+    <tspan x="830.0" dy="0">Форма корректна</tspan>
+  </text>
+  <text x="28" y="875.0" fill="#16313a" font-family="Arial, sans-serif" font-size="12" text-anchor="start">
+    <tspan x="28" dy="0">Шестерёнка автоматическая задача Человек действие Root Конверт сообщение Толстая рамка вызов процесса X исключающий шлюз</tspan>
+  </text>
+</svg>

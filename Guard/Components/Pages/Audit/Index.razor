@@ -1,0 +1,65 @@
+@using Guard.Core.Services
+@attribute [Authorize(Policy = Guard.Core.Identity.Permissions.Audit.Read)]
+<TableWrapperWithFilterAndAnalytics AnalitycsTitle="Отправка аудита" AnalitycsIcon="health_and_safety">
+  <Table>
+    <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@ViewRow" Count="@count" Data="@(items)" TItem="AuditEntryDto" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="20"
+                    AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
+                    DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
+                    LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NotEqualsText="Не равно" OrOperatorText="Или"
+                    PageAriaLabelFormat="К странице {0}" PageSizeText="записей на странице" PrevPageTitle="Предыдущая страница" ShowMultiColumnSortingIndex="true"
+                    EmptyText="Записи не найдены" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" StartsWithText="Начинается c" LessThanText="Меньше" LessThanOrEqualsText="Меньше или равно"
+                    PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" ShowPagingSummary="true" PagingSummaryFormat="Страница {0} из {1} (всего {2} записей)"
+                    Style="height:100%;">
+      <HeaderTemplate>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Style="width:100%;position:relative;min-height:36px;">
+          <RadzenSelectBar TValue="string" @bind-Value="deliveryState" Change="@(_ => ResetPage())" Style="position:absolute;left:50%;transform:translateX(-50%);">
+            <Items>
+              <RadzenSelectBarItem Text="Все" Value="@("all")" />
+              <RadzenSelectBarItem Text="Локальные" Value="@("local")" />
+              <RadzenSelectBarItem Text="Ожидают" Value="@("pending")" />
+              <RadzenSelectBarItem Text="Повтор" Value="@("retry")" />
+              <RadzenSelectBarItem Text="Переданы" Value="@("sent")" />
+            </Items>
+          </RadzenSelectBar>
+          <RadzenButton Icon="refresh" Click="@(grid.Reload)" Variant="Variant.Text" title="Обновить" />
+        </RadzenStack>
+      </HeaderTemplate>
+      <Columns>
+        <RadzenDataGridColumn TItem="AuditEntryDto" Property="OccurredAtUtc" SortProperty="OccurredAtUtc" Title="Дата и время" Width="180px"><Template Context="entry">@Time.Format(entry.OccurredAtUtc)</Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="AuditEntryDto" Property="EventType" SortProperty="EventType" Title="Событие" />
+        <RadzenDataGridColumn TItem="AuditEntryDto" Property="Actor" SortProperty="Actor" Title="Автор"><Template Context="entry">@(entry.Actor ?? (entry.ActorKind == "anonymous" ? "Анонимный" : entry.ActorKind == "system" ? "Система" : "Неизвестен"))</Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="AuditEntryDto" Property="Outcome" SortProperty="Outcome" Title="Результат"><Template Context="entry">@OutcomeText(entry.Outcome)</Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="AuditEntryDto" Property="ClientIp" SortProperty="ClientIp" Title="IP-адрес" />
+        <RadzenDataGridColumn TItem="AuditEntryDto" Property="ObjectType" SortProperty="ObjectType" Title="Объект" />
+        <RadzenDataGridColumn TItem="AuditEntryDto" Property="SentAtUtc" SortProperty="SentAtUtc" Title="Отправка"><Template Context="entry">@DeliveryText(entry)</Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="AuditEntryDto" Property="Attempts" SortProperty="Attempts" Title="Попытки" Width="100px" />
+        <RadzenDataGridColumn TItem="AuditEntryDto" Property="CorrelationId" SortProperty="CorrelationId" Title="Связь событий" />
+      </Columns>
+    </RadzenDataGrid>
+  </Table>
+  <Filter>
+    <RadzenDataFilter @ref="dataFilter" Auto="false" Data="@filterData" TItem="AuditFilterFields" AndOperatorText="И" OrOperatorText="Или" AddFilterText="Добавить условие" AddFilterGroupText="Добавить группу" EqualsText="Равно" NotEqualsText="Не равно" ContainsText="Содержит" DoesNotContainText="Не содержит" StartsWithText="Начинается с" EndsWithText="Заканчивается на" IsNullText="Не задано" IsNotNullText="Задано" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" LessThanText="Меньше" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно">
+      <Properties>
+        <RadzenDataFilterProperty TItem="AuditFilterFields" Property="OccurredAtUtc" Title="Дата и время" />
+        <RadzenDataFilterProperty TItem="AuditFilterFields" Property="Actor" Title="Автор" />
+        <RadzenDataFilterProperty TItem="AuditFilterFields" Property="Outcome" Title="Результат" />
+        <RadzenDataFilterProperty TItem="AuditFilterFields" Property="ClientIp" Title="IP-адрес" />
+        <RadzenDataFilterProperty TItem="AuditFilterFields" Property="ObjectType" Title="Тип объекта" />
+        <RadzenDataFilterProperty TItem="AuditFilterFields" Property="ObjectId" Title="Идентификатор объекта" />
+        <RadzenDataFilterProperty TItem="AuditFilterFields" Property="CorrelationId" Title="Связь событий" />
+      </Properties>
+    </RadzenDataFilter>
+  </Filter>
+  <FilterButtons>
+    <RadzenButton Text="Применить" Icon="filter_alt" Click="@ApplyFilter" Variant="Variant.Text" />
+    <RadzenButton Text="Очистить" Icon="clear" Click="@ClearFilter" Variant="Variant.Text" />
+  </FilterButtons>
+  <Analitycs>
+    @if (health != null) {
+      <RadzenText>Ожидают отправки: @health.Pending; с ошибкой: @health.Retrying</RadzenText>
+      <RadzenText>Старейшее событие: @(health.OldestPendingUtc is { } oldest ? Time.Format(oldest) : "Нет")</RadzenText>
+      <RadzenText>Последняя передача: @(health.LastSentUtc is { } sent ? Time.Format(sent) : "Нет")</RadzenText>
+      <RadzenText>Сбоев записи с запуска: @health.StorageFailures</RadzenText>
+    }
+  </Analitycs>
+</TableWrapperWithFilterAndAnalytics>

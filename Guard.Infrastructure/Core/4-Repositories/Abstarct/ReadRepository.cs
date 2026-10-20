@@ -12,11 +12,14 @@ public class ReadRepository<T>(IDbContextFactory<ApplicationDbContext> factory,
   {
     await using var db = await factory.CreateDbContextAsync(ct);
     var access = await permissions.GetCurrentAsync(ct);
+    access = access with { Permissions = new(access.Permissions) };
+    DataAccessScope? initialScope = null;
     IQueryable<T> source = db.Set<T>().AsNoTracking();
     if (typeof(T) == typeof(Personal))
     {
       await permissions.RequireAsync(Permissions.Personals.ReadDetails, ct);
       var scope = await scopes.GetAsync(ct);
+      initialScope = scope with { SubdivisionIds = new(scope.SubdivisionIds) };
       var q = (IQueryable<Personal>)source;
       if (!scope.IsRoot) q = q.Where(p => p.SubdivisionId.HasValue && scope.SubdivisionIds.Contains(p.SubdivisionId.Value));
       if (!access.Has(Permissions.Personals.ReadArchive)) q = q.Where(p => p.Status != Status.Archived && p.Status != Status.ArchivedBlocked);
@@ -27,6 +30,7 @@ public class ReadRepository<T>(IDbContextFactory<ApplicationDbContext> factory,
     {
       await permissions.RequireAsync(Permissions.Subdivisions.Read, ct);
       var scope = await scopes.GetAsync(ct);
+      initialScope = scope with { SubdivisionIds = new(scope.SubdivisionIds) };
       var q = (IQueryable<Subdivision>)source;
       if (!scope.IsRoot) q = q.Where(s => scope.SubdivisionIds.Contains(s.Id) && s.Status != Status.Deleted);
       if (!access.Has(Permissions.Subdivisions.ReadArchive)) q = q.Where(s => s.Status != Status.Archived && s.Status != Status.ArchivedBlocked);
@@ -36,6 +40,7 @@ public class ReadRepository<T>(IDbContextFactory<ApplicationDbContext> factory,
     {
       await permissions.RequireAsync(Permissions.Users.Read, ct);
       var scope = await scopes.GetAsync(ct);
+      initialScope = scope with { SubdivisionIds = new(scope.SubdivisionIds) };
       var q = (IQueryable<ApplicationUser>)source;
       if (!scope.IsRoot) q = q.Where(u => u.Personal != null && u.Personal.SubdivisionId.HasValue &&
           scope.SubdivisionIds.Contains(u.Personal.SubdivisionId.Value));
@@ -47,12 +52,22 @@ public class ReadRepository<T>(IDbContextFactory<ApplicationDbContext> factory,
     {
       await permissions.RequireAsync(Permissions.IpAddresses.Read, ct);
       var scope = await scopes.GetAsync(ct);
+      initialScope = scope with { SubdivisionIds = new(scope.SubdivisionIds) };
       var q = (IQueryable<IpAddress>)source;
       if (!scope.IsRoot) q = q.Where(ip => ip.SubdivisionId.HasValue && scope.SubdivisionIds.Contains(ip.SubdivisionId.Value));
       source = (IQueryable<T>)q;
     }
     else throw new InvalidOperationException("Для сущности не определена политика чтения.");
-    return await query(source);
+    var result = await query(source);
+    var current = await permissions.GetCurrentAsync(ct);
+    if (current.UserId != access.UserId || current.IsRoot != access.IsRoot || !current.Permissions.SetEquals(access.Permissions))
+      throw new UnauthorizedAccessException("Доступ изменился. Повторите загрузку.");
+    if (initialScope != null) {
+      var scope = await scopes.GetAsync(ct);
+      if (scope.UserId != initialScope.UserId || scope.IsRoot != initialScope.IsRoot || !scope.SubdivisionIds.SetEquals(initialScope.SubdivisionIds))
+        throw new UnauthorizedAccessException("Область доступа изменилась. Повторите загрузку.");
+    }
+    return result;
   }
   public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken ct = default) => await QueryAsync(q => q.ToListAsync(ct), ct);
   public async Task<T?> GetByIdAsync(object id, CancellationToken ct = default)

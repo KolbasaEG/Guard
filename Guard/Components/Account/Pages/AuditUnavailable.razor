@@ -1,0 +1,14 @@
+@page "/Account/AuditUnavailable"
+@attribute [AllowAnonymous]
+@layout AccountLayout
+<PageTitle>Работа приостановлена</PageTitle>
+<AccountCard Title="Работа приостановлена" Icon="health_and_safety">
+  <p>Обязательный аудит недоступен или превышены ограничения очереди SIEM. Просмотр, изменение данных и экспорт временно запрещены.</p>
+  <p><a href="/">Проверить доступность работы</a></p>
+  <p><a href="/Account/Audit">Диагностика для Root</a></p>
+  <p><a href="/Account/Login">Вход Root для восстановления</a></p>
+  <form method="post" action="/Account/Logout">
+    <AntiforgeryToken /><input type="hidden" name="returnUrl" value="Account/Login" />
+    <button type="submit" class="btn btn-secondary">Выйти</button>
+  </form>
+</AccountCard>

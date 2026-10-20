@@ -24,11 +24,20 @@ internal static class ExportCompletionTests
       };
       var processor = new ExportProcessor(factory, access, new ExportSnapshot(factory, storage),
         new ExportDocumentWriter(storage, options), storage, delivery, options, delivery);
-      check(await processor.RunNextAsync(stopping.Token), $"export reports processed job after {failure} audit delivery");
-      check(delivery.Events.SequenceEqual([AuditEventType.ExportArchived]) && delivery.SawCommit,
-        "audit sees committed Ready and artifact; failed delivery emits no false ExportFailed event");
-      check(delivery.Actor == author && delivery.Details?.Contains($"Export {id}; rows 2; SHA256 ") == true,
-        "archival audit retains job, actor, row count and hash");
+      if (failure == "stopping") await PostgresTests.ThrowsAsync<OperationCanceledException>(() => processor.RunNextAsync(stopping.Token), check,
+        "host cancellation before mandatory archive audit propagates without claiming Ready");
+      else check(await processor.RunNextAsync(stopping.Token), $"export processes the job with {failure} mandatory audit");
+      if (failure != "none") {
+        await using var absent = await factory.CreateDbContextAsync();
+        check(await absent.ExportJobs.AnyAsync(j => j.Id == id && j.State != ExportJobState.Ready) &&
+          !await absent.ExportArtifacts.AnyAsync(a => a.JobId == id) && !delivery.SawCommit,
+          "failed archive audit prevents Ready and leaves no committed artifact");
+        await processor.CleanupAsync(default); continue;
+      }
+      check(delivery.Events.SequenceEqual([AuditEventType.ExportProcessingStarted, AuditEventType.ExportArchived]) && !delivery.SawCommit,
+        "processing and archive events precede commit of Ready and its artifact");
+      check(delivery.Actor == null && delivery.Details?.Contains($"RequestedBy={author}; rows=2;") == true,
+        "archival audit identifies the system initiator, requesting account, row count and hash");
       check(delivery.Errors.Count == (failure == "none" ? 0 : 1) && delivery.Errors.All(e => e.Exception != null &&
         e.Message.Contains(id.ToString()) && !e.Message.Contains("завершилось ошибкой")), "audit failure logs delivery error with job ID");
       await using (var db = await factory.CreateDbContextAsync()) {
@@ -40,7 +49,7 @@ internal static class ExportCompletionTests
         check(artifact.Size > 0 && delivery.Details?.EndsWith(artifact.Sha256) == true && !storage.WorkIds().Contains(id),
           "exact archive passes hash verification, audit hash matches metadata and work files are removed");
       }
-      check(!await processor.RunNextAsync(default) && delivery.Events.Count == 1, "Ready job is not generated or audited again on next queue run");
+      check(!await processor.RunNextAsync(default) && delivery.Events.Count == 2, "Ready job is not generated or audited again on next queue run");
       await service.CancelAsync(id);
       await processor.CleanupAsync(default);
     }
@@ -59,19 +68,45 @@ internal static class ExportCompletionTests
       check(failed.State == ExportJobState.Failed && failed.Error != null && !await db.ExportArtifacts.AnyAsync(a => a.JobId == invalidId),
         "pre-commit failure creates no archive metadata and persists Failed");
     }
-    check(failedDelivery.Events.SequenceEqual([AuditEventType.ExportFailed]) && failedDelivery.Errors.Single().Exception is InvalidDataException,
+    check(failedDelivery.Events.SequenceEqual([AuditEventType.ExportProcessingStarted, AuditEventType.ExportFailed]) && failedDelivery.Errors.Single().Exception is InvalidDataException,
       "pre-commit failure retains failure audit and original diagnostic exception");
+    var unknownId = await service.CreateAsync(new(ExportArea.Personals, ExportFormat.Excel));
+    await using (var db = await factory.CreateDbContextAsync()) {
+      await db.ExportJobs.Where(j => j.Id == unknownId).ExecuteUpdateAsync(s => s.SetProperty(j => j.State, ExportJobState.Delivering));
+      db.ExportDeliveryAttempts.Add(new() { JobId = unknownId, StartedAtUtc = DateTimeOffset.UtcNow }); await db.SaveChangesAsync();
+    }
+    var recoveryFault = new Delivery("recovery", active);
+    var recoveryProcessor = new ExportProcessor(factory, access, new ExportSnapshot(factory, storage),
+      new ExportDocumentWriter(storage, options), storage, recoveryFault, options, recoveryFault);
+    await PostgresTests.ThrowsAsync<IOException>(() => recoveryProcessor.RecoverAsync(default), check,
+      "restart recovery cannot change delivery result without its mandatory event");
+    await using (var db = await factory.CreateDbContextAsync())
+      check(await db.ExportJobs.AnyAsync(j => j.Id == unknownId && j.State == ExportJobState.Delivering) &&
+        await db.ExportDeliveryAttempts.AnyAsync(a => a.JobId == unknownId && a.CompletedAtUtc == null), "failed recovery audit rolls back status and attempt together");
+    await failingProcessor.RecoverAsync(default);
+    await using (var db = await factory.CreateDbContextAsync())
+      check(await db.ExportJobs.AnyAsync(j => j.Id == unknownId && j.Error!.Contains("неизвестен")) &&
+        await db.ExportDeliveryAttempts.AnyAsync(a => a.JobId == unknownId && a.CompletedAtUtc != null && a.Succeeded == null),
+        "restart recovery explicitly preserves unknown transfer result rather than fabricating failure");
+    check(failedDelivery.Records.Any(e => e.EventType == AuditEventType.ExportRecoveryCompleted && e.ObjectId == unknownId.ToString() &&
+      e.Outcome == "unknown" && e.Actor == null && e.ActorKind == "system"), "recovery audit identifies unknown delivery and system initiator");
+    foreach (var recovered in failedDelivery.Records.Where(e => e.ReasonCode == "GenerationRequeuedAfterRestart"))
+      await service.CancelAsync(Guid.Parse(recovered.ObjectId!));
+    await failingProcessor.CleanupAsync(default);
   }
 
   private sealed class Delivery(string failure, CancellationTokenSource stopping) : IAuditService, ILogger<ExportProcessor>
   {
     public Func<Task<bool>> Observe = () => Task.FromResult(false);
     public List<AuditEventType> Events { get; } = [];
+    public List<AuditEventData> Records { get; } = [];
     public List<(Exception? Exception, string Message)> Errors { get; } = [];
     public bool SawCommit;
     public string? Actor, Details;
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); Records.Add(entry); LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
     public void LogIdentityEvent(AuditEventType type, string? user, string? ip = null, string? details = null) {
       Events.Add(type); Actor = user; Details = details;
+      if (failure == "recovery" && type == AuditEventType.ExportRecoveryCompleted) throw new IOException("Synthetic recovery audit failure");
       if (type != AuditEventType.ExportArchived) return;
       SawCommit = Observe().GetAwaiter().GetResult();
       if (failure == "stopping") stopping.Cancel();

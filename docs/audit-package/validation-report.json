@@ -1,0 +1,124 @@
+{
+  "edition": "1.0",
+  "date": "2026-10-20",
+  "branch": "codex/logging-reliability",
+  "scope": "Documentation artifacts only; uncommitted implementation snapshot",
+  "documents": [
+    {
+      "file": "Guard_Audit_Technical.docx",
+      "pages": 22,
+      "tables": 22,
+      "images": 0,
+      "positionErrors": [],
+      "suspiciousPages": []
+    },
+    {
+      "file": "Guard_Audit_Root_Guide.docx",
+      "pages": 30,
+      "tables": 6,
+      "images": 3,
+      "positionErrors": [],
+      "suspiciousPages": []
+    }
+  ],
+  "rootScenarios": 42,
+  "eventEnumValues": 46,
+  "bpmn": {
+    "xsd": "OMG BPMN 2.0.2 BPMN20.xsd",
+    "checks": [
+      {
+        "process": "P00",
+        "nodes": 9,
+        "flows": 11,
+        "reachable": 9
+      },
+      {
+        "process": "P01",
+        "nodes": 17,
+        "flows": 20,
+        "reachable": 17
+      },
+      {
+        "process": "P02",
+        "nodes": 19,
+        "flows": 21,
+        "reachable": 19
+      },
+      {
+        "process": "P03",
+        "nodes": 14,
+        "flows": 14,
+        "reachable": 14
+      },
+      {
+        "process": "P04",
+        "nodes": 14,
+        "flows": 16,
+        "reachable": 14
+      },
+      {
+        "process": "P05",
+        "nodes": 15,
+        "flows": 17,
+        "reachable": 15
+      },
+      {
+        "process": "P06",
+        "nodes": 20,
+        "flows": 21,
+        "reachable": 20
+      },
+      {
+        "process": "P07",
+        "nodes": 19,
+        "flows": 18,
+        "reachable": 19
+      },
+      {
+        "process": "P08",
+        "nodes": 15,
+        "flows": 15,
+        "reachable": 15
+      },
+      {
+        "process": "P09",
+        "nodes": 14,
+        "flows": 14,
+        "reachable": 14
+      },
+      {
+        "process": "P10",
+        "nodes": 12,
+        "flows": 12,
+        "reachable": 12
+      }
+    ],
+    "executable": false
+  },
+  "visualReview": {
+    "technicalPages": 22,
+    "rootGuidePages": 30,
+    "bpmnPages": 11,
+    "unresolvedLayoutFindings": 0
+  },
+  "sourceHashesVerified": 48,
+  "checks": [
+    "OOXML bookmarks",
+    "all 42 scenarios",
+    "no sample credentials in document text",
+    "PDF text bounds",
+    "section pagination",
+    "BPMN official XSD for master and 11 individual files",
+    "BPMN references and reachability",
+    "Source SHA-256 snapshot"
+  ],
+  "notVerified": [
+    "Import into a specific BPMN editor",
+    "Real RuSIEM end-to-end acceptance",
+    "Production load capacity",
+    "Target network certificate revocation",
+    "Backup restore acceptance",
+    "Dedicated HTTP reproduction of L03-L05"
+  ],
+  "productionCodeChangedForDocumentation": false
+}

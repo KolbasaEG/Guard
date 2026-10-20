@@ -9,163 +9,177 @@ using Guard.Core.Services.Exports;
 using Guard.Middlewares;
 using Guard.Core.Identity;
 using Microsoft.AspNetCore.Identity;
-using NpgsqlTypes;
 using Radzen;
 using Serilog;
 using Serilog.Core;
-using Serilog.Sinks.PostgreSQL;
-using Serilog.Sinks.Syslog;
+using System.Threading.RateLimiting;
 
 if (await Guard.Web.Maintenance.IpCatalogMaintenanceCommand.TryRunAsync(args)) return;
 
-var builder = WebApplication.CreateBuilder(args);
-// =====================================================
-// ПРОВЕРКА И СОЗДАНИЕ ФИЗИЧЕСКИХ БАЗ ДАННЫХ
-// =====================================================
-var logsConnectionString = builder.Configuration.GetConnectionString("LogsConnection")
-    ?? throw new InvalidOperationException("Строка подключения 'LogsConnection' не найдена.");
+var diagnostics = new InternalLogWriter();
+Serilog.Debugging.SelfLog.Enable(diagnostics.Write);
+using var bootstrap = new LoggerConfiguration().MinimumLevel.Information()
+  .WriteTo.Console()
+  .WriteTo.File(new Serilog.Formatting.Json.JsonFormatter(), "logs/startup-.json", rollingInterval: RollingInterval.Day,
+    fileSizeLimitBytes: 10 * 1024 * 1024, rollOnFileSizeLimit: true, retainedFileCountLimit: null,
+    retainedFileTimeLimit: null).CreateLogger();
+Log.Logger = bootstrap;
+DynamicLoggerManager? loggerManager = null;
+Logger? auditLogger = null;
+try {
+  var builder = WebApplication.CreateBuilder(args);
+  // =====================================================
+  // ПРОВЕРКА И СОЗДАНИЕ ФИЗИЧЕСКИХ БАЗ ДАННЫХ
+  // =====================================================
+  var logsConnectionString = builder.Configuration.GetConnectionString("LogsConnection")
+      ?? throw new InvalidOperationException("Строка подключения 'LogsConnection' не найдена.");
 
-var defaultConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Строка подключения 'DefaultConnection' не найдена.");
-// Строка подключения для будущей третьей БД:
-// var thirdConnectionString = builder.Configuration.GetConnectionString("ThirdConnection");
+  var defaultConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+      ?? throw new InvalidOperationException("Строка подключения 'DefaultConnection' не найдена.");
+  // Строка подключения для будущей третьей БД:
+  // var thirdConnectionString = builder.Configuration.GetConnectionString("ThirdConnection");
 
-// Создаем БД логов и таблицу 'logs'
-DatabaseInitializer.EnsureLogsDatabaseExists(logsConnectionString);
-
-// Создаем физические базы данных для остальных контекстов
-DatabaseInitializer.EnsureDatabaseExists(defaultConnectionString);
-// if (!string.IsNullOrEmpty(thirdConnectionString)) DatabaseInitializer.EnsureDatabaseExists(thirdConnectionString);
-
-// =====================================================
-// === SERILOG: ОСНОВНОЙ ЛОГГЕР
-// =====================================================
-IDictionary<string, ColumnWriterBase> columnWriters = new Dictionary<string, ColumnWriterBase>
-{
-  { "message", new RenderedMessageColumnWriter() },
-  { "message_template", new MessageTemplateColumnWriter() },
-  { "level", new LevelColumnWriter(true, NpgsqlDbType.Varchar) },
-  { "layer", new SinglePropertyColumnWriter("Layer", PropertyWriteMethod.Raw, NpgsqlDbType.Varchar) },
-  { "timestamp", new UtcTimestampColumnWriter() },
-  { "exception", new ExceptionColumnWriter() },
-  { "properties", new LogEventSerializedColumnWriter() },
-  { "user_id", new SinglePropertyColumnWriter("UserId", PropertyWriteMethod.Raw, NpgsqlDbType.Varchar) },
-  { "ip_address", new SinglePropertyColumnWriter("ClientIp", PropertyWriteMethod.Raw, NpgsqlDbType.Varchar) }
-};
-
-// 1. Включаем SelfLog (запись ошибок сети/БД в локальный файл, если PostgreSQL упадет)
-var selfLogGate = new object();
-Serilog.Debugging.SelfLog.Enable(msg =>
-{
-  lock (selfLogGate) {
-  Console.Error.WriteLine($"[Serilog Error] {msg}");
-  Directory.CreateDirectory("logs");
-  File.AppendAllText("logs/serilog-internal-errors.log", $"{DateTime.UtcNow:o} {msg}{Environment.NewLine}");
+  // Создаем БД логов и таблицу 'logs'
+  try { DatabaseInitializer.EnsureLogsDatabaseExists(logsConnectionString); }
+  catch (Exception error) {
+    bootstrap.Warning(error, "БД технических логов недоступна. Локальная запись продолжает работать");
   }
-});
 
-// 2. Загружаем сохраненный уровень логирования
-var savedState = LogLevelPersistenceService.LoadState();
+  // Создаем физические базы данных для остальных контекстов
+  try { DatabaseInitializer.EnsureDatabaseExists(defaultConnectionString); }
+  catch (Exception error) when (error is System.Data.Common.DbException or TimeoutException) {
+    bootstrap.Error(error, "Основная БД недоступна. Рабочие операции запрещены; доступна публичная страница отказа");
+  }
+  // if (!string.IsNullOrEmpty(thirdConnectionString)) DatabaseInitializer.EnsureDatabaseExists(thirdConnectionString);
 
-var levelSwitch = new LoggingLevelSwitch(savedState.MinimumLevel);
-builder.Services.AddSingleton(levelSwitch);
+  // =====================================================
+  // === SERILOG: ОСНОВНОЙ ЛОГГЕР
+  // =====================================================
+  // 2. Загружаем сохраненный уровень логирования
+  var savedState = LogLevelPersistenceService.LoadState();
 
-// 3. Создаем и регистрируем динамический менеджер логгера
-var loggerManager = new DynamicLoggerManager(logsConnectionString, levelSwitch);
-Log.Logger = loggerManager.Logger;
-builder.Services.AddSingleton(loggerManager);
+  var levelSwitch = new LoggingLevelSwitch(savedState.MinimumLevel);
+  builder.Services.AddSingleton(levelSwitch);
 
-loggerManager.ApplyConfiguration(maxSessions: savedState.MaxSessions, newLevel: savedState.MinimumLevel);
+  // 3. Создаем и регистрируем динамический менеджер логгера
+  loggerManager = new DynamicLoggerManager(logsConnectionString, levelSwitch);
+  builder.Services.AddSingleton(loggerManager);
 
-builder.Host.UseSerilog();
+  loggerManager.ApplyConfiguration(maxSessions: savedState.MaxSessions, newLevel: savedState.MinimumLevel);
 
-// =====================================================
-// === DEDICATED AUDIT LOGGER (Syslog / CEF)
-// =====================================================
-var auditTcpConfig = new SyslogTcpConfig
-{
-  Host = builder.Configuration.GetValue<string>("Audit:Syslog:Host") ?? "localhost",
-  Port = builder.Configuration.GetValue<int>("Audit:Syslog:Port", 6514),
-  UseTls = true,
-  Framer = new MessageFramer(FramingType.OCTET_COUNTING),
-  Formatter = new Rfc5424Formatter(),
+  Log.Logger = loggerManager.Logger;
+  builder.Host.UseSerilog();
 
-  CertValidationCallback = (sender, certificate, chain, sslPolicyErrors) =>
+  // =====================================================
+  // === DEDICATED AUDIT LOGGER (Syslog / CEF)
+  // =====================================================
+  auditLogger = new LoggerConfiguration()
+      .MinimumLevel.Information()
+      .Enrich.FromLogContext()
+      .WriteTo.Console()
+      .WriteTo.File(new Serilog.Formatting.Json.JsonFormatter(), "logs/audit-.json", rollingInterval: RollingInterval.Day,
+        fileSizeLimitBytes: 10 * 1024 * 1024, rollOnFileSizeLimit: true, retainedFileCountLimit: null, retainedFileTimeLimit: null)
+      .CreateLogger();
+
+  builder.Services.AddSingleton<IAuditService>(sp => new AuditService(auditLogger, sp.GetRequiredService<AuditJournal>()));
+  builder.Services.AddHostedService<AuditWorker>();
+
+  builder.Services.AddGuardServices(builder.Configuration, builder.Environment.IsDevelopment());
+  builder.Services.AddRateLimiter(options => {
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (rejected, ct) => {
+      var http = rejected.HttpContext;
+      try {
+        await http.RequestServices.GetRequiredService<IAuditService>().RecordAsync(
+          AuditEventData.Create(Guard.Core.Enums.AuditEventType.LoginFailed, null, ClientIpAddress.Get(http)) with {
+            Actor = null, ActorKind = "anonymous", Outcome = "denied", ReasonCode = "RateLimited",
+            CorrelationId = http.TraceIdentifier, ObjectType = "Account"
+          }, ct);
+      }
+      catch (Exception error) {
+        diagnostics.Write($"AuditRateLimitedLoginFailed ErrorType={error.GetType().Name}");
+      }
+    };
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+      HttpMethods.IsPost(context.Request.Method) && string.Equals(context.Request.Path.Value?.TrimEnd('/'), "/Account/Login", StringComparison.OrdinalIgnoreCase)
+        ? RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ =>
+          new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })
+        : RateLimitPartition.GetNoLimiter("other"));
+  });
+
+  // =====================================================
+  // === RADZEN & BLAZOR COMPONENTS
+  // =====================================================
+  builder.Services.AddSignalR();
+  builder.Services.AddRazorPages();
+
+  // AddRadzenComponents уже включает DialogService, NotificationService, TooltipService, ContextMenuService
+  builder.Services.AddRadzenComponents();
+  builder.Services.AddScoped<Guard.Components.Library.BrowserTimeService>();
+
+  builder.Services.AddRadzenCookieThemeService(options =>
   {
-    if (sslPolicyErrors == System.Net.Security.SslPolicyErrors.None)
-      return true;
+    options.Name = "ApplicationTheme";
+    options.Duration = TimeSpan.FromDays(365);
+  });
 
-    Log.Warning("RuSIEM TLS validation warning: {Errors}", sslPolicyErrors);
-    return true;
+  builder.Services.AddRazorComponents()
+      .AddInteractiveServerComponents()
+      .AddInteractiveWebAssemblyComponents();
+
+  var app = builder.Build();
+
+
+  // =====================================================
+  // === MIDDLEWARE PIPELINE
+  // =====================================================
+  app.UseForwardedHeaders();
+  app.UseStaticFiles();
+  app.UseRouting();
+  // Скомпилированные публичные ресурсы, включая версионированный загрузчик Blazor.
+  app.MapStaticAssets().ShortCircuit();
+
+  app.UseAuthentication();
+  app.UseRateLimiter();
+  app.UseUserContextLogging();
+  app.UseSerilogRequestLogging();
+  app.UseMiddleware<AuditAvailabilityMiddleware>();
+  app.UseAuthorization();
+  app.UseMiddleware<IpCheckMiddleware>();
+  app.UseMiddleware<AccountPolicyMiddleware>();
+  app.UseAntiforgery();
+  app.MapRazorPages();
+  app.MapRazorComponents<Guard.Components.App>()
+      .AddInteractiveServerRenderMode();
+  app.MapAdditionalIdentityEndpoints();
+  app.MapExportEndpoints();
+
+  // === SEEDING ===
+  if (app.Environment.IsDevelopment())
+  {
+    using var scope = app.Services.CreateScope();
+    var services = scope.ServiceProvider;
+
+    var context = services.GetRequiredService<ApplicationDbContext>();
+    var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleManager = services.GetRequiredService<RoleManager<ApplicationRole>>();
+
+    try { await DatabaseSeeder.SeedAsync(context, userManager, roleManager); }
+    catch (Exception error) when (error is System.Data.Common.DbException or TimeoutException) {
+      bootstrap.Error(error, "Подготовка Development-БД недоступна. Для восстановления требуется обслуживание сервера");
+    }
   }
-};
 
-var auditLogger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.TcpSyslog(auditTcpConfig)
-    .CreateLogger();
-
-builder.Services.AddSingleton<IAuditService>(_ => new AuditService(auditLogger));
-
-builder.Services.AddGuardServices(builder.Configuration, builder.Environment.IsDevelopment());
-
-// =====================================================
-// === RADZEN & BLAZOR COMPONENTS
-// =====================================================
-builder.Services.AddSignalR();
-builder.Services.AddRazorPages();
-
-// AddRadzenComponents уже включает DialogService, NotificationService, TooltipService, ContextMenuService
-builder.Services.AddRadzenComponents();
-builder.Services.AddScoped<Guard.Components.Library.BrowserTimeService>();
-
-builder.Services.AddRadzenCookieThemeService(options =>
-{
-  options.Name = "ApplicationTheme";
-  options.Duration = TimeSpan.FromDays(365);
-});
-
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents()
-    .AddInteractiveWebAssemblyComponents();
-
-var app = builder.Build();
-app.Lifetime.ApplicationStopped.Register(loggerManager.Dispose);
-
-// =====================================================
-// === MIDDLEWARE PIPELINE
-// =====================================================
-app.UseForwardedHeaders();
-app.UseStaticFiles();
-app.UseRouting();
-// Скомпилированные публичные ресурсы, включая версионированный загрузчик Blazor.
-app.MapStaticAssets().ShortCircuit();
-
-app.UseAuthentication();
-app.UseAuthorization();
-app.UseUserContextLogging();
-app.UseMiddleware<IpCheckMiddleware>();
-app.UseMiddleware<AccountPolicyMiddleware>();
-app.UseAntiforgery();
-app.MapRazorPages();
-app.MapRazorComponents<Guard.Components.App>()
-    .AddInteractiveServerRenderMode();
-app.MapAdditionalIdentityEndpoints();
-app.MapExportEndpoints();
-
-// === SEEDING ===
-if (app.Environment.IsDevelopment())
-{
-  using var scope = app.Services.CreateScope();
-  var services = scope.ServiceProvider;
-
-  var context = services.GetRequiredService<ApplicationDbContext>();
-  var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-  var roleManager = services.GetRequiredService<RoleManager<ApplicationRole>>();
-
-  await DatabaseSeeder.SeedAsync(context, userManager, roleManager);
+  app.Run();
 }
-
-app.Run();
+catch (Exception error) {
+  bootstrap.Fatal(error, "Приложение Guard завершилось с ошибкой");
+  throw;
+}
+finally {
+  try { auditLogger?.Dispose(); }
+  finally {
+    try { loggerManager?.Dispose(); }
+    finally { Log.CloseAndFlush(); Serilog.Debugging.SelfLog.Disable(); }
+  }
+}

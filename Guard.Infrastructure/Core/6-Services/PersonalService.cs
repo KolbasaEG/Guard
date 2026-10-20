@@ -103,8 +103,7 @@ public class PersonalService : IPersonalSearchService, IPersonalDetailsService, 
     await _uow.BaseEntityRepository<Personal>().AddAsync(Personal, ct);
     await _uow.SaveChangesAsync(ct);
 
-    _logger.LogInformation("Создана новая запись сотрудника '{LastName} {FirstName}' с ID: {PersonalId}",
-        Personal.LastName, Personal.FirstName, Personal.Id);
+    _logger.LogInformation("Создана запись сотрудника {PersonalId}", Personal.Id);
 
     return Personal.Id;
   }
@@ -129,8 +128,7 @@ public class PersonalService : IPersonalSearchService, IPersonalDetailsService, 
     current.UpdatedAt = DateTime.UtcNow;
     await _uow.SaveChangesAsync(ct);
 
-    _logger.LogInformation("Обновлены данные сотрудника '{LastName} {FirstName}' (ID: {PersonalId})",
-        Personal.LastName, Personal.FirstName, Personal.Id);
+    _logger.LogInformation("Обновлены данные сотрудника {PersonalId}", Personal.Id);
   }
 
   // ==================== Status Management ====================
@@ -146,8 +144,7 @@ public class PersonalService : IPersonalSearchService, IPersonalDetailsService, 
     await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.ApplyManual(Personal, StatusOperation.Delete, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
-    _logger.LogWarning("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) помечен как удаленный",
-        Personal.LastName, Personal.FirstName, id);
+    _logger.LogWarning("Сотрудник {PersonalId} помечен как удаленный", id);
   }
 
   public async Task ArchiveAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
@@ -161,8 +158,7 @@ public class PersonalService : IPersonalSearchService, IPersonalDetailsService, 
     await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.ApplyManual(Personal, StatusOperation.Archive, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
-    _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) отправлен в архив",
-        Personal.LastName, Personal.FirstName, id);
+    _logger.LogInformation("Сотрудник {PersonalId} отправлен в архив", id);
   }
 
   public async Task BlockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
@@ -176,8 +172,7 @@ public class PersonalService : IPersonalSearchService, IPersonalDetailsService, 
     await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.ApplyManual(Personal, StatusOperation.Block, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
-    _logger.LogWarning("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) заблокирован",
-        Personal.LastName, Personal.FirstName, id);
+    _logger.LogWarning("Сотрудник {PersonalId} заблокирован", id);
   }
 
   public async Task UnblockAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
@@ -191,8 +186,7 @@ public class PersonalService : IPersonalSearchService, IPersonalDetailsService, 
     await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.ApplyManual(Personal, StatusOperation.Unblock, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
-    _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) разблокирован",
-        Personal.LastName, Personal.FirstName, id);
+    _logger.LogInformation("Сотрудник {PersonalId} разблокирован", id);
   }
 
   public async Task RestoreAsync(Guid id, CancellationToken ct = default, Guid? expectedVersion = null)
@@ -206,8 +200,7 @@ public class PersonalService : IPersonalSearchService, IPersonalDetailsService, 
     await _uow.BaseEntityRepository<Personal>().ChangeStatusAsync(Personal, EntityStatusTransitions.ApplyManual(Personal, StatusOperation.Restore, (await _permissions.GetCurrentAsync(ct)).IsRoot), ct);
     await _uow.SaveChangesAsync(ct);
 
-    _logger.LogInformation("Сотрудник '{LastName} {FirstName}' (ID: {PersonalId}) восстановлен",
-        Personal.LastName, Personal.FirstName, id);
+    _logger.LogInformation("Сотрудник {PersonalId} восстановлен", id);
   }
 
   // ==================== Private Helpers ====================
@@ -241,14 +234,19 @@ public class PersonalService : IPersonalSearchService, IPersonalDetailsService, 
   public async Task<PersonalSearchResult> SearchAsync(PersonalSearchRequest request, CancellationToken ct = default)
   {
     if (request.Skip < 0 || request.Take is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
+    var originalScope = await _scopes.GetAsync(ct);
     await using var db = await _factory.CreateDbContextAsync(ct);
     var q = await ListQueryAsync(db, request, ct);
     var count = await q.CountAsync(ct);
     var items = await ProjectList(q.Skip(request.Skip).Take(request.Take)).ToListAsync(ct);
+    await _permissions.RequireAsync(Permissions.Personals.Read, ct);
+    await RequireUnchangedScopeAsync(originalScope, ct);
+    if (request.Mode == DataViewMode.Archived) await _permissions.RequireAsync(Permissions.Personals.ReadArchive, ct);
     return new(items, count);
   }
   public async Task<PersonalDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default)
   {
+    var originalScope = await _scopes.GetAsync(ct);
     var result = await _readPersonalRepository.QueryAsync(q => q.Where(p => p.Id == id).Select(p => new PersonalDetailsDto {
       Id = p.Id,
       Status = p.Status,
@@ -293,7 +291,16 @@ public class PersonalService : IPersonalSearchService, IPersonalDetailsService, 
     await using var db = await _factory.CreateDbContextAsync(ct);
     var account = await db.Users.AsNoTracking().Where(u => u.PersonalId == id)
       .Select(u => new { u.Id, u.UserName }).SingleOrDefaultAsync(ct);
+    await _permissions.RequireAsync(Permissions.Personals.ReadDetails, ct);
+    await RequireUnchangedScopeAsync(originalScope, ct);
+    if (result.Status is Status.Archived or Status.ArchivedBlocked) await _permissions.RequireAsync(Permissions.Personals.ReadArchive, ct);
     return result with { UserId = account?.Id, UserName = account?.UserName };
+  }
+  private async Task RequireUnchangedScopeAsync(DataAccessScope original, CancellationToken ct)
+  {
+    var current = await _scopes.GetAsync(ct);
+    if (current.UserId != original.UserId || current.IsRoot != original.IsRoot || !current.SubdivisionIds.SetEquals(original.SubdivisionIds))
+      throw new UnauthorizedAccessException("Область доступа изменилась. Обновите данные.");
   }
 
   public Task<Guid> CreateFromDtoAsync(CreatePersonalDto input, CancellationToken ct = default) {

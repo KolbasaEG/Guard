@@ -8,4 +8,5 @@ public interface ILocalAccountService
   Task<LocalSignInStatus> SignInAsync(string email, string password, bool rememberMe,
     CancellationToken ct = default);
   Task SignOutAsync(CancellationToken ct = default);
+  Task RecordRejectedSignInAsync(string? attemptedAccount, CancellationToken ct = default);
 }

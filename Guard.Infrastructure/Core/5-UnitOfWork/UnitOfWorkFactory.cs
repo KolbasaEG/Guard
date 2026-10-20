@@ -11,6 +11,7 @@ public sealed class UnitOfWorkFactory(IDbContextFactory<ApplicationDbContext> co
     var actor = await permissions.GetCurrentAsync(ct);
     var db = await contexts.CreateDbContextAsync(ct);
     db.PrepareAudit = context => AuditSaveChangesInterceptor.ApplyAudit(context, actor.UserId);
+    db.AuditActorId = actor.UserId;
     return new UnitOfWork(db, services, logger);
   }
 }

@@ -3,11 +3,12 @@ using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Guard.Core.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
+using Guard.Core.Logging;
 
 namespace Guard.Core.Services;
 
 public class PersonalIpService(IDbContextFactory<ApplicationDbContext> factory,
-    IIpManagementAccessService access, ILogger<PersonalIpService> logger) : IPersonalIpService
+    IIpManagementAccessService access, ILogger<PersonalIpService> logger, IAuditService? audit = null) : IPersonalIpService
 {
   private static void RequireAccess(Personal personal, IpManagementScope scope)
   {
@@ -28,6 +29,10 @@ public class PersonalIpService(IDbContextFactory<ApplicationDbContext> factory,
         .OrderBy(ip => ip.Address).Select(ip => new IpOptionDto(ip.Id, ip.Address)).ToListAsync(ct);
     // Выбор ограничен подразделением сотрудника, включая операции Root.
     var availableIds = options.Select(ip => ip.Id).ToHashSet();
+    var current = await access.GetScopeAsync(true, ct);
+    if (current.UserId != scope.UserId || current.IsRoot != scope.IsRoot || !current.SubdivisionIds.SetEquals(scope.SubdivisionIds))
+      throw new UnauthorizedAccessException("Область доступа изменилась. Обновите список.");
+    RequireAccess(personal, current);
     return new(options, personal.IpAddresses.Where(ip => availableIds.Contains(ip.Id)).Select(ip => ip.Id).ToList(),
         personal.IpAddresses.Count(ip => ip.SubdivisionId != personal.SubdivisionId || !personal.SubdivisionId.HasValue));
   }
@@ -38,6 +43,7 @@ public class PersonalIpService(IDbContextFactory<ApplicationDbContext> factory,
     var scope = await access.GetScopeAsync(true, ct);
     var ids = ipIds.Distinct().ToArray();
     await using var db = await factory.CreateDbContextAsync(ct);
+    AuditTransaction.Attach(db, audit); db.AuditActorId = scope.UserId;
     await using var transaction = await db.Database.BeginTransactionAsync(ct);
     await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({ApplicationDbContext.ManagementLock})", ct);
     if (await db.SynchronizationSettings.AnyAsync(s => s.Id == 1 && s.Mode == DataManagementMode.Api, ct))
@@ -62,8 +68,10 @@ public class PersonalIpService(IDbContextFactory<ApplicationDbContext> factory,
     personal.ModifiedBy = scope.UserId;
     personal.LastModifiedDate = DateTime.UtcNow;
     personal.Status = Status.Modified;
+    var auditChanges = EntityChangeAudit.TryCapture(db, audit);
     await db.SaveChangesAsync(ct);
-    await transaction.CommitAsync(ct);
+    await EntityChangeAudit.PublishAsync(auditChanges, scope.UserId, audit, ct);
+    await AuditTransaction.CommitAsync(transaction, ct);
     logger.LogInformation("Обновлены назначения IP сотрудника {PersonalId} пользователем {UserId}", personalId, scope.UserId);
   }
 }

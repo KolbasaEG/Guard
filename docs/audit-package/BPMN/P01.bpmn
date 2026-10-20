@@ -1,0 +1,1703 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="GuardAuditDefinitions" targetNamespace="https://guard.local/audit/bpmn" exporter="Guard audit documentation" exporterVersion="1.0">
+  <bpmn:message id="Message_CEF" name="Syslog TLS CEF событие с EventId"/>
+  <bpmn:process id="P00" name="Обращение к системе и выбор процесса" isExecutable="false">
+    <bpmn:documentation>Карта процессов. Доставка P04 и очистка P07 работают независимо по таймеру; P03 вызывается запросами и циклом состояния каждые 5 секунд. Модель описательная, не предназначена для запуска workflow engine.</bpmn:documentation>
+    <bpmn:laneSet id="P00_Lanes">
+      <bpmn:lane id="P00_Lane0" name="Пользователь или Root">
+        <bpmn:flowNodeRef>P00_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P00_login</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P00_csrf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P00_out</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P00_Lane1" name="Guard">
+        <bpmn:flowNodeRef>P00_classify</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P00_kind</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P00_work</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P00_settings</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P00_end</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P00_start" name="Обращение">
+      <bpmn:documentation>Обращение</bpmn:documentation>
+      <bpmn:outgoing>P00_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P00_classify" name="Определить маршрут и тип операции">
+      <bpmn:documentation>Определить маршрут и тип операции</bpmn:documentation>
+      <bpmn:incoming>P00_F1</bpmn:incoming>
+      <bpmn:outgoing>P00_F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P00_kind" name="Какое действие">
+      <bpmn:documentation>Какое действие</bpmn:documentation>
+      <bpmn:incoming>P00_F2</bpmn:incoming>
+      <bpmn:outgoing>P00_F3</bpmn:outgoing>
+      <bpmn:outgoing>P00_F4</bpmn:outgoing>
+      <bpmn:outgoing>P00_F5</bpmn:outgoing>
+      <bpmn:outgoing>P00_F6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:callActivity id="P00_login" name="Вход в систему P01" calledElement="P01">
+      <bpmn:documentation>Вход в систему P01</bpmn:documentation>
+      <bpmn:incoming>P00_F3</bpmn:incoming>
+      <bpmn:outgoing>P00_F9</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:callActivity id="P00_work" name="Рабочая операция P02" calledElement="P02">
+      <bpmn:documentation>Рабочая операция P02</bpmn:documentation>
+      <bpmn:incoming>P00_F4</bpmn:incoming>
+      <bpmn:outgoing>P00_F10</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:callActivity id="P00_settings" name="Настройки Root P05" calledElement="P05">
+      <bpmn:documentation>Настройки Root P05</bpmn:documentation>
+      <bpmn:incoming>P00_F5</bpmn:incoming>
+      <bpmn:outgoing>P00_F11</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:serviceTask id="P00_csrf" name="Проверить CSRF выхода">
+      <bpmn:documentation>Проверить CSRF выхода</bpmn:documentation>
+      <bpmn:incoming>P00_F6</bpmn:incoming>
+      <bpmn:outgoing>P00_F7</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P00_out" name="Удалить cookie и попытаться записать Logout">
+      <bpmn:documentation>Удалить cookie и попытаться записать Logout</bpmn:documentation>
+      <bpmn:incoming>P00_F7</bpmn:incoming>
+      <bpmn:outgoing>P00_F8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="P00_end" name="Результат и дальнейшее действие">
+      <bpmn:documentation>Результат и дальнейшее действие</bpmn:documentation>
+      <bpmn:incoming>P00_F8</bpmn:incoming>
+      <bpmn:incoming>P00_F9</bpmn:incoming>
+      <bpmn:incoming>P00_F10</bpmn:incoming>
+      <bpmn:incoming>P00_F11</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="P00_F1" sourceRef="P00_start" targetRef="P00_classify" name=""/>
+    <bpmn:sequenceFlow id="P00_F2" sourceRef="P00_classify" targetRef="P00_kind" name=""/>
+    <bpmn:sequenceFlow id="P00_F3" sourceRef="P00_kind" targetRef="P00_login" name="Вход">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Вход</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P00_F4" sourceRef="P00_kind" targetRef="P00_work" name="Работа">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Работа</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P00_F5" sourceRef="P00_kind" targetRef="P00_settings" name="Настройки">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Настройки</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P00_F6" sourceRef="P00_kind" targetRef="P00_csrf" name="Выход">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Выход</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P00_F7" sourceRef="P00_csrf" targetRef="P00_out" name=""/>
+    <bpmn:sequenceFlow id="P00_F8" sourceRef="P00_out" targetRef="P00_end" name=""/>
+    <bpmn:sequenceFlow id="P00_F9" sourceRef="P00_login" targetRef="P00_end" name=""/>
+    <bpmn:sequenceFlow id="P00_F10" sourceRef="P00_work" targetRef="P00_end" name=""/>
+    <bpmn:sequenceFlow id="P00_F11" sourceRef="P00_settings" targetRef="P00_end" name=""/>
+  </bpmn:process>
+  <bpmn:process id="P01" name="Обычный вход и отказ в доступе" isExecutable="false">
+    <bpmn:documentation>Одна попытка входа имеет итоговое событие. Смена счётчика и наступление lockout могут иметь дополнительные связанные события. Успешная cookie выдаётся только после LoginSuccess. Включённая 2FA в локальном сценарии не поддерживается.</bpmn:documentation>
+    <bpmn:laneSet id="P01_Lanes">
+      <bpmn:lane id="P01_Lane0" name="Клиент и HTTP">
+        <bpmn:flowNodeRef>P01_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_rate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_rg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_form</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_probe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_ag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_recovery</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_formok</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P01_Lane1" name="Identity и доступ">
+        <bpmn:flowNodeRef>P01_identity</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_ig</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_reject</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_denied</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_cookie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_ok</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P01_Lane2" name="Обязательный аудит">
+        <bpmn:flowNodeRef>P01_record</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_sg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P01_unknown</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P01_start" name="POST входа">
+      <bpmn:documentation>POST входа</bpmn:documentation>
+      <bpmn:outgoing>P01_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P01_rate" name="Лимит 5 запросов на IP в минуту">
+      <bpmn:documentation>Лимит 5 запросов на IP в минуту</bpmn:documentation>
+      <bpmn:incoming>P01_F1</bpmn:incoming>
+      <bpmn:outgoing>P01_F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P01_rg" name="Лимит соблюдён" default="P01_F4">
+      <bpmn:documentation>Лимит соблюдён</bpmn:documentation>
+      <bpmn:incoming>P01_F2</bpmn:incoming>
+      <bpmn:outgoing>P01_F3</bpmn:outgoing>
+      <bpmn:outgoing>P01_F4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P01_form" name="Проверить форму и обязательные поля">
+      <bpmn:documentation>Проверить форму и обязательные поля</bpmn:documentation>
+      <bpmn:incoming>P01_F3</bpmn:incoming>
+      <bpmn:outgoing>P01_F18</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:callActivity id="P01_probe" name="Проверить аудит P03" calledElement="P03">
+      <bpmn:documentation>Проверить аудит P03</bpmn:documentation>
+      <bpmn:incoming>P01_F19</bpmn:incoming>
+      <bpmn:outgoing>P01_F5</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:exclusiveGateway id="P01_ag" name="Обычная работа разрешена" default="P01_F7">
+      <bpmn:documentation>Обычная работа разрешена</bpmn:documentation>
+      <bpmn:incoming>P01_F5</bpmn:incoming>
+      <bpmn:outgoing>P01_F6</bpmn:outgoing>
+      <bpmn:outgoing>P01_F7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:callActivity id="P01_recovery" name="Ограниченный вход Root P06" calledElement="P06">
+      <bpmn:documentation>Ограниченный вход Root P06</bpmn:documentation>
+      <bpmn:incoming>P01_F7</bpmn:incoming>
+      <bpmn:outgoing>P01_F8</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:serviceTask id="P01_identity" name="Найти аккаунт и проверить пароль политику IP и 2FA">
+      <bpmn:documentation>Найти аккаунт и проверить пароль политику IP и 2FA</bpmn:documentation>
+      <bpmn:incoming>P01_F6</bpmn:incoming>
+      <bpmn:outgoing>P01_F9</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P01_ig" name="Вход разрешён" default="P01_F11">
+      <bpmn:documentation>Вход разрешён</bpmn:documentation>
+      <bpmn:incoming>P01_F9</bpmn:incoming>
+      <bpmn:outgoing>P01_F10</bpmn:outgoing>
+      <bpmn:outgoing>P01_F11</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P01_reject" name="Попытаться сохранить итог отказа и причину">
+      <bpmn:documentation>Попытаться сохранить итог отказа и причину</bpmn:documentation>
+      <bpmn:incoming>P01_F4</bpmn:incoming>
+      <bpmn:incoming>P01_F11</bpmn:incoming>
+      <bpmn:incoming>P01_F20</bpmn:incoming>
+      <bpmn:outgoing>P01_F12</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="P01_denied" name="Обычный доступ не предоставлен">
+      <bpmn:documentation>Обычный доступ не предоставлен</bpmn:documentation>
+      <bpmn:incoming>P01_F8</bpmn:incoming>
+      <bpmn:incoming>P01_F12</bpmn:incoming>
+      <bpmn:incoming>P01_F15</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="P01_record" name="Сохранить LoginSuccess до cookie">
+      <bpmn:documentation>Сохранить LoginSuccess до cookie</bpmn:documentation>
+      <bpmn:incoming>P01_F10</bpmn:incoming>
+      <bpmn:outgoing>P01_F13</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P01_sg" name="Запись подтверждена" default="P01_F16">
+      <bpmn:documentation>Запись подтверждена</bpmn:documentation>
+      <bpmn:incoming>P01_F13</bpmn:incoming>
+      <bpmn:outgoing>P01_F14</bpmn:outgoing>
+      <bpmn:outgoing>P01_F15</bpmn:outgoing>
+      <bpmn:outgoing>P01_F16</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P01_cookie" name="Выдать обычную cookie и обновить активность">
+      <bpmn:documentation>Выдать обычную cookie и обновить активность</bpmn:documentation>
+      <bpmn:incoming>P01_F14</bpmn:incoming>
+      <bpmn:outgoing>P01_F17</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="P01_ok" name="Обычная сессия">
+      <bpmn:documentation>Обычная сессия</bpmn:documentation>
+      <bpmn:incoming>P01_F17</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="P01_unknown" name="Исход сохранения неизвестен проверить состояние">
+      <bpmn:documentation>Исход сохранения неизвестен проверить состояние</bpmn:documentation>
+      <bpmn:incoming>P01_F16</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="P01_formok" name="Форма корректна" default="P01_F20">
+      <bpmn:documentation>Форма корректна</bpmn:documentation>
+      <bpmn:incoming>P01_F18</bpmn:incoming>
+      <bpmn:outgoing>P01_F19</bpmn:outgoing>
+      <bpmn:outgoing>P01_F20</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="P01_F1" sourceRef="P01_start" targetRef="P01_rate" name=""/>
+    <bpmn:sequenceFlow id="P01_F2" sourceRef="P01_rate" targetRef="P01_rg" name=""/>
+    <bpmn:sequenceFlow id="P01_F3" sourceRef="P01_rg" targetRef="P01_form" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P01_F4" sourceRef="P01_rg" targetRef="P01_reject" name="Нет HTTP 429"/>
+    <bpmn:sequenceFlow id="P01_F5" sourceRef="P01_probe" targetRef="P01_ag" name=""/>
+    <bpmn:sequenceFlow id="P01_F6" sourceRef="P01_ag" targetRef="P01_identity" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P01_F7" sourceRef="P01_ag" targetRef="P01_recovery" name="Нет"/>
+    <bpmn:sequenceFlow id="P01_F8" sourceRef="P01_recovery" targetRef="P01_denied" name="Обычная cookie не выдаётся"/>
+    <bpmn:sequenceFlow id="P01_F9" sourceRef="P01_identity" targetRef="P01_ig" name=""/>
+    <bpmn:sequenceFlow id="P01_F10" sourceRef="P01_ig" targetRef="P01_record" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P01_F11" sourceRef="P01_ig" targetRef="P01_reject" name="Нет"/>
+    <bpmn:sequenceFlow id="P01_F12" sourceRef="P01_reject" targetRef="P01_denied" name=""/>
+    <bpmn:sequenceFlow id="P01_F13" sourceRef="P01_record" targetRef="P01_sg" name=""/>
+    <bpmn:sequenceFlow id="P01_F14" sourceRef="P01_sg" targetRef="P01_cookie" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P01_F15" sourceRef="P01_sg" targetRef="P01_denied" name="Доказанный отказ">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Доказанный отказ</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P01_F16" sourceRef="P01_sg" targetRef="P01_unknown" name="Подтверждение потеряно"/>
+    <bpmn:sequenceFlow id="P01_F17" sourceRef="P01_cookie" targetRef="P01_ok" name=""/>
+    <bpmn:sequenceFlow id="P01_F18" sourceRef="P01_form" targetRef="P01_formok" name=""/>
+    <bpmn:sequenceFlow id="P01_F19" sourceRef="P01_formok" targetRef="P01_probe" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P01_F20" sourceRef="P01_formok" targetRef="P01_reject" name="Нет InvalidInput"/>
+  </bpmn:process>
+  <bpmn:process id="P02" name="Обычная операция и атомарность аудита" isExecutable="false">
+    <bpmn:documentation>Проверки остаются на сервере, включая старый Blazor circuit. Состояние P03 проверяет текущую очередь; перед обязательной вставкой дополнительно резервируется место под новые события. Обычные чтения самостоятельных событий не создают.</bpmn:documentation>
+    <bpmn:laneSet id="P02_Lanes">
+      <bpmn:lane id="P02_Lane0" name="Сервис доступа">
+        <bpmn:flowNodeRef>P02_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_session</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_probe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_gate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_kind</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_deny</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_export</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P02_Lane1" name="Чтение данных">
+        <bpmn:flowNodeRef>P02_query</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_recheck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_return</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_readok</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P02_Lane2" name="Транзакция изменения">
+        <bpmn:flowNodeRef>P02_begin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_insert</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_commit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_cg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_done</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_rollback</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_unknown</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P02_writeError</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P02_start" name="Запрос операции">
+      <bpmn:documentation>Запрос операции</bpmn:documentation>
+      <bpmn:outgoing>P02_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P02_session" name="Проверить stamp роли область и отсутствие recovery only">
+      <bpmn:documentation>Проверить stamp роли область и отсутствие recovery only</bpmn:documentation>
+      <bpmn:incoming>P02_F1</bpmn:incoming>
+      <bpmn:outgoing>P02_F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:callActivity id="P02_probe" name="Проверить аудит P03" calledElement="P03">
+      <bpmn:documentation>Проверить аудит P03</bpmn:documentation>
+      <bpmn:incoming>P02_F2</bpmn:incoming>
+      <bpmn:outgoing>P02_F3</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:exclusiveGateway id="P02_gate" name="Доступ разрешён" default="P02_F12">
+      <bpmn:documentation>Доступ разрешён</bpmn:documentation>
+      <bpmn:incoming>P02_F3</bpmn:incoming>
+      <bpmn:outgoing>P02_F4</bpmn:outgoing>
+      <bpmn:outgoing>P02_F12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="P02_kind" name="Тип операции">
+      <bpmn:documentation>Тип операции</bpmn:documentation>
+      <bpmn:incoming>P02_F4</bpmn:incoming>
+      <bpmn:outgoing>P02_F5</bpmn:outgoing>
+      <bpmn:outgoing>P02_F7</bpmn:outgoing>
+      <bpmn:outgoing>P02_F13</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P02_deny" name="Операция запрещена">
+      <bpmn:documentation>Операция запрещена</bpmn:documentation>
+      <bpmn:incoming>P02_F11</bpmn:incoming>
+      <bpmn:incoming>P02_F12</bpmn:incoming>
+      <bpmn:incoming>P02_F20</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="P02_query" name="Прочитать DTO в серверной области">
+      <bpmn:documentation>Прочитать DTO в серверной области</bpmn:documentation>
+      <bpmn:incoming>P02_F5</bpmn:incoming>
+      <bpmn:outgoing>P02_F6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P02_recheck" name="Перепроверить доступ перед возвратом">
+      <bpmn:documentation>Перепроверить доступ перед возвратом</bpmn:documentation>
+      <bpmn:incoming>P02_F6</bpmn:incoming>
+      <bpmn:outgoing>P02_F18</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="P02_return" name="Вернуть данные без события просмотра">
+      <bpmn:documentation>Вернуть данные без события просмотра</bpmn:documentation>
+      <bpmn:incoming>P02_F19</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="P02_begin" name="Начать транзакцию и сохранить изменение">
+      <bpmn:documentation>Начать транзакцию и сохранить изменение</bpmn:documentation>
+      <bpmn:incoming>P02_F7</bpmn:incoming>
+      <bpmn:outgoing>P02_F8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P02_insert" name="Под QueueLock проверить лимиты и вставить обязательный аудит">
+      <bpmn:documentation>Под QueueLock проверить лимиты и вставить обязательный аудит</bpmn:documentation>
+      <bpmn:incoming>P02_F8</bpmn:incoming>
+      <bpmn:outgoing>P02_F9</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P02_commit" name="Выполнить общий commit">
+      <bpmn:documentation>Выполнить общий commit</bpmn:documentation>
+      <bpmn:incoming>P02_F9</bpmn:incoming>
+      <bpmn:outgoing>P02_F10</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P02_cg" name="Результат commit" default="P02_F16">
+      <bpmn:documentation>Результат commit</bpmn:documentation>
+      <bpmn:incoming>P02_F10</bpmn:incoming>
+      <bpmn:outgoing>P02_F14</bpmn:outgoing>
+      <bpmn:outgoing>P02_F15</bpmn:outgoing>
+      <bpmn:outgoing>P02_F16</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P02_done" name="Изменение и аудит сохранены">
+      <bpmn:documentation>Изменение и аудит сохранены</bpmn:documentation>
+      <bpmn:incoming>P02_F14</bpmn:incoming>
+      <bpmn:incoming>P02_F17</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="P02_rollback" name="Откатить известную незавершённую транзакцию">
+      <bpmn:documentation>Откатить известную незавершённую транзакцию</bpmn:documentation>
+      <bpmn:incoming>P02_F15</bpmn:incoming>
+      <bpmn:incoming>P02_F21</bpmn:incoming>
+      <bpmn:outgoing>P02_F11</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="P02_unknown" name="Проверить фактическое состояние до повтора">
+      <bpmn:documentation>Проверить фактическое состояние до повтора</bpmn:documentation>
+      <bpmn:incoming>P02_F16</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:callActivity id="P02_export" name="Экспорт P09" calledElement="P09">
+      <bpmn:documentation>Экспорт P09</bpmn:documentation>
+      <bpmn:incoming>P02_F13</bpmn:incoming>
+      <bpmn:outgoing>P02_F17</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:exclusiveGateway id="P02_readok" name="Повторная проверка успешна" default="P02_F20">
+      <bpmn:documentation>Повторная проверка успешна</bpmn:documentation>
+      <bpmn:incoming>P02_F18</bpmn:incoming>
+      <bpmn:outgoing>P02_F19</bpmn:outgoing>
+      <bpmn:outgoing>P02_F20</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:boundaryEvent id="P02_writeError" name="Ошибка до commit" attachedToRef="P02_insert" cancelActivity="true">
+      <bpmn:documentation>Ошибка до commit</bpmn:documentation>
+      <bpmn:outgoing>P02_F21</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="P02_writeError_Error"/>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="P02_F1" sourceRef="P02_start" targetRef="P02_session" name=""/>
+    <bpmn:sequenceFlow id="P02_F2" sourceRef="P02_session" targetRef="P02_probe" name=""/>
+    <bpmn:sequenceFlow id="P02_F3" sourceRef="P02_probe" targetRef="P02_gate" name=""/>
+    <bpmn:sequenceFlow id="P02_F4" sourceRef="P02_gate" targetRef="P02_kind" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P02_F5" sourceRef="P02_kind" targetRef="P02_query" name="Чтение">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Чтение</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P02_F6" sourceRef="P02_query" targetRef="P02_recheck" name=""/>
+    <bpmn:sequenceFlow id="P02_F7" sourceRef="P02_kind" targetRef="P02_begin" name="Изменение">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Изменение</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P02_F8" sourceRef="P02_begin" targetRef="P02_insert" name=""/>
+    <bpmn:sequenceFlow id="P02_F9" sourceRef="P02_insert" targetRef="P02_commit" name=""/>
+    <bpmn:sequenceFlow id="P02_F10" sourceRef="P02_commit" targetRef="P02_cg" name=""/>
+    <bpmn:sequenceFlow id="P02_F11" sourceRef="P02_rollback" targetRef="P02_deny" name=""/>
+    <bpmn:sequenceFlow id="P02_F12" sourceRef="P02_gate" targetRef="P02_deny" name="Нет"/>
+    <bpmn:sequenceFlow id="P02_F13" sourceRef="P02_kind" targetRef="P02_export" name="Экспорт">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Экспорт</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P02_F14" sourceRef="P02_cg" targetRef="P02_done" name="Подтверждён">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Подтверждён</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P02_F15" sourceRef="P02_cg" targetRef="P02_rollback" name="Откат подтверждён">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Откат подтверждён</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P02_F16" sourceRef="P02_cg" targetRef="P02_unknown" name="Подтверждение потеряно"/>
+    <bpmn:sequenceFlow id="P02_F17" sourceRef="P02_export" targetRef="P02_done" name="Задание принято с аудитом"/>
+    <bpmn:sequenceFlow id="P02_F18" sourceRef="P02_recheck" targetRef="P02_readok" name=""/>
+    <bpmn:sequenceFlow id="P02_F19" sourceRef="P02_readok" targetRef="P02_return" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P02_F20" sourceRef="P02_readok" targetRef="P02_deny" name="Нет"/>
+    <bpmn:sequenceFlow id="P02_F21" sourceRef="P02_writeError" targetRef="P02_rollback" name=""/>
+  </bpmn:process>
+  <bpmn:process id="P03" name="Определение доступности аудита" isExecutable="false">
+    <bpmn:documentation>Один вызов проверки. Фоновый вызов повторяется каждые 5 секунд; HTTP и серверные операции вызывают проверку независимо. Проба вставляется и удаляется в одной подтверждённой транзакции, не создавая историю просмотров.</bpmn:documentation>
+    <bpmn:laneSet id="P03_Lanes">
+      <bpmn:lane id="P03_Lane0" name="Проверка локального хранения">
+        <bpmn:flowNodeRef>P03_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_probe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_store</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_storage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_not</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_invalid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_ready</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P03_Lane1" name="Настройки и очередь">
+        <bpmn:flowNodeRef>P03_config</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_configured</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_valid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_mode</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_limits</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_limit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P03_blocked</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P03_start" name="Запрос проверки">
+      <bpmn:documentation>Запрос проверки</bpmn:documentation>
+      <bpmn:outgoing>P03_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P03_probe" name="Прочитать настройки и очередь выполнить INSERT DELETE пробы и commit">
+      <bpmn:documentation>Прочитать настройки и очередь выполнить INSERT DELETE пробы и commit</bpmn:documentation>
+      <bpmn:incoming>P03_F1</bpmn:incoming>
+      <bpmn:outgoing>P03_F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P03_store" name="Commit пробы подтверждён" default="P03_F4">
+      <bpmn:documentation>Commit пробы подтверждён</bpmn:documentation>
+      <bpmn:incoming>P03_F2</bpmn:incoming>
+      <bpmn:outgoing>P03_F3</bpmn:outgoing>
+      <bpmn:outgoing>P03_F4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P03_storage" name="StorageUnavailable">
+      <bpmn:documentation>StorageUnavailable</bpmn:documentation>
+      <bpmn:incoming>P03_F4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="P03_config" name="Оценить прочитанные настройки и очередь">
+      <bpmn:documentation>Оценить прочитанные настройки и очередь</bpmn:documentation>
+      <bpmn:incoming>P03_F3</bpmn:incoming>
+      <bpmn:outgoing>P03_F5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P03_configured" name="Режим подтверждён" default="P03_F7">
+      <bpmn:documentation>Режим подтверждён</bpmn:documentation>
+      <bpmn:incoming>P03_F5</bpmn:incoming>
+      <bpmn:outgoing>P03_F6</bpmn:outgoing>
+      <bpmn:outgoing>P03_F7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P03_not" name="NotConfigured">
+      <bpmn:documentation>NotConfigured</bpmn:documentation>
+      <bpmn:incoming>P03_F7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="P03_valid" name="Настройки допустимы" default="P03_F9">
+      <bpmn:documentation>Настройки допустимы</bpmn:documentation>
+      <bpmn:incoming>P03_F6</bpmn:incoming>
+      <bpmn:outgoing>P03_F8</bpmn:outgoing>
+      <bpmn:outgoing>P03_F9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P03_invalid" name="InvalidConfiguration">
+      <bpmn:documentation>InvalidConfiguration</bpmn:documentation>
+      <bpmn:incoming>P03_F9</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="P03_mode" name="Локальный режим" default="P03_F11">
+      <bpmn:documentation>Локальный режим</bpmn:documentation>
+      <bpmn:incoming>P03_F8</bpmn:incoming>
+      <bpmn:outgoing>P03_F10</bpmn:outgoing>
+      <bpmn:outgoing>P03_F11</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P03_limits" name="Проверить возраст байты и количество pending">
+      <bpmn:documentation>Проверить возраст байты и количество pending</bpmn:documentation>
+      <bpmn:incoming>P03_F11</bpmn:incoming>
+      <bpmn:outgoing>P03_F12</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P03_limit" name="Пределы соблюдены" default="P03_F14">
+      <bpmn:documentation>Пределы соблюдены</bpmn:documentation>
+      <bpmn:incoming>P03_F12</bpmn:incoming>
+      <bpmn:outgoing>P03_F13</bpmn:outgoing>
+      <bpmn:outgoing>P03_F14</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P03_ready" name="Ready обычная работа разрешена">
+      <bpmn:documentation>Ready обычная работа разрешена</bpmn:documentation>
+      <bpmn:incoming>P03_F10</bpmn:incoming>
+      <bpmn:incoming>P03_F13</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="P03_blocked" name="QueueAgeExceeded или QueueVolumeExceeded">
+      <bpmn:documentation>QueueAgeExceeded или QueueVolumeExceeded</bpmn:documentation>
+      <bpmn:incoming>P03_F14</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="P03_F1" sourceRef="P03_start" targetRef="P03_probe" name=""/>
+    <bpmn:sequenceFlow id="P03_F2" sourceRef="P03_probe" targetRef="P03_store" name=""/>
+    <bpmn:sequenceFlow id="P03_F3" sourceRef="P03_store" targetRef="P03_config" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P03_F4" sourceRef="P03_store" targetRef="P03_storage" name="Нет или неизвестен"/>
+    <bpmn:sequenceFlow id="P03_F5" sourceRef="P03_config" targetRef="P03_configured" name=""/>
+    <bpmn:sequenceFlow id="P03_F6" sourceRef="P03_configured" targetRef="P03_valid" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P03_F7" sourceRef="P03_configured" targetRef="P03_not" name="Нет"/>
+    <bpmn:sequenceFlow id="P03_F8" sourceRef="P03_valid" targetRef="P03_mode" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P03_F9" sourceRef="P03_valid" targetRef="P03_invalid" name="Нет"/>
+    <bpmn:sequenceFlow id="P03_F10" sourceRef="P03_mode" targetRef="P03_ready" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P03_F11" sourceRef="P03_mode" targetRef="P03_limits" name="Нет SIEM"/>
+    <bpmn:sequenceFlow id="P03_F12" sourceRef="P03_limits" targetRef="P03_limit" name=""/>
+    <bpmn:sequenceFlow id="P03_F13" sourceRef="P03_limit" targetRef="P03_ready" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P03_F14" sourceRef="P03_limit" targetRef="P03_blocked" name="Нет"/>
+  </bpmn:process>
+  <bpmn:process id="P04" name="Доставка обязательной очереди в RuSIEM" isExecutable="false">
+    <bpmn:documentation>Цикл доставки каждые 2 секунды, до 25 событий. Аренда 2 минуты. Pending сохраняются при любых сетевых отказах. Успешная запись по TLS не является подтверждением сохранения в SIEM. При падении процесса возможен повтор того же EventId.</bpmn:documentation>
+    <bpmn:laneSet id="P04_Lanes">
+      <bpmn:lane id="P04_Lane0" name="Worker и PostgreSQL">
+        <bpmn:flowNodeRef>P04_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_mode</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_enabled</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_paused</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_claim</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_exists</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_attempt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_success</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_batch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_done</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P04_Lane1" name="TLS транспорт">
+        <bpmn:flowNodeRef>P04_send</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_result</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P04_Lane2" name="Фиксация попытки">
+        <bpmn:flowNodeRef>P04_retry</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P04_crash</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P04_start" name="Цикл каждые 2 секунды">
+      <bpmn:documentation>Цикл каждые 2 секунды</bpmn:documentation>
+      <bpmn:outgoing>P04_F1</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="P04_start_Timer">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">PT2S</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P04_mode" name="Прочитать настройки под QueueLock">
+      <bpmn:documentation>Прочитать настройки под QueueLock</bpmn:documentation>
+      <bpmn:incoming>P04_F1</bpmn:incoming>
+      <bpmn:outgoing>P04_F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P04_enabled" name="SIEM включён и настроен" default="P04_F4">
+      <bpmn:documentation>SIEM включён и настроен</bpmn:documentation>
+      <bpmn:incoming>P04_F2</bpmn:incoming>
+      <bpmn:outgoing>P04_F3</bpmn:outgoing>
+      <bpmn:outgoing>P04_F4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P04_paused" name="В Local очередь сохранена и приостановлена">
+      <bpmn:documentation>В Local очередь сохранена и приостановлена</bpmn:documentation>
+      <bpmn:incoming>P04_F4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="P04_claim" name="Выбрать pending SKIP LOCKED и выдать lease на 2 минуты">
+      <bpmn:documentation>Выбрать pending SKIP LOCKED и выдать lease на 2 минуты</bpmn:documentation>
+      <bpmn:incoming>P04_F3</bpmn:incoming>
+      <bpmn:incoming>P04_F15</bpmn:incoming>
+      <bpmn:outgoing>P04_F5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P04_exists" name="Событие найдено" default="P04_F7">
+      <bpmn:documentation>Событие найдено</bpmn:documentation>
+      <bpmn:incoming>P04_F5</bpmn:incoming>
+      <bpmn:outgoing>P04_F6</bpmn:outgoing>
+      <bpmn:outgoing>P04_F7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P04_attempt" name="Сохранить начало попытки адресат и Attempts">
+      <bpmn:documentation>Сохранить начало попытки адресат и Attempts</bpmn:documentation>
+      <bpmn:incoming>P04_F6</bpmn:incoming>
+      <bpmn:outgoing>P04_F8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="P04_send" name="Проверить TLS и записать Syslog CEF">
+      <bpmn:documentation>Проверить TLS и записать Syslog CEF</bpmn:documentation>
+      <bpmn:incoming>P04_F8</bpmn:incoming>
+      <bpmn:outgoing>P04_F9</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="P04_result" name="Запись по TLS завершена" default="P04_F12">
+      <bpmn:documentation>Запись по TLS завершена</bpmn:documentation>
+      <bpmn:incoming>P04_F9</bpmn:incoming>
+      <bpmn:outgoing>P04_F10</bpmn:outgoing>
+      <bpmn:outgoing>P04_F11</bpmn:outgoing>
+      <bpmn:outgoing>P04_F12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P04_success" name="Записать SentAtUtc и успешную попытку">
+      <bpmn:documentation>Записать SentAtUtc и успешную попытку</bpmn:documentation>
+      <bpmn:incoming>P04_F11</bpmn:incoming>
+      <bpmn:outgoing>P04_F13</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P04_retry" name="Записать ошибку и следующую попытку 10 с до 1 ч">
+      <bpmn:documentation>Записать ошибку и следующую попытку 10 с до 1 ч</bpmn:documentation>
+      <bpmn:incoming>P04_F12</bpmn:incoming>
+      <bpmn:outgoing>P04_F14</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P04_batch" name="Менее 25 событий и нет отмены" default="P04_F16">
+      <bpmn:documentation>Менее 25 событий и нет отмены</bpmn:documentation>
+      <bpmn:incoming>P04_F13</bpmn:incoming>
+      <bpmn:incoming>P04_F14</bpmn:incoming>
+      <bpmn:outgoing>P04_F15</bpmn:outgoing>
+      <bpmn:outgoing>P04_F16</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P04_done" name="Ожидать следующий цикл">
+      <bpmn:documentation>Ожидать следующий цикл</bpmn:documentation>
+      <bpmn:incoming>P04_F7</bpmn:incoming>
+      <bpmn:incoming>P04_F16</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="P04_crash" name="При обрыве lease истечёт и исход попытки останется неизвестным">
+      <bpmn:documentation>При обрыве lease истечёт и исход попытки останется неизвестным</bpmn:documentation>
+      <bpmn:incoming>P04_F10</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="P04_F1" sourceRef="P04_start" targetRef="P04_mode" name=""/>
+    <bpmn:sequenceFlow id="P04_F2" sourceRef="P04_mode" targetRef="P04_enabled" name=""/>
+    <bpmn:sequenceFlow id="P04_F3" sourceRef="P04_enabled" targetRef="P04_claim" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P04_F4" sourceRef="P04_enabled" targetRef="P04_paused" name="Нет"/>
+    <bpmn:sequenceFlow id="P04_F5" sourceRef="P04_claim" targetRef="P04_exists" name=""/>
+    <bpmn:sequenceFlow id="P04_F6" sourceRef="P04_exists" targetRef="P04_attempt" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P04_F7" sourceRef="P04_exists" targetRef="P04_done" name="Нет"/>
+    <bpmn:sequenceFlow id="P04_F8" sourceRef="P04_attempt" targetRef="P04_send" name=""/>
+    <bpmn:sequenceFlow id="P04_F9" sourceRef="P04_send" targetRef="P04_result" name=""/>
+    <bpmn:sequenceFlow id="P04_F10" sourceRef="P04_result" targetRef="P04_crash" name="Отмена процесса">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Отмена процесса</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P04_F11" sourceRef="P04_result" targetRef="P04_success" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P04_F12" sourceRef="P04_result" targetRef="P04_retry" name="Нет"/>
+    <bpmn:sequenceFlow id="P04_F13" sourceRef="P04_success" targetRef="P04_batch" name=""/>
+    <bpmn:sequenceFlow id="P04_F14" sourceRef="P04_retry" targetRef="P04_batch" name=""/>
+    <bpmn:sequenceFlow id="P04_F15" sourceRef="P04_batch" targetRef="P04_claim" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P04_F16" sourceRef="P04_batch" targetRef="P04_done" name="Нет"/>
+  </bpmn:process>
+  <bpmn:collaboration id="P04_Collaboration">
+    <bpmn:participant id="P04_Guard" name="Guard" processRef="P04"/>
+    <bpmn:participant id="P04_SIEM" name="RuSIEM внешняя система"/>
+    <bpmn:messageFlow id="P04_CEF" sourceRef="P04_send" targetRef="P04_SIEM" messageRef="Message_CEF" name="Syslog TLS CEF"/>
+  </bpmn:collaboration>
+  <bpmn:process id="P05" name="Изменение настроек и переключение режимов" isExecutable="false">
+    <bpmn:documentation>Настройки применяются только после проверки актуального Root, версии и обязательного события. Изменение host port или CA при pending требует отдельного подтверждения. Старые Local события не ретроотправляются; возраст прежней обязательной очереди сохраняется.</bpmn:documentation>
+    <bpmn:laneSet id="P05_Lanes">
+      <bpmn:lane id="P05_Lane0" name="Root">
+        <bpmn:flowNodeRef>P05_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_denied</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_confirm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_consent</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P05_Lane1" name="Сервер и блокировки">
+        <bpmn:flowNodeRef>P05_validate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_lock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_version</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_target</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_lease</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_wait</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_ok</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P05_Lane2" name="Транзакция аудита">
+        <bpmn:flowNodeRef>P05_save</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_audit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_commit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P05_unknown</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P05_start" name="Сохранить настройки">
+      <bpmn:documentation>Сохранить настройки</bpmn:documentation>
+      <bpmn:outgoing>P05_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P05_validate" name="Проверить поля и актуального Root">
+      <bpmn:documentation>Проверить поля и актуального Root</bpmn:documentation>
+      <bpmn:incoming>P05_F1</bpmn:incoming>
+      <bpmn:outgoing>P05_F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P05_lock" name="Начать транзакцию взять security lock и QueueLock">
+      <bpmn:documentation>Начать транзакцию взять security lock и QueueLock</bpmn:documentation>
+      <bpmn:incoming>P05_F2</bpmn:incoming>
+      <bpmn:outgoing>P05_F3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P05_version" name="Root и версия актуальны" default="P05_F12">
+      <bpmn:documentation>Root и версия актуальны</bpmn:documentation>
+      <bpmn:incoming>P05_F3</bpmn:incoming>
+      <bpmn:outgoing>P05_F4</bpmn:outgoing>
+      <bpmn:outgoing>P05_F12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P05_denied" name="Отказ перечитать настройки или войти заново">
+      <bpmn:documentation>Отказ перечитать настройки или войти заново</bpmn:documentation>
+      <bpmn:incoming>P05_F12</bpmn:incoming>
+      <bpmn:incoming>P05_F13</bpmn:incoming>
+      <bpmn:incoming>P05_F16</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="P05_target" name="Адресат изменён и есть pending">
+      <bpmn:documentation>Адресат изменён и есть pending</bpmn:documentation>
+      <bpmn:incoming>P05_F4</bpmn:incoming>
+      <bpmn:outgoing>P05_F5</bpmn:outgoing>
+      <bpmn:outgoing>P05_F8</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="P05_confirm" name="Отдельно подтвердить перенос обязательной очереди">
+      <bpmn:documentation>Отдельно подтвердить перенос обязательной очереди</bpmn:documentation>
+      <bpmn:incoming>P05_F5</bpmn:incoming>
+      <bpmn:outgoing>P05_F6</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="P05_consent" name="Подтверждение есть" default="P05_F13">
+      <bpmn:documentation>Подтверждение есть</bpmn:documentation>
+      <bpmn:incoming>P05_F6</bpmn:incoming>
+      <bpmn:outgoing>P05_F7</bpmn:outgoing>
+      <bpmn:outgoing>P05_F13</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="P05_lease" name="Есть активная отправка при смене режима или адресата" default="P05_F14">
+      <bpmn:documentation>Есть активная отправка при смене режима или адресата</bpmn:documentation>
+      <bpmn:incoming>P05_F7</bpmn:incoming>
+      <bpmn:incoming>P05_F8</bpmn:incoming>
+      <bpmn:outgoing>P05_F9</bpmn:outgoing>
+      <bpmn:outgoing>P05_F14</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P05_wait" name="Повторить после отправки или истечения аренды">
+      <bpmn:documentation>Повторить после отправки или истечения аренды</bpmn:documentation>
+      <bpmn:incoming>P05_F14</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="P05_save" name="Сохранить версию режим и при необходимости назначение pending">
+      <bpmn:documentation>Сохранить версию режим и при необходимости назначение pending</bpmn:documentation>
+      <bpmn:incoming>P05_F9</bpmn:incoming>
+      <bpmn:outgoing>P05_F10</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P05_audit" name="Вставить событие настроек и выполнить общий commit">
+      <bpmn:documentation>Вставить событие настроек и выполнить общий commit</bpmn:documentation>
+      <bpmn:incoming>P05_F10</bpmn:incoming>
+      <bpmn:outgoing>P05_F11</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P05_commit" name="Общий commit подтверждён" default="P05_F17">
+      <bpmn:documentation>Общий commit подтверждён</bpmn:documentation>
+      <bpmn:incoming>P05_F11</bpmn:incoming>
+      <bpmn:outgoing>P05_F15</bpmn:outgoing>
+      <bpmn:outgoing>P05_F16</bpmn:outgoing>
+      <bpmn:outgoing>P05_F17</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P05_ok" name="Настройки действуют">
+      <bpmn:documentation>Настройки действуют</bpmn:documentation>
+      <bpmn:incoming>P05_F15</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="P05_unknown" name="Результат неизвестен перечитать фактическую версию">
+      <bpmn:documentation>Результат неизвестен перечитать фактическую версию</bpmn:documentation>
+      <bpmn:incoming>P05_F17</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="P05_F1" sourceRef="P05_start" targetRef="P05_validate" name=""/>
+    <bpmn:sequenceFlow id="P05_F2" sourceRef="P05_validate" targetRef="P05_lock" name=""/>
+    <bpmn:sequenceFlow id="P05_F3" sourceRef="P05_lock" targetRef="P05_version" name=""/>
+    <bpmn:sequenceFlow id="P05_F4" sourceRef="P05_version" targetRef="P05_target" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P05_F5" sourceRef="P05_target" targetRef="P05_confirm" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P05_F6" sourceRef="P05_confirm" targetRef="P05_consent" name=""/>
+    <bpmn:sequenceFlow id="P05_F7" sourceRef="P05_consent" targetRef="P05_lease" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P05_F8" sourceRef="P05_target" targetRef="P05_lease" name="Нет">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Нет</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P05_F9" sourceRef="P05_lease" targetRef="P05_save" name="Нет активной отправки">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Нет активной отправки</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P05_F10" sourceRef="P05_save" targetRef="P05_audit" name=""/>
+    <bpmn:sequenceFlow id="P05_F11" sourceRef="P05_audit" targetRef="P05_commit" name=""/>
+    <bpmn:sequenceFlow id="P05_F12" sourceRef="P05_version" targetRef="P05_denied" name="Нет"/>
+    <bpmn:sequenceFlow id="P05_F13" sourceRef="P05_consent" targetRef="P05_denied" name="Нет"/>
+    <bpmn:sequenceFlow id="P05_F14" sourceRef="P05_lease" targetRef="P05_wait" name="Да"/>
+    <bpmn:sequenceFlow id="P05_F15" sourceRef="P05_commit" targetRef="P05_ok" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P05_F16" sourceRef="P05_commit" targetRef="P05_denied" name="Известный отказ откат">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Известный отказ откат</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P05_F17" sourceRef="P05_commit" targetRef="P05_unknown" name="Подтверждение потеряно"/>
+  </bpmn:process>
+  <bpmn:process id="P06" name="Ограниченный вход и восстановление Root" isExecutable="false">
+    <bpmn:documentation>Ограниченный вход выдаётся только при запрещённой обычной работе и доступной Identity. Проверяется фактическая роль Root, hash пароля, блокировки и отсутствие 2FA. Неверная recovery попытка не увеличивает Identity failure counter и не создаёт отдельный LoginFailed внутри RecoveryAsync.</bpmn:documentation>
+    <bpmn:laneSet id="P06_Lanes">
+      <bpmn:lane id="P06_Lane0" name="Root">
+        <bpmn:flowNodeRef>P06_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_refuse</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_diagnose</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_end</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_ttl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_expired</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P06_Lane1" name="Identity и ограниченная сессия">
+        <bpmn:flowNodeRef>P06_rate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_identity</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_verify</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_valid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_cookie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_event</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_login</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_rateok</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P06_Lane2" name="Восстановление">
+        <bpmn:flowNodeRef>P06_external</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_repair</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_settings</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_health</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_working</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P06_needsettings</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P06_start" name="Аудит запрещает обычный вход">
+      <bpmn:documentation>Аудит запрещает обычный вход</bpmn:documentation>
+      <bpmn:outgoing>P06_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P06_rate" name="Применить отдельный лимит 5 на IP в минуту">
+      <bpmn:documentation>Применить отдельный лимит 5 на IP в минуту</bpmn:documentation>
+      <bpmn:incoming>P06_F1</bpmn:incoming>
+      <bpmn:outgoing>P06_F16</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P06_identity" name="Identity доступна" default="P06_F13">
+      <bpmn:documentation>Identity доступна</bpmn:documentation>
+      <bpmn:incoming>P06_F17</bpmn:incoming>
+      <bpmn:outgoing>P06_F2</bpmn:outgoing>
+      <bpmn:outgoing>P06_F13</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P06_external" name="Выход и обслуживание сервера">
+      <bpmn:documentation>Выход и обслуживание сервера</bpmn:documentation>
+      <bpmn:incoming>P06_F13</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="P06_verify" name="Проверить пароль Root блокировки и отсутствие 2FA">
+      <bpmn:documentation>Проверить пароль Root блокировки и отсутствие 2FA</bpmn:documentation>
+      <bpmn:incoming>P06_F2</bpmn:incoming>
+      <bpmn:outgoing>P06_F3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P06_valid" name="Условия соблюдены" default="P06_F14">
+      <bpmn:documentation>Условия соблюдены</bpmn:documentation>
+      <bpmn:incoming>P06_F3</bpmn:incoming>
+      <bpmn:outgoing>P06_F4</bpmn:outgoing>
+      <bpmn:outgoing>P06_F14</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P06_refuse" name="Общий отказ без cookie">
+      <bpmn:documentation>Общий отказ без cookie</bpmn:documentation>
+      <bpmn:incoming>P06_F14</bpmn:incoming>
+      <bpmn:incoming>P06_F18</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="P06_cookie" name="Выдать recovery only cookie на 15 минут без продления">
+      <bpmn:documentation>Выдать recovery only cookie на 15 минут без продления</bpmn:documentation>
+      <bpmn:incoming>P06_F4</bpmn:incoming>
+      <bpmn:outgoing>P06_F5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P06_event" name="Попытаться записать RecoverySignIn">
+      <bpmn:documentation>Попытаться записать RecoverySignIn</bpmn:documentation>
+      <bpmn:incoming>P06_F5</bpmn:incoming>
+      <bpmn:outgoing>P06_F6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="P06_diagnose" name="Открыть состояние и определить причину">
+      <bpmn:documentation>Открыть состояние и определить причину</bpmn:documentation>
+      <bpmn:incoming>P06_F6</bpmn:incoming>
+      <bpmn:incoming>P06_F15</bpmn:incoming>
+      <bpmn:outgoing>P06_F7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="P06_repair" name="Восстановить хранилище или соединение с сопровождением">
+      <bpmn:documentation>Восстановить хранилище или соединение с сопровождением</bpmn:documentation>
+      <bpmn:incoming>P06_F7</bpmn:incoming>
+      <bpmn:outgoing>P06_F19</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:callActivity id="P06_settings" name="При исправной локальной записи изменить настройки P05" calledElement="P05">
+      <bpmn:documentation>При исправной локальной записи изменить настройки P05</bpmn:documentation>
+      <bpmn:incoming>P06_F20</bpmn:incoming>
+      <bpmn:outgoing>P06_F8</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:callActivity id="P06_health" name="Повторить проверку P03" calledElement="P03">
+      <bpmn:documentation>Повторить проверку P03</bpmn:documentation>
+      <bpmn:incoming>P06_F8</bpmn:incoming>
+      <bpmn:incoming>P06_F21</bpmn:incoming>
+      <bpmn:outgoing>P06_F9</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:exclusiveGateway id="P06_working" name="Аудит исправен" default="P06_F15">
+      <bpmn:documentation>Аудит исправен</bpmn:documentation>
+      <bpmn:incoming>P06_F9</bpmn:incoming>
+      <bpmn:outgoing>P06_F10</bpmn:outgoing>
+      <bpmn:outgoing>P06_F15</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="P06_login" name="Выйти и выполнить обычный вход">
+      <bpmn:documentation>Выйти и выполнить обычный вход</bpmn:documentation>
+      <bpmn:incoming>P06_F10</bpmn:incoming>
+      <bpmn:outgoing>P06_F11</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="P06_end" name="Recovery сессия не повышается автоматически">
+      <bpmn:documentation>Recovery сессия не повышается автоматически</bpmn:documentation>
+      <bpmn:incoming>P06_F11</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="P06_ttl" name="Новый HTTP с истёкшей cookie">
+      <bpmn:documentation>Новый HTTP с истёкшей cookie</bpmn:documentation>
+      <bpmn:outgoing>P06_F12</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="P06_expired" name="Повторить ограниченный вход">
+      <bpmn:documentation>Повторить ограниченный вход</bpmn:documentation>
+      <bpmn:incoming>P06_F12</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="P06_rateok" name="Лимит допускает" default="P06_F18">
+      <bpmn:documentation>Лимит допускает</bpmn:documentation>
+      <bpmn:incoming>P06_F16</bpmn:incoming>
+      <bpmn:outgoing>P06_F17</bpmn:outgoing>
+      <bpmn:outgoing>P06_F18</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="P06_needsettings" name="Нужно менять настройки" default="P06_F21">
+      <bpmn:documentation>Нужно менять настройки</bpmn:documentation>
+      <bpmn:incoming>P06_F19</bpmn:incoming>
+      <bpmn:outgoing>P06_F20</bpmn:outgoing>
+      <bpmn:outgoing>P06_F21</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="P06_F1" sourceRef="P06_start" targetRef="P06_rate" name=""/>
+    <bpmn:sequenceFlow id="P06_F2" sourceRef="P06_identity" targetRef="P06_verify" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P06_F3" sourceRef="P06_verify" targetRef="P06_valid" name=""/>
+    <bpmn:sequenceFlow id="P06_F4" sourceRef="P06_valid" targetRef="P06_cookie" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P06_F5" sourceRef="P06_cookie" targetRef="P06_event" name=""/>
+    <bpmn:sequenceFlow id="P06_F6" sourceRef="P06_event" targetRef="P06_diagnose" name=""/>
+    <bpmn:sequenceFlow id="P06_F7" sourceRef="P06_diagnose" targetRef="P06_repair" name=""/>
+    <bpmn:sequenceFlow id="P06_F8" sourceRef="P06_settings" targetRef="P06_health" name=""/>
+    <bpmn:sequenceFlow id="P06_F9" sourceRef="P06_health" targetRef="P06_working" name=""/>
+    <bpmn:sequenceFlow id="P06_F10" sourceRef="P06_working" targetRef="P06_login" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P06_F11" sourceRef="P06_login" targetRef="P06_end" name=""/>
+    <bpmn:sequenceFlow id="P06_F12" sourceRef="P06_ttl" targetRef="P06_expired" name=""/>
+    <bpmn:sequenceFlow id="P06_F13" sourceRef="P06_identity" targetRef="P06_external" name="Нет"/>
+    <bpmn:sequenceFlow id="P06_F14" sourceRef="P06_valid" targetRef="P06_refuse" name="Нет"/>
+    <bpmn:sequenceFlow id="P06_F15" sourceRef="P06_working" targetRef="P06_diagnose" name="Нет"/>
+    <bpmn:sequenceFlow id="P06_F16" sourceRef="P06_rate" targetRef="P06_rateok" name=""/>
+    <bpmn:sequenceFlow id="P06_F17" sourceRef="P06_rateok" targetRef="P06_identity" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P06_F18" sourceRef="P06_rateok" targetRef="P06_refuse" name="Нет"/>
+    <bpmn:sequenceFlow id="P06_F19" sourceRef="P06_repair" targetRef="P06_needsettings" name=""/>
+    <bpmn:sequenceFlow id="P06_F20" sourceRef="P06_needsettings" targetRef="P06_settings" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P06_F21" sourceRef="P06_needsettings" targetRef="P06_health" name="Нет"/>
+  </bpmn:process>
+  <bpmn:process id="P07" name="Хранение и независимая очистка" isExecutable="false">
+    <bpmn:documentation>Цикл каждые 5 минут. Срок от даты события в календарных годах. Неотправленные обязательные события сохраняются в обоих режимах. Ошибка одного этапа не отменяет следующие. Последний корректный срок кэшируется в процессе.</bpmn:documentation>
+    <bpmn:laneSet id="P07_Lanes">
+      <bpmn:lane id="P07_Lane0" name="Настройки">
+        <bpmn:flowNodeRef>P07_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_read</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_years</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_cutoff</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_health</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_done</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P07_Lane1" name="Хранилища и файлы">
+        <bpmn:flowNodeRef>P07_audit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_ae</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_am</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_technical</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_te</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_tm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_files</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_fe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_fm</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P07_Lane2" name="Диагностика">
+        <bpmn:flowNodeRef>P07_no</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_aerr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_terr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P07_ferr</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P07_start" name="Цикл каждые 5 минут">
+      <bpmn:documentation>Цикл каждые 5 минут</bpmn:documentation>
+      <bpmn:outgoing>P07_F1</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="P07_start_Timer">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">PT5M</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P07_read" name="Получить срок или последний корректный в процессе">
+      <bpmn:documentation>Получить срок или последний корректный в процессе</bpmn:documentation>
+      <bpmn:incoming>P07_F1</bpmn:incoming>
+      <bpmn:outgoing>P07_F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P07_years" name="Есть допустимый срок" default="P07_F18">
+      <bpmn:documentation>Есть допустимый срок</bpmn:documentation>
+      <bpmn:incoming>P07_F2</bpmn:incoming>
+      <bpmn:outgoing>P07_F3</bpmn:outgoing>
+      <bpmn:outgoing>P07_F18</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P07_no" name="Показать ошибку настроек без удаления">
+      <bpmn:documentation>Показать ошибку настроек без удаления</bpmn:documentation>
+      <bpmn:incoming>P07_F18</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="P07_cutoff" name="Вычислить UTC cutoff AddYears">
+      <bpmn:documentation>Вычислить UTC cutoff AddYears</bpmn:documentation>
+      <bpmn:incoming>P07_F3</bpmn:incoming>
+      <bpmn:outgoing>P07_F4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P07_audit" name="Удалить старые Local и доставленные до 10 пакетов по 1000">
+      <bpmn:documentation>Удалить старые Local и доставленные до 10 пакетов по 1000</bpmn:documentation>
+      <bpmn:incoming>P07_F4</bpmn:incoming>
+      <bpmn:outgoing>P07_F5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="P07_ae" name="Ошибка Audit" attachedToRef="P07_audit" cancelActivity="true">
+      <bpmn:documentation>Ошибка Audit</bpmn:documentation>
+      <bpmn:outgoing>P07_F6</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="P07_ae_Error"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="P07_aerr" name="Запомнить ошибку Audit">
+      <bpmn:documentation>Запомнить ошибку Audit</bpmn:documentation>
+      <bpmn:incoming>P07_F6</bpmn:incoming>
+      <bpmn:outgoing>P07_F7</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P07_am" name="Продолжить">
+      <bpmn:documentation>Продолжить</bpmn:documentation>
+      <bpmn:incoming>P07_F5</bpmn:incoming>
+      <bpmn:incoming>P07_F7</bpmn:incoming>
+      <bpmn:outgoing>P07_F8</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P07_technical" name="Удалить старые технические строки до 10 пакетов по 10000">
+      <bpmn:documentation>Удалить старые технические строки до 10 пакетов по 10000</bpmn:documentation>
+      <bpmn:incoming>P07_F8</bpmn:incoming>
+      <bpmn:outgoing>P07_F9</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="P07_te" name="Ошибка Technical" attachedToRef="P07_technical" cancelActivity="true">
+      <bpmn:documentation>Ошибка Technical</bpmn:documentation>
+      <bpmn:outgoing>P07_F10</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="P07_te_Error"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="P07_terr" name="Запомнить ошибку Technical">
+      <bpmn:documentation>Запомнить ошибку Technical</bpmn:documentation>
+      <bpmn:incoming>P07_F10</bpmn:incoming>
+      <bpmn:outgoing>P07_F11</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P07_tm" name="Продолжить">
+      <bpmn:documentation>Продолжить</bpmn:documentation>
+      <bpmn:incoming>P07_F9</bpmn:incoming>
+      <bpmn:incoming>P07_F11</bpmn:incoming>
+      <bpmn:outgoing>P07_F12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P07_files" name="Удалить только собственные старые лог файлы">
+      <bpmn:documentation>Удалить только собственные старые лог файлы</bpmn:documentation>
+      <bpmn:incoming>P07_F12</bpmn:incoming>
+      <bpmn:outgoing>P07_F13</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="P07_fe" name="Ошибка Files" attachedToRef="P07_files" cancelActivity="true">
+      <bpmn:documentation>Ошибка Files</bpmn:documentation>
+      <bpmn:outgoing>P07_F14</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="P07_fe_Error"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="P07_ferr" name="Запомнить ошибку Files">
+      <bpmn:documentation>Запомнить ошибку Files</bpmn:documentation>
+      <bpmn:incoming>P07_F14</bpmn:incoming>
+      <bpmn:outgoing>P07_F15</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P07_fm" name="Продолжить">
+      <bpmn:documentation>Продолжить</bpmn:documentation>
+      <bpmn:incoming>P07_F13</bpmn:incoming>
+      <bpmn:incoming>P07_F15</bpmn:incoming>
+      <bpmn:outgoing>P07_F16</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P07_health" name="Обновить LastCleanupUtc и ошибки этапов">
+      <bpmn:documentation>Обновить LastCleanupUtc и ошибки этапов</bpmn:documentation>
+      <bpmn:incoming>P07_F16</bpmn:incoming>
+      <bpmn:outgoing>P07_F17</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="P07_done" name="Очистка завершена или частична">
+      <bpmn:documentation>Очистка завершена или частична</bpmn:documentation>
+      <bpmn:incoming>P07_F17</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="P07_F1" sourceRef="P07_start" targetRef="P07_read" name=""/>
+    <bpmn:sequenceFlow id="P07_F2" sourceRef="P07_read" targetRef="P07_years" name=""/>
+    <bpmn:sequenceFlow id="P07_F3" sourceRef="P07_years" targetRef="P07_cutoff" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P07_F4" sourceRef="P07_cutoff" targetRef="P07_audit" name=""/>
+    <bpmn:sequenceFlow id="P07_F5" sourceRef="P07_audit" targetRef="P07_am" name=""/>
+    <bpmn:sequenceFlow id="P07_F6" sourceRef="P07_ae" targetRef="P07_aerr" name=""/>
+    <bpmn:sequenceFlow id="P07_F7" sourceRef="P07_aerr" targetRef="P07_am" name=""/>
+    <bpmn:sequenceFlow id="P07_F8" sourceRef="P07_am" targetRef="P07_technical" name=""/>
+    <bpmn:sequenceFlow id="P07_F9" sourceRef="P07_technical" targetRef="P07_tm" name=""/>
+    <bpmn:sequenceFlow id="P07_F10" sourceRef="P07_te" targetRef="P07_terr" name=""/>
+    <bpmn:sequenceFlow id="P07_F11" sourceRef="P07_terr" targetRef="P07_tm" name=""/>
+    <bpmn:sequenceFlow id="P07_F12" sourceRef="P07_tm" targetRef="P07_files" name=""/>
+    <bpmn:sequenceFlow id="P07_F13" sourceRef="P07_files" targetRef="P07_fm" name=""/>
+    <bpmn:sequenceFlow id="P07_F14" sourceRef="P07_fe" targetRef="P07_ferr" name=""/>
+    <bpmn:sequenceFlow id="P07_F15" sourceRef="P07_ferr" targetRef="P07_fm" name=""/>
+    <bpmn:sequenceFlow id="P07_F16" sourceRef="P07_fm" targetRef="P07_health" name=""/>
+    <bpmn:sequenceFlow id="P07_F17" sourceRef="P07_health" targetRef="P07_done" name=""/>
+    <bpmn:sequenceFlow id="P07_F18" sourceRef="P07_years" targetRef="P07_no" name="Нет"/>
+  </bpmn:process>
+  <bpmn:process id="P08" name="Проверка TLS соединения и тестового события" isExecutable="false">
+    <bpmn:documentation>Проверка использует поля формы без сохранения настроек. Начало и результат записываются разными EventId. В RuSIEM нужно искать EventId начала, указанный в сообщении интерфейса. Подтверждение приёма выполняет Root отдельно.</bpmn:documentation>
+    <bpmn:laneSet id="P08_Lanes">
+      <bpmn:lane id="P08_Lane0" name="Root">
+        <bpmn:flowNodeRef>P08_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_blocked</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_find</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_found</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_ok</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P08_Lane1" name="Guard и журнал">
+        <bpmn:flowNodeRef>P08_validate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_intent</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_local</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_fail</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_success</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_result</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_unverified</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P08_Lane2" name="TLS транспорт">
+        <bpmn:flowNodeRef>P08_send</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_sent</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P08_unknown</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P08_start" name="Проверить соединение">
+      <bpmn:documentation>Проверить соединение</bpmn:documentation>
+      <bpmn:outgoing>P08_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P08_validate" name="Проверить актуального Root адрес порт и публичный CA">
+      <bpmn:documentation>Проверить актуального Root адрес порт и публичный CA</bpmn:documentation>
+      <bpmn:incoming>P08_F1</bpmn:incoming>
+      <bpmn:outgoing>P08_F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P08_intent" name="Сохранить started и EventId теста локально">
+      <bpmn:documentation>Сохранить started и EventId теста локально</bpmn:documentation>
+      <bpmn:incoming>P08_F2</bpmn:incoming>
+      <bpmn:outgoing>P08_F3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P08_local" name="Локальная запись доступна" default="P08_F12">
+      <bpmn:documentation>Локальная запись доступна</bpmn:documentation>
+      <bpmn:incoming>P08_F3</bpmn:incoming>
+      <bpmn:outgoing>P08_F4</bpmn:outgoing>
+      <bpmn:outgoing>P08_F12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P08_blocked" name="Тест запрещён до восстановления записи">
+      <bpmn:documentation>Тест запрещён до восстановления записи</bpmn:documentation>
+      <bpmn:incoming>P08_F12</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sendTask id="P08_send" name="Выполнить TLS и Syslog CEF в адрес из формы">
+      <bpmn:documentation>Выполнить TLS и Syslog CEF в адрес из формы</bpmn:documentation>
+      <bpmn:incoming>P08_F4</bpmn:incoming>
+      <bpmn:outgoing>P08_F5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="P08_sent" name="Запись по TLS завершена">
+      <bpmn:documentation>Запись по TLS завершена</bpmn:documentation>
+      <bpmn:incoming>P08_F5</bpmn:incoming>
+      <bpmn:outgoing>P08_F6</bpmn:outgoing>
+      <bpmn:outgoing>P08_F7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P08_fail" name="Сохранить failure с новым EventId">
+      <bpmn:documentation>Сохранить failure с новым EventId</bpmn:documentation>
+      <bpmn:incoming>P08_F7</bpmn:incoming>
+      <bpmn:outgoing>P08_F8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P08_success" name="Сохранить success с новым EventId">
+      <bpmn:documentation>Сохранить success с новым EventId</bpmn:documentation>
+      <bpmn:incoming>P08_F6</bpmn:incoming>
+      <bpmn:outgoing>P08_F9</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P08_result" name="Подтверждение результата получено" default="P08_F13">
+      <bpmn:documentation>Подтверждение результата получено</bpmn:documentation>
+      <bpmn:incoming>P08_F9</bpmn:incoming>
+      <bpmn:outgoing>P08_F10</bpmn:outgoing>
+      <bpmn:outgoing>P08_F13</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P08_unknown" name="Проверить фактическое состояние до повтора">
+      <bpmn:documentation>Проверить фактическое состояние до повтора</bpmn:documentation>
+      <bpmn:incoming>P08_F13</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="P08_find" name="Найти исходный EventId в RuSIEM и проверить поля">
+      <bpmn:documentation>Найти исходный EventId в RuSIEM и проверить поля</bpmn:documentation>
+      <bpmn:incoming>P08_F10</bpmn:incoming>
+      <bpmn:outgoing>P08_F11</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="P08_found" name="Событие найдено и разобрано" default="P08_F15">
+      <bpmn:documentation>Событие найдено и разобрано</bpmn:documentation>
+      <bpmn:incoming>P08_F11</bpmn:incoming>
+      <bpmn:outgoing>P08_F14</bpmn:outgoing>
+      <bpmn:outgoing>P08_F15</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="P08_ok" name="Сквозная проверка подтверждена Root">
+      <bpmn:documentation>Сквозная проверка подтверждена Root</bpmn:documentation>
+      <bpmn:incoming>P08_F14</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="P08_unverified" name="Проверка не завершена передать администратору SIEM">
+      <bpmn:documentation>Проверка не завершена передать администратору SIEM</bpmn:documentation>
+      <bpmn:incoming>P08_F8</bpmn:incoming>
+      <bpmn:incoming>P08_F15</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="P08_F1" sourceRef="P08_start" targetRef="P08_validate" name=""/>
+    <bpmn:sequenceFlow id="P08_F2" sourceRef="P08_validate" targetRef="P08_intent" name=""/>
+    <bpmn:sequenceFlow id="P08_F3" sourceRef="P08_intent" targetRef="P08_local" name=""/>
+    <bpmn:sequenceFlow id="P08_F4" sourceRef="P08_local" targetRef="P08_send" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P08_F5" sourceRef="P08_send" targetRef="P08_sent" name=""/>
+    <bpmn:sequenceFlow id="P08_F6" sourceRef="P08_sent" targetRef="P08_success" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P08_F7" sourceRef="P08_sent" targetRef="P08_fail" name="Нет">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Нет</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P08_F8" sourceRef="P08_fail" targetRef="P08_unverified" name=""/>
+    <bpmn:sequenceFlow id="P08_F9" sourceRef="P08_success" targetRef="P08_result" name=""/>
+    <bpmn:sequenceFlow id="P08_F10" sourceRef="P08_result" targetRef="P08_find" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P08_F11" sourceRef="P08_find" targetRef="P08_found" name=""/>
+    <bpmn:sequenceFlow id="P08_F12" sourceRef="P08_local" targetRef="P08_blocked" name="Нет"/>
+    <bpmn:sequenceFlow id="P08_F13" sourceRef="P08_result" targetRef="P08_unknown" name="Commit неизвестен"/>
+    <bpmn:sequenceFlow id="P08_F14" sourceRef="P08_found" targetRef="P08_ok" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P08_F15" sourceRef="P08_found" targetRef="P08_unverified" name="Нет"/>
+  </bpmn:process>
+  <bpmn:collaboration id="P08_Collaboration">
+    <bpmn:participant id="P08_Guard" name="Guard" processRef="P08"/>
+    <bpmn:participant id="P08_SIEM" name="RuSIEM внешняя система"/>
+    <bpmn:messageFlow id="P08_CEF" sourceRef="P08_send" targetRef="P08_SIEM" messageRef="Message_CEF" name="Syslog TLS CEF"/>
+  </bpmn:collaboration>
+  <bpmn:process id="P09" name="Создание и формирование экспорта" isExecutable="false">
+    <bpmn:documentation>Запрос и изменения состояний экспорта сопровождаются обязательным аудитом. Worker при неисправном аудите не начинает новую обработку. На контрольных точках повторяются проверки. После restart Processing возвращается в очередь с событием восстановления.</bpmn:documentation>
+    <bpmn:laneSet id="P09_Lanes">
+      <bpmn:lane id="P09_Lane0" name="Пользователь и сервис">
+        <bpmn:flowNodeRef>P09_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_access</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_request</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_download</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P09_Lane1" name="Очередь и worker">
+        <bpmn:flowNodeRef>P09_queued</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_claim</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_failed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_end</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P09_Lane2" name="Файл и обязательный аудит">
+        <bpmn:flowNodeRef>P09_make</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_mg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_ready</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_restart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_recover</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P09_downloadRequest</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P09_start" name="Запрос экспорта">
+      <bpmn:documentation>Запрос экспорта</bpmn:documentation>
+      <bpmn:outgoing>P09_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P09_access" name="Проверить permissions область запрос и аудит">
+      <bpmn:documentation>Проверить permissions область запрос и аудит</bpmn:documentation>
+      <bpmn:incoming>P09_F1</bpmn:incoming>
+      <bpmn:outgoing>P09_F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P09_request" name="Сохранить задание и ExportRequested одной транзакцией">
+      <bpmn:documentation>Сохранить задание и ExportRequested одной транзакцией</bpmn:documentation>
+      <bpmn:incoming>P09_F2</bpmn:incoming>
+      <bpmn:outgoing>P09_F3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P09_queued" name="Ожидать исправного аудита и свободного worker">
+      <bpmn:documentation>Ожидать исправного аудита и свободного worker</bpmn:documentation>
+      <bpmn:incoming>P09_F3</bpmn:incoming>
+      <bpmn:incoming>P09_F12</bpmn:incoming>
+      <bpmn:outgoing>P09_F4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P09_claim" name="Захватить задание и сохранить ProcessingStarted">
+      <bpmn:documentation>Захватить задание и сохранить ProcessingStarted</bpmn:documentation>
+      <bpmn:incoming>P09_F4</bpmn:incoming>
+      <bpmn:outgoing>P09_F5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P09_make" name="Повторять проверки и сформировать файл">
+      <bpmn:documentation>Повторять проверки и сформировать файл</bpmn:documentation>
+      <bpmn:incoming>P09_F5</bpmn:incoming>
+      <bpmn:outgoing>P09_F6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P09_mg" name="Формирование успешно">
+      <bpmn:documentation>Формирование успешно</bpmn:documentation>
+      <bpmn:incoming>P09_F6</bpmn:incoming>
+      <bpmn:outgoing>P09_F7</bpmn:outgoing>
+      <bpmn:outgoing>P09_F8</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P09_ready" name="Сохранить артефакт Ready и ExportArchived одной транзакцией">
+      <bpmn:documentation>Сохранить артефакт Ready и ExportArchived одной транзакцией</bpmn:documentation>
+      <bpmn:incoming>P09_F7</bpmn:incoming>
+      <bpmn:outgoing>P09_F13</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:callActivity id="P09_download" name="Выдача и завершение P10" calledElement="P10">
+      <bpmn:documentation>Выдача и завершение P10</bpmn:documentation>
+      <bpmn:incoming>P09_F14</bpmn:incoming>
+      <bpmn:outgoing>P09_F10</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:serviceTask id="P09_failed" name="Сохранить Failed или Cancelled и итоговый аудит">
+      <bpmn:documentation>Сохранить Failed или Cancelled и итоговый аудит</bpmn:documentation>
+      <bpmn:incoming>P09_F8</bpmn:incoming>
+      <bpmn:outgoing>P09_F9</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="P09_end" name="Результат задания доступен при исправном аудите">
+      <bpmn:documentation>Результат задания доступен при исправном аудите</bpmn:documentation>
+      <bpmn:incoming>P09_F9</bpmn:incoming>
+      <bpmn:incoming>P09_F10</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="P09_restart" name="Worker после перезапуска">
+      <bpmn:documentation>Worker после перезапуска</bpmn:documentation>
+      <bpmn:outgoing>P09_F11</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P09_recover" name="Processing вернуть в Queued с событием восстановления">
+      <bpmn:documentation>Processing вернуть в Queued с событием восстановления</bpmn:documentation>
+      <bpmn:incoming>P09_F11</bpmn:incoming>
+      <bpmn:outgoing>P09_F12</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateCatchEvent id="P09_downloadRequest" name="Запрос пользователя на получение файла">
+      <bpmn:documentation>Запрос пользователя на получение файла</bpmn:documentation>
+      <bpmn:incoming>P09_F13</bpmn:incoming>
+      <bpmn:outgoing>P09_F14</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="P09_downloadRequest_Message"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="P09_F1" sourceRef="P09_start" targetRef="P09_access" name=""/>
+    <bpmn:sequenceFlow id="P09_F2" sourceRef="P09_access" targetRef="P09_request" name=""/>
+    <bpmn:sequenceFlow id="P09_F3" sourceRef="P09_request" targetRef="P09_queued" name=""/>
+    <bpmn:sequenceFlow id="P09_F4" sourceRef="P09_queued" targetRef="P09_claim" name=""/>
+    <bpmn:sequenceFlow id="P09_F5" sourceRef="P09_claim" targetRef="P09_make" name=""/>
+    <bpmn:sequenceFlow id="P09_F6" sourceRef="P09_make" targetRef="P09_mg" name=""/>
+    <bpmn:sequenceFlow id="P09_F7" sourceRef="P09_mg" targetRef="P09_ready" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P09_F8" sourceRef="P09_mg" targetRef="P09_failed" name="Нет">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Нет</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P09_F9" sourceRef="P09_failed" targetRef="P09_end" name=""/>
+    <bpmn:sequenceFlow id="P09_F10" sourceRef="P09_download" targetRef="P09_end" name=""/>
+    <bpmn:sequenceFlow id="P09_F11" sourceRef="P09_restart" targetRef="P09_recover" name=""/>
+    <bpmn:sequenceFlow id="P09_F12" sourceRef="P09_recover" targetRef="P09_queued" name=""/>
+    <bpmn:sequenceFlow id="P09_F13" sourceRef="P09_ready" targetRef="P09_downloadRequest" name=""/>
+    <bpmn:sequenceFlow id="P09_F14" sourceRef="P09_downloadRequest" targetRef="P09_download" name=""/>
+  </bpmn:process>
+  <bpmn:process id="P10" name="Выдача экспорта и неизвестный результат" isExecutable="false">
+    <bpmn:documentation>Передача одноразовая. Проверки доступа и аудита продолжаются при чтении. SentAt аудита и результат передачи файла различаются. При перезапуске незавершённая выдача не объявляется успешной: попытка unknown, задание Failed, требуется новый экспорт.</bpmn:documentation>
+    <bpmn:laneSet id="P10_Lanes">
+      <bpmn:lane id="P10_Lane0" name="Пользователь и доступ">
+        <bpmn:flowNodeRef>P10_start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_guard</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_begin</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P10_Lane1" name="Передача файла">
+        <bpmn:flowNodeRef>P10_stream</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_result</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_complete</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_end</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_crash</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="P10_Lane2" name="Архив и восстановление">
+        <bpmn:flowNodeRef>P10_unknown</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_new</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_expire</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P10_expiryCheck</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P10_start" name="Получить готовый файл">
+      <bpmn:documentation>Получить готовый файл</bpmn:documentation>
+      <bpmn:outgoing>P10_F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="P10_guard" name="Проверить права stamp срок артефакт и аудит">
+      <bpmn:documentation>Проверить права stamp срок артефакт и аудит</bpmn:documentation>
+      <bpmn:incoming>P10_F1</bpmn:incoming>
+      <bpmn:outgoing>P10_F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P10_begin" name="Захватить одноразовую выдачу и записать DeliveryStarted">
+      <bpmn:documentation>Захватить одноразовую выдачу и записать DeliveryStarted</bpmn:documentation>
+      <bpmn:incoming>P10_F2</bpmn:incoming>
+      <bpmn:outgoing>P10_F3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P10_stream" name="Передавать файл с повторными проверками">
+      <bpmn:documentation>Передавать файл с повторными проверками</bpmn:documentation>
+      <bpmn:incoming>P10_F3</bpmn:incoming>
+      <bpmn:outgoing>P10_F4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="P10_result" name="Итог передачи известен">
+      <bpmn:documentation>Итог передачи известен</bpmn:documentation>
+      <bpmn:incoming>P10_F4</bpmn:incoming>
+      <bpmn:outgoing>P10_F5</bpmn:outgoing>
+      <bpmn:outgoing>P10_F6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="P10_complete" name="Записать DeliveryCompleted и фактический результат">
+      <bpmn:documentation>Записать DeliveryCompleted и фактический результат</bpmn:documentation>
+      <bpmn:incoming>P10_F5</bpmn:incoming>
+      <bpmn:outgoing>P10_F10</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="P10_unknown" name="После restart отметить попытку unknown и задание Failed">
+      <bpmn:documentation>После restart отметить попытку unknown и задание Failed</bpmn:documentation>
+      <bpmn:incoming>P10_F6</bpmn:incoming>
+      <bpmn:incoming>P10_F7</bpmn:incoming>
+      <bpmn:outgoing>P10_F8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="P10_new" name="При неизвестном исходе создать новый экспорт">
+      <bpmn:documentation>При неизвестном исходе создать новый экспорт</bpmn:documentation>
+      <bpmn:incoming>P10_F8</bpmn:incoming>
+      <bpmn:outgoing>P10_F9</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="P10_expire" name="По сроку удалить артефакт и записать ExportExpired">
+      <bpmn:documentation>По сроку удалить артефакт и записать ExportExpired</bpmn:documentation>
+      <bpmn:incoming>P10_F12</bpmn:incoming>
+      <bpmn:outgoing>P10_F11</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="P10_end" name="Файл завершён или требуется новое задание">
+      <bpmn:documentation>Файл завершён или требуется новое задание</bpmn:documentation>
+      <bpmn:incoming>P10_F9</bpmn:incoming>
+      <bpmn:incoming>P10_F10</bpmn:incoming>
+      <bpmn:incoming>P10_F11</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="P10_crash" name="Worker после перезапуска">
+      <bpmn:documentation>Worker после перезапуска</bpmn:documentation>
+      <bpmn:outgoing>P10_F7</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="P10_expiryCheck" name="Проверка сроков каждые 30 секунд">
+      <bpmn:documentation>Проверка сроков каждые 30 секунд</bpmn:documentation>
+      <bpmn:outgoing>P10_F12</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="P10_expiryCheck_Timer">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">PT30S</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="P10_F1" sourceRef="P10_start" targetRef="P10_guard" name=""/>
+    <bpmn:sequenceFlow id="P10_F2" sourceRef="P10_guard" targetRef="P10_begin" name=""/>
+    <bpmn:sequenceFlow id="P10_F3" sourceRef="P10_begin" targetRef="P10_stream" name=""/>
+    <bpmn:sequenceFlow id="P10_F4" sourceRef="P10_stream" targetRef="P10_result" name=""/>
+    <bpmn:sequenceFlow id="P10_F5" sourceRef="P10_result" targetRef="P10_complete" name="Да">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Да</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P10_F6" sourceRef="P10_result" targetRef="P10_unknown" name="Нет">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">Нет</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="P10_F7" sourceRef="P10_crash" targetRef="P10_unknown" name=""/>
+    <bpmn:sequenceFlow id="P10_F8" sourceRef="P10_unknown" targetRef="P10_new" name=""/>
+    <bpmn:sequenceFlow id="P10_F9" sourceRef="P10_new" targetRef="P10_end" name=""/>
+    <bpmn:sequenceFlow id="P10_F10" sourceRef="P10_complete" targetRef="P10_end" name=""/>
+    <bpmn:sequenceFlow id="P10_F11" sourceRef="P10_expire" targetRef="P10_end" name=""/>
+    <bpmn:sequenceFlow id="P10_F12" sourceRef="P10_expiryCheck" targetRef="P10_expire" name=""/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="P01_Diagram" name="Обычный вход и отказ в доступе">
+    <bpmndi:BPMNPlane id="P01_Plane" bpmnElement="P01">
+      <bpmndi:BPMNShape id="P01_Lane0_DI" bpmnElement="P01_Lane0" isHorizontal="true">
+        <dc:Bounds x="10" y="100" width="2095.0" height="230"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_Lane1_DI" bpmnElement="P01_Lane1" isHorizontal="true">
+        <dc:Bounds x="10" y="330" width="2095.0" height="230"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_Lane2_DI" bpmnElement="P01_Lane2" isHorizontal="true">
+        <dc:Bounds x="10" y="560" width="2095.0" height="230"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_start_DI" bpmnElement="P01_start">
+        <dc:Bounds x="150.0" y="150.0" width="40" height="40"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="85.0" y="198.0" width="170" height="25"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_rate_DI" bpmnElement="P01_rate">
+        <dc:Bounds x="310.0" y="130.0" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_rg_DI" bpmnElement="P01_rg" isMarkerVisible="true">
+        <dc:Bounds x="580.0" y="140.0" width="60" height="60"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525.0" y="208.0" width="170" height="25"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_form_DI" bpmnElement="P01_form">
+        <dc:Bounds x="750.0" y="130.0" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_probe_DI" bpmnElement="P01_probe" isExpanded="false">
+        <dc:Bounds x="970.0" y="130.0" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_ag_DI" bpmnElement="P01_ag" isMarkerVisible="true">
+        <dc:Bounds x="1240.0" y="140.0" width="60" height="60"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1185.0" y="208.0" width="170" height="42"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_recovery_DI" bpmnElement="P01_recovery" isExpanded="false">
+        <dc:Bounds x="1410.0" y="130.0" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_identity_DI" bpmnElement="P01_identity">
+        <dc:Bounds x="970.0" y="360.0" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_ig_DI" bpmnElement="P01_ig" isMarkerVisible="true">
+        <dc:Bounds x="1240.0" y="370.0" width="60" height="60"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1185.0" y="438.0" width="170" height="25"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_reject_DI" bpmnElement="P01_reject">
+        <dc:Bounds x="530.0" y="470.0" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_denied_DI" bpmnElement="P01_denied">
+        <dc:Bounds x="810.0" y="490.0" width="40" height="40"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="745.0" y="538.0" width="170" height="42"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_record_DI" bpmnElement="P01_record">
+        <dc:Bounds x="1190.0" y="590.0" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_sg_DI" bpmnElement="P01_sg" isMarkerVisible="true">
+        <dc:Bounds x="1460.0" y="600.0" width="60" height="60"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1405.0" y="668.0" width="170" height="25"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_cookie_DI" bpmnElement="P01_cookie">
+        <dc:Bounds x="1630.0" y="360.0" width="160" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_ok_DI" bpmnElement="P01_ok">
+        <dc:Bounds x="1910.0" y="380.0" width="40" height="40"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1845.0" y="428.0" width="170" height="25"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_unknown_DI" bpmnElement="P01_unknown">
+        <dc:Bounds x="1690.0" y="720.0" width="40" height="40"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1625.0" y="768.0" width="170" height="59"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P01_formok_DI" bpmnElement="P01_formok" isMarkerVisible="true">
+        <dc:Bounds x="800.0" y="250.0" width="60" height="60"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="745.0" y="318.0" width="170" height="25"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P01_F1_DI" bpmnElement="P01_F1">
+        <di:waypoint x="190.0" y="170.0"/>
+        <di:waypoint x="310.0" y="170.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F2_DI" bpmnElement="P01_F2">
+        <di:waypoint x="470.0" y="170.0"/>
+        <di:waypoint x="580.0" y="170.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F3_DI" bpmnElement="P01_F3">
+        <di:waypoint x="640.0" y="170.0"/>
+        <di:waypoint x="750.0" y="170.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="623.0" y="94.5" width="144" height="21"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F4_DI" bpmnElement="P01_F4">
+        <di:waypoint x="640.0" y="170.0"/>
+        <di:waypoint x="660" y="170"/>
+        <di:waypoint x="660" y="120"/>
+        <di:waypoint x="500" y="120"/>
+        <di:waypoint x="500" y="510"/>
+        <di:waypoint x="530.0" y="510.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="428.0" y="286.5" width="144" height="21"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F5_DI" bpmnElement="P01_F5">
+        <di:waypoint x="1130.0" y="170.0"/>
+        <di:waypoint x="1240.0" y="170.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F6_DI" bpmnElement="P01_F6">
+        <di:waypoint x="1300.0" y="170.0"/>
+        <di:waypoint x="1320" y="170"/>
+        <di:waypoint x="1320" y="110"/>
+        <di:waypoint x="950" y="110"/>
+        <di:waypoint x="950" y="400"/>
+        <di:waypoint x="970.0" y="400.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="878.0" y="226.5" width="144" height="21"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F7_DI" bpmnElement="P01_F7">
+        <di:waypoint x="1300.0" y="170.0"/>
+        <di:waypoint x="1410.0" y="170.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1283.0" y="94.5" width="144" height="21"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F8_DI" bpmnElement="P01_F8">
+        <di:waypoint x="1570.0" y="170.0"/>
+        <di:waypoint x="1590" y="170"/>
+        <di:waypoint x="1590" y="340"/>
+        <di:waypoint x="940" y="340"/>
+        <di:waypoint x="940" y="470"/>
+        <di:waypoint x="790" y="470"/>
+        <di:waypoint x="790" y="510"/>
+        <di:waypoint x="810.0" y="510.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1193.0" y="303.5" width="144" height="37"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F9_DI" bpmnElement="P01_F9">
+        <di:waypoint x="1130.0" y="400.0"/>
+        <di:waypoint x="1240.0" y="400.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F10_DI" bpmnElement="P01_F10">
+        <di:waypoint x="1300.0" y="400.0"/>
+        <di:waypoint x="1320" y="400"/>
+        <di:waypoint x="1320" y="350"/>
+        <di:waypoint x="1160" y="350"/>
+        <di:waypoint x="1160" y="630"/>
+        <di:waypoint x="1190.0" y="630.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1088.0" y="499.5" width="144" height="21"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F11_DI" bpmnElement="P01_F11">
+        <di:waypoint x="1300.0" y="400.0"/>
+        <di:waypoint x="1320" y="400"/>
+        <di:waypoint x="1320" y="340"/>
+        <di:waypoint x="940" y="340"/>
+        <di:waypoint x="940" y="450"/>
+        <di:waypoint x="510" y="450"/>
+        <di:waypoint x="510" y="510"/>
+        <di:waypoint x="530.0" y="510.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="653.0" y="421.5" width="144" height="21"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F12_DI" bpmnElement="P01_F12">
+        <di:waypoint x="690.0" y="510.0"/>
+        <di:waypoint x="810.0" y="510.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F13_DI" bpmnElement="P01_F13">
+        <di:waypoint x="1350.0" y="630.0"/>
+        <di:waypoint x="1460.0" y="630.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F14_DI" bpmnElement="P01_F14">
+        <di:waypoint x="1520.0" y="630.0"/>
+        <di:waypoint x="1540" y="630"/>
+        <di:waypoint x="1540" y="400"/>
+        <di:waypoint x="1630.0" y="400.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1468.0" y="486.5" width="144" height="21"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F15_DI" bpmnElement="P01_F15">
+        <di:waypoint x="1520.0" y="630.0"/>
+        <di:waypoint x="1540" y="630"/>
+        <di:waypoint x="1540" y="490"/>
+        <di:waypoint x="870" y="490"/>
+        <di:waypoint x="870" y="470"/>
+        <di:waypoint x="790" y="470"/>
+        <di:waypoint x="790" y="510"/>
+        <di:waypoint x="810.0" y="510.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1133.0" y="544.5" width="144" height="21"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F16_DI" bpmnElement="P01_F16">
+        <di:waypoint x="1520.0" y="630.0"/>
+        <di:waypoint x="1670" y="630"/>
+        <di:waypoint x="1670" y="740"/>
+        <di:waypoint x="1690.0" y="740.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1598.0" y="648.5" width="144" height="37"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F17_DI" bpmnElement="P01_F17">
+        <di:waypoint x="1790.0" y="400.0"/>
+        <di:waypoint x="1910.0" y="400.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F18_DI" bpmnElement="P01_F18">
+        <di:waypoint x="910.0" y="170.0"/>
+        <di:waypoint x="930" y="170"/>
+        <di:waypoint x="930" y="230"/>
+        <di:waypoint x="780" y="230"/>
+        <di:waypoint x="780" y="280"/>
+        <di:waypoint x="800.0" y="280.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F19_DI" bpmnElement="P01_F19">
+        <di:waypoint x="860.0" y="280.0"/>
+        <di:waypoint x="950" y="280"/>
+        <di:waypoint x="950" y="170"/>
+        <di:waypoint x="970.0" y="170.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="878.0" y="254.5" width="144" height="21"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P01_F20_DI" bpmnElement="P01_F20">
+        <di:waypoint x="860.0" y="280.0"/>
+        <di:waypoint x="940" y="280"/>
+        <di:waypoint x="940" y="450"/>
+        <di:waypoint x="510" y="450"/>
+        <di:waypoint x="510" y="510"/>
+        <di:waypoint x="530.0" y="510.0"/>
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="653.0" y="374.5" width="144" height="21"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

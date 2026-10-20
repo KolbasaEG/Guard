@@ -46,7 +46,7 @@ public sealed class ExportDeliveryAttempt
   public ExportJob Job { get; set; } = null!;
   public DateTimeOffset StartedAtUtc { get; set; }
   public DateTimeOffset? CompletedAtUtc { get; set; }
-  public bool Succeeded { get; set; }
+  public bool? Succeeded { get; set; }
 }
 
 public sealed class ExportRetentionSettings

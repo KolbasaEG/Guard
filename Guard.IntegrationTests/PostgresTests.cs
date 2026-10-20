@@ -36,6 +36,7 @@ internal static class PostgresTests
         return;
       }
       await AccountPolicyMigrationTests.RunAsync(db, check);
+      await AuditJournalIntegrationTests.RunAsync(factory, check);
       await PersonalPaginationIndexTests.RunAsync(factory, check);
       await PersonalIdentityBoundaryTests.RunAsync(factory, check);
       var own = new Subdivision { Name = "Own", Path = "/1/", CreatedBy = "test" };
@@ -52,6 +53,7 @@ internal static class PostgresTests
       foreach (var permission in PermissionCatalog.All.Where(p => !p.RootOnly)) db.RoleClaims.Add(new() { RoleId = adminRole.Id, ClaimType = "Permission", ClaimValue = permission.Code });
       await db.SaveChangesAsync();
 
+      await MandatoryAuditIntegrationTests.RunAsync(factory, check);
       await CurrentSessionTests.RunIntegrationAsync(factory, check);
       await PermissionReaderIntegrationTests.RunAsync(factory, check);
       await DataAccessScopeReaderIntegrationTests.RunAsync(factory, check);

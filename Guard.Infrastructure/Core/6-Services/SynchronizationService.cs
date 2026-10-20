@@ -3,6 +3,7 @@ using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
+using Guard.Core.Logging;
 
 namespace Guard.Core.Services;
 
@@ -27,7 +28,9 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
     await permissions.RequireAsync(readPermission, ct);
     await using var db = await factory.CreateDbContextAsync(ct);
     var mode = await db.SynchronizationSettings.AsNoTracking().Where(s => s.Id == 1).Select(s => s.Mode).SingleAsync(ct);
-    return new(mode, await GlobalActualAtAsync(db, ct));
+    var actual = await GlobalActualAtAsync(db, ct);
+    await permissions.RequireAsync(readPermission, ct);
+    return new(mode, actual);
   }
 
   private static Task<DateTime?> GlobalActualAtAsync(ApplicationDbContext db, CancellationToken ct) =>
@@ -43,7 +46,9 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
       .Select(SynchronizationProjection.Settings).SingleAsync(ct);
     var last = await db.SynchronizationRuns.AsNoTracking().OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id)
       .Select(SynchronizationProjection.Run).FirstOrDefaultAsync(ct);
-    return new(settings, null, await GlobalActualAtAsync(db, ct), last, settings.Mode == DataManagementMode.Api);
+    var actual = await GlobalActualAtAsync(db, ct);
+    if (!(await permissions.GetCurrentAsync(ct)).IsRoot) throw new UnauthorizedAccessException();
+    return new(settings, null, actual, last, settings.Mode == DataManagementMode.Api);
   }
 
   public async Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null, bool? completeSnapshotGuaranteed = null)
@@ -85,15 +90,12 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
         (string.IsNullOrWhiteSpace(settings.ApiUsername) || string.IsNullOrEmpty(settings.ProtectedApiPassword)))
       throw new ArgumentException("Для управления из API укажите логин и пароль Basic auth.");
     settings.ModifiedBy = actor.UserId; settings.ModifiedAt = DateTime.UtcNow;
-    await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-    try {
-      audit.LogIdentityEvent(Guard.Core.Enums.AuditEventType.SynchronizationSettingsChanged, actor.UserId,
-        details: $"Mode={mode}; ScheduleEnabled={enabled}; DailyTime={time:HH:mm}; TimeZone={TimeZoneInfo.Local.Id}; ApiHeadSubdivisionId={apiHeadSubdivisionId}; CompleteSnapshotGuaranteed={settings.CompleteSnapshotGuaranteed}; PreviouslyConfirmed={previouslyConfirmed}; SourceChanged={sourceChanged}");
-    }
-    catch (Exception ex) {
-      logger.LogError(ex, "Настройки синхронизации сохранены, но событие аудита {EventType} для {SettingsId} не доставлено",
-        Guard.Core.Enums.AuditEventType.SynchronizationSettingsChanged, settings.Id);
-    }
+    await db.SaveChangesAsync(ct);
+    await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(Guard.Core.Enums.AuditEventType.SynchronizationSettingsChanged, actor.UserId,
+      details: $"Mode={mode}; ScheduleEnabled={enabled}; DailyTime={time:HH:mm}; ApiHeadSubdivisionId={apiHeadSubdivisionId}; CompleteSnapshotGuaranteed={settings.CompleteSnapshotGuaranteed}; PreviouslyConfirmed={previouslyConfirmed}; SourceChanged={sourceChanged}")
+      with { ObjectType = "SynchronizationSettings", ObjectId = "1" }, ct);
+    await AuditTransaction.CommitAsync(transaction, ct);
+    logger.LogDebug("Настройки синхронизации {SettingsId} сохранены с аудитом", settings.Id);
   }
 
   public async Task<SynchronizationRunDto> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false)
@@ -115,7 +117,7 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
     var request = new SynchronizationRun { ActorId = actor.UserId, PoolId = pool, UpdatedSince = updatedSince,
       Status = SynchronizationStatus.Queued, QueuedAt = DateTime.UtcNow, StartedAt = DateTime.UtcNow,
       RequestedSettingsVersion = settings.Version, Phase = "Queued" };
-    queueDb.Add(request); await queueDb.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+    queueDb.Add(request); await queueDb.SaveChangesAsync(ct); await AuditTransaction.CommitAsync(transaction, ct);
     return SynchronizationProjection.FromRun(request);
   }
 
@@ -127,12 +129,14 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
     var history = await db.SynchronizationRuns.AsNoTracking()
       .OrderByDescending(r => r.StartedAt).ThenByDescending(r => r.Id).Take(20)
       .Select(SynchronizationProjection.Run).ToListAsync(ct);
+    if (!(await permissions.GetCurrentAsync(ct)).IsRoot) throw new UnauthorizedAccessException();
     return history.AsReadOnly();
   }
 }
 
 public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbContext> factory,
-  IDirectoryApiClient client, IPermissionService permissions, IAuditService audit, ILogger<ApiSynchronizationRunner> logger, ApiCredentialProtector credentials, IHostApplicationLifetime? applicationLifetime = null, TimeProvider? timeProvider = null)
+  IDirectoryApiClient client, IPermissionService permissions, IAuditService audit, ILogger<ApiSynchronizationRunner> logger, ApiCredentialProtector credentials, IHostApplicationLifetime? applicationLifetime = null, TimeProvider? timeProvider = null,
+  IOperationAvailability? availability = null)
 {
   public Task CheckConnectionAsync(string baseUrl, string username, string password, CancellationToken ct) => client.PingAsync(baseUrl, username, password, ct);
 
@@ -152,6 +156,7 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
 
   public async Task<SynchronizationRun> RunAsync(string actor, Guid? pool, bool scheduled, CancellationToken ct, DateOnly? updatedSince = null, Guid? queuedRunId = null)
   {
+    if (availability != null) await availability.RequireWorkingAsync(ct);
     var clock = timeProvider ?? TimeProvider.System;
     await using var db = await factory.CreateDbContextAsync(ct);
     db.IsSynchronization = true;
@@ -281,22 +286,18 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
         await db.SaveChangesAsync(ct);
         await db.Subdivisions.Where(s => coveredIds.Contains(s.Id))
           .ExecuteUpdateAsync(s => s.SetProperty(p => p.SynchronizedAt, run.CompletedAt), ct);
-        await transaction.CommitAsync(ct); committed = true;
+        if (availability != null) await availability.RequireWorkingAsync(ct);
+        await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(Guard.Core.Enums.AuditEventType.SynchronizationCompleted,
+          scheduled ? null : actor, details: $"RunId={run.Id}; PoolId={pool}; Status={run.Status}; Archived={run.Archived}; Restored={run.Restored}")
+          with { Actor = scheduled ? null : actor, ActorKind = scheduled ? "system" : "user", ObjectType = "SynchronizationRun", ObjectId = run.Id.ToString() }, ct);
+        await AuditTransaction.CommitAsync(transaction, ct); committed = true;
         phase = "Committed";
       }
+      catch (OperationCommitUnknownException) { committed = true; throw; }
       catch { await transaction.RollbackAsync(CancellationToken.None); throw; }
       logger.LogInformation("Синхронизация {RunId} завершена: добавлено {Added}, изменено {Updated}, архивировано {Archived}", run.Id, run.Added, run.Updated, run.Archived);
       logger.LogInformation("Синхронизация {RunId}: событий выхода {ExitEventCount}, повторных {RepeatedExitEvents}, неизвестных сотрудников {UnknownExitEmployees}, длительность {SyncElapsedMs} мс",
         run.Id, run.ExitEvents, run.RepeatedExitEvents, run.UnknownExitEmployees, elapsed.Elapsed.TotalMilliseconds);
-      // The snapshot and Succeeded are committed together; audit delivery cannot undo them.
-      try {
-        audit.LogIdentityEvent(Guard.Core.Enums.AuditEventType.SynchronizationCompleted, actor,
-          details: $"RunId={run.Id}; PoolId={pool}; Status={run.Status}; Archived={run.Archived}; Restored={run.Restored}");
-      }
-      catch (Exception ex) {
-        logger.LogError(ex, "Синхронизация {RunId} сохранена успешно, но событие аудита {EventType} не доставлено",
-          run.Id, Guard.Core.Enums.AuditEventType.SynchronizationCompleted);
-      }
       return run;
     }
     catch (Exception ex) when (run != null && !committed)

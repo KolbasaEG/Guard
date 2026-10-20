@@ -66,14 +66,16 @@ internal static class IdentityRollbackIntegrationTests
           "reset" => service.ResetPasswordFromDtoAsync(new(user.Id, "ReplacementPassword123!")),
           _ => service.SetUserLockoutAsync(user.Id, scenario == "block")
         };
-        delivery.Audits = delivery.Notifications = 0;
+        delivery.Audits = delivery.Notifications = 0; delivery.Rejected.Clear();
         await PostgresTests.ThrowsAsync<UserSecurityException>(async () => { await Execute(); }, check,
           scenario + ": failed mandatory IdentityResult rejects compound operation");
         check(fault.Calls == fault.FailAt, scenario + ": intended mandatory step was reached");
         check(JsonSerializer.Serialize(await Read()) == original, scenario + ": rollback restores all user fields, hash, concurrency and security stamps");
         check((await observer.UserRoles.AsNoTracking().Where(r => r.UserId == user.Id).ToArrayAsync())
           .Select(r => r.RoleId).Order().SequenceEqual(roles.Select(r => r.RoleId).Order()), scenario + ": rollback preserves role assignments");
-        check(delivery.Audits == 0 && delivery.Notifications == 0, scenario + ": rollback emits no success audit or access notification");
+        check(delivery.Audits == 0 && delivery.Notifications == 0 && delivery.Rejected.Count == 1 &&
+          delivery.Rejected[0].Outcome == "failure" && delivery.Rejected[0].ObjectId == user.Id,
+          scenario + ": rollback records a separate rejection without success or access notification");
         fault.FailAt = 0; fault.BeforeFailure = null;
         await Execute();
         check(delivery.Audits == 1 && delivery.Notifications == 1 && JsonSerializer.Serialize(await Read()) != original,
@@ -103,6 +105,8 @@ internal static class IdentityRollbackIntegrationTests
   private sealed class Delivery : IAuditService, IAccessChangeNotifier
   {
     public int Audits, Notifications;
+    public List<AuditEventData> Rejected = [];
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); if (entry.Outcome != "success") Rejected.Add(entry); else LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
     public void LogIdentityEvent(AuditEventType type, string? user, string? ip = null, string? details = null) => Audits++;
     public Task PublishAsync(IEnumerable<string> ids) { Notifications++; return Task.CompletedTask; }
     public IDisposable Subscribe(string id, Func<Task> refresh) => throw new NotSupportedException();

@@ -10,7 +10,7 @@
     <RadzenText Style="overflow-wrap:anywhere;">SHA-256: @details.Sha256</RadzenText>
     <RadzenText>Начало передачи UTC: @details.DeliveryStartedAtUtc</RadzenText>
     <RadzenText>Завершение передачи UTC: @details.DeliveryCompletedAtUtc</RadzenText>
-    <RadzenText>Результат: @(details.DeliverySucceeded == true ? "Файл передан сервером" : details.DeliverySucceeded == false ? "Передача не завершена" : "Передача не начиналась")</RadzenText>
+    <RadzenText>Результат: @(details.DeliverySucceeded == true ? "Файл передан сервером" : details.DeliverySucceeded == false ? "Передача не завершена" : details.DeliveryStartedAtUtc != null ? "Результат передачи неизвестен" : "Передача не начиналась")</RadzenText>
   }
 </EntityInfo>
 @code {

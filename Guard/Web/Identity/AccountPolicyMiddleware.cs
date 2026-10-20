@@ -9,9 +9,12 @@ namespace Guard.Core.Identity;
 
 public sealed class AccountPolicyMiddleware(RequestDelegate next)
 {
-  public async Task InvokeAsync(HttpContext context, IAccountPolicyService policies, UserManager<ApplicationUser> manager)
+  public async Task InvokeAsync(HttpContext context, IAccountPolicyService policies, UserManager<ApplicationUser> manager, IAuditService? audit = null)
   {
-    if (context.User.Identity?.IsAuthenticated == true && !context.Request.Path.StartsWithSegments("/Account/Logout"))
+    if (context.User.Identity?.IsAuthenticated == true && !context.Request.Path.StartsWithSegments("/Account/Logout") &&
+      !context.Request.Path.StartsWithSegments("/Account/Audit") && !context.Request.Path.StartsWithSegments("/audit/settings") &&
+      !context.Request.Path.StartsWithSegments("/audit/diagnostics") &&
+      !context.User.HasClaim("guard:audit-recovery", "1"))
     {
       var id = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
       var user = id == null ? null : await manager.FindByIdAsync(id);
@@ -19,6 +22,13 @@ public sealed class AccountPolicyMiddleware(RequestDelegate next)
       var state = user == null ? new AccountState(true, false) : await policies.CheckAsync(user.Id, context.RequestAborted);
       if (state.Blocked || user?.SecurityStamp != stamp) {
         await context.SignOutAsync(IdentityConstants.ApplicationScheme);
+        if (audit != null) {
+          try {
+            await audit.RecordAsync(AuditEventData.ForAccount(Guard.Core.Enums.AuditEventType.SessionRevoked, id,
+              ClientIpAddress.Get(context)) with { Outcome = "denied", ReasonCode = state.Blocked ? "AccountBlocked" : "SecurityStampChanged" }, context.RequestAborted);
+          }
+          catch (AuditUnavailableException) { /* Отзыв сессии выполняется и при недоступности журнала. */ }
+        }
         context.Response.Redirect("/Account/Login");
         return;
       }

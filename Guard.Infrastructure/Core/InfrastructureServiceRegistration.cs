@@ -2,6 +2,7 @@ using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Identity;
 using Guard.Core.Interceptors;
+using Guard.Core.Logging;
 using Guard.Core.Repositories;
 using Guard.Core.Services;
 using Guard.Core.Services.Exports;
@@ -29,7 +30,6 @@ public static class InfrastructureServiceRegistration
     {
       options.UseNpgsql(connectionString);
       options.EnableDetailedErrors(development);
-      options.EnableSensitiveDataLogging(development);
     });
 
     // 2. Scoped DbContext для Identity stores в HTTP / отдельном scope операции.
@@ -42,8 +42,7 @@ public static class InfrastructureServiceRegistration
       optionsBuilder.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
 
       optionsBuilder.EnableDetailedErrors(development);
-      optionsBuilder.EnableSensitiveDataLogging(development);
-      return new ApplicationDbContext(optionsBuilder.Options);
+      return new ApplicationDbContext(optionsBuilder.Options, sp.GetRequiredService<AuditPersistence>());
     });
 
     // 3. Фабрика для работы с изолированной БД логов
@@ -75,6 +74,18 @@ public static class InfrastructureServiceRegistration
     // === REPOSITORIES & SERVICES (Scrutor)
     // =====================================================
     services.AddScoped<ILogSearchService, LogService>();
+    services.AddSingleton<InternalLogWriter>();
+    services.AddSingleton<AuditHealth>();
+    services.AddSingleton(sp => new AuditJournal(configuration.GetConnectionString("DefaultConnection")
+      ?? throw new InvalidOperationException("Не настроена основная БД аудита."),
+      sp.GetRequiredService<InternalLogWriter>(), sp.GetRequiredService<AuditHealth>()));
+    services.AddSingleton<IOperationAvailability>(sp => sp.GetRequiredService<AuditJournal>());
+    services.AddSingleton<AuditPersistence>();
+    services.AddOptions<AuditSyslogOptions>().Bind(configuration.GetSection("Audit:Syslog"))
+      .Validate(o => !string.IsNullOrWhiteSpace(o.Host) && o.Port is >= 1 and <= 65535, "Некорректный адрес SIEM.");
+    services.AddSingleton<IAuditTransport, SyslogAuditTransport>();
+    services.AddSingleton<AuditDeliveryProcessor>();
+    services.AddSingleton<LogRetention>();
     services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
     services.AddHttpContextAccessor();
     services.AddSingleton<IAccessChangeNotifier, AccessChangeNotifier>();

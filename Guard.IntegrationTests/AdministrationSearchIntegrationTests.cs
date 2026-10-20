@@ -19,8 +19,8 @@ internal static class AdministrationSearchIntegrationTests
     var entries = Enumerable.Range(1, 24).Select(n => new ApplicationRole { Name = $"search-role-{n:00}", NormalizedName = $"SEARCH-ROLE-{n:00}" }).ToArray();
     db.Roles.AddRange(entries); await db.SaveChangesAsync();
     // This database is created and dropped by PostgresTests. No schema changes run against application databases.
-    await db.Database.ExecuteSqlRawAsync("CREATE TABLE logs (timestamp timestamp without time zone, level text, layer text, message text, exception text, user_id text, ip_address text)");
-    await db.Database.ExecuteSqlRawAsync("INSERT INTO logs SELECT timestamp '2026-01-01', CASE WHEN n % 2 = 0 THEN 'Error' ELSE 'Information' END, 'Service', 'search-log-' || lpad(n::text, 2, '0'), NULL, 'test', NULL FROM generate_series(1, 24) n");
+    await db.Database.ExecuteSqlRawAsync("CREATE TABLE logs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), timestamp timestamp without time zone, level text, layer text, message text, message_template text, properties jsonb, exception text, user_id text, ip_address text)");
+    await db.Database.ExecuteSqlRawAsync("INSERT INTO logs (timestamp, level, layer, message, exception, user_id, ip_address) SELECT timestamp '2026-01-01', CASE WHEN n % 2 = 0 THEN 'Error' ELSE 'Information' END, 'Service', 'search-log-' || lpad(n::text, 2, '0'), NULL, 'test', NULL FROM generate_series(1, 24) n");
     var logs = new LogService(new LogFactory(db.Database.GetConnectionString()!), permissions);
     ExportFilter Text(string field, string op, object value) => new(field, op, JsonSerializer.SerializeToElement(value));
     var roleFilter = Text("Name", "StartsWith", "SEARCH-ROLE-");
@@ -41,7 +41,7 @@ internal static class AdministrationSearchIntegrationTests
       check((await logs.SearchAsync(new(Filter: Text("Level", "NotIn", new[] { "Error" })))).Count == 12, "log negative selection executes in SQL");
       check((await logs.SearchAsync(new(Filter: Text("Timestamp", "GreaterThanOrEquals", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc))))).Count == 24, "log UTC boundary executes in SQL");
       check((await logs.SearchAsync(new(Filter: new("Exception", "IsNull")))).Count == 24, "log null filter executes in SQL");
-      await db.Database.ExecuteSqlRawAsync("INSERT INTO logs SELECT * FROM logs WHERE message = 'search-log-01'");
+      await db.Database.ExecuteSqlRawAsync("INSERT INTO logs (timestamp, level, layer, message, exception, user_id, ip_address) SELECT timestamp, level, layer, message, exception, user_id, ip_address FROM logs WHERE message = 'search-log-01'");
       var duplicates = await logs.SearchAsync(new(Filter: Text("Message", "Equals", "search-log-01")));
       check(duplicates.Count == 2 && duplicates.Items.Count == 2 && !Equals(duplicates.Items[0], duplicates.Items[1]),
         "identical log events remain distinct Radzen row keys");

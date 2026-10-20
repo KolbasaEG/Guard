@@ -62,9 +62,22 @@
 
   public async Task LoginUser()
   {
-    if (!editContext.Validate()) return;
-    var result = await Accounts.SignInAsync(Input.Email, Input.Password, Input.RememberMe, HttpContext.RequestAborted);
+    if (!editContext.Validate()) {
+      try { await Accounts.RecordRejectedSignInAsync(Input.Email, HttpContext.RequestAborted); }
+      catch (AuditUnavailableException) { errorMessage = "Обязательный аудит недоступен. Работа системы приостановлена."; }
+      return;
+    }
+    LocalSignInStatus result;
+    try { result = await Accounts.SignInAsync(Input.Email, Input.Password, Input.RememberMe, HttpContext.RequestAborted); }
+    catch (AuditUnavailableException) { errorMessage = "Обязательный аудит недоступен. Работа системы приостановлена."; return; }
+    catch (OperationCommitUnknownException) { errorMessage = "Результат входа не подтверждён. Обновите страницу и проверьте состояние аудита."; return; }
     switch (result) {
+      case LocalSignInStatus.RecoveryOnly:
+        RedirectManager.RedirectTo("Account/Audit");
+        break;
+      case LocalSignInStatus.AuditUnavailable:
+        errorMessage = "Работа системы приостановлена: обязательный аудит недоступен. Root может войти только в диагностику.";
+        break;
       case LocalSignInStatus.Succeeded:
         RedirectManager.RedirectTo(AccountReturnUrl.Normalize(ReturnUrl));
         break;

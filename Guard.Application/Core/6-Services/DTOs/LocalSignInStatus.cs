@@ -2,9 +2,11 @@ namespace Guard.Core.Services.DTOs;
 
 public enum LocalSignInStatus
 {
-  Succeeded,
+  Succeeded = 0,
   Failed,
   NotAllowed,
   LockedOut,
-  RequiresTwoFactor
+  RequiresTwoFactor,
+  RecoveryOnly = 100,
+  AuditUnavailable = 101
 }

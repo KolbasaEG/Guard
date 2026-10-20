@@ -4,12 +4,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services;
 
-public sealed class DirectoryManagementService(IDbContextFactory<ApplicationDbContext> factory) : IDirectoryManagementService
+public sealed class DirectoryManagementService(IDbContextFactory<ApplicationDbContext> factory, IOperationAvailability? availability = null) : IDirectoryManagementService
 {
   public async Task<bool> IsApiManagedAsync(CancellationToken ct = default)
   {
+    if (availability != null) await availability.RequireWorkingAsync(ct);
     await using var db = await factory.CreateDbContextAsync(ct);
-    return await db.SynchronizationSettings.AnyAsync(s => s.Id == 1 && s.Mode == DataManagementMode.Api, ct);
+    var result = await db.SynchronizationSettings.AnyAsync(s => s.Id == 1 && s.Mode == DataManagementMode.Api, ct);
+    if (availability != null) await availability.RequireWorkingAsync(ct);
+    return result;
   }
 
   internal static async Task RequireLocalAsync(IUnitOfWork work, CancellationToken ct)

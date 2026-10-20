@@ -148,6 +148,8 @@ internal static class ServiceRegistrationTests
       check(a.GetRequiredService<UserManager<ApplicationUser>>() is PolicyUserManager &&
         a.GetRequiredService<SignInManager<ApplicationUser>>() is IpRestrictedSignInManager,
         "production Identity retains policy and IP-aware managers");
+      check(a.GetRequiredService<ApplicationDbContext>().AuditWriter != null,
+        "scoped Identity context uses mandatory audit persistence");
       var db = a.GetRequiredService<ApplicationDbContext>();
       check(ReferenceEquals(db, a.GetRequiredService<ApplicationDbContext>()) && !ReferenceEquals(db, b.GetRequiredService<ApplicationDbContext>()),
         "Identity context is shared within its scope and isolated between scopes");
@@ -160,14 +162,15 @@ internal static class ServiceRegistrationTests
       check(db.GetService<IDbContextOptions>().Extensions.OfType<CoreOptionsExtension>().Single().Interceptors!
         .Contains(a.GetRequiredService<AuditSaveChangesInterceptor>()), "scoped Identity context retains audit interceptor");
       await using var independent = await provider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContextAsync();
+      check(independent.AuditWriter != null, "factory context uses mandatory audit persistence");
       var factoryOptions = independent.GetService<IDbContextOptions>().Extensions.OfType<CoreOptionsExtension>().Single();
       check(!ReferenceEquals(independent, db) && !(factoryOptions.Interceptors?.Any() ?? false),
         "singleton factory creates an independent context without scoped audit interceptor");
-      check(factoryOptions.IsSensitiveDataLoggingEnabled == development && factoryOptions.DetailedErrorsEnabled == development,
-        "factory diagnostic options follow environment");
+      check(!factoryOptions.IsSensitiveDataLoggingEnabled && factoryOptions.DetailedErrorsEnabled == development,
+        "factory diagnostics preserve environment detail without exposing SQL parameter values");
       var scopedOptions = db.GetService<IDbContextOptions>().Extensions.OfType<CoreOptionsExtension>().Single();
-      check(scopedOptions.IsSensitiveDataLoggingEnabled == development && scopedOptions.DetailedErrorsEnabled == development,
-        "scoped diagnostic options follow environment");
+      check(!scopedOptions.IsSensitiveDataLoggingEnabled && scopedOptions.DetailedErrorsEnabled == development,
+        "scoped diagnostics preserve environment detail without exposing Identity SQL parameter values");
       var calls = timeouts.Count;
       check(a.GetRequiredService<IDirectoryApiClient>() is DirectoryApiClient && b.GetRequiredService<IDirectoryApiClient>() is DirectoryApiClient &&
         timeouts.Count == calls + 2 && timeouts.All(t => t == TimeSpan.FromSeconds(60)),

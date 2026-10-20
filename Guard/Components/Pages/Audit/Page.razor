@@ -1,0 +1,3 @@
+@page "/audit"
+@attribute [Authorize(Policy = Permissions.Audit.Read)]
+<PermissionView Permission="@Permissions.Audit.Read"><ChildContent><Guard.Components.Pages.Audit.Index /></ChildContent><NotAllowed><AccessDenied /></NotAllowed></PermissionView>

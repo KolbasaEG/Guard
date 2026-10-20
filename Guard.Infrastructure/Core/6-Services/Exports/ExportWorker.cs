@@ -1,5 +1,6 @@
 using Guard.Core.Contexts;
 using Guard.Core.Identity;
+using Guard.Core.Logging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Services.Exports;
@@ -21,7 +22,12 @@ public sealed class ExportWorker(IServiceScopeFactory scopes, ILogger<ExportWork
     try {
     while (!stoppingToken.IsCancellationRequested) {
       try {
-        await using var scope = scopes.CreateAsyncScope(); var processor = scope.ServiceProvider.GetRequiredService<ExportProcessor>();
+        await using var scope = scopes.CreateAsyncScope();
+        if (scope.ServiceProvider.GetService<AuditJournal>() is { } journal && !(await journal.GetStateAsync(stoppingToken)).Available) {
+          await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+          continue;
+        }
+        var processor = scope.ServiceProvider.GetRequiredService<ExportProcessor>();
         // Protect recovery from overlapping IIS restarts or a second process on the same server.
         if (lease == null) {
           var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();

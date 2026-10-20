@@ -156,6 +156,7 @@ internal static class ManagementModeConcurrencyTests
   private sealed class Audit : IAuditService
   {
     public int Count { get; private set; }
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
     public void LogIdentityEvent(AuditEventType type, string? user, string? ipAddress = null, string? details = null)
     {
       if (type == AuditEventType.SynchronizationSettingsChanged) Count++;

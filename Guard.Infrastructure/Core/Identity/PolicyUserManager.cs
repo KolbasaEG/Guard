@@ -2,6 +2,10 @@ using Guard.Core.Entities;
 using Guard.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
+using Guard.Core.Contexts;
+using Guard.Core.Logging;
+using Guard.Core.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Identity;
 
@@ -30,10 +34,9 @@ public class PolicyUserManager(IUserStore<ApplicationUser> store, IOptions<Ident
     if (policy.MaxFailedLoginAttempts is < 1 or > 100 || policy.LoginLockoutMinutes is < 1 or > 10080) throw new InvalidOperationException("Некорректная политика блокировки входа.");
     Options.Lockout.MaxFailedAccessAttempts = policy.MaxFailedLoginAttempts;
     Options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(policy.LoginLockoutMinutes);
-    var result = await base.AccessFailedAsync(user);
-    if (result.Succeeded && user.LockoutEnd > DateTimeOffset.UtcNow)
-      audit.LogIdentityEvent(Core.Enums.AuditEventType.UserBlocked, user.Id, details: "Failed login attempts; temporary lockout");
-    return result;
+    return await AuditedAsync(user, () => base.AccessFailedAsync(user),
+      () => user.LockoutEnd > DateTimeOffset.UtcNow ? AuditEventType.UserBlocked : AuditEventType.UserDetailsChanged,
+      "Failed login counter; temporary lockout policy", ct, AuditEventType.UserDetailsChanged);
   }
 
   private async Task<IdentityResult> SetPasswordAsync(ApplicationUser user, string password, Func<Task<IdentityResult>> change)
@@ -61,28 +64,53 @@ public class PolicyUserManager(IUserStore<ApplicationUser> store, IOptions<Ident
 
   public override async Task<IdentityResult> AddPasswordAsync(ApplicationUser user, string password)
   {
-    var result = await SetPasswordAsync(user, password, () => base.AddPasswordAsync(user, password));
-    if (result.Succeeded) audit.LogIdentityEvent(Core.Enums.AuditEventType.PasswordChanged, user.Id);
-    return result;
+    return await AuditedAsync(user, () => SetPasswordAsync(user, password, () => base.AddPasswordAsync(user, password)),
+      () => AuditEventType.PasswordChanged, "Password added", RequestToken);
   }
 
   public override async Task<IdentityResult> ResetPasswordAsync(ApplicationUser user, string token, string newPassword)
   {
     if (!await VerifyUserTokenAsync(user, Options.Tokens.PasswordResetTokenProvider, ResetPasswordTokenPurpose, token))
       return IdentityResult.Failed(ErrorDescriber.InvalidToken());
-    return await SetPasswordAsync(user, newPassword, () => base.ResetPasswordAsync(user, token, newPassword));
+    return await AuditedAsync(user, () => SetPasswordAsync(user, newPassword, () => base.ResetPasswordAsync(user, token, newPassword)),
+      () => AuditEventType.PasswordChanged, "Administrative password reset", RequestToken);
   }
 
   public override async Task<IdentityResult> ChangePasswordAsync(ApplicationUser user, string currentPassword, string newPassword)
   {
-    if (!await CheckPasswordAsync(user, currentPassword))
-      return IdentityResult.Failed(new IdentityError { Code = "PasswordMismatch", Description = "Текущий пароль неверен." });
-    var result = await SetPasswordAsync(user, newPassword, () => base.ChangePasswordAsync(user, currentPassword, newPassword));
-    if (result.Succeeded) {
-      // The store has confirmed the password update. Audit delivery cannot undo it.
-      try { audit.LogIdentityEvent(Core.Enums.AuditEventType.PasswordChanged, user.Id); }
-      catch (Exception ex) { Logger.LogError(ex, "Пароль пользователя {UserId} сохранён, но событие аудита не отправлено", user.Id); }
+    return await AuditedAsync(user, async () => {
+      if (!await CheckPasswordAsync(user, currentPassword))
+        return IdentityResult.Failed(new IdentityError { Code = "PasswordMismatch", Description = "Текущий пароль неверен." });
+      return await SetPasswordAsync(user, newPassword, () => base.ChangePasswordAsync(user, currentPassword, newPassword));
+    }, () => AuditEventType.PasswordChanged, "Own password change", RequestToken);
+  }
+
+  private CancellationToken RequestToken => ServiceProvider.GetService<IHttpContextAccessor>()?.HttpContext?.RequestAborted ?? default;
+
+  private async Task<IdentityResult> AuditedAsync(ApplicationUser user, Func<Task<IdentityResult>> action,
+    Func<AuditEventType> type, string details, CancellationToken ct, AuditEventType failureType = AuditEventType.PasswordChangeFailed)
+  {
+    var db = ServiceProvider.GetService<ApplicationDbContext>();
+    var own = db != null && db.Database.IsRelational() && db.Database.CurrentTransaction == null;
+    await using var tx = own ? await db!.Database.BeginTransactionAsync(ct) : null;
+    var original = db?.Entry(user).CurrentValues.Clone();
+    try {
+      var result = await action();
+      var initiator = AuditOperationContext.Current?.UserId ?? db?.AuditActorId;
+      var entry = AuditEventData.ForAccount(result.Succeeded ? type() : failureType, user.Id,
+        details: details) with { Actor = initiator, ActorKind = initiator != null ? "user" : AuditOperationContext.Current?.ActorKind ?? "system",
+        Outcome = result.Succeeded ? "success" : "failure",
+        ReasonCode = result.Succeeded ? null : string.Join(",", result.Errors.Select(e => e.Code)) };
+      if (db?.Database.CurrentTransaction != null) await AuditTransaction.RecordAsync(db, audit, entry, ct);
+      else await audit.RecordAsync(entry, ct);
+      if (tx != null) await AuditTransaction.CommitAsync(tx, ct);
+      return result;
     }
-    return result;
+    catch (OperationCommitUnknownException) { throw; }
+    catch {
+      if (tx != null) await tx.RollbackAsync(CancellationToken.None);
+      if (db != null && original != null) { db.Entry(user).CurrentValues.SetValues(original); db.Entry(user).OriginalValues.SetValues(original); }
+      throw;
+    }
   }
 }

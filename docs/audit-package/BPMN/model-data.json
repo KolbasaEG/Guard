@@ -1,0 +1,9300 @@
+[
+  {
+    "id": "P00",
+    "title": "Обращение к системе и выбор процесса",
+    "lanes": [
+      "Пользователь или Root",
+      "Guard"
+    ],
+    "doc": "Карта процессов. Доставка P04 и очистка P07 работают независимо по таймеру; P03 вызывается запросами и циклом состояния каждые 5 секунд. Модель описательная, не предназначена для запуска workflow engine.",
+    "nodes": [
+      {
+        "id": "P00_start",
+        "short": "start",
+        "kind": "start",
+        "label": "Обращение",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P00_classify",
+        "short": "classify",
+        "kind": "service",
+        "label": "Определить маршрут и тип операции",
+        "col": 1,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P00_kind",
+        "short": "kind",
+        "kind": "xor",
+        "label": "Какое действие",
+        "col": 2,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          580.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          525.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P00_login",
+        "short": "login",
+        "kind": "call",
+        "label": "Вход в систему P01",
+        "col": 3,
+        "lane": 0,
+        "row": 0,
+        "call": "P01",
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P00_work",
+        "short": "work",
+        "kind": "call",
+        "label": "Рабочая операция P02",
+        "col": 3,
+        "lane": 1,
+        "row": 0,
+        "call": "P02",
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P00_settings",
+        "short": "settings",
+        "kind": "call",
+        "label": "Настройки Root P05",
+        "col": 3,
+        "lane": 1,
+        "row": 1,
+        "call": "P05",
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          470.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P00_csrf",
+        "short": "csrf",
+        "kind": "service",
+        "label": "Проверить CSRF выхода",
+        "col": 4,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P00_out",
+        "short": "out",
+        "kind": "service",
+        "label": "Удалить cookie и попытаться записать Logout",
+        "col": 5,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P00_end",
+        "short": "end",
+        "kind": "end",
+        "label": "Результат и дальнейшее действие",
+        "col": 6,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1470.0,
+          380.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1405.0,
+          428.0,
+          170,
+          42
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P00_F1",
+        "source": "P00_start",
+        "target": "P00_classify",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            290,
+            170
+          ],
+          [
+            290,
+            400
+          ],
+          [
+            310.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P00_F2",
+        "source": "P00_classify",
+        "target": "P00_kind",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            400.0
+          ],
+          [
+            580.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P00_F3",
+        "source": "P00_kind",
+        "target": "P00_login",
+        "label": "Вход",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            400.0
+          ],
+          [
+            660,
+            400
+          ],
+          [
+            660,
+            170
+          ],
+          [
+            750.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          588.0,
+          256.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          660.0,
+          270.5
+        ]
+      },
+      {
+        "id": "P00_F4",
+        "source": "P00_kind",
+        "target": "P00_work",
+        "label": "Работа",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            400.0
+          ],
+          [
+            750.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          623.0,
+          324.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          695.0,
+          338.5
+        ]
+      },
+      {
+        "id": "P00_F5",
+        "source": "P00_kind",
+        "target": "P00_settings",
+        "label": "Настройки",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            400.0
+          ],
+          [
+            730,
+            400
+          ],
+          [
+            730,
+            510
+          ],
+          [
+            750.0,
+            510.0
+          ]
+        ],
+        "labelBox": [
+          668.0,
+          564.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          740.0,
+          578.5
+        ]
+      },
+      {
+        "id": "P00_F6",
+        "source": "P00_kind",
+        "target": "P00_csrf",
+        "label": "Выход",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            400.0
+          ],
+          [
+            660,
+            400
+          ],
+          [
+            660,
+            230
+          ],
+          [
+            950,
+            230
+          ],
+          [
+            950,
+            170
+          ],
+          [
+            970.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          733.0,
+          284.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          805.0,
+          298.5
+        ]
+      },
+      {
+        "id": "P00_F7",
+        "source": "P00_csrf",
+        "target": "P00_out",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            170.0
+          ],
+          [
+            1190.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P00_F8",
+        "source": "P00_out",
+        "target": "P00_end",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            170.0
+          ],
+          [
+            1370,
+            170
+          ],
+          [
+            1370,
+            400
+          ],
+          [
+            1470.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P00_F9",
+        "source": "P00_login",
+        "target": "P00_end",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            170.0
+          ],
+          [
+            930,
+            170
+          ],
+          [
+            930,
+            400
+          ],
+          [
+            1470.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P00_F10",
+        "source": "P00_work",
+        "target": "P00_end",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            400.0
+          ],
+          [
+            1470.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P00_F11",
+        "source": "P00_settings",
+        "target": "P00_end",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            510.0
+          ],
+          [
+            930,
+            510
+          ],
+          [
+            930,
+            400
+          ],
+          [
+            1470.0,
+            400.0
+          ]
+        ]
+      }
+    ],
+    "siem": false,
+    "width": 1675.0,
+    "height": 620.0,
+    "canvasHeight": 620.0
+  },
+  {
+    "id": "P01",
+    "title": "Обычный вход и отказ в доступе",
+    "lanes": [
+      "Клиент и HTTP",
+      "Identity и доступ",
+      "Обязательный аудит"
+    ],
+    "doc": "Одна попытка входа имеет итоговое событие. Смена счётчика и наступление lockout могут иметь дополнительные связанные события. Успешная cookie выдаётся только после LoginSuccess. Включённая 2FA в локальном сценарии не поддерживается.",
+    "nodes": [
+      {
+        "id": "P01_start",
+        "short": "start",
+        "kind": "start",
+        "label": "POST входа",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P01_rate",
+        "short": "rate",
+        "kind": "service",
+        "label": "Лимит 5 запросов на IP в минуту",
+        "col": 1,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P01_rg",
+        "short": "rg",
+        "kind": "xor",
+        "label": "Лимит соблюдён",
+        "col": 2,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          580.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          525.0,
+          208.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P01_form",
+        "short": "form",
+        "kind": "service",
+        "label": "Проверить форму и обязательные поля",
+        "col": 3,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P01_probe",
+        "short": "probe",
+        "kind": "call",
+        "label": "Проверить аудит P03",
+        "col": 4,
+        "lane": 0,
+        "row": 0,
+        "call": "P03",
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P01_ag",
+        "short": "ag",
+        "kind": "xor",
+        "label": "Обычная работа разрешена",
+        "col": 5,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1240.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1185.0,
+          208.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P01_recovery",
+        "short": "recovery",
+        "kind": "call",
+        "label": "Ограниченный вход Root P06",
+        "col": 6,
+        "lane": 0,
+        "row": 0,
+        "call": "P06",
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1410.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P01_identity",
+        "short": "identity",
+        "kind": "service",
+        "label": "Найти аккаунт и проверить пароль политику IP и 2FA",
+        "col": 4,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P01_ig",
+        "short": "ig",
+        "kind": "xor",
+        "label": "Вход разрешён",
+        "col": 5,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1240.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1185.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P01_reject",
+        "short": "reject",
+        "kind": "service",
+        "label": "Попытаться сохранить итог отказа и причину",
+        "col": 2,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          530.0,
+          470.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P01_denied",
+        "short": "denied",
+        "kind": "end",
+        "label": "Обычный доступ не предоставлен",
+        "col": 3,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          810.0,
+          490.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          745.0,
+          538.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P01_record",
+        "short": "record",
+        "kind": "service",
+        "label": "Сохранить LoginSuccess до cookie",
+        "col": 5,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P01_sg",
+        "short": "sg",
+        "kind": "xor",
+        "label": "Запись подтверждена",
+        "col": 6,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1460.0,
+          600.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1405.0,
+          668.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P01_cookie",
+        "short": "cookie",
+        "kind": "service",
+        "label": "Выдать обычную cookie и обновить активность",
+        "col": 7,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1630.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P01_ok",
+        "short": "ok",
+        "kind": "end",
+        "label": "Обычная сессия",
+        "col": 8,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1910.0,
+          380.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1845.0,
+          428.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P01_unknown",
+        "short": "unknown",
+        "kind": "end",
+        "label": "Исход сохранения неизвестен проверить состояние",
+        "col": 7,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1690.0,
+          720.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1625.0,
+          768.0,
+          170,
+          59
+        ]
+      },
+      {
+        "id": "P01_formok",
+        "short": "formok",
+        "kind": "xor",
+        "label": "Форма корректна",
+        "col": 3,
+        "lane": 0,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          800.0,
+          250.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          745.0,
+          318.0,
+          170,
+          25
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P01_F1",
+        "source": "P01_start",
+        "target": "P01_rate",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            310.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P01_F2",
+        "source": "P01_rate",
+        "target": "P01_rg",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            170.0
+          ],
+          [
+            580.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P01_F3",
+        "source": "P01_rg",
+        "target": "P01_form",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            170.0
+          ],
+          [
+            750.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          623.0,
+          94.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          695.0,
+          108.5
+        ]
+      },
+      {
+        "id": "P01_F4",
+        "source": "P01_rg",
+        "target": "P01_reject",
+        "label": "Нет HTTP 429",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            170.0
+          ],
+          [
+            660,
+            170
+          ],
+          [
+            660,
+            120
+          ],
+          [
+            500,
+            120
+          ],
+          [
+            500,
+            510
+          ],
+          [
+            530.0,
+            510.0
+          ]
+        ],
+        "labelBox": [
+          428.0,
+          286.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          500.0,
+          300.5
+        ]
+      },
+      {
+        "id": "P01_F5",
+        "source": "P01_probe",
+        "target": "P01_ag",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            170.0
+          ],
+          [
+            1240.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P01_F6",
+        "source": "P01_ag",
+        "target": "P01_identity",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            170.0
+          ],
+          [
+            1320,
+            170
+          ],
+          [
+            1320,
+            110
+          ],
+          [
+            950,
+            110
+          ],
+          [
+            950,
+            400
+          ],
+          [
+            970.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          878.0,
+          226.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          950.0,
+          240.5
+        ]
+      },
+      {
+        "id": "P01_F7",
+        "source": "P01_ag",
+        "target": "P01_recovery",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            170.0
+          ],
+          [
+            1410.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1283.0,
+          94.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1355.0,
+          108.5
+        ]
+      },
+      {
+        "id": "P01_F8",
+        "source": "P01_recovery",
+        "target": "P01_denied",
+        "label": "Обычная cookie не выдаётся",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1570.0,
+            170.0
+          ],
+          [
+            1590,
+            170
+          ],
+          [
+            1590,
+            340
+          ],
+          [
+            940,
+            340
+          ],
+          [
+            940,
+            470
+          ],
+          [
+            790,
+            470
+          ],
+          [
+            790,
+            510
+          ],
+          [
+            810.0,
+            510.0
+          ]
+        ],
+        "labelBox": [
+          1193.0,
+          303.5,
+          144,
+          37
+        ],
+        "labelPoint": [
+          1265.0,
+          317.5
+        ]
+      },
+      {
+        "id": "P01_F9",
+        "source": "P01_identity",
+        "target": "P01_ig",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            400.0
+          ],
+          [
+            1240.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P01_F10",
+        "source": "P01_ig",
+        "target": "P01_record",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            400.0
+          ],
+          [
+            1320,
+            400
+          ],
+          [
+            1320,
+            350
+          ],
+          [
+            1160,
+            350
+          ],
+          [
+            1160,
+            630
+          ],
+          [
+            1190.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          1088.0,
+          499.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1160.0,
+          513.5
+        ]
+      },
+      {
+        "id": "P01_F11",
+        "source": "P01_ig",
+        "target": "P01_reject",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            400.0
+          ],
+          [
+            1320,
+            400
+          ],
+          [
+            1320,
+            340
+          ],
+          [
+            940,
+            340
+          ],
+          [
+            940,
+            450
+          ],
+          [
+            510,
+            450
+          ],
+          [
+            510,
+            510
+          ],
+          [
+            530.0,
+            510.0
+          ]
+        ],
+        "labelBox": [
+          653.0,
+          421.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          725.0,
+          435.5
+        ]
+      },
+      {
+        "id": "P01_F12",
+        "source": "P01_reject",
+        "target": "P01_denied",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            690.0,
+            510.0
+          ],
+          [
+            810.0,
+            510.0
+          ]
+        ]
+      },
+      {
+        "id": "P01_F13",
+        "source": "P01_record",
+        "target": "P01_sg",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            630.0
+          ],
+          [
+            1460.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P01_F14",
+        "source": "P01_sg",
+        "target": "P01_cookie",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            630.0
+          ],
+          [
+            1540,
+            630
+          ],
+          [
+            1540,
+            400
+          ],
+          [
+            1630.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1468.0,
+          486.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1540.0,
+          500.5
+        ]
+      },
+      {
+        "id": "P01_F15",
+        "source": "P01_sg",
+        "target": "P01_denied",
+        "label": "Доказанный отказ",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            630.0
+          ],
+          [
+            1540,
+            630
+          ],
+          [
+            1540,
+            490
+          ],
+          [
+            870,
+            490
+          ],
+          [
+            870,
+            470
+          ],
+          [
+            790,
+            470
+          ],
+          [
+            790,
+            510
+          ],
+          [
+            810.0,
+            510.0
+          ]
+        ],
+        "labelBox": [
+          1133.0,
+          544.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1205.0,
+          558.5
+        ]
+      },
+      {
+        "id": "P01_F16",
+        "source": "P01_sg",
+        "target": "P01_unknown",
+        "label": "Подтверждение потеряно",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            630.0
+          ],
+          [
+            1670,
+            630
+          ],
+          [
+            1670,
+            740
+          ],
+          [
+            1690.0,
+            740.0
+          ]
+        ],
+        "labelBox": [
+          1598.0,
+          648.5,
+          144,
+          37
+        ],
+        "labelPoint": [
+          1670.0,
+          662.5
+        ]
+      },
+      {
+        "id": "P01_F17",
+        "source": "P01_cookie",
+        "target": "P01_ok",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1790.0,
+            400.0
+          ],
+          [
+            1910.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P01_F18",
+        "source": "P01_form",
+        "target": "P01_formok",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            170.0
+          ],
+          [
+            930,
+            170
+          ],
+          [
+            930,
+            230
+          ],
+          [
+            780,
+            230
+          ],
+          [
+            780,
+            280
+          ],
+          [
+            800.0,
+            280.0
+          ]
+        ]
+      },
+      {
+        "id": "P01_F19",
+        "source": "P01_formok",
+        "target": "P01_probe",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            860.0,
+            280.0
+          ],
+          [
+            950,
+            280
+          ],
+          [
+            950,
+            170
+          ],
+          [
+            970.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          878.0,
+          254.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          950.0,
+          268.5
+        ]
+      },
+      {
+        "id": "P01_F20",
+        "source": "P01_formok",
+        "target": "P01_reject",
+        "label": "Нет InvalidInput",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            860.0,
+            280.0
+          ],
+          [
+            940,
+            280
+          ],
+          [
+            940,
+            450
+          ],
+          [
+            510,
+            450
+          ],
+          [
+            510,
+            510
+          ],
+          [
+            530.0,
+            510.0
+          ]
+        ],
+        "labelBox": [
+          653.0,
+          374.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          725.0,
+          388.5
+        ]
+      }
+    ],
+    "siem": false,
+    "width": 2115.0,
+    "height": 830.0,
+    "canvasHeight": 830.0
+  },
+  {
+    "id": "P02",
+    "title": "Обычная операция и атомарность аудита",
+    "lanes": [
+      "Сервис доступа",
+      "Чтение данных",
+      "Транзакция изменения"
+    ],
+    "doc": "Проверки остаются на сервере, включая старый Blazor circuit. Состояние P03 проверяет текущую очередь; перед обязательной вставкой дополнительно резервируется место под новые события. Обычные чтения самостоятельных событий не создают.",
+    "nodes": [
+      {
+        "id": "P02_start",
+        "short": "start",
+        "kind": "start",
+        "label": "Запрос операции",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P02_session",
+        "short": "session",
+        "kind": "service",
+        "label": "Проверить stamp роли область и отсутствие recovery only",
+        "col": 1,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P02_probe",
+        "short": "probe",
+        "kind": "call",
+        "label": "Проверить аудит P03",
+        "col": 2,
+        "lane": 0,
+        "row": 0,
+        "call": "P03",
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          530.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P02_gate",
+        "short": "gate",
+        "kind": "xor",
+        "label": "Доступ разрешён",
+        "col": 3,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          800.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          745.0,
+          208.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P02_kind",
+        "short": "kind",
+        "kind": "xor",
+        "label": "Тип операции",
+        "col": 4,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1020.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          965.0,
+          208.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P02_deny",
+        "short": "deny",
+        "kind": "end",
+        "label": "Операция запрещена",
+        "col": 5,
+        "lane": 0,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1250.0,
+          260.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1185.0,
+          308.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P02_query",
+        "short": "query",
+        "kind": "service",
+        "label": "Прочитать DTO в серверной области",
+        "col": 4,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P02_recheck",
+        "short": "recheck",
+        "kind": "service",
+        "label": "Перепроверить доступ перед возвратом",
+        "col": 5,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P02_return",
+        "short": "return",
+        "kind": "end",
+        "label": "Вернуть данные без события просмотра",
+        "col": 7,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1690.0,
+          380.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1625.0,
+          428.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P02_begin",
+        "short": "begin",
+        "kind": "service",
+        "label": "Начать транзакцию и сохранить изменение",
+        "col": 3,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P02_insert",
+        "short": "insert",
+        "kind": "service",
+        "label": "Под QueueLock проверить лимиты и вставить обязательный аудит",
+        "col": 4,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P02_commit",
+        "short": "commit",
+        "kind": "service",
+        "label": "Выполнить общий commit",
+        "col": 5,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P02_cg",
+        "short": "cg",
+        "kind": "xor",
+        "label": "Результат commit",
+        "col": 6,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1460.0,
+          600.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1405.0,
+          668.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P02_done",
+        "short": "done",
+        "kind": "end",
+        "label": "Изменение и аудит сохранены",
+        "col": 7,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1690.0,
+          610.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1625.0,
+          658.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P02_rollback",
+        "short": "rollback",
+        "kind": "service",
+        "label": "Откатить известную незавершённую транзакцию",
+        "col": 3,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          700.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P02_unknown",
+        "short": "unknown",
+        "kind": "end",
+        "label": "Проверить фактическое состояние до повтора",
+        "col": 7,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1690.0,
+          720.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1625.0,
+          768.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P02_export",
+        "short": "export",
+        "kind": "call",
+        "label": "Экспорт P09",
+        "col": 6,
+        "lane": 0,
+        "row": 0,
+        "call": "P09",
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1410.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P02_readok",
+        "short": "readok",
+        "kind": "xor",
+        "label": "Повторная проверка успешна",
+        "col": 6,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1460.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1405.0,
+          438.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P02_writeError",
+        "short": "writeError",
+        "kind": "boundaryError",
+        "label": "Ошибка до commit",
+        "col": 4,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": "insert",
+        "timer": null,
+        "doc": "",
+        "box": [
+          1080.0,
+          650.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1015.0,
+          698.0,
+          170,
+          25
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P02_F1",
+        "source": "P02_start",
+        "target": "P02_session",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            310.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P02_F2",
+        "source": "P02_session",
+        "target": "P02_probe",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            170.0
+          ],
+          [
+            530.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P02_F3",
+        "source": "P02_probe",
+        "target": "P02_gate",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            690.0,
+            170.0
+          ],
+          [
+            800.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P02_F4",
+        "source": "P02_gate",
+        "target": "P02_kind",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            860.0,
+            170.0
+          ],
+          [
+            1020.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          868.0,
+          141.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          940.0,
+          155.5
+        ]
+      },
+      {
+        "id": "P02_F5",
+        "source": "P02_kind",
+        "target": "P02_query",
+        "label": "Чтение",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            170.0
+          ],
+          [
+            1100,
+            170
+          ],
+          [
+            1100,
+            120
+          ],
+          [
+            940,
+            120
+          ],
+          [
+            940,
+            400
+          ],
+          [
+            970.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          868.0,
+          269.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          940.0,
+          283.5
+        ]
+      },
+      {
+        "id": "P02_F6",
+        "source": "P02_query",
+        "target": "P02_recheck",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            400.0
+          ],
+          [
+            1190.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P02_F7",
+        "source": "P02_kind",
+        "target": "P02_begin",
+        "label": "Изменение",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            170.0
+          ],
+          [
+            1100,
+            170
+          ],
+          [
+            1100,
+            120
+          ],
+          [
+            720,
+            120
+          ],
+          [
+            720,
+            630
+          ],
+          [
+            750.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          648.0,
+          346.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          720.0,
+          360.5
+        ]
+      },
+      {
+        "id": "P02_F8",
+        "source": "P02_begin",
+        "target": "P02_insert",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            630.0
+          ],
+          [
+            970.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P02_F9",
+        "source": "P02_insert",
+        "target": "P02_commit",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            630.0
+          ],
+          [
+            1190.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P02_F10",
+        "source": "P02_commit",
+        "target": "P02_cg",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            630.0
+          ],
+          [
+            1460.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P02_F11",
+        "source": "P02_rollback",
+        "target": "P02_deny",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            740.0
+          ],
+          [
+            930,
+            740
+          ],
+          [
+            930,
+            280
+          ],
+          [
+            1250.0,
+            280.0
+          ]
+        ]
+      },
+      {
+        "id": "P02_F12",
+        "source": "P02_gate",
+        "target": "P02_deny",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            860.0,
+            170.0
+          ],
+          [
+            940,
+            170
+          ],
+          [
+            940,
+            280
+          ],
+          [
+            1250.0,
+            280.0
+          ]
+        ],
+        "labelBox": [
+          1023.0,
+          251.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1095.0,
+          265.5
+        ]
+      },
+      {
+        "id": "P02_F13",
+        "source": "P02_kind",
+        "target": "P02_export",
+        "label": "Экспорт",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            170.0
+          ],
+          [
+            1410.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1173.0,
+          141.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1245.0,
+          155.5
+        ]
+      },
+      {
+        "id": "P02_F14",
+        "source": "P02_cg",
+        "target": "P02_done",
+        "label": "Подтверждён",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            630.0
+          ],
+          [
+            1690.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          1533.0,
+          601.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1605.0,
+          615.5
+        ]
+      },
+      {
+        "id": "P02_F15",
+        "source": "P02_cg",
+        "target": "P02_rollback",
+        "label": "Откат подтверждён",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            630.0
+          ],
+          [
+            1540,
+            630
+          ],
+          [
+            1540,
+            570
+          ],
+          [
+            730,
+            570
+          ],
+          [
+            730,
+            740
+          ],
+          [
+            750.0,
+            740.0
+          ]
+        ],
+        "labelBox": [
+          1063.0,
+          541.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1135.0,
+          555.5
+        ]
+      },
+      {
+        "id": "P02_F16",
+        "source": "P02_cg",
+        "target": "P02_unknown",
+        "label": "Подтверждение потеряно",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            630.0
+          ],
+          [
+            1600,
+            630
+          ],
+          [
+            1600,
+            740
+          ],
+          [
+            1690.0,
+            740.0
+          ]
+        ],
+        "labelBox": [
+          1528.0,
+          706.5,
+          144,
+          37
+        ],
+        "labelPoint": [
+          1600.0,
+          720.5
+        ]
+      },
+      {
+        "id": "P02_F17",
+        "source": "P02_export",
+        "target": "P02_done",
+        "label": "Задание принято с аудитом",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1570.0,
+            170.0
+          ],
+          [
+            1600,
+            170
+          ],
+          [
+            1600,
+            630
+          ],
+          [
+            1690.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          1528.0,
+          363.5,
+          144,
+          37
+        ],
+        "labelPoint": [
+          1600.0,
+          377.5
+        ]
+      },
+      {
+        "id": "P02_F18",
+        "source": "P02_recheck",
+        "target": "P02_readok",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            400.0
+          ],
+          [
+            1460.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P02_F19",
+        "source": "P02_readok",
+        "target": "P02_return",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            400.0
+          ],
+          [
+            1690.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1533.0,
+          324.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1605.0,
+          338.5
+        ]
+      },
+      {
+        "id": "P02_F20",
+        "source": "P02_readok",
+        "target": "P02_deny",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            400.0
+          ],
+          [
+            1540,
+            400
+          ],
+          [
+            1540,
+            240
+          ],
+          [
+            1230,
+            240
+          ],
+          [
+            1230,
+            280
+          ],
+          [
+            1250.0,
+            280.0
+          ]
+        ],
+        "labelBox": [
+          1313.0,
+          249.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1385.0,
+          263.5
+        ]
+      },
+      {
+        "id": "P02_F21",
+        "source": "P02_writeError",
+        "target": "P02_rollback",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1120.0,
+            670.0
+          ],
+          [
+            1150,
+            670
+          ],
+          [
+            1150,
+            570
+          ],
+          [
+            730,
+            570
+          ],
+          [
+            730,
+            740
+          ],
+          [
+            750.0,
+            740.0
+          ]
+        ]
+      }
+    ],
+    "siem": false,
+    "width": 1895.0,
+    "height": 850.0,
+    "canvasHeight": 850.0
+  },
+  {
+    "id": "P03",
+    "title": "Определение доступности аудита",
+    "lanes": [
+      "Проверка локального хранения",
+      "Настройки и очередь"
+    ],
+    "doc": "Один вызов проверки. Фоновый вызов повторяется каждые 5 секунд; HTTP и серверные операции вызывают проверку независимо. Проба вставляется и удаляется в одной подтверждённой транзакции, не создавая историю просмотров.",
+    "nodes": [
+      {
+        "id": "P03_start",
+        "short": "start",
+        "kind": "start",
+        "label": "Запрос проверки",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P03_probe",
+        "short": "probe",
+        "kind": "service",
+        "label": "Прочитать настройки и очередь выполнить INSERT DELETE пробы и commit",
+        "col": 1,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P03_store",
+        "short": "store",
+        "kind": "xor",
+        "label": "Commit пробы подтверждён",
+        "col": 2,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          580.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          525.0,
+          208.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P03_storage",
+        "short": "storage",
+        "kind": "end",
+        "label": "StorageUnavailable",
+        "col": 3,
+        "lane": 0,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          810.0,
+          260.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          745.0,
+          308.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P03_config",
+        "short": "config",
+        "kind": "service",
+        "label": "Оценить прочитанные настройки и очередь",
+        "col": 3,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P03_configured",
+        "short": "configured",
+        "kind": "xor",
+        "label": "Режим подтверждён",
+        "col": 4,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1020.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          965.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P03_not",
+        "short": "not",
+        "kind": "end",
+        "label": "NotConfigured",
+        "col": 4,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1030.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          965.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P03_valid",
+        "short": "valid",
+        "kind": "xor",
+        "label": "Настройки допустимы",
+        "col": 5,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1240.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1185.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P03_invalid",
+        "short": "invalid",
+        "kind": "end",
+        "label": "InvalidConfiguration",
+        "col": 5,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1250.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1185.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P03_mode",
+        "short": "mode",
+        "kind": "xor",
+        "label": "Локальный режим",
+        "col": 6,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1460.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1405.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P03_limits",
+        "short": "limits",
+        "kind": "service",
+        "label": "Проверить возраст байты и количество pending",
+        "col": 6,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1410.0,
+          470.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P03_limit",
+        "short": "limit",
+        "kind": "xor",
+        "label": "Пределы соблюдены",
+        "col": 7,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1680.0,
+          480.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1625.0,
+          548.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P03_ready",
+        "short": "ready",
+        "kind": "end",
+        "label": "Ready обычная работа разрешена",
+        "col": 7,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1690.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1625.0,
+          198.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P03_blocked",
+        "short": "blocked",
+        "kind": "end",
+        "label": "QueueAgeExceeded или QueueVolumeExceeded",
+        "col": 8,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1910.0,
+          490.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1845.0,
+          538.0,
+          170,
+          42
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P03_F1",
+        "source": "P03_start",
+        "target": "P03_probe",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            310.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P03_F2",
+        "source": "P03_probe",
+        "target": "P03_store",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            170.0
+          ],
+          [
+            580.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P03_F3",
+        "source": "P03_store",
+        "target": "P03_config",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            170.0
+          ],
+          [
+            720,
+            170
+          ],
+          [
+            720,
+            400
+          ],
+          [
+            750.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          648.0,
+          256.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          720.0,
+          270.5
+        ]
+      },
+      {
+        "id": "P03_F4",
+        "source": "P03_store",
+        "target": "P03_storage",
+        "label": "Нет или неизвестен",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            170.0
+          ],
+          [
+            790,
+            170
+          ],
+          [
+            790,
+            280
+          ],
+          [
+            810.0,
+            280.0
+          ]
+        ],
+        "labelBox": [
+          718.0,
+          196.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          790.0,
+          210.5
+        ]
+      },
+      {
+        "id": "P03_F5",
+        "source": "P03_config",
+        "target": "P03_configured",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            400.0
+          ],
+          [
+            1020.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P03_F6",
+        "source": "P03_configured",
+        "target": "P03_valid",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            400.0
+          ],
+          [
+            1240.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1088.0,
+          371.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1160.0,
+          385.5
+        ]
+      },
+      {
+        "id": "P03_F7",
+        "source": "P03_configured",
+        "target": "P03_not",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            400.0
+          ],
+          [
+            1100,
+            400
+          ],
+          [
+            1100,
+            250
+          ],
+          [
+            940,
+            250
+          ],
+          [
+            940,
+            170
+          ],
+          [
+            1030.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          948.0,
+          259.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1020.0,
+          273.5
+        ]
+      },
+      {
+        "id": "P03_F8",
+        "source": "P03_valid",
+        "target": "P03_mode",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            400.0
+          ],
+          [
+            1460.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1308.0,
+          371.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1380.0,
+          385.5
+        ]
+      },
+      {
+        "id": "P03_F9",
+        "source": "P03_valid",
+        "target": "P03_invalid",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            400.0
+          ],
+          [
+            1320,
+            400
+          ],
+          [
+            1320,
+            250
+          ],
+          [
+            1160,
+            250
+          ],
+          [
+            1160,
+            170
+          ],
+          [
+            1250.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1168.0,
+          259.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1240.0,
+          273.5
+        ]
+      },
+      {
+        "id": "P03_F10",
+        "source": "P03_mode",
+        "target": "P03_ready",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            400.0
+          ],
+          [
+            1540,
+            400
+          ],
+          [
+            1540,
+            170
+          ],
+          [
+            1690.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1468.0,
+          256.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1540.0,
+          270.5
+        ]
+      },
+      {
+        "id": "P03_F11",
+        "source": "P03_mode",
+        "target": "P03_limits",
+        "label": "Нет SIEM",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            400.0
+          ],
+          [
+            1540,
+            400
+          ],
+          [
+            1540,
+            350
+          ],
+          [
+            1380,
+            350
+          ],
+          [
+            1380,
+            510
+          ],
+          [
+            1410.0,
+            510.0
+          ]
+        ],
+        "labelBox": [
+          1388.0,
+          321.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1460.0,
+          335.5
+        ]
+      },
+      {
+        "id": "P03_F12",
+        "source": "P03_limits",
+        "target": "P03_limit",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1570.0,
+            510.0
+          ],
+          [
+            1680.0,
+            510.0
+          ]
+        ]
+      },
+      {
+        "id": "P03_F13",
+        "source": "P03_limit",
+        "target": "P03_ready",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1740.0,
+            510.0
+          ],
+          [
+            1760,
+            510
+          ],
+          [
+            1760,
+            260
+          ],
+          [
+            1600,
+            260
+          ],
+          [
+            1600,
+            170
+          ],
+          [
+            1690.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1688.0,
+          356.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1760.0,
+          370.5
+        ]
+      },
+      {
+        "id": "P03_F14",
+        "source": "P03_limit",
+        "target": "P03_blocked",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1740.0,
+            510.0
+          ],
+          [
+            1910.0,
+            510.0
+          ]
+        ],
+        "labelBox": [
+          1753.0,
+          481.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1825.0,
+          495.5
+        ]
+      }
+    ],
+    "siem": false,
+    "width": 2115.0,
+    "height": 620.0,
+    "canvasHeight": 620.0
+  },
+  {
+    "id": "P04",
+    "title": "Доставка обязательной очереди в RuSIEM",
+    "lanes": [
+      "Worker и PostgreSQL",
+      "TLS транспорт",
+      "Фиксация попытки"
+    ],
+    "doc": "Цикл доставки каждые 2 секунды, до 25 событий. Аренда 2 минуты. Pending сохраняются при любых сетевых отказах. Успешная запись по TLS не является подтверждением сохранения в SIEM. При падении процесса возможен повтор того же EventId.",
+    "nodes": [
+      {
+        "id": "P04_start",
+        "short": "start",
+        "kind": "timerStart",
+        "label": "Цикл каждые 2 секунды",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": "PT2S",
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P04_mode",
+        "short": "mode",
+        "kind": "service",
+        "label": "Прочитать настройки под QueueLock",
+        "col": 1,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P04_enabled",
+        "short": "enabled",
+        "kind": "xor",
+        "label": "SIEM включён и настроен",
+        "col": 2,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          580.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          525.0,
+          208.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P04_paused",
+        "short": "paused",
+        "kind": "end",
+        "label": "В Local очередь сохранена и приостановлена",
+        "col": 2,
+        "lane": 0,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          590.0,
+          260.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          525.0,
+          308.0,
+          170,
+          59
+        ]
+      },
+      {
+        "id": "P04_claim",
+        "short": "claim",
+        "kind": "service",
+        "label": "Выбрать pending SKIP LOCKED и выдать lease на 2 минуты",
+        "col": 3,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P04_exists",
+        "short": "exists",
+        "kind": "xor",
+        "label": "Событие найдено",
+        "col": 4,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1020.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          965.0,
+          208.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P04_attempt",
+        "short": "attempt",
+        "kind": "service",
+        "label": "Сохранить начало попытки адресат и Attempts",
+        "col": 5,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P04_send",
+        "short": "send",
+        "kind": "send",
+        "label": "Проверить TLS и записать Syslog CEF",
+        "col": 5,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P04_result",
+        "short": "result",
+        "kind": "xor",
+        "label": "Запись по TLS завершена",
+        "col": 6,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1460.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1405.0,
+          438.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P04_success",
+        "short": "success",
+        "kind": "service",
+        "label": "Записать SentAtUtc и успешную попытку",
+        "col": 7,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1630.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P04_retry",
+        "short": "retry",
+        "kind": "service",
+        "label": "Записать ошибку и следующую попытку 10 с до 1 ч",
+        "col": 7,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1630.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P04_batch",
+        "short": "batch",
+        "kind": "xor",
+        "label": "Менее 25 событий и нет отмены",
+        "col": 8,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1900.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1845.0,
+          208.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P04_done",
+        "short": "done",
+        "kind": "end",
+        "label": "Ожидать следующий цикл",
+        "col": 8,
+        "lane": 0,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1910.0,
+          260.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1845.0,
+          308.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P04_crash",
+        "short": "crash",
+        "kind": "end",
+        "label": "При обрыве lease истечёт и исход попытки останется неизвестным",
+        "col": 6,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1470.0,
+          720.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1405.0,
+          768.0,
+          170,
+          76
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P04_F1",
+        "source": "P04_start",
+        "target": "P04_mode",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            310.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P04_F2",
+        "source": "P04_mode",
+        "target": "P04_enabled",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            170.0
+          ],
+          [
+            580.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P04_F3",
+        "source": "P04_enabled",
+        "target": "P04_claim",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            170.0
+          ],
+          [
+            750.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          623.0,
+          94.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          695.0,
+          108.5
+        ]
+      },
+      {
+        "id": "P04_F4",
+        "source": "P04_enabled",
+        "target": "P04_paused",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            170.0
+          ],
+          [
+            660,
+            170
+          ],
+          [
+            660,
+            120
+          ],
+          [
+            500,
+            120
+          ],
+          [
+            500,
+            280
+          ],
+          [
+            590.0,
+            280.0
+          ]
+        ],
+        "labelBox": [
+          428.0,
+          254.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          500.0,
+          268.5
+        ]
+      },
+      {
+        "id": "P04_F5",
+        "source": "P04_claim",
+        "target": "P04_exists",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            170.0
+          ],
+          [
+            1020.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P04_F6",
+        "source": "P04_exists",
+        "target": "P04_attempt",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            170.0
+          ],
+          [
+            1190.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1063.0,
+          94.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1135.0,
+          108.5
+        ]
+      },
+      {
+        "id": "P04_F7",
+        "source": "P04_exists",
+        "target": "P04_done",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            170.0
+          ],
+          [
+            1170,
+            170
+          ],
+          [
+            1170,
+            280
+          ],
+          [
+            1910.0,
+            280.0
+          ]
+        ],
+        "labelBox": [
+          1468.0,
+          251.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1540.0,
+          265.5
+        ]
+      },
+      {
+        "id": "P04_F8",
+        "source": "P04_attempt",
+        "target": "P04_send",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            170.0
+          ],
+          [
+            1370,
+            170
+          ],
+          [
+            1370,
+            340
+          ],
+          [
+            1170,
+            340
+          ],
+          [
+            1170,
+            400
+          ],
+          [
+            1190.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P04_F9",
+        "source": "P04_send",
+        "target": "P04_result",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            400.0
+          ],
+          [
+            1460.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P04_F10",
+        "source": "P04_result",
+        "target": "P04_crash",
+        "label": "Отмена процесса",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            400.0
+          ],
+          [
+            1600,
+            400
+          ],
+          [
+            1600,
+            700
+          ],
+          [
+            1450,
+            700
+          ],
+          [
+            1450,
+            740
+          ],
+          [
+            1470.0,
+            740.0
+          ]
+        ],
+        "labelBox": [
+          1528.0,
+          521.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1600.0,
+          535.5
+        ]
+      },
+      {
+        "id": "P04_F11",
+        "source": "P04_result",
+        "target": "P04_success",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            400.0
+          ],
+          [
+            1540,
+            400
+          ],
+          [
+            1540,
+            170
+          ],
+          [
+            1630.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1468.0,
+          294.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1540.0,
+          308.5
+        ]
+      },
+      {
+        "id": "P04_F12",
+        "source": "P04_result",
+        "target": "P04_retry",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            400.0
+          ],
+          [
+            1610,
+            400
+          ],
+          [
+            1610,
+            630
+          ],
+          [
+            1630.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          1538.0,
+          486.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1610.0,
+          500.5
+        ]
+      },
+      {
+        "id": "P04_F13",
+        "source": "P04_success",
+        "target": "P04_batch",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1790.0,
+            170.0
+          ],
+          [
+            1900.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P04_F14",
+        "source": "P04_retry",
+        "target": "P04_batch",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1790.0,
+            630.0
+          ],
+          [
+            1810,
+            630
+          ],
+          [
+            1810,
+            170
+          ],
+          [
+            1900.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P04_F15",
+        "source": "P04_batch",
+        "target": "P04_claim",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1960.0,
+            170.0
+          ],
+          [
+            1980,
+            170
+          ],
+          [
+            1980,
+            110
+          ],
+          [
+            730,
+            110
+          ],
+          [
+            730,
+            170
+          ],
+          [
+            750.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1908.0,
+          111.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1980.0,
+          125.5
+        ]
+      },
+      {
+        "id": "P04_F16",
+        "source": "P04_batch",
+        "target": "P04_done",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1960.0,
+            170.0
+          ],
+          [
+            1980,
+            170
+          ],
+          [
+            1980,
+            120
+          ],
+          [
+            1820,
+            120
+          ],
+          [
+            1820,
+            280
+          ],
+          [
+            1910.0,
+            280.0
+          ]
+        ],
+        "labelBox": [
+          1748.0,
+          254.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1820.0,
+          268.5
+        ]
+      }
+    ],
+    "siem": true,
+    "width": 2152.0,
+    "height": 844.0,
+    "canvasHeight": 984.0,
+    "messagePoints": [
+      [
+        1350.0,
+        400.0
+      ],
+      [
+        1370,
+        400
+      ],
+      [
+        1370,
+        880
+      ],
+      [
+        1230,
+        880
+      ],
+      [
+        1250.0,
+        884.5
+      ]
+    ]
+  },
+  {
+    "id": "P05",
+    "title": "Изменение настроек и переключение режимов",
+    "lanes": [
+      "Root",
+      "Сервер и блокировки",
+      "Транзакция аудита"
+    ],
+    "doc": "Настройки применяются только после проверки актуального Root, версии и обязательного события. Изменение host port или CA при pending требует отдельного подтверждения. Старые Local события не ретроотправляются; возраст прежней обязательной очереди сохраняется.",
+    "nodes": [
+      {
+        "id": "P05_start",
+        "short": "start",
+        "kind": "start",
+        "label": "Сохранить настройки",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P05_validate",
+        "short": "validate",
+        "kind": "service",
+        "label": "Проверить поля и актуального Root",
+        "col": 1,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P05_lock",
+        "short": "lock",
+        "kind": "service",
+        "label": "Начать транзакцию взять security lock и QueueLock",
+        "col": 2,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          530.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P05_version",
+        "short": "version",
+        "kind": "xor",
+        "label": "Root и версия актуальны",
+        "col": 3,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          800.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          745.0,
+          438.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P05_denied",
+        "short": "denied",
+        "kind": "end",
+        "label": "Отказ перечитать настройки или войти заново",
+        "col": 3,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          810.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          745.0,
+          198.0,
+          170,
+          59
+        ]
+      },
+      {
+        "id": "P05_target",
+        "short": "target",
+        "kind": "xor",
+        "label": "Адресат изменён и есть pending",
+        "col": 4,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1020.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          965.0,
+          438.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P05_confirm",
+        "short": "confirm",
+        "kind": "user",
+        "label": "Отдельно подтвердить перенос обязательной очереди",
+        "col": 4,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P05_consent",
+        "short": "consent",
+        "kind": "xor",
+        "label": "Подтверждение есть",
+        "col": 5,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1240.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1185.0,
+          208.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P05_lease",
+        "short": "lease",
+        "kind": "xor",
+        "label": "Есть активная отправка при смене режима или адресата",
+        "col": 5,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1240.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1185.0,
+          303.0,
+          170,
+          59
+        ]
+      },
+      {
+        "id": "P05_wait",
+        "short": "wait",
+        "kind": "end",
+        "label": "Повторить после отправки или истечения аренды",
+        "col": 5,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1250.0,
+          490.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1185.0,
+          538.0,
+          170,
+          59
+        ]
+      },
+      {
+        "id": "P05_save",
+        "short": "save",
+        "kind": "service",
+        "label": "Сохранить версию режим и при необходимости назначение pending",
+        "col": 6,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1410.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P05_audit",
+        "short": "audit",
+        "kind": "service",
+        "label": "Вставить событие настроек и выполнить общий commit",
+        "col": 7,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1630.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P05_commit",
+        "short": "commit",
+        "kind": "xor",
+        "label": "Общий commit подтверждён",
+        "col": 8,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1900.0,
+          600.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1845.0,
+          668.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P05_ok",
+        "short": "ok",
+        "kind": "end",
+        "label": "Настройки действуют",
+        "col": 8,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1910.0,
+          380.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1845.0,
+          428.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P05_unknown",
+        "short": "unknown",
+        "kind": "end",
+        "label": "Результат неизвестен перечитать фактическую версию",
+        "col": 8,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1910.0,
+          720.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1845.0,
+          768.0,
+          170,
+          59
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P05_F1",
+        "source": "P05_start",
+        "target": "P05_validate",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            290,
+            170
+          ],
+          [
+            290,
+            400
+          ],
+          [
+            310.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P05_F2",
+        "source": "P05_validate",
+        "target": "P05_lock",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            400.0
+          ],
+          [
+            530.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P05_F3",
+        "source": "P05_lock",
+        "target": "P05_version",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            690.0,
+            400.0
+          ],
+          [
+            800.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P05_F4",
+        "source": "P05_version",
+        "target": "P05_target",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            860.0,
+            400.0
+          ],
+          [
+            1020.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          868.0,
+          371.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          940.0,
+          385.5
+        ]
+      },
+      {
+        "id": "P05_F5",
+        "source": "P05_target",
+        "target": "P05_confirm",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            400.0
+          ],
+          [
+            1100,
+            400
+          ],
+          [
+            1100,
+            230
+          ],
+          [
+            950,
+            230
+          ],
+          [
+            950,
+            170
+          ],
+          [
+            970.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1028.0,
+          286.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1100.0,
+          300.5
+        ]
+      },
+      {
+        "id": "P05_F6",
+        "source": "P05_confirm",
+        "target": "P05_consent",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            170.0
+          ],
+          [
+            1240.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P05_F7",
+        "source": "P05_consent",
+        "target": "P05_lease",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            170.0
+          ],
+          [
+            1320,
+            170
+          ],
+          [
+            1320,
+            120
+          ],
+          [
+            1160,
+            120
+          ],
+          [
+            1160,
+            400
+          ],
+          [
+            1240.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1248.0,
+          96.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1320.0,
+          110.5
+        ]
+      },
+      {
+        "id": "P05_F8",
+        "source": "P05_target",
+        "target": "P05_lease",
+        "label": "Нет",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            400.0
+          ],
+          [
+            1240.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1088.0,
+          371.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1160.0,
+          385.5
+        ]
+      },
+      {
+        "id": "P05_F9",
+        "source": "P05_lease",
+        "target": "P05_save",
+        "label": "Нет активной отправки",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            400.0
+          ],
+          [
+            1390,
+            400
+          ],
+          [
+            1390,
+            630
+          ],
+          [
+            1410.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          1318.0,
+          478.5,
+          144,
+          37
+        ],
+        "labelPoint": [
+          1390.0,
+          492.5
+        ]
+      },
+      {
+        "id": "P05_F10",
+        "source": "P05_save",
+        "target": "P05_audit",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1570.0,
+            630.0
+          ],
+          [
+            1630.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P05_F11",
+        "source": "P05_audit",
+        "target": "P05_commit",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1790.0,
+            630.0
+          ],
+          [
+            1900.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P05_F12",
+        "source": "P05_version",
+        "target": "P05_denied",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            860.0,
+            400.0
+          ],
+          [
+            880,
+            400
+          ],
+          [
+            880,
+            280
+          ],
+          [
+            720,
+            280
+          ],
+          [
+            720,
+            170
+          ],
+          [
+            810.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          728.0,
+          289.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          800.0,
+          303.5
+        ]
+      },
+      {
+        "id": "P05_F13",
+        "source": "P05_consent",
+        "target": "P05_denied",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            170.0
+          ],
+          [
+            1320,
+            170
+          ],
+          [
+            1320,
+            110
+          ],
+          [
+            790,
+            110
+          ],
+          [
+            790,
+            170
+          ],
+          [
+            810.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          718.0,
+          111.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          790.0,
+          125.5
+        ]
+      },
+      {
+        "id": "P05_F14",
+        "source": "P05_lease",
+        "target": "P05_wait",
+        "label": "Да",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            400.0
+          ],
+          [
+            1320,
+            400
+          ],
+          [
+            1320,
+            470
+          ],
+          [
+            1230,
+            470
+          ],
+          [
+            1230,
+            510
+          ],
+          [
+            1250.0,
+            510.0
+          ]
+        ],
+        "labelBox": [
+          1203.0,
+          441.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1275.0,
+          455.5
+        ]
+      },
+      {
+        "id": "P05_F15",
+        "source": "P05_commit",
+        "target": "P05_ok",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1960.0,
+            630.0
+          ],
+          [
+            1980,
+            630
+          ],
+          [
+            1980,
+            480
+          ],
+          [
+            1820,
+            480
+          ],
+          [
+            1820,
+            400
+          ],
+          [
+            1910.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1828.0,
+          489.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1900.0,
+          503.5
+        ]
+      },
+      {
+        "id": "P05_F16",
+        "source": "P05_commit",
+        "target": "P05_denied",
+        "label": "Известный отказ откат",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1960.0,
+            630.0
+          ],
+          [
+            1980,
+            630
+          ],
+          [
+            1980,
+            480
+          ],
+          [
+            1380,
+            480
+          ],
+          [
+            1380,
+            110
+          ],
+          [
+            790,
+            110
+          ],
+          [
+            790,
+            170
+          ],
+          [
+            810.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1608.0,
+          443.5,
+          144,
+          37
+        ],
+        "labelPoint": [
+          1680.0,
+          457.5
+        ]
+      },
+      {
+        "id": "P05_F17",
+        "source": "P05_commit",
+        "target": "P05_unknown",
+        "label": "Подтверждение потеряно",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1960.0,
+            630.0
+          ],
+          [
+            1980,
+            630
+          ],
+          [
+            1980,
+            580
+          ],
+          [
+            1820,
+            580
+          ],
+          [
+            1820,
+            740
+          ],
+          [
+            1910.0,
+            740.0
+          ]
+        ],
+        "labelBox": [
+          1828.0,
+          543.5,
+          144,
+          37
+        ],
+        "labelPoint": [
+          1900.0,
+          557.5
+        ]
+      }
+    ],
+    "siem": false,
+    "width": 2115.0,
+    "height": 830.0,
+    "canvasHeight": 830.0
+  },
+  {
+    "id": "P06",
+    "title": "Ограниченный вход и восстановление Root",
+    "lanes": [
+      "Root",
+      "Identity и ограниченная сессия",
+      "Восстановление"
+    ],
+    "doc": "Ограниченный вход выдаётся только при запрещённой обычной работе и доступной Identity. Проверяется фактическая роль Root, hash пароля, блокировки и отсутствие 2FA. Неверная recovery попытка не увеличивает Identity failure counter и не создаёт отдельный LoginFailed внутри RecoveryAsync.",
+    "nodes": [
+      {
+        "id": "P06_start",
+        "short": "start",
+        "kind": "start",
+        "label": "Аудит запрещает обычный вход",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P06_rate",
+        "short": "rate",
+        "kind": "service",
+        "label": "Применить отдельный лимит 5 на IP в минуту",
+        "col": 1,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P06_identity",
+        "short": "identity",
+        "kind": "xor",
+        "label": "Identity доступна",
+        "col": 2,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          580.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          525.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P06_external",
+        "short": "external",
+        "kind": "end",
+        "label": "Выход и обслуживание сервера",
+        "col": 2,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          590.0,
+          610.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          525.0,
+          658.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P06_verify",
+        "short": "verify",
+        "kind": "service",
+        "label": "Проверить пароль Root блокировки и отсутствие 2FA",
+        "col": 3,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P06_valid",
+        "short": "valid",
+        "kind": "xor",
+        "label": "Условия соблюдены",
+        "col": 4,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1020.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          965.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P06_refuse",
+        "short": "refuse",
+        "kind": "end",
+        "label": "Общий отказ без cookie",
+        "col": 4,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1030.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          965.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P06_cookie",
+        "short": "cookie",
+        "kind": "service",
+        "label": "Выдать recovery only cookie на 15 минут без продления",
+        "col": 5,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P06_event",
+        "short": "event",
+        "kind": "service",
+        "label": "Попытаться записать RecoverySignIn",
+        "col": 6,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1410.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P06_diagnose",
+        "short": "diagnose",
+        "kind": "user",
+        "label": "Открыть состояние и определить причину",
+        "col": 6,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1410.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P06_repair",
+        "short": "repair",
+        "kind": "user",
+        "label": "Восстановить хранилище или соединение с сопровождением",
+        "col": 5,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P06_settings",
+        "short": "settings",
+        "kind": "call",
+        "label": "При исправной локальной записи изменить настройки P05",
+        "col": 6,
+        "lane": 2,
+        "row": 0,
+        "call": "P05",
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1410.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P06_health",
+        "short": "health",
+        "kind": "call",
+        "label": "Повторить проверку P03",
+        "col": 7,
+        "lane": 2,
+        "row": 0,
+        "call": "P03",
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1630.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P06_working",
+        "short": "working",
+        "kind": "xor",
+        "label": "Аудит исправен",
+        "col": 8,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1900.0,
+          600.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1845.0,
+          668.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P06_login",
+        "short": "login",
+        "kind": "user",
+        "label": "Выйти и выполнить обычный вход",
+        "col": 8,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1850.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P06_end",
+        "short": "end",
+        "kind": "end",
+        "label": "Recovery сессия не повышается автоматически",
+        "col": 8,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1910.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1845.0,
+          198.0,
+          170,
+          59
+        ]
+      },
+      {
+        "id": "P06_ttl",
+        "short": "ttl",
+        "kind": "start",
+        "label": "Новый HTTP с истёкшей cookie",
+        "col": 7,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1690.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1625.0,
+          198.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P06_expired",
+        "short": "expired",
+        "kind": "end",
+        "label": "Повторить ограниченный вход",
+        "col": 7,
+        "lane": 0,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1690.0,
+          260.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1625.0,
+          308.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P06_rateok",
+        "short": "rateok",
+        "kind": "xor",
+        "label": "Лимит допускает",
+        "col": 1,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          360.0,
+          480.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          305.0,
+          548.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P06_needsettings",
+        "short": "needsettings",
+        "kind": "xor",
+        "label": "Нужно менять настройки",
+        "col": 5,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1240.0,
+          710.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1185.0,
+          778.0,
+          170,
+          25
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P06_F1",
+        "source": "P06_start",
+        "target": "P06_rate",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            290,
+            170
+          ],
+          [
+            290,
+            400
+          ],
+          [
+            310.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F2",
+        "source": "P06_identity",
+        "target": "P06_verify",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            400.0
+          ],
+          [
+            750.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          623.0,
+          324.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          695.0,
+          338.5
+        ]
+      },
+      {
+        "id": "P06_F3",
+        "source": "P06_verify",
+        "target": "P06_valid",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            400.0
+          ],
+          [
+            1020.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F4",
+        "source": "P06_valid",
+        "target": "P06_cookie",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            400.0
+          ],
+          [
+            1190.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1063.0,
+          324.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1135.0,
+          338.5
+        ]
+      },
+      {
+        "id": "P06_F5",
+        "source": "P06_cookie",
+        "target": "P06_event",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            400.0
+          ],
+          [
+            1410.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F6",
+        "source": "P06_event",
+        "target": "P06_diagnose",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1570.0,
+            400.0
+          ],
+          [
+            1590,
+            400
+          ],
+          [
+            1590,
+            230
+          ],
+          [
+            1390,
+            230
+          ],
+          [
+            1390,
+            170
+          ],
+          [
+            1410.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F7",
+        "source": "P06_diagnose",
+        "target": "P06_repair",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1570.0,
+            170.0
+          ],
+          [
+            1590,
+            170
+          ],
+          [
+            1590,
+            570
+          ],
+          [
+            1170,
+            570
+          ],
+          [
+            1170,
+            630
+          ],
+          [
+            1190.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F8",
+        "source": "P06_settings",
+        "target": "P06_health",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1570.0,
+            630.0
+          ],
+          [
+            1630.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F9",
+        "source": "P06_health",
+        "target": "P06_working",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1790.0,
+            630.0
+          ],
+          [
+            1900.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F10",
+        "source": "P06_working",
+        "target": "P06_login",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1960.0,
+            630.0
+          ],
+          [
+            1980,
+            630
+          ],
+          [
+            1980,
+            460
+          ],
+          [
+            1830,
+            460
+          ],
+          [
+            1830,
+            400
+          ],
+          [
+            1850.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1908.0,
+          516.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1980.0,
+          530.5
+        ]
+      },
+      {
+        "id": "P06_F11",
+        "source": "P06_login",
+        "target": "P06_end",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            2010.0,
+            400.0
+          ],
+          [
+            2040,
+            400
+          ],
+          [
+            2040,
+            130
+          ],
+          [
+            1890,
+            130
+          ],
+          [
+            1890,
+            170
+          ],
+          [
+            1910.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F12",
+        "source": "P06_ttl",
+        "target": "P06_expired",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1730.0,
+            170.0
+          ],
+          [
+            1750,
+            170
+          ],
+          [
+            1750,
+            130
+          ],
+          [
+            1600,
+            130
+          ],
+          [
+            1600,
+            280
+          ],
+          [
+            1690.0,
+            280.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F13",
+        "source": "P06_identity",
+        "target": "P06_external",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            400.0
+          ],
+          [
+            720,
+            400
+          ],
+          [
+            720,
+            590
+          ],
+          [
+            570,
+            590
+          ],
+          [
+            570,
+            630
+          ],
+          [
+            590.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          648.0,
+          504.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          720.0,
+          518.5
+        ]
+      },
+      {
+        "id": "P06_F14",
+        "source": "P06_valid",
+        "target": "P06_refuse",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            400.0
+          ],
+          [
+            1100,
+            400
+          ],
+          [
+            1100,
+            250
+          ],
+          [
+            940,
+            250
+          ],
+          [
+            940,
+            170
+          ],
+          [
+            1030.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          948.0,
+          259.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1020.0,
+          273.5
+        ]
+      },
+      {
+        "id": "P06_F15",
+        "source": "P06_working",
+        "target": "P06_diagnose",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1960.0,
+            630.0
+          ],
+          [
+            1980,
+            630
+          ],
+          [
+            1980,
+            460
+          ],
+          [
+            1390,
+            460
+          ],
+          [
+            1390,
+            170
+          ],
+          [
+            1410.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1613.0,
+          431.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1685.0,
+          445.5
+        ]
+      },
+      {
+        "id": "P06_F16",
+        "source": "P06_rate",
+        "target": "P06_rateok",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            400.0
+          ],
+          [
+            490,
+            400
+          ],
+          [
+            490,
+            460
+          ],
+          [
+            340,
+            460
+          ],
+          [
+            340,
+            510
+          ],
+          [
+            360.0,
+            510.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F17",
+        "source": "P06_rateok",
+        "target": "P06_identity",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            420.0,
+            510.0
+          ],
+          [
+            500,
+            510
+          ],
+          [
+            500,
+            400
+          ],
+          [
+            580.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          428.0,
+          484.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          500.0,
+          498.5
+        ]
+      },
+      {
+        "id": "P06_F18",
+        "source": "P06_rateok",
+        "target": "P06_refuse",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            420.0,
+            510.0
+          ],
+          [
+            940,
+            510
+          ],
+          [
+            940,
+            170
+          ],
+          [
+            1030.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          608.0,
+          539.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          680.0,
+          553.5
+        ]
+      },
+      {
+        "id": "P06_F19",
+        "source": "P06_repair",
+        "target": "P06_needsettings",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            630.0
+          ],
+          [
+            1370,
+            630
+          ],
+          [
+            1370,
+            690
+          ],
+          [
+            1220,
+            690
+          ],
+          [
+            1220,
+            740
+          ],
+          [
+            1240.0,
+            740.0
+          ]
+        ]
+      },
+      {
+        "id": "P06_F20",
+        "source": "P06_needsettings",
+        "target": "P06_settings",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            740.0
+          ],
+          [
+            1390,
+            740
+          ],
+          [
+            1390,
+            630
+          ],
+          [
+            1410.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          1318.0,
+          694.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1390.0,
+          708.5
+        ]
+      },
+      {
+        "id": "P06_F21",
+        "source": "P06_needsettings",
+        "target": "P06_health",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            740.0
+          ],
+          [
+            1610,
+            740
+          ],
+          [
+            1610,
+            630
+          ],
+          [
+            1630.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          1383.0,
+          749.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1455.0,
+          763.5
+        ]
+      }
+    ],
+    "siem": false,
+    "width": 2152.0,
+    "height": 840.0,
+    "canvasHeight": 840.0
+  },
+  {
+    "id": "P07",
+    "title": "Хранение и независимая очистка",
+    "lanes": [
+      "Настройки",
+      "Хранилища и файлы",
+      "Диагностика"
+    ],
+    "doc": "Цикл каждые 5 минут. Срок от даты события в календарных годах. Неотправленные обязательные события сохраняются в обоих режимах. Ошибка одного этапа не отменяет следующие. Последний корректный срок кэшируется в процессе.",
+    "nodes": [
+      {
+        "id": "P07_start",
+        "short": "start",
+        "kind": "timerStart",
+        "label": "Цикл каждые 5 минут",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": "PT5M",
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P07_read",
+        "short": "read",
+        "kind": "service",
+        "label": "Получить срок или последний корректный в процессе",
+        "col": 1,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P07_years",
+        "short": "years",
+        "kind": "xor",
+        "label": "Есть допустимый срок",
+        "col": 2,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          580.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          525.0,
+          208.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P07_no",
+        "short": "no",
+        "kind": "end",
+        "label": "Показать ошибку настроек без удаления",
+        "col": 2,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          590.0,
+          610.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          525.0,
+          658.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P07_cutoff",
+        "short": "cutoff",
+        "kind": "service",
+        "label": "Вычислить UTC cutoff AddYears",
+        "col": 3,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P07_audit",
+        "short": "audit",
+        "kind": "service",
+        "label": "Удалить старые Local и доставленные до 10 пакетов по 1000",
+        "col": 3,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P07_ae",
+        "short": "ae",
+        "kind": "boundaryError",
+        "label": "Ошибка Audit",
+        "col": 3,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": "audit",
+        "timer": null,
+        "doc": "",
+        "box": [
+          860.0,
+          420.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          795.0,
+          468.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P07_aerr",
+        "short": "aerr",
+        "kind": "service",
+        "label": "Запомнить ошибку Audit",
+        "col": 4,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P07_am",
+        "short": "am",
+        "kind": "xor",
+        "label": "Продолжить",
+        "col": 4,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1020.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          965.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P07_technical",
+        "short": "technical",
+        "kind": "service",
+        "label": "Удалить старые технические строки до 10 пакетов по 10000",
+        "col": 5,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P07_te",
+        "short": "te",
+        "kind": "boundaryError",
+        "label": "Ошибка Technical",
+        "col": 5,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": "technical",
+        "timer": null,
+        "doc": "",
+        "box": [
+          1300.0,
+          420.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1235.0,
+          468.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P07_terr",
+        "short": "terr",
+        "kind": "service",
+        "label": "Запомнить ошибку Technical",
+        "col": 6,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1410.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P07_tm",
+        "short": "tm",
+        "kind": "xor",
+        "label": "Продолжить",
+        "col": 6,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1460.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1405.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P07_files",
+        "short": "files",
+        "kind": "service",
+        "label": "Удалить только собственные старые лог файлы",
+        "col": 7,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1630.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P07_fe",
+        "short": "fe",
+        "kind": "boundaryError",
+        "label": "Ошибка Files",
+        "col": 7,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": "files",
+        "timer": null,
+        "doc": "",
+        "box": [
+          1740.0,
+          420.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1675.0,
+          468.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P07_ferr",
+        "short": "ferr",
+        "kind": "service",
+        "label": "Запомнить ошибку Files",
+        "col": 8,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1850.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P07_fm",
+        "short": "fm",
+        "kind": "xor",
+        "label": "Продолжить",
+        "col": 8,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1900.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1845.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P07_health",
+        "short": "health",
+        "kind": "service",
+        "label": "Обновить LastCleanupUtc и ошибки этапов",
+        "col": 8,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1850.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P07_done",
+        "short": "done",
+        "kind": "end",
+        "label": "Очистка завершена или частична",
+        "col": 9,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          2130.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          2065.0,
+          198.0,
+          170,
+          42
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P07_F1",
+        "source": "P07_start",
+        "target": "P07_read",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            310.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F2",
+        "source": "P07_read",
+        "target": "P07_years",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            170.0
+          ],
+          [
+            580.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F3",
+        "source": "P07_years",
+        "target": "P07_cutoff",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            170.0
+          ],
+          [
+            750.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          623.0,
+          94.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          695.0,
+          108.5
+        ]
+      },
+      {
+        "id": "P07_F4",
+        "source": "P07_cutoff",
+        "target": "P07_audit",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            170.0
+          ],
+          [
+            930,
+            170
+          ],
+          [
+            930,
+            340
+          ],
+          [
+            730,
+            340
+          ],
+          [
+            730,
+            400
+          ],
+          [
+            750.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F5",
+        "source": "P07_audit",
+        "target": "P07_am",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            400.0
+          ],
+          [
+            1020.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F6",
+        "source": "P07_ae",
+        "target": "P07_aerr",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            900.0,
+            440.0
+          ],
+          [
+            930,
+            440
+          ],
+          [
+            930,
+            340
+          ],
+          [
+            730,
+            340
+          ],
+          [
+            730,
+            630
+          ],
+          [
+            970.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F7",
+        "source": "P07_aerr",
+        "target": "P07_am",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            630.0
+          ],
+          [
+            1160,
+            630
+          ],
+          [
+            1160,
+            350
+          ],
+          [
+            1000,
+            350
+          ],
+          [
+            1000,
+            400
+          ],
+          [
+            1020.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F8",
+        "source": "P07_am",
+        "target": "P07_technical",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            400.0
+          ],
+          [
+            1190.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F9",
+        "source": "P07_technical",
+        "target": "P07_tm",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            400.0
+          ],
+          [
+            1460.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F10",
+        "source": "P07_te",
+        "target": "P07_terr",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1340.0,
+            440.0
+          ],
+          [
+            1370,
+            440
+          ],
+          [
+            1370,
+            340
+          ],
+          [
+            1170,
+            340
+          ],
+          [
+            1170,
+            630
+          ],
+          [
+            1410.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F11",
+        "source": "P07_terr",
+        "target": "P07_tm",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1570.0,
+            630.0
+          ],
+          [
+            1600,
+            630
+          ],
+          [
+            1600,
+            350
+          ],
+          [
+            1440,
+            350
+          ],
+          [
+            1440,
+            400
+          ],
+          [
+            1460.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F12",
+        "source": "P07_tm",
+        "target": "P07_files",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            400.0
+          ],
+          [
+            1630.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F13",
+        "source": "P07_files",
+        "target": "P07_fm",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1790.0,
+            400.0
+          ],
+          [
+            1900.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F14",
+        "source": "P07_fe",
+        "target": "P07_ferr",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1780.0,
+            440.0
+          ],
+          [
+            1810,
+            440
+          ],
+          [
+            1810,
+            340
+          ],
+          [
+            1610,
+            340
+          ],
+          [
+            1610,
+            630
+          ],
+          [
+            1850.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F15",
+        "source": "P07_ferr",
+        "target": "P07_fm",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            2010.0,
+            630.0
+          ],
+          [
+            2040,
+            630
+          ],
+          [
+            2040,
+            350
+          ],
+          [
+            1880,
+            350
+          ],
+          [
+            1880,
+            400
+          ],
+          [
+            1900.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F16",
+        "source": "P07_fm",
+        "target": "P07_health",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1960.0,
+            400.0
+          ],
+          [
+            1980,
+            400
+          ],
+          [
+            1980,
+            230
+          ],
+          [
+            1830,
+            230
+          ],
+          [
+            1830,
+            170
+          ],
+          [
+            1850.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F17",
+        "source": "P07_health",
+        "target": "P07_done",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            2010.0,
+            170.0
+          ],
+          [
+            2130.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P07_F18",
+        "source": "P07_years",
+        "target": "P07_no",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            640.0,
+            170.0
+          ],
+          [
+            720,
+            170
+          ],
+          [
+            720,
+            590
+          ],
+          [
+            570,
+            590
+          ],
+          [
+            570,
+            630
+          ],
+          [
+            590.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          648.0,
+          331.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          720.0,
+          345.5
+        ]
+      }
+    ],
+    "siem": false,
+    "width": 2335.0,
+    "height": 790,
+    "canvasHeight": 790
+  },
+  {
+    "id": "P08",
+    "title": "Проверка TLS соединения и тестового события",
+    "lanes": [
+      "Root",
+      "Guard и журнал",
+      "TLS транспорт"
+    ],
+    "doc": "Проверка использует поля формы без сохранения настроек. Начало и результат записываются разными EventId. В RuSIEM нужно искать EventId начала, указанный в сообщении интерфейса. Подтверждение приёма выполняет Root отдельно.",
+    "nodes": [
+      {
+        "id": "P08_start",
+        "short": "start",
+        "kind": "start",
+        "label": "Проверить соединение",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P08_validate",
+        "short": "validate",
+        "kind": "service",
+        "label": "Проверить актуального Root адрес порт и публичный CA",
+        "col": 1,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P08_intent",
+        "short": "intent",
+        "kind": "service",
+        "label": "Сохранить started и EventId теста локально",
+        "col": 2,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          530.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P08_local",
+        "short": "local",
+        "kind": "xor",
+        "label": "Локальная запись доступна",
+        "col": 3,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          800.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          745.0,
+          438.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P08_blocked",
+        "short": "blocked",
+        "kind": "end",
+        "label": "Тест запрещён до восстановления записи",
+        "col": 3,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          810.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          745.0,
+          198.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P08_send",
+        "short": "send",
+        "kind": "send",
+        "label": "Выполнить TLS и Syslog CEF в адрес из формы",
+        "col": 4,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P08_sent",
+        "short": "sent",
+        "kind": "xor",
+        "label": "Запись по TLS завершена",
+        "col": 5,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1240.0,
+          600.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1185.0,
+          668.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P08_fail",
+        "short": "fail",
+        "kind": "service",
+        "label": "Сохранить failure с новым EventId",
+        "col": 5,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          470.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P08_success",
+        "short": "success",
+        "kind": "service",
+        "label": "Сохранить success с новым EventId",
+        "col": 6,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1410.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P08_result",
+        "short": "result",
+        "kind": "xor",
+        "label": "Подтверждение результата получено",
+        "col": 7,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1680.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1625.0,
+          438.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P08_unknown",
+        "short": "unknown",
+        "kind": "end",
+        "label": "Проверить фактическое состояние до повтора",
+        "col": 7,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1690.0,
+          720.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1625.0,
+          768.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P08_find",
+        "short": "find",
+        "kind": "user",
+        "label": "Найти исходный EventId в RuSIEM и проверить поля",
+        "col": 7,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1630.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P08_found",
+        "short": "found",
+        "kind": "xor",
+        "label": "Событие найдено и разобрано",
+        "col": 8,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1900.0,
+          140.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1845.0,
+          208.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P08_ok",
+        "short": "ok",
+        "kind": "end",
+        "label": "Сквозная проверка подтверждена Root",
+        "col": 9,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          2130.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          2065.0,
+          198.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P08_unverified",
+        "short": "unverified",
+        "kind": "end",
+        "label": "Проверка не завершена передать администратору SIEM",
+        "col": 9,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          2130.0,
+          380.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          2065.0,
+          428.0,
+          170,
+          59
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P08_F1",
+        "source": "P08_start",
+        "target": "P08_validate",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            290,
+            170
+          ],
+          [
+            290,
+            400
+          ],
+          [
+            310.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P08_F2",
+        "source": "P08_validate",
+        "target": "P08_intent",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            400.0
+          ],
+          [
+            530.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P08_F3",
+        "source": "P08_intent",
+        "target": "P08_local",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            690.0,
+            400.0
+          ],
+          [
+            800.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P08_F4",
+        "source": "P08_local",
+        "target": "P08_send",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            860.0,
+            400.0
+          ],
+          [
+            950,
+            400
+          ],
+          [
+            950,
+            630
+          ],
+          [
+            970.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          878.0,
+          486.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          950.0,
+          500.5
+        ]
+      },
+      {
+        "id": "P08_F5",
+        "source": "P08_send",
+        "target": "P08_sent",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            630.0
+          ],
+          [
+            1240.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P08_F6",
+        "source": "P08_sent",
+        "target": "P08_success",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            630.0
+          ],
+          [
+            1390,
+            630
+          ],
+          [
+            1390,
+            400
+          ],
+          [
+            1410.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1318.0,
+          569.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1390.0,
+          583.5
+        ]
+      },
+      {
+        "id": "P08_F7",
+        "source": "P08_sent",
+        "target": "P08_fail",
+        "label": "Нет",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1300.0,
+            630.0
+          ],
+          [
+            1320,
+            630
+          ],
+          [
+            1320,
+            570
+          ],
+          [
+            1170,
+            570
+          ],
+          [
+            1170,
+            510
+          ],
+          [
+            1190.0,
+            510.0
+          ]
+        ],
+        "labelBox": [
+          1108.0,
+          434.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1180.0,
+          448.5
+        ]
+      },
+      {
+        "id": "P08_F8",
+        "source": "P08_fail",
+        "target": "P08_unverified",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            510.0
+          ],
+          [
+            2040,
+            510
+          ],
+          [
+            2040,
+            400
+          ],
+          [
+            2130.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P08_F9",
+        "source": "P08_success",
+        "target": "P08_result",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1570.0,
+            400.0
+          ],
+          [
+            1680.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P08_F10",
+        "source": "P08_result",
+        "target": "P08_find",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1740.0,
+            400.0
+          ],
+          [
+            1760,
+            400
+          ],
+          [
+            1760,
+            230
+          ],
+          [
+            1610,
+            230
+          ],
+          [
+            1610,
+            170
+          ],
+          [
+            1630.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1688.0,
+          286.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1760.0,
+          300.5
+        ]
+      },
+      {
+        "id": "P08_F11",
+        "source": "P08_find",
+        "target": "P08_found",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1790.0,
+            170.0
+          ],
+          [
+            1900.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P08_F12",
+        "source": "P08_local",
+        "target": "P08_blocked",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            860.0,
+            400.0
+          ],
+          [
+            880,
+            400
+          ],
+          [
+            880,
+            260
+          ],
+          [
+            720,
+            260
+          ],
+          [
+            720,
+            170
+          ],
+          [
+            810.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          728.0,
+          269.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          800.0,
+          283.5
+        ]
+      },
+      {
+        "id": "P08_F13",
+        "source": "P08_result",
+        "target": "P08_unknown",
+        "label": "Commit неизвестен",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1740.0,
+            400.0
+          ],
+          [
+            1820,
+            400
+          ],
+          [
+            1820,
+            700
+          ],
+          [
+            1670,
+            700
+          ],
+          [
+            1670,
+            740
+          ],
+          [
+            1690.0,
+            740.0
+          ]
+        ],
+        "labelBox": [
+          1748.0,
+          521.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1820.0,
+          535.5
+        ]
+      },
+      {
+        "id": "P08_F14",
+        "source": "P08_found",
+        "target": "P08_ok",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1960.0,
+            170.0
+          ],
+          [
+            2130.0,
+            170.0
+          ]
+        ],
+        "labelBox": [
+          1973.0,
+          141.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          2045.0,
+          155.5
+        ]
+      },
+      {
+        "id": "P08_F15",
+        "source": "P08_found",
+        "target": "P08_unverified",
+        "label": "Нет",
+        "default": true,
+        "via": null,
+        "points": [
+          [
+            1960.0,
+            170.0
+          ],
+          [
+            2040,
+            170
+          ],
+          [
+            2040,
+            400
+          ],
+          [
+            2130.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1968.0,
+          256.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          2040.0,
+          270.5
+        ]
+      }
+    ],
+    "siem": true,
+    "width": 2335.0,
+    "height": 830.0,
+    "canvasHeight": 970.0,
+    "messagePoints": [
+      [
+        1130.0,
+        630.0
+      ],
+      [
+        1150,
+        630
+      ],
+      [
+        1150,
+        870
+      ],
+      [
+        1010,
+        870
+      ],
+      [
+        1030.0,
+        870.5
+      ]
+    ]
+  },
+  {
+    "id": "P09",
+    "title": "Создание и формирование экспорта",
+    "lanes": [
+      "Пользователь и сервис",
+      "Очередь и worker",
+      "Файл и обязательный аудит"
+    ],
+    "doc": "Запрос и изменения состояний экспорта сопровождаются обязательным аудитом. Worker при неисправном аудите не начинает новую обработку. На контрольных точках повторяются проверки. После restart Processing возвращается в очередь с событием восстановления.",
+    "nodes": [
+      {
+        "id": "P09_start",
+        "short": "start",
+        "kind": "start",
+        "label": "Запрос экспорта",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P09_access",
+        "short": "access",
+        "kind": "service",
+        "label": "Проверить permissions область запрос и аудит",
+        "col": 1,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P09_request",
+        "short": "request",
+        "kind": "service",
+        "label": "Сохранить задание и ExportRequested одной транзакцией",
+        "col": 2,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          530.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P09_queued",
+        "short": "queued",
+        "kind": "service",
+        "label": "Ожидать исправного аудита и свободного worker",
+        "col": 3,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P09_claim",
+        "short": "claim",
+        "kind": "service",
+        "label": "Захватить задание и сохранить ProcessingStarted",
+        "col": 4,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P09_make",
+        "short": "make",
+        "kind": "service",
+        "label": "Повторять проверки и сформировать файл",
+        "col": 5,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P09_mg",
+        "short": "mg",
+        "kind": "xor",
+        "label": "Формирование успешно",
+        "col": 6,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1460.0,
+          600.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          1405.0,
+          668.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P09_ready",
+        "short": "ready",
+        "kind": "service",
+        "label": "Сохранить артефакт Ready и ExportArchived одной транзакцией",
+        "col": 7,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1630.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P09_download",
+        "short": "download",
+        "kind": "call",
+        "label": "Выдача и завершение P10",
+        "col": 8,
+        "lane": 0,
+        "row": 0,
+        "call": "P10",
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1850.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P09_failed",
+        "short": "failed",
+        "kind": "service",
+        "label": "Сохранить Failed или Cancelled и итоговый аудит",
+        "col": 7,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1630.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P09_end",
+        "short": "end",
+        "kind": "end",
+        "label": "Результат задания доступен при исправном аудите",
+        "col": 8,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1910.0,
+          380.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1845.0,
+          428.0,
+          170,
+          59
+        ]
+      },
+      {
+        "id": "P09_restart",
+        "short": "restart",
+        "kind": "start",
+        "label": "Worker после перезапуска",
+        "col": 3,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          810.0,
+          720.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          745.0,
+          768.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P09_recover",
+        "short": "recover",
+        "kind": "service",
+        "label": "Processing вернуть в Queued с событием восстановления",
+        "col": 4,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          700.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P09_downloadRequest",
+        "short": "downloadRequest",
+        "kind": "catchMessage",
+        "label": "Запрос пользователя на получение файла",
+        "col": 8,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1910.0,
+          610.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1845.0,
+          658.0,
+          170,
+          42
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P09_F1",
+        "source": "P09_start",
+        "target": "P09_access",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            310.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F2",
+        "source": "P09_access",
+        "target": "P09_request",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            170.0
+          ],
+          [
+            530.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F3",
+        "source": "P09_request",
+        "target": "P09_queued",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            690.0,
+            170.0
+          ],
+          [
+            710,
+            170
+          ],
+          [
+            710,
+            400
+          ],
+          [
+            750.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F4",
+        "source": "P09_queued",
+        "target": "P09_claim",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            400.0
+          ],
+          [
+            970.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F5",
+        "source": "P09_claim",
+        "target": "P09_make",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            400.0
+          ],
+          [
+            1150,
+            400
+          ],
+          [
+            1150,
+            630
+          ],
+          [
+            1190.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F6",
+        "source": "P09_make",
+        "target": "P09_mg",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            630.0
+          ],
+          [
+            1460.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F7",
+        "source": "P09_mg",
+        "target": "P09_ready",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            630.0
+          ],
+          [
+            1630.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          1503.0,
+          554.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1575.0,
+          568.5
+        ]
+      },
+      {
+        "id": "P09_F8",
+        "source": "P09_mg",
+        "target": "P09_failed",
+        "label": "Нет",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1520.0,
+            630.0
+          ],
+          [
+            1540,
+            630
+          ],
+          [
+            1540,
+            400
+          ],
+          [
+            1630.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1468.0,
+          486.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1540.0,
+          500.5
+        ]
+      },
+      {
+        "id": "P09_F9",
+        "source": "P09_failed",
+        "target": "P09_end",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1790.0,
+            400.0
+          ],
+          [
+            1910.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F10",
+        "source": "P09_download",
+        "target": "P09_end",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            2010.0,
+            170.0
+          ],
+          [
+            2030,
+            170
+          ],
+          [
+            2030,
+            360
+          ],
+          [
+            1890,
+            360
+          ],
+          [
+            1890,
+            400
+          ],
+          [
+            1910.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F11",
+        "source": "P09_restart",
+        "target": "P09_recover",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            850.0,
+            740.0
+          ],
+          [
+            970.0,
+            740.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F12",
+        "source": "P09_recover",
+        "target": "P09_queued",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            740.0
+          ],
+          [
+            1150,
+            740
+          ],
+          [
+            1150,
+            460
+          ],
+          [
+            730,
+            460
+          ],
+          [
+            730,
+            400
+          ],
+          [
+            750.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F13",
+        "source": "P09_ready",
+        "target": "P09_downloadRequest",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1790.0,
+            630.0
+          ],
+          [
+            1910.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P09_F14",
+        "source": "P09_downloadRequest",
+        "target": "P09_download",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1950.0,
+            630.0
+          ],
+          [
+            1970,
+            630
+          ],
+          [
+            1970,
+            510
+          ],
+          [
+            1820,
+            510
+          ],
+          [
+            1820,
+            170
+          ],
+          [
+            1850.0,
+            170.0
+          ]
+        ]
+      }
+    ],
+    "siem": false,
+    "width": 2130,
+    "height": 850.0,
+    "canvasHeight": 850.0
+  },
+  {
+    "id": "P10",
+    "title": "Выдача экспорта и неизвестный результат",
+    "lanes": [
+      "Пользователь и доступ",
+      "Передача файла",
+      "Архив и восстановление"
+    ],
+    "doc": "Передача одноразовая. Проверки доступа и аудита продолжаются при чтении. SentAt аудита и результат передачи файла различаются. При перезапуске незавершённая выдача не объявляется успешной: попытка unknown, задание Failed, требуется новый экспорт.",
+    "nodes": [
+      {
+        "id": "P10_start",
+        "short": "start",
+        "kind": "start",
+        "label": "Получить готовый файл",
+        "col": 0,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          150.0,
+          150.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          85.0,
+          198.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P10_guard",
+        "short": "guard",
+        "kind": "service",
+        "label": "Проверить права stamp срок артефакт и аудит",
+        "col": 1,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          310.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P10_begin",
+        "short": "begin",
+        "kind": "service",
+        "label": "Захватить одноразовую выдачу и записать DeliveryStarted",
+        "col": 2,
+        "lane": 0,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          530.0,
+          130.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P10_stream",
+        "short": "stream",
+        "kind": "service",
+        "label": "Передавать файл с повторными проверками",
+        "col": 3,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          750.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P10_result",
+        "short": "result",
+        "kind": "xor",
+        "label": "Итог передачи известен",
+        "col": 4,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1020.0,
+          370.0,
+          60,
+          60
+        ],
+        "labelBox": [
+          965.0,
+          438.0,
+          170,
+          25
+        ]
+      },
+      {
+        "id": "P10_complete",
+        "short": "complete",
+        "kind": "service",
+        "label": "Записать DeliveryCompleted и фактический результат",
+        "col": 5,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          360.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P10_unknown",
+        "short": "unknown",
+        "kind": "service",
+        "label": "После restart отметить попытку unknown и задание Failed",
+        "col": 4,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          970.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P10_new",
+        "short": "new",
+        "kind": "user",
+        "label": "При неизвестном исходе создать новый экспорт",
+        "col": 5,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1190.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P10_expire",
+        "short": "expire",
+        "kind": "service",
+        "label": "По сроку удалить артефакт и записать ExportExpired",
+        "col": 6,
+        "lane": 2,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1410.0,
+          590.0,
+          160,
+          80
+        ]
+      },
+      {
+        "id": "P10_end",
+        "short": "end",
+        "kind": "end",
+        "label": "Файл завершён или требуется новое задание",
+        "col": 7,
+        "lane": 1,
+        "row": 0,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          1690.0,
+          380.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1625.0,
+          428.0,
+          170,
+          59
+        ]
+      },
+      {
+        "id": "P10_crash",
+        "short": "crash",
+        "kind": "start",
+        "label": "Worker после перезапуска",
+        "col": 3,
+        "lane": 1,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": null,
+        "doc": "",
+        "box": [
+          810.0,
+          490.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          745.0,
+          538.0,
+          170,
+          42
+        ]
+      },
+      {
+        "id": "P10_expiryCheck",
+        "short": "expiryCheck",
+        "kind": "timerStart",
+        "label": "Проверка сроков каждые 30 секунд",
+        "col": 6,
+        "lane": 2,
+        "row": 1,
+        "call": null,
+        "attach": null,
+        "timer": "PT30S",
+        "doc": "",
+        "box": [
+          1470.0,
+          720.0,
+          40,
+          40
+        ],
+        "labelBox": [
+          1405.0,
+          768.0,
+          170,
+          42
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "P10_F1",
+        "source": "P10_start",
+        "target": "P10_guard",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            190.0,
+            170.0
+          ],
+          [
+            310.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P10_F2",
+        "source": "P10_guard",
+        "target": "P10_begin",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            470.0,
+            170.0
+          ],
+          [
+            530.0,
+            170.0
+          ]
+        ]
+      },
+      {
+        "id": "P10_F3",
+        "source": "P10_begin",
+        "target": "P10_stream",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            690.0,
+            170.0
+          ],
+          [
+            710,
+            170
+          ],
+          [
+            710,
+            400
+          ],
+          [
+            750.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P10_F4",
+        "source": "P10_stream",
+        "target": "P10_result",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            910.0,
+            400.0
+          ],
+          [
+            1020.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P10_F5",
+        "source": "P10_result",
+        "target": "P10_complete",
+        "label": "Да",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            400.0
+          ],
+          [
+            1190.0,
+            400.0
+          ]
+        ],
+        "labelBox": [
+          1063.0,
+          324.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          1135.0,
+          338.5
+        ]
+      },
+      {
+        "id": "P10_F6",
+        "source": "P10_result",
+        "target": "P10_unknown",
+        "label": "Нет",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1080.0,
+            400.0
+          ],
+          [
+            1100,
+            400
+          ],
+          [
+            1100,
+            350
+          ],
+          [
+            940,
+            350
+          ],
+          [
+            940,
+            630
+          ],
+          [
+            970.0,
+            630.0
+          ]
+        ],
+        "labelBox": [
+          868.0,
+          499.5,
+          144,
+          21
+        ],
+        "labelPoint": [
+          940.0,
+          513.5
+        ]
+      },
+      {
+        "id": "P10_F7",
+        "source": "P10_crash",
+        "target": "P10_unknown",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            850.0,
+            510.0
+          ],
+          [
+            950,
+            510
+          ],
+          [
+            950,
+            630
+          ],
+          [
+            970.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P10_F8",
+        "source": "P10_unknown",
+        "target": "P10_new",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1130.0,
+            630.0
+          ],
+          [
+            1190.0,
+            630.0
+          ]
+        ]
+      },
+      {
+        "id": "P10_F9",
+        "source": "P10_new",
+        "target": "P10_end",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            630.0
+          ],
+          [
+            1370,
+            630
+          ],
+          [
+            1370,
+            400
+          ],
+          [
+            1690.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P10_F10",
+        "source": "P10_complete",
+        "target": "P10_end",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1350.0,
+            400.0
+          ],
+          [
+            1690.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P10_F11",
+        "source": "P10_expire",
+        "target": "P10_end",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1570.0,
+            630.0
+          ],
+          [
+            1590,
+            630
+          ],
+          [
+            1590,
+            400
+          ],
+          [
+            1690.0,
+            400.0
+          ]
+        ]
+      },
+      {
+        "id": "P10_F12",
+        "source": "P10_expiryCheck",
+        "target": "P10_expire",
+        "label": "",
+        "default": false,
+        "via": null,
+        "points": [
+          [
+            1510.0,
+            740.0
+          ],
+          [
+            1530,
+            740
+          ],
+          [
+            1530,
+            690
+          ],
+          [
+            1390,
+            690
+          ],
+          [
+            1390,
+            630
+          ],
+          [
+            1410.0,
+            630.0
+          ]
+        ]
+      }
+    ],
+    "siem": false,
+    "width": 1895.0,
+    "height": 830.0,
+    "canvasHeight": 830.0
+  }
+]

@@ -118,6 +118,13 @@ internal static class UserAdministrationIntegrationTests
       db.Personals.Add(person); await db.SaveChangesAsync();
       try {
         delivery.Observe = async () => await db.Users.AsNoTracking().AnyAsync(u => u.UserName == name);
+        if (failure is "audit" or "both" or "cancelled") {
+          if (failure == "cancelled") await PostgresTests.ThrowsAsync<OperationCanceledException>(() => service.CreateFromDtoAsync(new(name, name + "@example.test", "InitialPassword123!", person.Id)), check, "cancelled mandatory audit rolls back account creation");
+          else await PostgresTests.ThrowsAsync<IOException>(() => service.CreateFromDtoAsync(new(name, name + "@example.test", "InitialPassword123!", person.Id)), check, "failed mandatory audit rolls back account creation");
+          check(!await db.Users.AnyAsync(u => u.UserName == name) && delivery.AuditCalls == 1 && delivery.NotificationCalls == 0,
+            "failed account audit leaves no account and publishes no committed notification");
+          continue;
+        }
         var id = await service.CreateFromDtoAsync(new(name, name + "@example.test", "InitialPassword123!", person.Id));
         delivery.Assert(check, AuditEventType.UserCreated, id);
 
@@ -161,6 +168,7 @@ internal static class UserAdministrationIntegrationTests
   {
     public Func<Task<bool>> Observe = () => Task.FromResult(false);
     public int NotificationCalls, AuditCalls;
+    public List<AuditEventData> Rejected = [];
     private bool notificationSawCommit, auditSawCommit;
     private string[] targets = [];
     private string? actor, details;
@@ -175,6 +183,7 @@ internal static class UserAdministrationIntegrationTests
       if (failure == "cancelled") throw new OperationCanceledException("Synthetic notification cancellation after commit");
       if (failure is "notification" or "both") throw new IOException("Synthetic notification failure");
     }
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); if (entry.Outcome != "success") Rejected.Add(entry); else LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
     public void LogIdentityEvent(AuditEventType type, string? user, string? ip = null, string? text = null) {
       AuditCalls++; actor = user; details = text; eventType = type; auditSawCommit = Observe().GetAwaiter().GetResult();
       if (failure == "cancelled") throw new OperationCanceledException("Synthetic audit cancellation after commit");
@@ -182,7 +191,7 @@ internal static class UserAdministrationIntegrationTests
     }
     public void Assert(Action<bool, string> check, AuditEventType expectedType, string id) {
       check(AuditCalls == 1 && NotificationCalls == 1, $"{expectedType}: both deliveries attempted once with {failure}");
-      check(notificationSawCommit && auditSawCommit, $"{expectedType}: independent context sees committed user write with {failure}");
+      check(notificationSawCommit && !auditSawCommit, $"{expectedType}: mandatory audit precedes commit; notification observes committed user write with {failure}");
       check(actor == "root" && eventType == expectedType && details == "Target=" + id && targets.SequenceEqual([id]), "completion retains trusted actor, event and affected user");
       var expectedErrors = failure switch { "none" => 0, "both" or "cancelled" => 2, _ => 1 };
       check(Errors.Count == expectedErrors && Errors.All(e => e != null), "each post-commit user delivery failure is logged");
@@ -229,6 +238,8 @@ internal static class UserAdministrationIntegrationTests
   private sealed class Audit : IAuditService
   {
     public List<(AuditEventType, string?, string?)> Events = [];
+    public List<AuditEventData> Rejected = [];
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); if (entry.Outcome != "success") Rejected.Add(entry); else LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
     public void LogIdentityEvent(AuditEventType type, string? user, string? ip = null, string? details = null) => Events.Add((type, user, details));
   }
 }

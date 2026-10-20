@@ -43,6 +43,10 @@ public static class Permissions
     public const string Read = "Permissions.Logs.Read";
     public const string Configure = "Permissions.Logs.Configure";
   }
+  public static class Audit
+  {
+    public const string Read = "Permissions.Audit.Read";
+  }
   public static class Exports
   {
     public const string ReadArchive = "Permissions.Exports.ReadArchive";

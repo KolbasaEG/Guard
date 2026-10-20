@@ -238,6 +238,7 @@ internal static class ApiLifecycleIntegrationTests
   }
   private sealed class AuditStub : IAuditService
   {
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
     public void LogIdentityEvent(AuditEventType eventType, string? userName, string? ipAddress = null, string? details = null) { }
   }
 }

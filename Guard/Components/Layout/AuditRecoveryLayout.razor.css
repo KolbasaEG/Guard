@@ -1,0 +1,25 @@
+.audit-recovery-shell { min-height: 100vh; --guard-header-height: calc(var(--rz-header-min-height, 3.125rem) + 1px); }
+.audit-recovery-shell ::deep .recovery-layout.rz-layout {
+  height: 100dvh;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: var(--guard-header-height) minmax(0, 1fr);
+  grid-template-areas: 'rz-sidebar rz-header' 'rz-sidebar rz-body';
+  background-color: var(--rz-body-background-color);
+}
+.recovery-header { display: flex; align-items: center; gap: 12px; height: var(--rz-header-min-height, 3.125rem); padding-right: 12px; }
+.recovery-title { min-width: 0; flex: 1; font-size: 16px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recovery-actions { display: flex; align-items: center; flex-shrink: 0; }
+.recovery-actions form { margin: 0; }
+.audit-recovery-shell ::deep .recovery-sidebar { width: 260px; overflow: hidden; }
+.recovery-sidebar-content { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.recovery-brand { display: flex; align-items: center; gap: 12px; padding: 20px 16px; color: var(--rz-sidebar-color); text-decoration: none; border-bottom: var(--rz-panel-menu-item-border); font-weight: 600; flex-shrink: 0; }
+.recovery-navigation { flex: 1; min-height: 0; overflow: auto; }
+.recovery-caption { padding: 16px 16px 8px; color: var(--rz-sidebar-color); opacity: .72; font-size: 12px; }
+.recovery-scope { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-top: var(--rz-panel-menu-item-border); color: var(--rz-sidebar-color); font-size: 12px; }
+.audit-recovery-shell ::deep .recovery-body { padding: 0; min-width: 0; overflow: hidden; }
+.recovery-content { height: 100%; min-height: 0; overflow: auto; }
+@media (max-width: 768px) {
+  .audit-recovery-shell ::deep .recovery-layout.rz-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'rz-header' 'rz-body'; }
+  .audit-recovery-shell ::deep .recovery-sidebar { position: fixed; grid-area: auto; top: var(--guard-header-height); bottom: 0; left: 0; right: auto; height: auto; max-width: calc(100vw - 32px); z-index: 100; box-shadow: var(--rz-shadow-4); }
+  .recovery-header { gap: 4px; padding-right: 4px; }
+}

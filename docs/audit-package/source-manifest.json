@@ -1,0 +1,586 @@
+{
+  "date": "2026-10-20",
+  "branch": "codex/logging-reliability",
+  "workingTree": "Uncommitted implementation snapshot",
+  "files": [
+    {
+      "path": "docs/audit-compliance-plan.md",
+      "sha256": "832e50a79e4da85807a7487062cb01b32ef858a02c8009e005cb114bd1bd0c8d"
+    },
+    {
+      "path": "docs/audit-operations.md",
+      "sha256": "a4e8f53b29297d4c454a2376ed295032be5fce57033addb44c9d12a3d30f544d"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/AuditFilterFields.cs",
+      "sha256": "224778d5a014d57a7e62a12099e45e92157d8050f95adf308ce819f0a27fbebb"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/Details.razor",
+      "sha256": "5f304a8b80c1ef87463dc78bdaed5b84f4cad5d9388fc69f61a17f2984ab6368"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/Details.razor.cs",
+      "sha256": "9b4fa61c0e1287b16957895d0e743c02e654ea35fb53059daffb6093f9b135fa"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/Details.razor.css",
+      "sha256": "625936aab1c64f21d723a1789b0447cb3672190b3f04cfbfc27b7786a98fc288"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/Diagnostics.razor",
+      "sha256": "f701d2b9a789f57525ea12c3a17689ed1180b7920ca771a9aa01f181e35b0f73"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/Index.razor",
+      "sha256": "6c1e334bdf26b70f50f4e2c1fbb8f33833e09db7b10b0853fe3c86661b7ef199"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/Index.razor.cs",
+      "sha256": "1e10e789d7fffcc38633bea9841fb267f8b286393963687e691dbb0982d3b035"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/Page.razor",
+      "sha256": "4c4d6c7d40624aa2eb6503c423789af57cdc4ea3db58d59f82cd21dd2faba15c"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/Settings.razor",
+      "sha256": "f7da8adacdb0a680aa45b3ee4c0faaf75748554205e7847cc3666cacac804c9a"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/Settings.razor.cs",
+      "sha256": "9a8994da53b37eec74195f52bc1e3b428e76a0dd0bc3b2853f99e7abab0ededd"
+    },
+    {
+      "path": "Guard/Components/Pages/Audit/Settings.razor.css",
+      "sha256": "8fc2203d04c5b89afe6edbed77e452692af8aff03e977abd0634086455ca2ec2"
+    },
+    {
+      "path": "Guard/Web/Identity/AccessCircuitHandler.cs",
+      "sha256": "d949bbf4d29bb2e3223f34085d8398fb2da75afda40c9d0fac91bef29acbd58b"
+    },
+    {
+      "path": "Guard/Web/Identity/AccessRefreshCoordinator.cs",
+      "sha256": "63a258f69694cb391a1bd5943e6c666096840d0a73f4d43231e2a7d22e86e9f8"
+    },
+    {
+      "path": "Guard/Web/Identity/AccountPolicyMiddleware.cs",
+      "sha256": "573bc2cb86b2aa52df384cf7371442f6833f86d2e2422b9ec0955c7b7902b0ed"
+    },
+    {
+      "path": "Guard/Web/Identity/AuditAvailabilityMiddleware.cs",
+      "sha256": "6882ce070f41c751424260eaecbc5548acbdfc8ff9a0de0f549f4135d5d10c0e"
+    },
+    {
+      "path": "Guard/Web/Identity/AuditCookieValidation.cs",
+      "sha256": "713ca437adb2f96776a121a44d5f439c583c1a9cd99123958fd4427932d25574"
+    },
+    {
+      "path": "Guard/Web/Identity/ClientIpAccessor.cs",
+      "sha256": "a7506edb2f03eafda383b229ce62bfcfe3c5f73ac5b87c35d9a97ad5e1bb7ee1"
+    },
+    {
+      "path": "Guard/Web/Identity/IpCheckMiddleware.cs",
+      "sha256": "62909d03de66b12d4aad3b466d754fd7e79267deb03fef99ce575ac97dc0fe49"
+    },
+    {
+      "path": "Guard/Web/Identity/PermissionAuthorizationHandler.cs",
+      "sha256": "5e47f6ce018348918e69a4354b08c30f7af4d09a0aa777ab1d2b1cda3c3192ba"
+    },
+    {
+      "path": "Guard.Application/Core/6-Services/PermissionService.cs",
+      "sha256": "bdae66d01d940c5b5d582f18d1a3cdf4985bdca33f3168eea476e63ff0ec18c2"
+    },
+    {
+      "path": "Guard.Domain/Core/0-Enums/AuditEventType.cs",
+      "sha256": "427d6578d06522b736f306514a8d5884b07dd255ddac06394ac854a90f7c82d4"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/6-Services/AuditAdministrationService.cs",
+      "sha256": "8f5ead61cf306e2d11b7b322180a984f7d37f315f01d1c5ac912709860e47f35"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/6-Services/AuditSearchService.cs",
+      "sha256": "424e1641c7112b3d5d382ba6db3e528891ce1d254111ca64aae5c591c56151da"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/AuditDeliveryProcessor.cs",
+      "sha256": "ab81c9b2d3542ed8d1039b9e5a80e6e9e15c50e871739ce095fd1c3ffd24594f"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/AuditHealth.cs",
+      "sha256": "35c77abc73c5c695492f81514e9d09e2e412895ade7773083136e40abeaa15ce"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/AuditJournal.cs",
+      "sha256": "a56e5a0e91abb1454aded7c565406ec353d137f0e9b3ec4545f7de4712000e17"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/AuditOperation.cs",
+      "sha256": "de7757a3b8451dab7e5d2f96556d63b5a5ebd2f25f0cc9bc434bbc43ab558b5a"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/AuditPersistence.cs",
+      "sha256": "d9328930a993c1d4f30775eb56101018ffa6087546fffa170a6df23fd81cecd1"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/AuditWorker.cs",
+      "sha256": "a2f95c6f913c420ab0ef93c9775013b7077c10911bc6753234d90ea4bbbf4e81"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/CefFormatter.cs",
+      "sha256": "5415900d7aab22f18da84f629ccce17f332c3a3c83b83fb8bfcacc123629be70"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/DynamicLoggerManager.cs",
+      "sha256": "260f6d6412ab03e1ff32c6f906963fffb1e7842fcca37f2b437b58bc08e1bdbd"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/EntityChangeAudit.cs",
+      "sha256": "92269a8ac0219d5dcd1996070852145ffa89b91b5fa9534f6c10e11205d41ab5"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/InternalLogWriter.cs",
+      "sha256": "64e782c2df583e323d1f3c852021610eb09e6b9e44759d11df4e6a333500dd7e"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/LayerEnricher.cs",
+      "sha256": "0f9059b686d6f16aad18b8643b003dff01e1137b09ad6228c5ab143f5e64485c"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/LogLevelPersistenceService.cs",
+      "sha256": "2bb42f57552bd5f17580910ab1439c2f3839e3b9c4e24fdd036868cb27d5eb73"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/LogRetention.cs",
+      "sha256": "53a753459d29f310350fcc745d70cb945d7ab09d499c49401afb41dd2aa18c80"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/PostgresSerilogConfigurator.cs",
+      "sha256": "bc7ddf5cee2d9fa6055fbb45177ebfde34be88a6dbc952649a2f520568746cb5"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/SyslogAuditTransport.cs",
+      "sha256": "d052e4e84c297cc2a3f3e17f2f15c26b7520c36105e34f77f074d187d01e7d92"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/9-Logging/UtcTimestampColumnWriter.cs",
+      "sha256": "654993e0cca710e25b8504655fbf01efbc2806ccc7eb537b080bdad95cce5eec"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/Identity/AccountPolicyUserStateMapping.cs",
+      "sha256": "d724b6c95ae4e63b4c52fe02e8a60d4fed3d35faf9798d9f9599346186756c88"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/Identity/ClientIpAddress.cs",
+      "sha256": "5b8274f2c71825a5f8dcf3e38ba6468d88714853dbcf9bc7ea92336b3f8ffeeb"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/Identity/IpRestrictedSignInManager.cs",
+      "sha256": "15bda99778fcc1a7dfa2d2376a716970e9dc8175ca09e992ac93c8ac18f642f9"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/Identity/LocalAccountService.cs",
+      "sha256": "2a03c2ee630b34738abda5da132f1ff5874dcfdf6c9fc12cc016376fb1586a54"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/Identity/OwnPasswordService.cs",
+      "sha256": "1e9bceb69fa873749f7ab148ff695cc58ac944a26e7cf5049a036f2db10237b4"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/Identity/PolicyPasswordValidator.cs",
+      "sha256": "bf215bb3555f0e920de3177d45395a004d253a5f0b7027c8b5e03532c1f430da"
+    },
+    {
+      "path": "Guard.Infrastructure/Core/Identity/PolicyUserManager.cs",
+      "sha256": "755d9727eeab1ea6abb91eba23c05792cc3a2789fce8fe3aaa8c03a6d6519f73"
+    }
+  ],
+  "events": [
+    {
+      "code": 1,
+      "name": "LoginSuccess",
+      "purpose": "Успешный обычный вход до выдачи cookie",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Administrator/AuditService.cs",
+        "Guard.Infrastructure/Core/Identity/IpRestrictedSignInManager.cs",
+        "Guard.Infrastructure/Core/Identity/LocalAccountService.cs"
+      ]
+    },
+    {
+      "code": 2,
+      "name": "LoginFailed",
+      "purpose": "Итог отказа входа и машинная причина",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Administrator/AuditService.cs",
+        "Guard.Infrastructure/Core/Identity/LocalAccountService.cs",
+        "Guard/Program.cs",
+        "Guard/Web/Identity/IpCheckMiddleware.cs"
+      ]
+    },
+    {
+      "code": 3,
+      "name": "Logout",
+      "purpose": "Явный выход; при отказе аудита возможна только best effort запись",
+      "references": [
+        "Guard.Infrastructure/Core/9-Logging/AuditJournal.cs",
+        "Guard.Infrastructure/Core/Identity/LocalAccountService.cs"
+      ]
+    },
+    {
+      "code": 4,
+      "name": "PasswordChanged",
+      "purpose": "Изменение или административная установка пароля без секретов",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/SecurityService.cs",
+        "Guard.Infrastructure/Core/Identity/PolicyUserManager.cs"
+      ]
+    },
+    {
+      "code": 5,
+      "name": "PasswordResetRequested",
+      "purpose": "Совместимое значение; текущий сброс фиксируется PasswordChanged",
+      "references": []
+    },
+    {
+      "code": 6,
+      "name": "TwoFactorEnabled",
+      "purpose": "Совместимое значение; рабочая 2FA не поддерживается локальной формой",
+      "references": []
+    },
+    {
+      "code": 7,
+      "name": "TwoFactorDisabled",
+      "purpose": "Совместимое значение; не означает доступность 2FA",
+      "references": []
+    },
+    {
+      "code": 8,
+      "name": "PasskeyRegistered",
+      "purpose": "Совместимое значение; passkey сценарий не заявлен",
+      "references": []
+    },
+    {
+      "code": 9,
+      "name": "PasskeyRemoved",
+      "purpose": "Совместимое значение; passkey сценарий не заявлен",
+      "references": []
+    },
+    {
+      "code": 10,
+      "name": "ExternalLoginAdded",
+      "purpose": "Совместимое значение; внешний вход не заявлен",
+      "references": []
+    },
+    {
+      "code": 11,
+      "name": "ExternalLoginRemoved",
+      "purpose": "Совместимое значение; внешний вход не заявлен",
+      "references": []
+    },
+    {
+      "code": 12,
+      "name": "RoleAssigned",
+      "purpose": "Назначение роли в транзакции Identity",
+      "references": [
+        "Guard.Infrastructure/Core/9-Logging/AuditPersistence.cs"
+      ]
+    },
+    {
+      "code": 13,
+      "name": "RoleRemoved",
+      "purpose": "Снятие роли в транзакции Identity",
+      "references": [
+        "Guard.Infrastructure/Core/9-Logging/AuditPersistence.cs"
+      ]
+    },
+    {
+      "code": 14,
+      "name": "RolePermissionsChanged",
+      "purpose": "Изменение роли или набора permissions",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/RoleAccessService.cs",
+        "Guard.Infrastructure/Core/9-Logging/AuditPersistence.cs"
+      ]
+    },
+    {
+      "code": 15,
+      "name": "UserRolesChanged",
+      "purpose": "Итог изменения набора ролей аккаунта",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/RoleAccessService.cs"
+      ]
+    },
+    {
+      "code": 16,
+      "name": "AccessDenied",
+      "purpose": "Отказ защищённой операции с объектом и причиной",
+      "references": [
+        "Guard.Application/Core/6-Services/Administrator/AuditEventData.cs",
+        "Guard.Application/Core/6-Services/PermissionService.cs",
+        "Guard.Infrastructure/Core/6-Services/Exports/ExportDeliveryService.cs",
+        "Guard/Web/Identity/PermissionAuthorizationHandler.cs"
+      ]
+    },
+    {
+      "code": 17,
+      "name": "UserBlocked",
+      "purpose": "Ручная или автоматическая блокировка",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/AccountPolicyService.cs",
+        "Guard.Infrastructure/Core/6-Services/SecurityService.cs",
+        "Guard.Infrastructure/Core/Identity/PolicyUserManager.cs"
+      ]
+    },
+    {
+      "code": 18,
+      "name": "UserUnblocked",
+      "purpose": "Разблокировка",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/SecurityService.cs"
+      ]
+    },
+    {
+      "code": 19,
+      "name": "AccountPolicyChanged",
+      "purpose": "Изменение политики аккаунтов и паролей",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/AccountPolicyService.cs",
+        "Guard.Infrastructure/Core/9-Logging/AuditPersistence.cs"
+      ]
+    },
+    {
+      "code": 20,
+      "name": "SynchronizationSettingsChanged",
+      "purpose": "Изменение конфигурации синхронизации",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/SynchronizationService.cs"
+      ]
+    },
+    {
+      "code": 21,
+      "name": "SynchronizationCompleted",
+      "purpose": "Итог синхронизации",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/SynchronizationService.cs"
+      ]
+    },
+    {
+      "code": 22,
+      "name": "ExportRequested",
+      "purpose": "Принят запрос экспорта",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Exports/DataExportService.cs"
+      ]
+    },
+    {
+      "code": 23,
+      "name": "ExportArchived",
+      "purpose": "Файл сформирован и включён в архив",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Exports/ExportProcessor.cs"
+      ]
+    },
+    {
+      "code": 24,
+      "name": "ExportDeliveryStarted",
+      "purpose": "Начало одноразовой выдачи",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Exports/ExportDeliveryService.cs"
+      ]
+    },
+    {
+      "code": 25,
+      "name": "ExportDeliveryCompleted",
+      "purpose": "Фактический или неизвестный итог передачи",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Exports/ExportDeliveryService.cs",
+        "Guard.Infrastructure/Core/9-Logging/AuditJournal.cs"
+      ]
+    },
+    {
+      "code": 26,
+      "name": "ExportFailed",
+      "purpose": "Ошибка экспорта",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Exports/ExportDeliveryService.cs",
+        "Guard.Infrastructure/Core/6-Services/Exports/ExportProcessor.cs",
+        "Guard/Web/Exports/ExportEndpoints.cs"
+      ]
+    },
+    {
+      "code": 27,
+      "name": "ExportCancelled",
+      "purpose": "Отмена экспорта",
+      "references": [
+        "Guard.Application/Core/6-Services/Administrator/AuditEventData.cs",
+        "Guard.Infrastructure/Core/6-Services/Exports/DataExportService.cs",
+        "Guard.Infrastructure/Core/6-Services/Exports/ExportProcessor.cs"
+      ]
+    },
+    {
+      "code": 28,
+      "name": "ExportArchiveViewed",
+      "purpose": "Совместимое значение; обычный просмотр архива не журналируется",
+      "references": []
+    },
+    {
+      "code": 29,
+      "name": "ExportRetentionChanged",
+      "purpose": "Изменение срока архива экспорта",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Exports/DataExportService.cs"
+      ]
+    },
+    {
+      "code": 30,
+      "name": "ExportExpired",
+      "purpose": "Истечение срока и удаление артефакта",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Exports/ExportProcessor.cs",
+        "Guard.Infrastructure/Core/9-Logging/AuditJournal.cs"
+      ]
+    },
+    {
+      "code": 31,
+      "name": "UserDetailsChanged",
+      "purpose": "Изменение безопасных полей аккаунта Identity",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/SecurityService.Users.cs",
+        "Guard.Infrastructure/Core/6-Services/SecurityService.cs",
+        "Guard.Infrastructure/Core/9-Logging/AuditPersistence.cs",
+        "Guard.Infrastructure/Core/Identity/PolicyUserManager.cs"
+      ]
+    },
+    {
+      "code": 32,
+      "name": "UserCreated",
+      "purpose": "Создание аккаунта",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/SecurityService.Users.cs",
+        "Guard.Infrastructure/Core/6-Services/SecurityService.cs",
+        "Guard.Infrastructure/Core/9-Logging/AuditPersistence.cs"
+      ]
+    },
+    {
+      "code": 33,
+      "name": "LoggingConfigurationChanged",
+      "purpose": "Применение настроек технического логирования",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/LogConfigurationService.cs"
+      ]
+    },
+    {
+      "code": 34,
+      "name": "EntityChanged",
+      "purpose": "Изменение разрешённых предметных полей и связей",
+      "references": [
+        "Guard.Infrastructure/Core/9-Logging/EntityChangeAudit.cs"
+      ]
+    },
+    {
+      "code": 35,
+      "name": "AuditConfigurationChanged",
+      "purpose": "Изменение настроек аудита и режима",
+      "references": [
+        "Guard.Infrastructure/Core/9-Logging/AuditJournal.cs"
+      ]
+    },
+    {
+      "code": 36,
+      "name": "AuditStateChanged",
+      "purpose": "Переход состояния и RecoverySignIn",
+      "references": [
+        "Guard.Infrastructure/Core/9-Logging/AuditJournal.cs",
+        "Guard.Infrastructure/Core/9-Logging/AuditWorker.cs",
+        "Guard.Infrastructure/Core/Identity/LocalAccountService.cs"
+      ]
+    },
+    {
+      "code": 37,
+      "name": "AuditConnectionTest",
+      "purpose": "Начало и итог теста соединения",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/AuditAdministrationService.cs",
+        "Guard.Infrastructure/Core/9-Logging/AuditJournal.cs"
+      ]
+    },
+    {
+      "code": 38,
+      "name": "PasswordChangeFailed",
+      "purpose": "Отказ или ошибка изменения пароля",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/SecurityService.Users.cs",
+        "Guard.Infrastructure/Core/Identity/OwnPasswordService.cs",
+        "Guard.Infrastructure/Core/Identity/PolicyUserManager.cs"
+      ]
+    },
+    {
+      "code": 39,
+      "name": "SessionRevoked",
+      "purpose": "Отзыв сессии",
+      "references": [
+        "Guard.Infrastructure/Core/9-Logging/AuditJournal.cs",
+        "Guard/Web/Identity/AccountPolicyMiddleware.cs"
+      ]
+    },
+    {
+      "code": 40,
+      "name": "RoleDeleted",
+      "purpose": "Удаление роли",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/RoleAccessService.cs",
+        "Guard.Infrastructure/Core/9-Logging/AuditPersistence.cs"
+      ]
+    },
+    {
+      "code": 41,
+      "name": "RoleCreated",
+      "purpose": "Создание роли",
+      "references": [
+        "Guard.Infrastructure/Core/9-Logging/AuditPersistence.cs"
+      ]
+    },
+    {
+      "code": 42,
+      "name": "AuditCleanupCompleted",
+      "purpose": "Пакетный результат очистки",
+      "references": [
+        "Guard.Infrastructure/Core/9-Logging/AuditJournal.cs",
+        "Guard.Infrastructure/Core/9-Logging/LogRetention.cs"
+      ]
+    },
+    {
+      "code": 43,
+      "name": "ExportProcessingStarted",
+      "purpose": "Worker начал формирование экспорта",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Exports/ExportProcessor.cs"
+      ]
+    },
+    {
+      "code": 44,
+      "name": "LoggingConfigurationChangeRequested",
+      "purpose": "Долговечное намерение изменить техническую конфигурацию",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/LogConfigurationService.cs"
+      ]
+    },
+    {
+      "code": 45,
+      "name": "ExportRecoveryCompleted",
+      "purpose": "Результат восстановления экспортного задания после рестарта",
+      "references": [
+        "Guard.Infrastructure/Core/6-Services/Exports/ExportProcessor.cs"
+      ]
+    },
+    {
+      "code": 46,
+      "name": "SessionRefreshed",
+      "purpose": "Обновление сессии без ложного нового входа",
+      "references": [
+        "Guard.Infrastructure/Core/Identity/IpRestrictedSignInManager.cs"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+@inherits LayoutComponentBase
+@inject CookieThemeService CookieThemeService
+<div class="audit-recovery-shell">
+  <RadzenComponents />
+  <RadzenLayout class="recovery-layout">
+    <RadzenHeader>
+      <div class="recovery-header">
+        <RadzenSidebarToggle Click="@(() => sidebarExpanded = !sidebarExpanded)" ToggleAriaLabel="Показать или скрыть меню" />
+        <span class="recovery-title">Аудит и восстановление</span>
+        <div class="recovery-actions">
+          <RadzenAppearanceToggle />
+          <form method="post" action="/Account/Logout" data-enhance="false">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="/Account/Login" />
+            <RadzenButton Icon="power_settings_new" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" title="Выйти" aria-label="Выйти" />
+          </form>
+        </div>
+      </div>
+    </RadzenHeader>
+    <RadzenSidebar @bind-Expanded="sidebarExpanded" ResponsiveMaxWidth="768px" class="recovery-sidebar">
+      <div class="recovery-sidebar-content">
+        <a class="recovery-brand" href="/audit/settings">
+          <RadzenImage Path="images/logo.png" AlternateText="" Style="width:48px;height:48px;" />
+          <span>АИС Охрана</span>
+        </a>
+        <nav class="recovery-navigation" aria-label="Разделы аудита">
+          <div class="recovery-caption">Администрирование</div>
+          <RadzenPanelMenu>
+            <RadzenPanelMenuItem Text="Состояние и настройки" Icon="health_and_safety" Path="/audit/settings" />
+            <RadzenPanelMenuItem Text="Диагностический журнал" Icon="history" Path="/audit/diagnostics" />
+            <RadzenPanelMenuItem Text="Обычный вход" Icon="login" Path="/Account/Login" />
+          </RadzenPanelMenu>
+        </nav>
+        <div class="recovery-scope">
+          <RadzenIcon Icon="admin_panel_settings" />
+          <span>Диагностика и восстановление аудита</span>
+        </div>
+      </div>
+    </RadzenSidebar>
+    <RadzenBody class="recovery-body">
+      <main class="recovery-content">@Body</main>
+    </RadzenBody>
+  </RadzenLayout>
+</div>
+@code {
+  private bool sidebarExpanded = true;
+}

@@ -31,12 +31,20 @@ internal static class ExportCommandCompletionTests
       delivery.Observe = async (type, actor, details) => {
         var id = Guid.Parse(details!.Split(';')[0][7..]);
         await using var db = await factory.CreateDbContextAsync();
-        var job = await db.ExportJobs.AsNoTracking().SingleAsync(j => j.Id == id);
-        return type == AuditEventType.ExportRequested && actor == user && job.AuthorId == user &&
+        var job = await db.ExportJobs.AsNoTracking().SingleOrDefaultAsync(j => j.Id == id);
+        return type == AuditEventType.ExportRequested && actor == user && job != null && job.AuthorId == user &&
           job.ClientIp == expectedIp && job.State == ExportJobState.Queued;
       };
+      if (failure != "none") {
+        await using var absent = await factory.CreateDbContextAsync(); var previousCount = await absent.ExportJobs.CountAsync();
+        if (failure == "io") await PostgresTests.ThrowsAsync<IOException>(() => service.CreateAsync(new(ExportArea.Personals, ExportFormat.Excel), creating.Token), check, "failed mandatory audit rejects export creation");
+        else await PostgresTests.ThrowsAsync<OperationCanceledException>(() => service.CreateAsync(new(ExportArea.Personals, ExportFormat.Excel), creating.Token), check, "cancelled mandatory audit rejects export creation");
+        check(await absent.ExportJobs.CountAsync() == previousCount && !delivery.SawCommit && delivery.Events.Count == 1,
+          "export request and mandatory audit roll back together before a job becomes visible");
+        await cleanup(); continue;
+      }
       var id = await service.CreateAsync(new(ExportArea.Personals, ExportFormat.Excel), creating.Token);
-      check(delivery.SawCommit, "export request audit observes committed job and trusted author");
+      check(!delivery.SawCommit, "export request audit precedes visibility of the committed job");
       check(delivery.LastIp == expectedIp, "export request audit retains trusted normalized client IP or null without HTTP address");
       await using (var db = await factory.CreateDbContextAsync()) {
         check(await db.ExportJobs.CountAsync(j => j.Id == id && j.AuthorId == user && !j.CancelRequested) == 1,
@@ -57,7 +65,7 @@ internal static class ExportCommandCompletionTests
           await db.ExportJobs.AnyAsync(j => j.Id == id && j.CancelRequested);
       };
       await service.CancelAsync(id, cancelling.Token);
-      check(delivery.SawCommit, "cancel audit observes committed cancellation and exact target");
+      check(!delivery.SawCommit, "cancel audit precedes committed cancellation and retains exact target");
       await using (var db = await factory.CreateDbContextAsync()) {
         check(await db.ExportJobs.AnyAsync(j => j.Id == id && j.CancelRequested), "cancel succeeds despite audit delivery failure");
       }
@@ -80,7 +88,7 @@ internal static class ExportCommandCompletionTests
           await db.ExportRetentionSettings.AnyAsync(s => s.Id == 1 && s.Years == years && s.Version != previous.Version && s.ModifiedBy == root);
       };
       await service.SaveRetentionAsync(years, previous.Version, configuring.Token);
-      check(delivery.SawCommit, "retention audit observes saved value, new version and trusted Root");
+      check(!delivery.SawCommit, "retention audit precedes commit of the new version and trusted Root");
       var saved = await service.GetRetentionAsync();
       check(saved.Years == years && saved.Version != previous.Version, "retention command returns success after confirmed write");
       beforeRejected = delivery.Events.Count;
@@ -120,6 +128,7 @@ internal static class ExportCommandCompletionTests
     public List<(Exception? Exception, string Message)> Errors { get; } = [];
     public bool SawCommit;
     public string? LastIp;
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
     public void LogIdentityEvent(AuditEventType type, string? user, string? ip = null, string? details = null) {
       LastIp = ip;
       Events.Add(type);

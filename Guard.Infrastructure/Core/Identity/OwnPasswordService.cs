@@ -8,13 +8,15 @@ namespace Guard.Core.Identity;
 // Request-scoped Identity adapter: changing a password also replaces the HTTP cookie.
 public sealed class OwnPasswordService(IHttpContextAccessor contexts,
   UserManager<ApplicationUser> users, SignInManager<ApplicationUser> signIn,
-  ILogger<OwnPasswordService> logger) : IOwnPasswordService
+  ILogger<OwnPasswordService> logger, IOperationAvailability? availability = null, IAuditService? audit = null) : IOwnPasswordService
 {
   private async Task<ApplicationUser?> GetUserAsync(CancellationToken ct)
   {
     ct.ThrowIfCancellationRequested();
     var context = contexts.HttpContext;
     if (context?.User.Identity?.IsAuthenticated != true) return null;
+    if (context.User.HasClaim("guard:audit-recovery", "1")) return null;
+    if (availability != null) await availability.RequireWorkingAsync(ct);
     return await users.GetUserAsync(context.User);
   }
 
@@ -31,10 +33,16 @@ public sealed class OwnPasswordService(IHttpContextAccessor contexts,
   {
     var user = await GetUserAsync(ct);
     if (user is null) return new(OwnPasswordChangeStatus.Unauthorized);
-    if (string.IsNullOrEmpty(currentPassword) || string.IsNullOrEmpty(newPassword))
+    if (string.IsNullOrEmpty(currentPassword) || string.IsNullOrEmpty(newPassword)) {
+      if (audit != null) await audit.RecordAsync(AuditEventData.ForAccount(Core.Enums.AuditEventType.PasswordChangeFailed, user.Id)
+        with { ReasonCode = "MissingInput", Outcome = "failure" }, ct);
       return new(OwnPasswordChangeStatus.Rejected, "Заполните текущий и новый пароль.");
-    if (newPassword != confirmation)
+    }
+    if (newPassword != confirmation) {
+      if (audit != null) await audit.RecordAsync(AuditEventData.ForAccount(Core.Enums.AuditEventType.PasswordChangeFailed, user.Id)
+        with { ReasonCode = "ConfirmationMismatch", Outcome = "failure" }, ct);
       return new(OwnPasswordChangeStatus.Rejected, "Пароли не совпадают.");
+    }
     ct.ThrowIfCancellationRequested();
     var result = await users.ChangePasswordAsync(user, currentPassword, newPassword);
     if (!result.Succeeded)

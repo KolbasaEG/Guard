@@ -51,6 +51,7 @@ public static class DatabaseInitializer
     using var cmd = connection.CreateCommand();
     cmd.CommandText = @"
             CREATE TABLE IF NOT EXISTS public.logs (
+                id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
                 timestamp TIMESTAMP NOT NULL,
                 level VARCHAR(50),
                 layer VARCHAR(50),
@@ -60,7 +61,8 @@ public static class DatabaseInitializer
                 properties JSONB,
                 user_id VARCHAR(250),
                 ip_address VARCHAR(50)
-            );";
+            );
+            CREATE INDEX IF NOT EXISTS ix_logs_timestamp ON public.logs (timestamp);";
     cmd.ExecuteNonQuery();
   }
 

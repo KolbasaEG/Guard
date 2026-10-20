@@ -5,6 +5,7 @@ using Guard.Core.Enums;
 using Guard.Core.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Guard.Core.Logging;
 namespace Guard.Core.Services;
 public partial class SecurityService(
   IReadRepository<ApplicationUser> userReads, IPermissionService permissions,
@@ -98,6 +99,7 @@ public partial class SecurityService(
     var actorId = initial.Actor.UserId;
     await using var scope = scopes.CreateAsyncScope();
     var db=scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.AuditActorId = actorId;
     var manager=scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     await using var tx=await db.Database.BeginTransactionAsync(ct);
     await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74162002)",ct);
@@ -105,16 +107,12 @@ public partial class SecurityService(
     await write(db,manager);
     await RecheckUserWriteAsync(initial, ct);
     ct.ThrowIfCancellationRequested();
-    await tx.CommitAsync(ct);
     targetId ??= createdId?.Invoke();
+    if (targetId != null && eventType.HasValue)
+      await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(eventType.Value, actorId,
+        details: $"Target={targetId}") with { ObjectType = "Account", ObjectId = targetId }, ct);
+    await AuditTransaction.CommitAsync(tx, ct);
     if (targetId != null) {
-      // Commit is confirmed; delivery failures cannot undo the user write.
-      if (eventType.HasValue) {
-        try { audit.LogIdentityEvent(eventType.Value, actorId, details: $"Target={targetId}"); }
-        catch (Exception ex) {
-          logger.LogError(ex, "Изменение пользователя сохранено, но аудит не доставлен. EventType={EventType}; TargetId={TargetId}", eventType, targetId);
-        }
-      }
       try { await notifier.PublishAsync([targetId]); }
       catch (Exception ex) {
         logger.LogError(ex, "Изменение пользователя сохранено, но уведомление не доставлено. EventType={EventType}; TargetId={TargetId}", eventType, targetId);
@@ -137,8 +135,9 @@ public partial class SecurityService(
     user.Id = created.Id;
     return result;
   }
-  public async Task SetUserLockoutAsync(string userId, bool lockout, CancellationToken ct = default) =>
-    Check(await ToggleUserLockoutAsync(userId, lockout, ct));
+  public Task SetUserLockoutAsync(string userId, bool lockout, CancellationToken ct = default) =>
+    AuditOperation.RunAsync(audit, lockout ? AuditEventType.UserBlocked : AuditEventType.UserUnblocked, "Account", userId,
+      async () => Check(await ToggleUserLockoutAsync(userId, lockout, ct)));
 
   private Task<IdentityResult> ToggleUserLockoutAsync(string userId,bool lockout,CancellationToken ct=default) =>
     WriteAsync(async(db,manager)=>{

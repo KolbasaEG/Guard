@@ -71,13 +71,15 @@ internal static class InfrastructureAssemblyBoundaryTests
       "20261015174116_AddApiSnapshotConfirmation",
       "20261017120000_AddIpCanonicalKeys",
       "20261017160000_AddPersonalActiveNameIndex",
+      "20261020120000_AddAuditJournal",
+      "20261020150000_EnforceMandatoryAudit",
     ];
     using var db = new ApplicationDbContextDesignFactory().CreateDbContext([]);
     var migrations = db.GetService<IMigrationsAssembly>();
     check(migrations.Assembly == infrastructure && migrations.ModelSnapshot?.GetType().Assembly == infrastructure,
       "EF discovers migrations and snapshot alongside the context in Infrastructure");
     check(db.Database.GetMigrations().SequenceEqual(expectedMigrations),
-      "all 40 baseline migrations and the IP key and employee index migrations keep chronological order");
+      "baseline, index and audit journal migrations keep chronological order");
     check(!db.Database.HasPendingModelChanges(), "extraction preserves EF configuration discovery and relational snapshot");
     var script = db.GetService<IMigrator>().GenerateScript();
     check(expectedMigrations.All(id => script.Contains(id, StringComparison.Ordinal)),

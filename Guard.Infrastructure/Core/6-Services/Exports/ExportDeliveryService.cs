@@ -3,11 +3,13 @@ using Guard.Core.Contexts;
 using Guard.Core.Entities;
 using Guard.Core.Enums;
 using Microsoft.EntityFrameworkCore;
+using Guard.Core.Logging;
 
 namespace Guard.Core.Services.Exports;
 
 public sealed class ExportDeliveryService(IPermissionService permissions, ExportAccess access, ExportStorage storage,
-  IDbContextFactory<ApplicationDbContext> contexts, IAuditService audit, ILoggerFactory logs) : IExportDeliveryService
+  IDbContextFactory<ApplicationDbContext> contexts, IAuditService audit, ILoggerFactory logs,
+  IClientIpAccessor? clientIp = null, IOperationAvailability? availability = null) : IExportDeliveryService
 {
   public async Task DeliverAsync(Guid id, Func<ExportDeliveryFile, Stream, CancellationToken, Task> deliver,
     CancellationToken ct = default)
@@ -32,13 +34,19 @@ public sealed class ExportDeliveryService(IPermissionService permissions, Export
           .ExecuteUpdateAsync(u => u.SetProperty(j => j.State, ExportJobState.Delivering), ct) != 1)
           throw new EntityRuleException("Передача уже началась или выгрузка отменена.");
         db.ExportDeliveryAttempts.Add(new() { JobId = id, StartedAtUtc = DateTimeOffset.UtcNow });
-        await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); claimed = true;
+        await db.SaveChangesAsync(ct);
+        await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.ExportDeliveryStarted, author,
+          clientIp?.GetClientIp(), $"bytes={file.Size}; rows={job.RowCount}; SHA256={file.Sha256}")
+          with { ObjectType = "Export", ObjectId = id.ToString() }, ct);
+        await AuditTransaction.CommitAsync(transaction, ct); claimed = true;
       }
-      DeliverAudit(AuditEventType.ExportDeliveryStarted, job.ClientIp);
+      if (availability != null) await availability.RequireWorkingAsync(ct);
       await using var stream = storage.Open(file.StorageKey);
-      await deliver(new(file.FileName, file.ContentType, file.Size), stream, ct);
+      await using var guarded = new AuditGuardedStream(stream, availability);
+      await deliver(new(file.FileName, file.ContentType, file.Size), guarded, ct);
       succeeded = true;
     }
+    catch (OperationCommitUnknownException) { throw; }
     catch (Exception ex) {
       DeliverAudit(ex is UnauthorizedAccessException ? AuditEventType.AccessDenied : AuditEventType.ExportFailed);
       throw;
@@ -54,8 +62,9 @@ public sealed class ExportDeliveryService(IPermissionService permissions, Export
           await db.ExportJobs.Where(j => j.Id == id && j.State == ExportJobState.Delivering).ExecuteUpdateAsync(u => u
             .SetProperty(j => j.State, succeeded ? ExportJobState.Delivered : ExportJobState.Failed)
             .SetProperty(j => j.Error, succeeded ? null : "Передача прервана. Создайте новую выгрузку."), finish.Token);
-          await transaction.CommitAsync(finish.Token);
-          DeliverAudit(succeeded ? AuditEventType.ExportDeliveryCompleted : AuditEventType.ExportFailed);
+          await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(succeeded ? AuditEventType.ExportDeliveryCompleted : AuditEventType.ExportFailed,
+            author, clientIp?.GetClientIp()) with { ObjectType = "Export", ObjectId = id.ToString() }, finish.Token);
+          await AuditTransaction.CommitAsync(transaction, finish.Token);
         }
       } catch (Exception ex) { logger.LogError(ex, "Не удалось записать результат передачи {ExportId}", id); }
       finally { if (locked) storage.ArchiveGate.Release(); }
@@ -69,4 +78,25 @@ public sealed class ExportDeliveryService(IPermissionService permissions, Export
       }
     }
   }
+}
+
+internal sealed class AuditGuardedStream(Stream source, IOperationAvailability? availability) : Stream
+{
+  public override bool CanRead => source.CanRead;
+  public override bool CanSeek => false;
+  public override bool CanWrite => false;
+  public override long Length => source.Length;
+  public override long Position { get => source.Position; set => throw new NotSupportedException(); }
+  public override int Read(byte[] buffer, int offset, int count) {
+    availability?.RequireWorkingAsync().GetAwaiter().GetResult(); return source.Read(buffer, offset, count);
+  }
+  public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default) {
+    if (availability != null) await availability.RequireWorkingAsync(ct);
+    return await source.ReadAsync(buffer, ct);
+  }
+  public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct) => ReadAsync(buffer.AsMemory(offset, count), ct).AsTask();
+  public override void Flush() { }
+  public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+  public override void SetLength(long value) => throw new NotSupportedException();
+  public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 }

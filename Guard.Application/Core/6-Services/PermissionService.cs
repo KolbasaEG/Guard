@@ -4,7 +4,8 @@ using Guard.Core.Services.DTOs;
 namespace Guard.Core.Services;
 
 public class PermissionService(ICurrentSession session,
-    IPermissionReader reader, IAuditService audit, IAccountPolicyService policies) : IPermissionService
+    IPermissionReader reader, IAuditService audit, IAccountPolicyService policies,
+    IOperationAvailability? availability = null) : IPermissionService
 {
   public async Task<UserAccessSnapshot> GetCurrentAsync(CancellationToken ct = default)
   {
@@ -15,6 +16,8 @@ public class PermissionService(ICurrentSession session,
     var stamp = await reader.GetSecurityStampAsync(id, ct);
     if (stamp == null || stamp != current.SecurityStamp)
       throw new UnauthorizedAccessException("Сессия завершена. Войдите заново.");
+    if (current.AuditRecoveryOnly) throw new AuditUnavailableException("RecoveryOnly", "Этот вход разрешает только диагностику аудита. Для работы войдите заново.");
+    if (availability != null) await availability.RequireWorkingAsync(ct);
     return await GetForUserAsync(id, ct);
   }
 

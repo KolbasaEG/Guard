@@ -31,6 +31,11 @@
     <InfoBlock Title="Детальная информация">
       <RadzenTabs RenderMode="TabRenderMode.Client">
         <Tabs>
+          <RadzenTabsItem Text="Структурированные данные" Icon="data_object">
+            <p>Идентификатор: @Log.Id</p>
+            <p>Шаблон: @Log.MessageTemplate</p>
+            <pre style="white-space:pre-wrap;word-break:break-word;">@Log.Properties</pre>
+          </RadzenTabsItem>
           <RadzenTabsItem Text="Сообщение" Icon="chat" >
             <RadzenCard Variant="Variant.Outlined" Style="padding:5px;margin:5px;border-radius:0px;">
               <RadzenStack Gap="5px" Style="margin-top: 10px;">

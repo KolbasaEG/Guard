@@ -10,6 +10,7 @@
             IsSaving="IsSaving"
             ReadOnly="ReadOnly"
             ShowSaveButton="ShowSaveButton"
+            ShowCancelButton="ShowCancelButton"
             ShowInfoButton="ShowInfoButton"
             Submit="Submit"
             OnInfoClick="OnInfoClick"
@@ -21,6 +22,7 @@
   [Parameter] public string? StaticFormName { get; set; }
   [Parameter] public bool ReadOnly { get; set; }
   [Parameter] public bool ShowSaveButton { get; set; } = true;
+  [Parameter] public bool ShowCancelButton { get; set; } = true;
   [Parameter] public bool ShowInfoButton { get; set; } = false;
 
   [Parameter] public TItem? Data { get; set; }

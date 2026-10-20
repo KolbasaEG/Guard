@@ -98,6 +98,7 @@ internal static class PermissionBoundaryTests
   private sealed class Audit : IAuditService
   {
     public int Count; public string? Actor; public string? Details;
+    public Task RecordAsync(Guard.Core.Services.AuditEventData entry, CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); LogIdentityEvent(entry.EventType, entry.Actor, entry.ClientIp, entry.Details); return Task.CompletedTask; }
     public void LogIdentityEvent(AuditEventType type, string? userName, string? ipAddress = null, string? details = null)
     { if (type != AuditEventType.AccessDenied) throw new InvalidOperationException(); Count++; Actor = userName; Details = details; }
   }

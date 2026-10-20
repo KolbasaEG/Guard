@@ -1,53 +1,38 @@
 using Guard.Core.Enums;
+using Guard.Core.Logging;
 
 namespace Guard.Core.Services;
 
-/// <summary>
-/// Реализация сервиса аудита Identity событий.
-/// Отправляет данные в RuSIEM по TcpSyslog + TLS в формате CEF.
-/// </summary>
-public sealed class AuditService(Serilog.ILogger auditLogger) : IAuditService, IDisposable
+/// <summary>Независимый от уровня технических логов канал аудита.</summary>
+public sealed class AuditService(Serilog.ILogger auditLogger, AuditJournal? journal = null) : IAuditService, IDisposable
 {
+  internal AuditJournal? Journal => journal;
   public void Dispose() => (auditLogger as IDisposable)?.Dispose();
-  public void LogIdentityEvent(
-      AuditEventType eventType,
-      string? userName,
-      string? ipAddress = null,
-      string? details = null)
-  {
-    var cefMessage = BuildCefMessage(eventType, userName, ipAddress, details);
 
-    auditLogger
-        .ForContext("EventType", eventType.ToString())
-        .ForContext("UserName", userName ?? "Anonymous")
-        .ForContext("SourceIp", ipAddress)
-        .Information(cefMessage);
+  public void LogIdentityEvent(AuditEventType eventType, string? userName, string? ipAddress = null, string? details = null)
+  {
+    var entry = AuditEventData.ForAccount(eventType, userName, ipAddress, details);
+    if (eventType is AuditEventType.LoginFailed or AuditEventType.LoginSuccess)
+      entry = entry with { ObjectId = null, AttemptedAccount = userName };
+    Record(entry);
   }
 
-  /// <summary>
-  /// Формирует сообщение в формате CEF (рекомендуется RuSIEM).
-  /// </summary>
-  private static string BuildCefMessage(
-      AuditEventType eventType,
-      string? userName,
-      string? ipAddress,
-      string? details)
+  public void Record(AuditEventData entry)
   {
-    var severity = eventType switch
-    {
-      AuditEventType.LoginFailed => 8,
-      AuditEventType.PasswordChanged => 7,
-      AuditEventType.RoleAssigned or AuditEventType.RoleRemoved or AuditEventType.RolePermissionsChanged or AuditEventType.UserRolesChanged => 7,
-      AuditEventType.AccessDenied => 8,
-      _ => 5
-    };
+    entry = entry.Normalize();
+    if (journal == null) throw new AuditUnavailableException("NotConfigured", "Обязательный журнал аудита не зарегистрирован.");
+    journal.Write(entry);
+    auditLogger.ForContext("EventType", entry.EventType.ToString())
+      .ForContext("EventId", entry.EventId).ForContext("UserName", entry.Actor ?? "Anonymous").ForContext("SourceIp", entry.ClientIp)
+      .Information("{CefMessage:l}", CefFormatter.Format(entry));
+  }
 
-    var outcome = (eventType == AuditEventType.AccessDenied || eventType.ToString().Contains("Failed")) ? "failure" : "success";
-
-    return $"CEF:0|Guard|IdentityAudit|1.0|{eventType}|{eventType}|{severity}|" +
-           $"src={ipAddress ?? "-"} " +
-           $"user={userName ?? "unknown"} " +
-           $"outcome={outcome} " +
-           $"msg={details ?? eventType.ToString()}";
+  public async Task RecordAsync(AuditEventData entry, CancellationToken ct = default)
+  {
+    entry = entry.Normalize();
+    if (journal == null) throw new AuditUnavailableException("NotConfigured", "Обязательный журнал аудита не зарегистрирован.");
+    await journal.WriteAsync(entry, ct);
+    auditLogger.ForContext("EventId", entry.EventId).ForContext("EventType", entry.EventType.ToString())
+      .Information("{CefMessage:l}", CefFormatter.Format(entry));
   }
 }

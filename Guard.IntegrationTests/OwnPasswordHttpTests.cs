@@ -11,6 +11,7 @@ internal static class OwnPasswordHttpTests
     var checks = 0;
     using var handler = new HttpClientHandler { CookieContainer = cookies, AllowAutoRedirect = false };
     using var client = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:5079") };
+    client.DefaultRequestHeaders.Add("X-Forwarded-For", "198.18.11.1");
     void Check(bool value, string scenario) {
       if (!value) throw new InvalidOperationException($"Own password HTTP: {scenario}");
       checks++;

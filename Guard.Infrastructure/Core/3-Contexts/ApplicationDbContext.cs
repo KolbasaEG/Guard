@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
+using Guard.Core.Logging;
 
 namespace Guard.Core.Contexts;
 
@@ -18,9 +19,10 @@ namespace Guard.Core.Contexts;
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
 {
   // Стандартный конструктор EF Core без зависимости от Scoped-интерцептора
-  public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+  public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, AuditPersistence? audit = null)
       : base(options)
   {
+    AuditWriter = audit;
   }
 
   protected override void OnModelCreating(ModelBuilder builder)
@@ -33,6 +35,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
   public DbSet<Subdivision> Subdivisions { get; set; } = null!;
   public DbSet<Classifier> Classifiers { get; set; } = null!;
   public DbSet<Personal> Personals { get; set; } = null!;
+  public DbSet<AuditEventRecord> AuditEvents => Set<AuditEventRecord>();
+  public DbSet<AuditSettings> AuditSettings => Set<AuditSettings>();
+  public DbSet<AuditDeliveryAttempt> AuditDeliveryAttempts => Set<AuditDeliveryAttempt>();
   public DbSet<ExportJob> ExportJobs { get; set; } = null!;
   public DbSet<ExportArtifact> ExportArtifacts { get; set; } = null!;
   public DbSet<ExportDeliveryAttempt> ExportDeliveryAttempts { get; set; } = null!;
@@ -43,10 +48,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
   // Только прикладная операция синхронизации может обходить режим просмотра.
   internal bool IsSynchronization { get; set; }
   internal Action<ApplicationDbContext>? PrepareAudit { get; set; }
+  internal string? AuditActorId { get; set; }
+  internal AuditPersistence? AuditWriter { get; set; }
+  internal bool IsAuditInitialization { get; set; }
+  internal bool IsAuditMaintenance { get; set; }
   internal const long ManagementLock = 73460219;
 
   public override int SaveChanges(bool acceptAllChangesOnSuccess)
   {
+    if (AuditWriter != null) return SaveChangesAsync(acceptAllChangesOnSuccess).GetAwaiter().GetResult();
     PrepareAudit?.Invoke(this);
     if (!IsSynchronization && HasDirectoryChanges())
       return SaveChangesAsync(acceptAllChangesOnSuccess).GetAwaiter().GetResult();
@@ -55,6 +65,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
   }
 
   public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+  {
+    if (AuditWriter != null && Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL")
+      return await AuditWriter.SaveAsync(this, () => SaveCoreAsync(acceptAllChangesOnSuccess, cancellationToken), cancellationToken);
+    return await SaveCoreAsync(acceptAllChangesOnSuccess, cancellationToken);
+  }
+
+  private async Task<int> SaveCoreAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken)
   {
     PrepareAudit?.Invoke(this);
     if (IsSynchronization || !HasDirectoryChanges())

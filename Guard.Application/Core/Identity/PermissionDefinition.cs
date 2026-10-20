@@ -23,6 +23,7 @@ public static class PermissionCatalog
     new(Permissions.Classifiers.Read, "Классификаторы", "Просмотр", "Общий справочник"),
     new(Permissions.Classifiers.Manage, "Классификаторы", "Управление", "Изменение справочника", Permissions.Classifiers.Read),
     new(Permissions.Logs.Read, "Логи", "Просмотр", "Первоначально только Root", RootOnly: true),
+    new(Permissions.Audit.Read, "Аудит", "Просмотр", "События безопасности и история изменений; только Root", RootOnly: true),
     new(Permissions.Exports.ReadArchive, "Архив выгрузок", "Расследования", "Просмотр точных копий выгрузок", RootOnly: true),
     new(Permissions.Exports.Configure, "Архив выгрузок", "Хранение", "Настройка срока хранения", Permissions.Exports.ReadArchive, true),
     new(Permissions.Logs.Configure, "Логи", "Настройка", "Первоначально только Root", Permissions.Logs.Read, true),

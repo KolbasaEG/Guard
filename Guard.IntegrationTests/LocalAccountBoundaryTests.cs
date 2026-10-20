@@ -8,7 +8,7 @@ internal static class LocalAccountBoundaryTests
   public static async Task RunAsync(Action<bool, string> check)
   {
     var contexts = new HttpContextAccessor();
-    var service = new LocalAccountService(contexts, null!, null!, null!);
+    var service = new LocalAccountService(contexts, null!, null!, new AuditStub());
     await PostgresTests.ThrowsAsync<InvalidOperationException>(() => service.SignInAsync("a", "b", false), check,
       "local login requires HTTP request");
     await PostgresTests.ThrowsAsync<InvalidOperationException>(() => service.SignOutAsync(), check,

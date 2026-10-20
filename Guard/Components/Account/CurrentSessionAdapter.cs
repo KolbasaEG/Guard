@@ -16,6 +16,6 @@ public sealed class CurrentSessionAdapter(AuthenticationStateProvider authentica
     ct.ThrowIfCancellationRequested();
     var id = principal?.FindFirstValue(ClaimTypes.NameIdentifier);
     return principal?.Identity?.IsAuthenticated == true && !string.IsNullOrEmpty(id)
-      ? new(id, principal.FindFirstValue("AspNet.Identity.SecurityStamp")) : null;
+      ? new(id, principal.FindFirstValue("AspNet.Identity.SecurityStamp"), principal.HasClaim("guard:audit-recovery", "1")) : null;
   }
 }
