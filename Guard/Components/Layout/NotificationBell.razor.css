@@ -1,0 +1,5 @@
+.notification-bell { position: relative; }
+.notification-popup { position: absolute; right: 0; top: 100%; z-index: 1001; width: min(430px, 90vw); max-height: 75vh; overflow: auto; padding: 12px; background: var(--rz-base-background-color); color: var(--rz-text-color); border: 1px solid var(--rz-base-300); box-shadow: var(--rz-shadow-4); }
+.notification-item { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; background: transparent; color: inherit; padding: 8px; border: 1px solid var(--rz-base-300); cursor: pointer; }
+.notification-item.unread { border-left: 4px solid var(--rz-primary); font-weight: 600; }
+.notification-item small { font-weight: normal; }

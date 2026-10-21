@@ -73,6 +73,10 @@ internal static partial class ExportIntegrationTests
         var id = await service.CreateAsync(new(area, format, IncludeChildren: true));
         await processor.RunNextAsync(default);
         var result = await service.GetAsync(id);
+        await using (var notificationDb = await factory.CreateDbContextAsync()) {
+          check(await notificationDb.NotificationEvents.CountAsync(e => e.TargetId == id && e.Kind == UserNotificationKind.ExportReady && e.UserId == user.Id) == 1,
+            "export processor commits one ready notification event addressed to author");
+        }
         if (result.State != ExportJobState.Ready) throw new Exception("Export processor failed: " + result.Error);
         check(result.RowCount == 2, "database export includes all authorized descendants and excludes foreign records");
         auth.UserId = root.Id;
@@ -145,6 +149,10 @@ internal static partial class ExportIntegrationTests
         var claim = await db.RoleClaims.SingleAsync(c => c.RoleId == role.Id && c.ClaimValue == Permissions.Personals.Export); db.RoleClaims.Remove(claim); await db.SaveChangesAsync();
       }
       await processor.RunNextAsync(default); check((await service.GetAsync(revoked)).State == ExportJobState.Failed, "permission revocation before worker blocks generation");
+      await using (var notificationDb = await factory.CreateDbContextAsync()) {
+        check(await notificationDb.NotificationEvents.CountAsync(e => e.TargetId == revoked && e.Kind == UserNotificationKind.ExportFailed && e.UserId == user.Id) == 1,
+          "export final failure commits one personal notification without exception details");
+      }
       string expiredKey;
       await using (var db = await factory.CreateDbContextAsync()) {
         var artifact = await db.ExportArtifacts.SingleAsync(a => a.JobId == filteredId);

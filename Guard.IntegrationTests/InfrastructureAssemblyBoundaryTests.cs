@@ -73,6 +73,7 @@ internal static class InfrastructureAssemblyBoundaryTests
       "20261017160000_AddPersonalActiveNameIndex",
       "20261020120000_AddAuditJournal",
       "20261020150000_EnforceMandatoryAudit",
+      "20261021120000_AddUserNotifications",
     ];
     using var db = new ApplicationDbContextDesignFactory().CreateDbContext([]);
     var migrations = db.GetService<IMigrationsAssembly>();

@@ -17,8 +17,10 @@ internal static class DomainAssemblyBoundaryTests
       typeof(ExportJob), typeof(ExportArtifact), typeof(ExportDeliveryAttempt), typeof(ExportRetentionSettings),
       typeof(Status), typeof(StatusOperation), typeof(DataViewMode), typeof(SubdivisionHierarchyMode),
       typeof(MaintenanceTaskStatus), typeof(ClassifierType), typeof(AuditEventType), typeof(DataManagementMode),
-      typeof(SynchronizationStatus), typeof(ExportArea), typeof(ExportFormat), typeof(ExportJobState), typeof(AuditMode)];
-    check(domain.GetExportedTypes().ToHashSet().SetEquals(expected), "Domain inventory contains the agreed 29 model and enum types");
+      typeof(SynchronizationStatus), typeof(ExportArea), typeof(ExportFormat), typeof(ExportJobState), typeof(AuditMode),
+      typeof(UserNotification), typeof(NotificationIncident), typeof(NotificationEvent),
+      typeof(UserNotificationKind), typeof(UserNotificationSeverity), typeof(NotificationTarget)];
+    check(domain.GetExportedTypes().ToHashSet().SetEquals(expected), "Domain inventory contains the agreed model and enum types including notifications");
     foreach (var type in expected)
       check(type.Assembly == domain && type.Namespace is "Guard.Core.Entities" or "Guard.Core.Enums" &&
         host.GetType(type.FullName!) == null && infrastructure.GetType(type.FullName!) == null,

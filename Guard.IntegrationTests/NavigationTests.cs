@@ -18,7 +18,7 @@ internal static class NavigationTests
     var root = new UserAccessSnapshot("root", true, []);
     var limited = new UserAccessSnapshot("user", false, [Permissions.Personals.Read]);
     var limitedItems = NavigationCatalog.VisibleGroups(limited).SelectMany(group => group.Items).ToArray();
-    check(limitedItems.Select(item => item.Path).ToHashSet().SetEquals(["/", "/personal"]),
+    check(limitedItems.Select(item => item.Path).ToHashSet().SetEquals(["/", "/Notifications", "/personal"]),
       "navigation limits an ordinary user to permitted sections");
     check(!NavigationCatalog.VisibleGroups(new("user", false, [])).Any(group => group.Text != "Обзор"),
       "navigation omits groups with no available sections");

@@ -17,7 +17,7 @@ public static class NavigationCatalog
 {
   public static IReadOnlyList<NavigationGroup> Groups { get; } =
   [
-    new("Обзор", [new("Главная", "/", "home")]),
+    new("Обзор", [new("Главная", "/", "home"), new("Уведомления", "/Notifications", "notifications")]),
     new("Организация", [
       new("Подразделения", "/subdivisions", "domain", Permissions.Subdivisions.Read),
       new("Персонал", "/personal", "group", Permissions.Personals.Read)

@@ -1,0 +1,46 @@
+@using Guard.Core.Services
+@implements IDisposable
+@inject IUserNotificationService Service
+@inject Guard.Web.Notifications.NotificationCenterState Center
+@inject DialogService Dialogs
+@inject ILogger<Index> Logger
+
+<div class="notification-list">
+<RadzenStack Gap="5px" Style="height:100%; min-height:0;">
+  <CardHeader Name="УВЕДОМЛЕНИЯ" Icon="notifications" ShowSaveButton="false" ShowCancelButton="false" ShowInfoButton="false" />
+  @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@error</RadzenAlert> }
+  <RadzenDataGrid @ref="grid" TItem="UserNotificationDto" Data="items" Count="count" LoadData="LoadData" IsLoading="loading"
+                  RowSelect="OpenAsync" AllowPaging="true" AllowSorting="false" PageSize="20" PageSizeOptions="@(new int[] { 10, 20, 50, 100 })"
+                  Density="Density.Compact" AllowColumnResize="true" EmptyText="Уведомлений нет" Style="height:100%;"
+                  FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" LastPageTitle="Последняя страница" LastPageAriaLabel="К последней странице"
+                  NextPageTitle="Следующая страница" PrevPageTitle="Предыдущая страница" PageAriaLabelFormat="К странице {0}" PageSizeText="записей на странице"
+                  ShowPagingSummary="true" PagingSummaryFormat="Страница {0} из {1} (всего {2} уведомлений)" PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top">
+    <HeaderTemplate>
+      <RadzenStack Class="notification-toolbar" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Style="position:relative; min-height:36px; width:100%;">
+        <RadzenSelectBar Class="notification-status" TValue="bool" Value="unread" Change="FilterAsync" Style="position:absolute; left:50%; transform:translateX(-50%);">
+          <Items><RadzenSelectBarItem Value="false" Text="Все" /><RadzenSelectBarItem Value="true" Text="Непрочитанные" /></Items>
+        </RadzenSelectBar>
+        <RadzenButton Text="Прочитать все" Icon="done_all" Click="ReadAllAsync" Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" Style="color:var(--rz-text-color);" />
+        <RadzenButton Icon="refresh" title="Обновить" aria-label="Обновить уведомления" Click="ReloadAsync" Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" Style="color:var(--rz-text-color);" />
+      </RadzenStack>
+    </HeaderTemplate>
+    <Columns>
+      <RadzenDataGridColumn TItem="UserNotificationDto" Property="IsRead" Title="Прочтение" Width="140px">
+        <Template Context="item">@(item.IsRead ? "Прочитано" : "Новое")</Template>
+      </RadzenDataGridColumn>
+      <RadzenDataGridColumn TItem="UserNotificationDto" Property="Title" Title="Уведомление">
+        <Template Context="item"><span style="font-weight:@(item.IsRead ? "normal" : "600")">@item.Title</span></Template>
+      </RadzenDataGridColumn>
+      <RadzenDataGridColumn TItem="UserNotificationDto" Property="IncidentActive" Title="Состояние" Width="180px">
+        <Template Context="item">@(item.IsIncident ? item.IncidentActive ? "Требует внимания" : "Восстановлено" : "Результат операции")</Template>
+      </RadzenDataGridColumn>
+      <RadzenDataGridColumn TItem="UserNotificationDto" Property="UpdatedAtUtc" Title="Обновлено" Width="190px">
+        <Template Context="item">@item.UpdatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</Template>
+      </RadzenDataGridColumn>
+      <RadzenDataGridColumn TItem="UserNotificationDto" Width="60px" TextAlign="TextAlign.Center">
+        <Template Context="item"><RadzenButton Icon="visibility" Size="ButtonSize.ExtraSmall" Variant="Variant.Flat" Shade="Shade.Lighter" title="Открыть уведомление" aria-label="Открыть уведомление" Click="@(() => OpenAsync(item))" @onclick:stopPropagation="true" /></Template>
+      </RadzenDataGridColumn>
+    </Columns>
+  </RadzenDataGrid>
+</RadzenStack>
+</div>

@@ -111,6 +111,10 @@ internal static partial class ApiSynchronizationIntegrationTests
     await CheckReadContractsAsync(factory, service, check);
     await CheckSnapshotConfirmationAsync(factory, service, runner, permissions, api, audit, credentials, check);
     var first = await runner.RunAsync("test-api-root", null, false, CancellationToken.None, new DateOnly(2000, 8, 10));
+    await using (var notificationDb = await factory.CreateDbContextAsync()) {
+      check(await notificationDb.NotificationEvents.CountAsync(e => e.TargetId == first.Id && e.UserId == "test-api-root" && e.Kind == Guard.Core.Enums.UserNotificationKind.SynchronizationResult) == 1,
+        "successful manual synchronization commits exactly one notification for initiator");
+    }
     check(first.Status == SynchronizationStatus.Succeeded && first.UpdatedSince == new DateOnly(2000, 8, 10), "initial synchronization with date succeeds without prior full import");
     await CheckExportWorkerIsolationAsync(factory, permissions, api, audit, credentials, runner, service, check);
     var listService = new PersonalService(null!, null!, NullLogger<PersonalService>.Instance, permissions,

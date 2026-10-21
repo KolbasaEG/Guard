@@ -35,6 +35,7 @@ public class SynchronizationRun
   public DateTime StartedAt { get; set; }
   public DateTime? QueuedAt { get; set; }
   public Guid? RequestedSettingsVersion { get; set; }
+  public string? NotificationSourceKey { get; set; }
   public string? Phase { get; set; }
   public DateTime? CompletedAt { get; set; }
   public SynchronizationStatus Status { get; set; }

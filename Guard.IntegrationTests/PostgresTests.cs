@@ -61,6 +61,7 @@ internal static class PostgresTests
       await MandatoryAuditIntegrationTests.RunAsync(factory, check);
       await CurrentSessionTests.RunIntegrationAsync(factory, check);
       await PermissionReaderIntegrationTests.RunAsync(factory, check);
+      await NotificationPostgresTests.RunAsync(factory, check);
       await DataAccessScopeReaderIntegrationTests.RunAsync(factory, check);
       var gate = new IpAccessService(new IpAccessReader(factory));
       check(!await gate.IsAllowedAsync("missing", "192.168.1.1"), "unknown user denied");

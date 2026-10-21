@@ -1406,6 +1406,82 @@ namespace Guard.Migrations
 
                     b.Navigation("Personals");
                 });
+
+            modelBuilder.HasSequence<long>("NotificationRevision");
+            modelBuilder.Entity("Guard.Core.Entities.SynchronizationRun", b =>
+            {
+                b.Property<string>("NotificationSourceKey").HasColumnType("text");
+            });
+
+            modelBuilder.Entity("Guard.Core.Entities.NotificationEvent", b =>
+            {
+                b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                b.Property<string>("EventKey").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
+                b.Property<string>("UserId").HasMaxLength(450).HasColumnType("character varying(450)");
+                b.Property<int>("Kind").HasColumnType("integer");
+                b.Property<int>("Severity").HasColumnType("integer");
+                b.Property<string>("Title").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
+                b.Property<string>("Message").IsRequired().HasMaxLength(2000).HasColumnType("character varying(2000)");
+                b.Property<int>("Target").HasColumnType("integer");
+                b.Property<Guid?>("TargetId").HasColumnType("uuid");
+                b.Property<string>("SourceKey").HasMaxLength(200).HasColumnType("character varying(200)");
+                b.Property<bool>("Recovery").HasColumnType("boolean");
+                b.Property<DateOnly?>("UpdatedSince").HasColumnType("date");
+                b.Property<DateTime>("OccurredAtUtc").HasColumnType("timestamp with time zone");
+                b.Property<DateTime?>("ProcessedAtUtc").HasColumnType("timestamp with time zone");
+                b.HasKey("Id");
+                b.ToTable("NotificationEvents");
+                b.HasIndex("EventKey").IsUnique();
+                b.HasIndex("OccurredAtUtc", "Id").HasFilter("\"ProcessedAtUtc\" IS NULL");
+            });
+
+            modelBuilder.Entity("Guard.Core.Entities.NotificationIncident", b =>
+            {
+                b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                b.Property<string>("SourceKey").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
+                b.Property<int>("Kind").HasColumnType("integer");
+                b.Property<bool>("Active").HasColumnType("boolean");
+                b.Property<DateTime>("FirstSeenUtc").HasColumnType("timestamp with time zone");
+                b.Property<DateTime>("LastSeenUtc").HasColumnType("timestamp with time zone");
+                b.Property<DateTime?>("ResolvedAtUtc").HasColumnType("timestamp with time zone");
+                b.Property<int>("Occurrences").HasColumnType("integer");
+                b.Property<DateOnly?>("RequiredSince").HasColumnType("date");
+                b.Property<bool>("FullSnapshotRequired").HasColumnType("boolean");
+                b.HasKey("Id");
+                b.ToTable("NotificationIncidents");
+                b.HasIndex("SourceKey").IsUnique().HasFilter("\"Active\"");
+            });
+
+            modelBuilder.Entity("Guard.Core.Entities.UserNotification", b =>
+            {
+                b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                b.Property<string>("UserId").IsRequired().HasMaxLength(450).HasColumnType("character varying(450)");
+                b.Property<string>("EventKey").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
+                b.Property<int>("Kind").HasColumnType("integer");
+                b.Property<int>("Severity").HasColumnType("integer");
+                b.Property<string>("Title").IsRequired().HasMaxLength(200).HasColumnType("character varying(200)");
+                b.Property<string>("Message").IsRequired().HasMaxLength(2000).HasColumnType("character varying(2000)");
+                b.Property<int>("Target").HasColumnType("integer");
+                b.Property<Guid?>("TargetId").HasColumnType("uuid");
+                b.Property<bool>("RootOnly").HasColumnType("boolean");
+                b.Property<Guid?>("IncidentId").HasColumnType("uuid");
+                b.Property<bool>("IncidentActive").HasColumnType("boolean");
+                b.Property<DateTime>("CreatedAtUtc").HasColumnType("timestamp with time zone");
+                b.Property<DateTime>("UpdatedAtUtc").HasColumnType("timestamp with time zone");
+                b.Property<long>("Revision").HasColumnType("bigint");
+                b.Property<long>("ReadRevision").HasColumnType("bigint");
+                b.Property<DateTime?>("ReadAtUtc").HasColumnType("timestamp with time zone");
+                b.HasKey("Id");
+                b.ToTable("UserNotifications");
+                b.HasIndex("UserId", "EventKey").IsUnique();
+                b.HasIndex("UserId", "UpdatedAtUtc", "Id");
+                b.HasIndex("UserId", "Revision");
+                b.HasIndex(new[] { "UserId", "Revision" }, "IX_UserNotifications_Unread").HasFilter("\"ReadRevision\" < \"Revision\"");
+                b.HasIndex("ReadAtUtc").HasFilter("NOT \"IncidentActive\" AND \"ReadRevision\" = \"Revision\"");
+                b.HasIndex("IncidentId");
+                b.HasOne("Guard.Core.Entities.ApplicationUser", null).WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.Cascade).IsRequired();
+                b.HasOne("Guard.Core.Entities.NotificationIncident", null).WithMany().HasForeignKey("IncidentId").OnDelete(DeleteBehavior.Restrict);
+            });
 #pragma warning restore 612, 618
         }
     }

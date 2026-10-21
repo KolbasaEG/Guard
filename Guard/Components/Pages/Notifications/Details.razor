@@ -1,0 +1,22 @@
+@using Guard.Core.Services
+@implements IDisposable
+@inject IUserNotificationService Service
+@inject IPermissionService Permissions
+@inject IDataExportService Exports
+@inject NavigationManager Navigation
+@inject DialogService Dialogs
+@inject ILogger<Details> Logger
+
+<ViewEntity TItem="UserNotificationDto" Data="item" Name="УВЕДОМЛЕНИЕ" Icon="notifications" IsLoading="loading" OnCancelButtonClick="@(() => Dialogs.Close(null))">
+  <RadzenStack Gap="12px">
+    @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@error</RadzenAlert> }
+    @if (item != null) {
+      <strong>@item.Title</strong>
+      <RadzenText>@item.Message</RadzenText>
+      <RadzenText>Получено: @item.CreatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</RadzenText>
+      <RadzenText>Обновлено: @item.UpdatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</RadzenText>
+      @if (item.IsIncident) { <RadzenText>@(item.IncidentActive ? "Требует внимания" : "Восстановлено")</RadzenText> }
+      <RadzenButton Text="Перейти к событию" Icon="open_in_new" Click="OpenTargetAsync" />
+    }
+  </RadzenStack>
+</ViewEntity>

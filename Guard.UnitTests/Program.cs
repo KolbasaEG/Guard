@@ -18,6 +18,7 @@ try
   ApiDiagnosticAnalyzerTests.Run(Check);
   ApiDiagnosticRuleTests.Run(Check);
   SynchronizationScheduleTests.Run(Check);
+  NotificationRuleTests.Run(Check);
   await IpAccessBoundaryTests.RunAsync(Check);
   await PermissionBoundaryTests.RunAsync(Check);
   await DataAccessScopeBoundaryTests.RunAsync(Check);

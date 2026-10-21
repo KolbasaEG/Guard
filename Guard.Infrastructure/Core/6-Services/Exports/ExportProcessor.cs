@@ -5,6 +5,7 @@ using Guard.Core.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Guard.Core.Logging;
+using Guard.Core.Services.Notifications;
 
 namespace Guard.Core.Services.Exports;
 
@@ -53,6 +54,8 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
       var ready = await db.ExportJobs.Where(j => j.Id == job.Id && j.State == ExportJobState.Processing && !j.CancelRequested && j.ExpiresAtUtc > DateTimeOffset.UtcNow)
         .ExecuteUpdateAsync(u => u.SetProperty(j => j.State, ExportJobState.Ready).SetProperty(j => j.RowCount, captured.Count).SetProperty(j => j.CompletedAtUtc, DateTimeOffset.UtcNow), ct);
       if (ready == 0) throw new OperationCanceledException("Выгрузка отменена.");
+      NotificationOutbox.Export(db, job, ready: true);
+      await db.SaveChangesAsync(ct);
       await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(AuditEventType.ExportArchived, null, job.ClientIp,
         $"RequestedBy={job.AuthorId}; rows={captured.Count}; bytes={saved.Size}; SHA256={saved.Hash}")
         with { Actor = null, ActorKind = "system", ObjectType = "Export", ObjectId = job.Id.ToString() }, ct);
@@ -62,6 +65,7 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
     catch (OperationCommitUnknownException) { throw; }
     catch (OperationCanceledException) when (stopping.IsCancellationRequested) { throw; }
     catch (Exception ex) {
+      db.ChangeTracker.Clear();
       // Технический сбой не должен потеряться, если чтение служебного статуса также завершится ошибкой.
       if (ex is not (OperationCanceledException or UnauthorizedAccessException))
         Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(logger, ex, "Формирование выгрузки {ExportId} завершилось ошибкой", job.Id);
@@ -79,8 +83,12 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
       var error = cancelled ? "Выгрузка отменена." : ex is UnauthorizedAccessException ? "Доступ изменился. Создайте новую выгрузку." :
         ex is OperationCanceledException ? "Превышено время формирования. Сузьте фильтры и повторите выгрузку." : "Не удалось сформировать выгрузку. Обратитесь к администратору.";
       await using var failed = await db.Database.BeginTransactionAsync(stopping);
-      await db.ExportJobs.Where(j => j.Id == job.Id && j.State == ExportJobState.Processing).ExecuteUpdateAsync(u =>
+      var failedCount = await db.ExportJobs.Where(j => j.Id == job.Id && j.State == ExportJobState.Processing).ExecuteUpdateAsync(u =>
         u.SetProperty(j => j.State, cancelled ? ExportJobState.Cancelled : ExportJobState.Failed).SetProperty(j => j.Error, error).SetProperty(j => j.CompletedAtUtc, DateTimeOffset.UtcNow), stopping);
+      if (failedCount > 0 && !cancelled) {
+        NotificationOutbox.Export(db, job, ready: false);
+        await db.SaveChangesAsync(stopping);
+      }
       await AuditTransaction.RecordAsync(db, audit, AuditEventData.Create(cancelled ? AuditEventType.ExportCancelled : AuditEventType.ExportFailed,
         null, job.ClientIp, $"RequestedBy={job.AuthorId}") with { Actor = null, ActorKind = "system", ObjectType = "Export", ObjectId = job.Id.ToString() }, stopping);
       await AuditTransaction.CommitAsync(failed, stopping);

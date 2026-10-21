@@ -52,6 +52,12 @@ internal static class BrowserTestHost
         Status = n == 26 ? Guard.Core.Enums.Status.Archived : n == 27 ? Guard.Core.Enums.Status.Deleted : Guard.Core.Enums.Status.Inserted
       }).ToArray();
       db.Personals.AddRange(people);
+      db.NotificationEvents.AddRange(Enumerable.Range(1, 27).Select(n => new NotificationEvent {
+        EventKey = $"browser-notification-{n:00}", UserId = "root", Kind = Guard.Core.Enums.UserNotificationKind.SynchronizationResult,
+        Severity = Guard.Core.Enums.UserNotificationSeverity.Information, Title = $"Проверка уведомления {n:00}",
+        Message = $"Результат фоновой операции {n:00} для проверки истории.", Target = Guard.Core.Enums.NotificationTarget.Synchronization,
+        OccurredAtUtc = DateTime.UtcNow.AddMinutes(-n)
+      }));
       db.AuditEvents.AddRange(Enumerable.Range(1, 125).Select(n => new AuditEventRecord {
         EventId = Guid.NewGuid(), OccurredAtUtc = DateTime.UtcNow.AddMinutes(-n), SchemaVersion = 1,
         EventType = n % 2 == 0 ? Guard.Core.Enums.AuditEventType.LoginFailed : Guard.Core.Enums.AuditEventType.EntityChanged,
@@ -77,6 +83,9 @@ internal static class BrowserTestHost
       await db.Database.ExecuteSqlRawAsync("CREATE TABLE logs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), timestamp timestamp without time zone, level varchar, layer varchar, message text, message_template text, exception text, properties jsonb, user_id varchar, ip_address varchar, correlation_id text, source_context text, diagnostic_session_id uuid, run_id text, fingerprint text, application_version text, instance_id text)");
       await db.Database.ExecuteSqlRawAsync("INSERT INTO logs (timestamp, level, layer, message, message_template, exception, properties, user_id, ip_address, correlation_id, source_context, fingerprint) SELECT (now() AT TIME ZONE 'UTC') - n * interval '1 minute', CASE WHEN n % 2 = 0 THEN 'Error' ELSE 'Information' END, 'Service', 'DTO log ' || lpad(n::text, 3, '0'), 'DTO log', NULL, jsonb_build_object(), 'test', '192.0.2.1', 'browser-correlation-' || n, 'Guard.Browser.Fixture', 'browser-fingerprint' FROM generate_series(1, 125) n");
     }
+    var notificationSignals = new Guard.Core.Services.Notifications.NotificationSignals(Microsoft.Extensions.Logging.Abstractions.NullLogger<Guard.Core.Services.Notifications.NotificationSignals>.Instance);
+    var notificationDispatcher = new Guard.Core.Services.Notifications.NotificationDispatcher(factory, notificationSignals);
+    while (await notificationDispatcher.DeliverAsync() > 0) { }
     var exportDirectory = Path.Combine(Path.GetTempPath(), "guard-browser-export-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(exportDirectory);
     var start = new ProcessStartInfo("dotnet") {

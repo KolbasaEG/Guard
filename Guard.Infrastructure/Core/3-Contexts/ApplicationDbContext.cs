@@ -29,6 +29,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
   {
     base.OnModelCreating(builder);
     builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+    builder.HasSequence<long>("NotificationRevision");
   }
 
   public DbSet<IpAddress> IpAddresses { get; set; } = null!;
@@ -44,6 +45,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
   public DbSet<ExportRetentionSettings> ExportRetentionSettings { get; set; } = null!;
   public DbSet<SynchronizationSettings> SynchronizationSettings { get; set; } = null!;
   public DbSet<SynchronizationRun> SynchronizationRuns { get; set; } = null!;
+  public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+  public DbSet<NotificationIncident> NotificationIncidents => Set<NotificationIncident>();
+  public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
 
   // Только прикладная операция синхронизации может обходить режим просмотра.
   internal bool IsSynchronization { get; set; }

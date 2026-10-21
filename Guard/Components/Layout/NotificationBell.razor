@@ -1,0 +1,33 @@
+@using Guard.Core.Services
+@using Guard.Web.Notifications
+@implements IDisposable
+@inject NotificationCenterState Center
+@inject NotificationService Toasts
+@inject DialogService Dialogs
+@inject ILogger<NotificationBell> Logger
+
+<div class="notification-bell">
+  <RadzenButton Icon="notifications" Text="@(Center.Summary is { } s ? s.UnreadCount > 99 ? "99+" : s.UnreadCount.ToString() : "—")"
+                Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" Style="color:var(--rz-menu-top-item-color);" Click="Toggle" aria-label="Уведомления" title="Уведомления" />
+  @if (expanded) {
+    <section class="notification-popup" aria-label="Последние уведомления">
+      <RadzenStack Gap="8px">
+        <strong>Уведомления</strong>
+        @if (Center.Error != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@Center.Error</RadzenAlert> }
+        @if (actionError != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@actionError</RadzenAlert> }
+        @if (Center.Summary is { } summary) {
+          @if (summary.Latest.Count == 0) { <span>Уведомлений пока нет</span> }
+          @foreach (var item in summary.Latest) {
+            <button class="notification-item @(item.IsRead ? "" : "unread")" @onclick="() => OpenAsync(item)">
+              <span>@item.Title</span>
+              <small>@item.UpdatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm") · @(item.IsRead ? "Прочитано" : "Новое")@IncidentText(item)</small>
+            </button>
+          }
+          <RadzenButton Text="Прочитать все" Icon="done_all" Disabled="@(summary.UnreadCount == 0)" Click="ReadAllAsync" ButtonStyle="ButtonStyle.Light" />
+        }
+        <a href="/Notifications" @onclick="() => expanded = false">Вся история</a>
+        <RadzenButton Text="Закрыть" Variant="Variant.Text" Click="@(() => expanded = false)" />
+      </RadzenStack>
+    </section>
+  }
+</div>

@@ -14,6 +14,10 @@ internal static class AccountPolicyMigrationTests
     db.ChangeTracker.Clear();
     await db.Database.ExecuteSqlRawAsync("""
       DROP TABLE "AccountPolicies";
+      DROP TABLE "UserNotifications";
+      DROP TABLE "NotificationIncidents";
+      DROP TABLE "NotificationEvents";
+      DROP SEQUENCE "NotificationRevision";
       DROP TABLE "AuditDeliveryAttempts";
       DROP TABLE "AuditSettings";
       DROP TABLE "AuditEvents";

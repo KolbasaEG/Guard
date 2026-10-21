@@ -6,6 +6,7 @@ using Guard.Core.Logging;
 using Guard.Core.Repositories;
 using Guard.Core.Services;
 using Guard.Core.Services.Exports;
+using Guard.Core.Services.Notifications;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -122,6 +123,10 @@ public static class InfrastructureServiceRegistration
     services.AddScoped<ExportDocumentWriter>();
     services.AddScoped<ExportProcessor>();
     services.AddHostedService<ExportWorker>();
+    services.AddSingleton<INotificationSignals, NotificationSignals>();
+    services.AddSingleton<NotificationDispatcher>();
+    services.AddHostedService<NotificationDeliveryWorker>();
+    services.AddHostedService<NotificationHealthWorker>();
 
     services.Scan(scan => scan
         .FromAssemblies(typeof(InfrastructureServiceRegistration).Assembly)

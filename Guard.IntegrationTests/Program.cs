@@ -39,6 +39,7 @@ await AdministrationSearchUiTests.RunAsync(Check);
 await UserDialogLifecycleTests.RunAsync(Check);
 await RefactorTests.RunAsync(Check);
 await ServiceRegistrationTests.RunAsync(Check);
+await NotificationTests.RunAsync(Check);
 await WorkerLifecycleTests.RunAsync(Check);
 await LogConfigurationTests.RunAsync(Check);
 await LoggingReliabilityTests.RunAsync(Check);

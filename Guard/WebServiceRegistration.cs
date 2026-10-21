@@ -38,6 +38,7 @@ public static class WebServiceRegistration
     services.AddScoped<ICurrentSession, CurrentSessionAdapter>();
     services.AddScoped<IClientIpAccessor, Guard.Web.Identity.ClientIpAccessor>();
     services.AddScoped<AccessRefreshCoordinator>();
+    services.AddScoped<Guard.Web.Notifications.NotificationCenterState>();
     services.AddScoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, AccessCircuitHandler>();
     services.AddAuthorization(options =>
     {

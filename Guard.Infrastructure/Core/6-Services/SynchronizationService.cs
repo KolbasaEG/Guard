@@ -4,6 +4,7 @@ using Guard.Core.Identity;
 using Guard.Core.Services.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Guard.Core.Logging;
+using Guard.Core.Services.Notifications;
 
 namespace Guard.Core.Services;
 
@@ -116,7 +117,7 @@ public sealed class SynchronizationService(IDbContextFactory<ApplicationDbContex
       throw new EntityRuleException("Синхронизация уже ожидает запуска или выполняется.");
     var request = new SynchronizationRun { ActorId = actor.UserId, PoolId = pool, UpdatedSince = updatedSince,
       Status = SynchronizationStatus.Queued, QueuedAt = DateTime.UtcNow, StartedAt = DateTime.UtcNow,
-      RequestedSettingsVersion = settings.Version, Phase = "Queued" };
+      RequestedSettingsVersion = settings.Version, Phase = "Queued", NotificationSourceKey = NotificationOutbox.SynchronizationSource(settings) };
     queueDb.Add(request); await queueDb.SaveChangesAsync(ct); await AuditTransaction.CommitAsync(transaction, ct);
     return SynchronizationProjection.FromRun(request);
   }
@@ -147,9 +148,7 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
     if (!await db.Database.SqlQueryRaw<bool>($"SELECT pg_try_advisory_lock({PostgresAdvisoryLocks.ApiSynchronization}) AS \"Value\"").SingleAsync(ct)) return;
     try
     {
-      await db.SynchronizationRuns.Where(r => r.Status == SynchronizationStatus.Running)
-        .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, SynchronizationStatus.Interrupted)
-          .SetProperty(r => r.CompletedAt, DateTime.UtcNow).SetProperty(r => r.Error, "Предыдущий процесс завершился до окончания синхронизации."), ct);
+      await NotificationOutbox.RecoverSynchronizationAsync(db, ct);
     }
     finally { await db.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({PostgresAdvisoryLocks.ApiSynchronization})", CancellationToken.None); }
   }
@@ -202,15 +201,14 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
       if (scheduled) updatedSince = SynchronizationSchedule.UpdatedSince(startedAt);
       if (updatedSince.HasValue && pool.HasValue) throw new EntityRuleException("Синхронизация с датой доступна только для всей организации.");
       // Только владелец глобальной блокировки может объявить прежний запуск прерванным.
-      await db.SynchronizationRuns.Where(r => r.Status == SynchronizationStatus.Running)
-        .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, SynchronizationStatus.Interrupted)
-          .SetProperty(r => r.CompletedAt, DateTime.UtcNow).SetProperty(r => r.Error, "Предыдущий процесс завершился до окончания синхронизации."), ct);
+      await NotificationOutbox.RecoverSynchronizationAsync(db, ct);
       if (run == null)
       {
         run = new() { ActorId = actor, PoolId = pool, Scheduled = scheduled, StartedAt = startedAt, UpdatedSince = updatedSince };
         db.SynchronizationRuns.Add(run);
       }
       else { run.Status = SynchronizationStatus.Running; run.StartedAt = startedAt; }
+      run.NotificationSourceKey ??= NotificationOutbox.SynchronizationSource(settings);
       run.Phase = "Fetch";
       runScope = logger.BeginScope(new Dictionary<string, object> { ["RunId"] = run.Id, ["SyncScheduled"] = scheduled });
       logger.LogInformation("Синхронизация {RunId}: фильтр UpdatedAt {UpdatedSince}, полная выгрузка {FullSnapshot}", run.Id, updatedSince, !updatedSince.HasValue);
@@ -282,6 +280,7 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
           else { current.LastFullSynchronizedAt = run.CompletedAt; current.RecoveryRequiredFrom = null; }
         }
         run.Phase = "Completed";
+        NotificationOutbox.Synchronization(db, run);
         if (scheduled) current.LastScheduledDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(run.StartedAt, TimeZoneInfo.Local));
         await db.SaveChangesAsync(ct);
         await db.Subdivisions.Where(s => coveredIds.Contains(s.Id))
@@ -315,6 +314,7 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
       run.Error = ex is EntityRuleException or ArgumentException ? ex.Message :
         run.Status == SynchronizationStatus.Cancelled ? "Синхронизация отменена." : ex is OperationCanceledException ?
         "Превышено время ожидания ответа API." : "Не удалось выполнить синхронизацию. Подробности доступны в техническом журнале.";
+      NotificationOutbox.Synchronization(db, run);
       await db.SaveChangesAsync(CancellationToken.None);
       logger.LogWarning("Синхронизация {RunId}: завершение с ошибкой, этап {SyncPhase}, статус {SyncStatus}, причина {CancellationReason}, токен инициатора {CallerTokenCancelled}, токен загрузки {FetchTokenCancelled}, остановка приложения {ApplicationStopping}, длительность {SyncElapsedMs} мс", run.Id, phase, run.Status,
         Volatile.Read(ref settingsChanged) != 0 ? "SettingsChanged" : ct.IsCancellationRequested ? "CallerToken" : ex is OperationCanceledException ? "HttpTimeoutOrTransportCancellation" : "Failure",
