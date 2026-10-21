@@ -27,7 +27,7 @@
     loading = true; error = null;
     try { preview = await Service.PreviewAsync(Id, part, offset, cts.Token); skip = offset; }
     catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
-    catch (Exception ex) { preview = null; Logger.LogWarning(ex, "Просмотр архивной копии {ExportId}", Id); error = UserOperationErrors.Message(ex); }
+    catch (Exception ex) { preview = null; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Просмотр архивной копии {ExportId}", Id); error = UserOperationErrors.Message(ex); }
     finally { loading = false; }
   }
   [Inject] public DialogService Dialogs { get; set; } = default!;

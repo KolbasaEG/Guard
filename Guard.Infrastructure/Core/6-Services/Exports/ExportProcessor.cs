@@ -18,6 +18,11 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
     await using var db = await contexts.CreateDbContextAsync(stopping);
     var job = await db.ExportJobs.AsNoTracking().Where(j => j.State == ExportJobState.Queued).OrderBy(j => j.CreatedAtUtc).ThenBy(j => j.Id).FirstOrDefaultAsync(stopping);
     if (job == null) return false;
+    using var logScope = logger.BeginScope(new Dictionary<string, object> {
+      ["RunId"] = job.Id, ["CorrelationId"] = "export-" + job.Id.ToString("N"), ["Operation"] = "ExportProcessing"
+    });
+    var elapsed = System.Diagnostics.Stopwatch.StartNew();
+    logger.LogDebug(new EventId(5301, "ExportProcessingStarted"), "Начало подготовки выгрузки {ExportId}", job.Id);
     await using (var claim = await db.Database.BeginTransactionAsync(stopping)) {
       var claimed = await db.ExportJobs.Where(j => j.Id == job.Id && j.State == ExportJobState.Queued)
         .ExecuteUpdateAsync(u => u.SetProperty(j => j.State, ExportJobState.Processing).SetProperty(j => j.StartedAtUtc, DateTimeOffset.UtcNow), stopping);
@@ -52,12 +57,25 @@ public sealed class ExportProcessor(IDbContextFactory<ApplicationDbContext> cont
         $"RequestedBy={job.AuthorId}; rows={captured.Count}; bytes={saved.Size}; SHA256={saved.Hash}")
         with { Actor = null, ActorKind = "system", ObjectType = "Export", ObjectId = job.Id.ToString() }, ct);
       await AuditTransaction.CommitAsync(transaction, ct); published = true;
+      logger.LogInformation(new EventId(5302, "ExportProcessingCompleted"), "Выгрузка {ExportId} подготовлена: {Count} строк, {DurationMs} мс", job.Id, captured.Count, elapsed.Elapsed.TotalMilliseconds);
     }
     catch (OperationCommitUnknownException) { throw; }
     catch (OperationCanceledException) when (stopping.IsCancellationRequested) { throw; }
     catch (Exception ex) {
-      logger.LogError(ex, "Формирование выгрузки {ExportId} завершилось ошибкой", job.Id);
-      var cancelled = await db.ExportJobs.Where(j => j.Id == job.Id).Select(j => j.CancelRequested).SingleAsync(stopping);
+      // Технический сбой не должен потеряться, если чтение служебного статуса также завершится ошибкой.
+      if (ex is not (OperationCanceledException or UnauthorizedAccessException))
+        Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(logger, ex, "Формирование выгрузки {ExportId} завершилось ошибкой", job.Id);
+      bool cancelled;
+      try {
+        var status = await db.ExportJobs.Where(j => j.Id == job.Id).Select(j => new { j.CancelRequested, j.ExpiresAtUtc }).SingleAsync(stopping);
+        cancelled = status.CancelRequested;
+        if (ex is UnauthorizedAccessException || ex is OperationCanceledException && (cancelled || status.ExpiresAtUtc <= DateTimeOffset.UtcNow))
+          logger.LogInformation("Формирование выгрузки {ExportId} прекращено по условию отмены или доступа", job.Id);
+        else if (ex is OperationCanceledException) logger.LogError(ex, "Превышено время формирования выгрузки {ExportId}", job.Id);
+      } catch {
+        if (ex is OperationCanceledException) logger.LogError(ex, "Формирование выгрузки {ExportId} прервано, причина отмены не подтверждена", job.Id);
+        throw;
+      }
       var error = cancelled ? "Выгрузка отменена." : ex is UnauthorizedAccessException ? "Доступ изменился. Создайте новую выгрузку." :
         ex is OperationCanceledException ? "Превышено время формирования. Сузьте фильтры и повторите выгрузку." : "Не удалось сформировать выгрузку. Обратитесь к администратору.";
       await using var failed = await db.Database.BeginTransactionAsync(stopping);

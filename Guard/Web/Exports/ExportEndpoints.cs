@@ -30,7 +30,9 @@ public static class ExportEndpoints
       }, ct);
     }
     catch (Exception ex) {
-      logger.LogWarning(ex, "Передача выгрузки {ExportId} не завершена", id);
+      if (ex is OperationCanceledException && ct.IsCancellationRequested) logger.LogDebug("Передача выгрузки {ExportId} отменена клиентом", id);
+      else if (ex is AntiforgeryValidationException) logger.LogWarning("Отклонён запрос передачи выгрузки {ExportId}", id);
+      else Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(logger, ex, "Передача выгрузки {ExportId} не завершена", id);
       // Ошибки до вызова сервиса не проходят через его аудит.
       if (!delegated) {
         try { audit.LogIdentityEvent(AuditEventType.ExportFailed, null, null, $"Export {id}"); }

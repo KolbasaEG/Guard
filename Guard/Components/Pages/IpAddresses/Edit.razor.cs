@@ -53,7 +53,7 @@ public partial class Edit : IDisposable
     catch (Exception ex)
     {
       if (disposed || ct.IsCancellationRequested) return;
-      Logger.LogError(ex, "Загрузка IP-адреса {IpAddressId}", Id);
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка IP-адреса {IpAddressId}", Id);
       ShowErrorNotification(UserOperationErrors.Message(ex));
       DialogService.Close(null);
     }
@@ -76,7 +76,7 @@ public partial class Edit : IDisposable
     catch (Exception ex)
     {
       if (disposed || ct.IsCancellationRequested) return;
-      Logger.LogError(ex, "Обновление IP-адреса {IpAddressId}", item.Id);
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Обновление IP-адреса {IpAddressId}", item.Id);
       ShowErrorNotification(UserOperationErrors.Message(ex));
     }
     finally { isSaving = false; }

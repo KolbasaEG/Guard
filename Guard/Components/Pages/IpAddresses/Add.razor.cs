@@ -34,7 +34,7 @@ public partial class Add : IDisposable
     catch (Exception ex)
     {
       if (disposed || ct.IsCancellationRequested) return;
-      Logger.LogError(ex, "Загрузка подразделений для IP-адреса");
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка подразделений для IP-адреса");
       NotificationService.Notify(new NotificationMessage {
         Severity = NotificationSeverity.Error, Summary = "IP-адрес", Detail = UserOperationErrors.Message(ex),
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
@@ -59,7 +59,7 @@ public partial class Add : IDisposable
     catch (Exception ex)
     {
       if (disposed || ct.IsCancellationRequested) return;
-      Logger.LogError(ex, "Создание IP-адреса");
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Создание IP-адреса");
       NotificationService.Notify(new NotificationMessage {
         Severity = NotificationSeverity.Error, Summary = "IP-адрес",
         Detail = UserOperationErrors.Message(ex),

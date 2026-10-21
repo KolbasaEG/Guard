@@ -27,7 +27,7 @@ public partial class Add : IDisposable
     }
     catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
     catch (Exception) when (disposed || stop.IsCancellationRequested) { }
-    catch (Exception ex) { Logger.LogWarning(ex, "Загрузка сотрудников для создания пользователя"); error = "Не удалось загрузить сотрудников. Проверьте доступ."; }
+    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка сотрудников для создания пользователя"); error = "Не удалось загрузить сотрудников. Проверьте доступ."; }
     finally { busy = false; }
   }
   private async Task SaveAsync()
@@ -52,7 +52,7 @@ public partial class Add : IDisposable
     catch (ArgumentException ex) { error = ex.Message; }
     catch (InvalidOperationException ex) { error = ex.Message; }
     catch (UnauthorizedAccessException) { error = "Создание пользователя недоступно: проверьте права и подразделение сотрудника."; }
-    catch (Exception ex) { Logger.LogError(ex, "Ошибка создания пользователя"); error = "Не удалось создать пользователя."; }
+    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка создания пользователя"); error = "Не удалось создать пользователя."; }
     finally { busy = false; }
   }
   private void Cancel() { stop.Cancel(); model.Password = ""; confirmation = ""; Dialogs.Close(null); }

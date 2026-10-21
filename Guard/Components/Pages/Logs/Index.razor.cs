@@ -31,7 +31,7 @@ namespace Guard.Components.Pages.Logs
       if (disposed || !reloadPending) return;
       reloadPending = false;
       try { await Time.InitializeAsync(); await grid.Reload(); if (!disposed) StateHasChanged(); }
-      catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс логов"); }
+      catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Часовой пояс логов"); }
     }
     [Inject] protected IPermissionService Permissions { get; set; } = default!;
     [Inject]
@@ -64,31 +64,10 @@ namespace Guard.Components.Pages.Logs
     protected RadzenDataFilter<LogFilterFields> dataFilter;
     
 
-    // Переменные для Level
+    private static readonly FilterOperator[] selectionOperators = [FilterOperator.In, FilterOperator.NotIn];
+
     protected IEnumerable<string> itemsLevel = ["Verbose", "Debug", "Information", "Warning", "Error", "Fatal"];
-    protected IEnumerable<string> selectedItemsLevel;
-    protected IEnumerable<string> finalSelectedItemsLevel;
-
-    // Переменные для Layer
     protected IEnumerable<string> itemsLayer = ["Components", "Service", "Database", "System"];
-    protected IEnumerable<string> selectedItemsLayer;
-    protected IEnumerable<string> finalSelectedItemsLayer;
-
-    // Обработчики изменений наборов для фильтра
-    void OnSelectedLevelChange(object value)
-    {
-      if (selectedItemsLevel != null && !selectedItemsLevel.Any())
-      {
-        selectedItemsLevel = null;
-      }
-    }
-    void OnSelectedLayerChange(object value)
-    {
-      if (selectedItemsLayer != null && !selectedItemsLayer.Any())
-      {
-        selectedItemsLayer = null;
-      }
-    }
 
     private BadgeStyle GetBadgeStyle(string? level) => level switch
     {
@@ -109,19 +88,8 @@ namespace Guard.Components.Pages.Logs
     // Применение фильтра
     async Task ApplyFilter()
     {
-      finalSelectedItemsLevel = selectedItemsLevel?.ToArray();
-      finalSelectedItemsLayer = selectedItemsLayer?.ToArray();
-      SetSelectionValues(dataFilter.Filters ?? []);
       try { appliedFilter = AdministrationListQuery.Capture(dataFilter, Time, LogSearchFilter.Fields, LogSearchFilter.Validate); if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
-      catch (Exception ex) { Logger.LogWarning(ex, "Фильтр логов"); NotificationService.Notify(new NotificationMessage { Severity=NotificationSeverity.Error, Summary="Фильтр", Detail=Guard.Core.Services.UserOperationErrors.Message(ex), Style="position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); }
-    }
-    private void SetSelectionValues(IEnumerable<CompositeFilterDescriptor> filters)
-    {
-      foreach (var filter in filters) {
-        if (filter.Property == "Level") filter.FilterValue = finalSelectedItemsLevel;
-        if (filter.Property == "Layer") filter.FilterValue = finalSelectedItemsLayer;
-        if (filter.Filters != null) SetSelectionValues(filter.Filters);
-      }
+      catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Фильтр логов"); NotificationService.Notify(new NotificationMessage { Severity=NotificationSeverity.Error, Summary="Фильтр", Detail=Guard.Core.Services.UserOperationErrors.Message(ex), Style="position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); }
     }
     protected override async Task OnInitializedAsync()
     {
@@ -144,7 +112,7 @@ namespace Guard.Components.Pages.Logs
       catch (Exception ex)
       {
         if (disposed) return;
-        Logger.LogError(ex, "Ошибка при инициализации панели логов");
+        Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка при инициализации панели логов");
 
         NotificationService.Notify(new NotificationMessage
         {
@@ -171,7 +139,7 @@ namespace Guard.Components.Pages.Logs
         if (!disposed && ReferenceEquals(request, loading)) { filteredData = result.Items; count = result.Count; }
       }
       catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-      catch (Exception ex) { if (!disposed && ReferenceEquals(request, loading)) { filteredData = []; count = 0; Logger.LogError(ex, "Загрузка логов"); NotificationService.Notify(new NotificationMessage { Severity=NotificationSeverity.Error, Summary="Логи", Detail="Не удалось загрузить логи. Проверьте доступ и повторите попытку.", Style="position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); } }
+      catch (Exception ex) { if (!disposed && ReferenceEquals(request, loading)) { filteredData = []; count = 0; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка логов"); NotificationService.Notify(new NotificationMessage { Severity=NotificationSeverity.Error, Summary="Логи", Detail="Не удалось загрузить логи. Проверьте доступ и повторите попытку.", Style="position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); } }
       finally { if (ReferenceEquals(request, loading)) { loading=null; isLoading=false; } request.Dispose(); }
     }
     /// <summary>
@@ -230,7 +198,7 @@ namespace Guard.Components.Pages.Logs
         {
           // Ожидаемая отмена при переключении режима или уничтожении компонента
         }
-        catch (Exception ex) { Logger.LogError(ex, "Автообновление логов остановлено"); }
+        catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Автообновление логов остановлено"); }
     }
 
     /// <summary>
@@ -268,7 +236,7 @@ namespace Guard.Components.Pages.Logs
         NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Успешно", Detail = "Настройки логирования сохранены.", Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" });
       }
       catch (OperationCanceledException) when (_cts.IsCancellationRequested) { }
-      catch (Exception ex) { if (!disposed) { Logger.LogError(ex, "Настройки логирования"); NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Внимание", Detail = Guard.Core.Services.UserOperationErrors.Message(ex), Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); } }
+      catch (Exception ex) { if (!disposed) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Настройки логирования"); NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Внимание", Detail = Guard.Core.Services.UserOperationErrors.Message(ex), Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" }); } }
       finally { settingsSaving = false; }
     }
     /// <summary>

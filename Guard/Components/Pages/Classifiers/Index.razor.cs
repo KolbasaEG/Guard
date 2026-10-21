@@ -27,7 +27,7 @@ namespace Guard.Components.Pages.Classifiers
     protected override async Task OnAfterRenderAsync(bool firstRender) {
       if (disposed || !reloadPending) return; reloadPending = false;
       try { await Time.InitializeAsync(); await grid.Reload(); }
-      catch (Exception ex) { Logger.LogWarning(ex, "Загрузка часового пояса"); ShowErrorNotification("Не удалось определить часовой пояс браузера. Обновите страницу."); }
+      catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка часового пояса"); ShowErrorNotification("Не удалось определить часовой пояс браузера. Обновите страницу."); }
       if (!disposed) StateHasChanged();
     }
     private async Task ResetPageAsync() { if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
@@ -68,7 +68,7 @@ namespace Guard.Components.Pages.Classifiers
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при инициализации страницы классификаторов");
+        Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка при инициализации страницы классификаторов");
         ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
@@ -95,7 +95,7 @@ namespace Guard.Components.Pages.Classifiers
       catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
       catch (Exception ex) {
         if (!disposed && ReferenceEquals(request, _loadDataCts)) {
-          filteredData = []; count = 0; Logger.LogError(ex, "Загрузка списка");
+          filteredData = []; count = 0; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка списка");
           ShowErrorNotification("Не удалось загрузить данные. Проверьте доступ и повторите попытку.");
         }
       }
@@ -141,7 +141,7 @@ namespace Guard.Components.Pages.Classifiers
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Ошибка при изменении статуса классификатора ID: {ClassifierId}", item.Id);
+          Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка при изменении статуса классификатора ID: {ClassifierId}", item.Id);
           ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
         }
       }
@@ -160,13 +160,13 @@ namespace Guard.Components.Pages.Classifiers
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Ошибка при удалении классификатора ID: {ClassifierId}", item.Id);
+          Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка при удалении классификатора ID: {ClassifierId}", item.Id);
           ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
         }
       }
     }
 
-    async Task ApplyFilter() { try { appliedFilter = ClassifierListQuery.Capture(dataFilter, Time); await ResetPageAsync(); } catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
+    async Task ApplyFilter() { try { appliedFilter = ClassifierListQuery.Capture(dataFilter, Time); await ResetPageAsync(); } catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); } }
 
     private void ShowSuccessNotification(string detail)
     {

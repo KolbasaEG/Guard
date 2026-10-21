@@ -60,7 +60,9 @@ public static class DatabaseInitializer
                 exception TEXT,
                 properties JSONB,
                 user_id VARCHAR(250),
-                ip_address VARCHAR(50)
+                ip_address VARCHAR(50),
+                correlation_id TEXT, source_context TEXT, diagnostic_session_id UUID, run_id TEXT,
+                fingerprint TEXT, application_version TEXT, instance_id TEXT
             );
             CREATE INDEX IF NOT EXISTS ix_logs_timestamp ON public.logs (timestamp);";
     cmd.ExecuteNonQuery();

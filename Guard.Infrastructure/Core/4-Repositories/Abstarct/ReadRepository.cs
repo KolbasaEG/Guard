@@ -6,9 +6,25 @@ using Guard.Core.Services;
 using Microsoft.EntityFrameworkCore;
 
 public class ReadRepository<T>(IDbContextFactory<ApplicationDbContext> factory,
-    IPermissionService permissions, IDataAccessScopeService scopes) : IReadRepository<T> where T : class
+    IPermissionService permissions, IDataAccessScopeService scopes, ILogger<ReadRepository<T>>? logger = null) : IReadRepository<T> where T : class
 {
   public async Task<TResult> QueryAsync<TResult>(Func<IQueryable<T>, Task<TResult>> query, CancellationToken ct = default)
+  {
+    var elapsed = System.Diagnostics.Stopwatch.StartNew();
+    using var scope = logger?.BeginScope(new Dictionary<string, object> { ["Operation"] = "RepositoryRead", ["EntityType"] = typeof(T).Name });
+    logger?.LogDebug(new EventId(5101, "ReadStarted"), "Начало чтения {EntityType}", typeof(T).Name);
+    try {
+      var result = await QueryCoreAsync(query, ct);
+      logger?.LogDebug(new EventId(5102, "ReadCompleted"), "Чтение {EntityType} выполнено за {DurationMs} мс", typeof(T).Name, elapsed.Elapsed.TotalMilliseconds);
+      return result;
+    } catch (OperationCanceledException) when (ct.IsCancellationRequested) {
+      logger?.LogDebug(new EventId(5103, "ReadCancelled"), "Чтение {EntityType} отменено за {DurationMs} мс", typeof(T).Name, elapsed.Elapsed.TotalMilliseconds); throw;
+    } catch (Exception error) {
+      // Ошибка будет зарегистрирована вызывающей операцией; подробная диагностика добавляет этап без второго Error.
+      logger?.LogDebug(new EventId(5104, "ReadFailed"), error, "Чтение {EntityType} прервано за {DurationMs} мс", typeof(T).Name, elapsed.Elapsed.TotalMilliseconds); throw;
+    }
+  }
+  private async Task<TResult> QueryCoreAsync<TResult>(Func<IQueryable<T>, Task<TResult>> query, CancellationToken ct)
   {
     await using var db = await factory.CreateDbContextAsync(ct);
     var access = await permissions.GetCurrentAsync(ct);

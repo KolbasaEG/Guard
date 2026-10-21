@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Guard.Core.Logging;
 
-public sealed class LogRetention(IDbContextFactory<ApplicationDbContext> factory, IDbContextFactory<LogsDbContext> logsFactory,
+public sealed class LogRetention(IDbContextFactory<ApplicationDbContext> factory,
   string directory = "logs", AuditJournal? journal = null, AuditHealth? health = null, InternalLogWriter? diagnostics = null)
 {
   private int? lastYears;
@@ -34,19 +34,6 @@ public sealed class LogRetention(IDbContextFactory<ApplicationDbContext> factory
         if (removed < 1000) break;
       }
     });
-    await RunAsync("Technical", async () => {
-      await using var logs = await logsFactory.CreateDbContextAsync(ct); logs.Database.SetCommandTimeout(10);
-      var parameter = new Npgsql.NpgsqlParameter("cutoff", NpgsqlTypes.NpgsqlDbType.Timestamp) {
-        Value = DateTime.SpecifyKind(cutoff, DateTimeKind.Unspecified)
-      };
-      for (var batch = 0; batch < 10; batch++) {
-        var removed = await logs.Database.ExecuteSqlRawAsync("""
-          DELETE FROM public.logs WHERE ctid IN
-            (SELECT ctid FROM public.logs WHERE timestamp < @cutoff ORDER BY timestamp LIMIT 10000)
-          """, new object[] { parameter }, ct);
-        if (removed < 10000) break;
-      }
-    });
     await RunAsync("Files", () => { CleanFiles(directory, cutoff); return Task.CompletedTask; });
     health?.Cleanup(errors.Count == 0 ? null : string.Join(";", errors));
 
@@ -64,8 +51,7 @@ public sealed class LogRetention(IDbContextFactory<ApplicationDbContext> factory
     if (!Directory.Exists(directory)) return;
     foreach (var file in Directory.EnumerateFiles(directory)) {
       var name = Path.GetFileName(file);
-      if ((name.StartsWith("app-fallback-", StringComparison.Ordinal) || name.StartsWith("startup-", StringComparison.Ordinal) ||
-        name.StartsWith("serilog-internal-errors-", StringComparison.Ordinal) || name.StartsWith("audit-", StringComparison.Ordinal)) &&
+      if (name.StartsWith("audit-", StringComparison.Ordinal) &&
         File.GetLastWriteTimeUtc(file) < cutoff) File.Delete(file);
     }
   }

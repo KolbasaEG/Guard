@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Basic', 'Postgres', 'Browser', 'Benchmark')]
+    [ValidateSet('Basic', 'Postgres', 'Browser', 'Benchmark', 'Technical-Benchmark')]
     [string] $Mode = 'Basic',
     [string] $SettingsPath = 'Guard/appsettings.json',
     [string] $BinaryDirectory,

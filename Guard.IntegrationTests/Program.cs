@@ -1,4 +1,7 @@
 var checks = 0;
+if (args.Length == 2 && args[0] == "--technical-crash-probe") {
+  await TechnicalLoggingReadinessTests.CrashChildAsync(args[1]); return;
+}
 void Check(bool condition, string scenario)
 {
   if (!condition) throw new Exception($"FAILED: {scenario}");
@@ -6,6 +9,11 @@ void Check(bool condition, string scenario)
 }
 if (args.Length == 2 && args[0] == "--benchmark") {
   try { await PostgresTests.RunAsync(args[1], Check, benchmark: true); }
+  catch (Exception error) { Console.Error.WriteLine(error); Environment.ExitCode = 1; }
+  return;
+}
+if (args.Length == 2 && args[0] == "--technical-benchmark") {
+  try { await PostgresTests.RunAsync(args[1], Check, technicalBenchmark: true); }
   catch (Exception error) { Console.Error.WriteLine(error); Environment.ExitCode = 1; }
   return;
 }
@@ -34,6 +42,8 @@ await ServiceRegistrationTests.RunAsync(Check);
 await WorkerLifecycleTests.RunAsync(Check);
 await LogConfigurationTests.RunAsync(Check);
 await LoggingReliabilityTests.RunAsync(Check);
+await TechnicalLoggingTests.RunAsync(Check);
+await TechnicalLoggingReadinessTests.RunAsync(Check);
 await OwnPasswordBoundaryTests.RunAsync(Check);
 await OwnPasswordCompletionTests.RunAsync(Check);
 await OwnPasswordUiCompletionTests.RunAsync(Check);

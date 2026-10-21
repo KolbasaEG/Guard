@@ -19,7 +19,7 @@ public partial class DetailsInfo : IDisposable
     catch (Exception ex)
     {
       if (disposed) return;
-      Logger.LogWarning(ex, "Определение часового пояса карточки сотрудника");
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Определение часового пояса карточки сотрудника");
       timeError = "Не удалось определить часовой пояс браузера. Откройте дополнительную информацию повторно.";
     }
     if (!disposed) StateHasChanged();

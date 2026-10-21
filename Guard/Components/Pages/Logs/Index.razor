@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @attribute [Authorize(Policy = Guard.Core.Identity.Permissions.Logs.Read)]
 
-<TableWrapperWithFilterAndAnalytics AnalitycsTitle="Управление уровнем логирования" AnalitycsIcon="settings">
+<TableWrapperWithFilterAndAnalytics AnalitycsTitle="Техническое логирование" AnalitycsIcon="monitor_heart" TopPaneSize="420px">
   <Table>
     <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="LogEntryDto" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="100"
                     AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
@@ -47,6 +47,10 @@
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="LogEntryDto" Property="UserId" SortProperty="UserId" Title="Пользователь" Width="150px" />
         <RadzenDataGridColumn TItem="LogEntryDto" Property="ClientIp" SortProperty="ClientIp" Title="IP-адрес" Width="130px" />
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="CorrelationId" SortProperty="CorrelationId" Title="Корреляция" Width="200px" />
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="SourceContext" SortProperty="SourceContext" Title="Категория" Width="240px" />
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="DiagnosticSessionId" SortProperty="DiagnosticSessionId" Title="Сессия диагностики" Width="240px" />
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="RunId" SortProperty="RunId" Title="Запуск" Width="180px" />
         <RadzenDataGridColumn TItem="LogEntryDto" Property="Message" SortProperty="Message" Title="Сообщение" Width="400px">
           <Template Context="log">
             <span style="white-space: pre-wrap; word-break: break-word;">@log.Message</span>
@@ -70,28 +74,36 @@
     <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto=false Data="@data" TItem="LogFilterFields"
                       AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                       DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
+                      InText="Входит в список" NotInText="Не входит в список"
                       AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
       <Properties>
         <RadzenDataFilterProperty TItem="LogFilterFields" Property="Timestamp" Title="Дата и время" />
-        <!-- Фильтр для Level -->
-        <RadzenDataFilterProperty TItem="LogFilterFields" Property="Level" Title="Уровень" FilterValue="@finalSelectedItemsLevel"
-                                  Type="typeof(IEnumerable<string>)" FilterOperator="FilterOperator.In">
-          <FilterTemplate>
-            <RadzenDropDown @bind-Value=@selectedItemsLevel Style="width:100%;" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                            Change=@OnSelectedLevelChange Data="@(itemsLevel)" AllowClear="true" Multiple="true" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="Level" Title="Уровень"
+                                  Type="typeof(IEnumerable<string>)" FilterOperator="FilterOperator.In" FilterOperators="selectionOperators">
+          <FilterTemplate Context="filter">
+            <RadzenDropDown TValue="IEnumerable<string>" Value="@((IEnumerable<string>?)filter.FilterValue)"
+                            ValueChanged="@(values => filter.FilterValue = values?.Any() == true ? values.ToArray() : null)"
+                            Style="width:100%;" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            Data="@(itemsLevel)" AllowClear="true" Multiple="true" />
           </FilterTemplate>
         </RadzenDataFilterProperty>
 
-        <!-- Фильтр для Layer -->
-        <RadzenDataFilterProperty TItem="LogFilterFields" Property="Layer" Title="Слой" FilterValue="@finalSelectedItemsLayer"
-                                  Type="typeof(IEnumerable<string>)" FilterOperator="FilterOperator.In">
-          <FilterTemplate>
-            <RadzenDropDown @bind-Value=@selectedItemsLayer Style="width:100%;" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                            Change=@OnSelectedLayerChange Data="@(itemsLayer)" AllowClear="true" Multiple="true" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="Layer" Title="Слой"
+                                  Type="typeof(IEnumerable<string>)" FilterOperator="FilterOperator.In" FilterOperators="selectionOperators">
+          <FilterTemplate Context="filter">
+            <RadzenDropDown TValue="IEnumerable<string>" Value="@((IEnumerable<string>?)filter.FilterValue)"
+                            ValueChanged="@(values => filter.FilterValue = values?.Any() == true ? values.ToArray() : null)"
+                            Style="width:100%;" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            Data="@(itemsLayer)" AllowClear="true" Multiple="true" />
           </FilterTemplate>
         </RadzenDataFilterProperty>        
         <RadzenDataFilterProperty TItem="LogFilterFields" Property="UserId" Title="ID пользователя" />
         <RadzenDataFilterProperty TItem="LogFilterFields" Property="ClientIp" Title="IP-адрес" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="CorrelationId" Title="Корреляция" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="SourceContext" Title="Категория" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="DiagnosticSessionId" Title="Сессия диагностики" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="RunId" Title="Запуск" />
+        <RadzenDataFilterProperty TItem="LogFilterFields" Property="Fingerprint" Title="Отпечаток ошибки" />
         <RadzenDataFilterProperty TItem="LogFilterFields" Property="Message" Title="Сообщение" />
         <RadzenDataFilterProperty TItem="LogFilterFields" Property="Exception" Title="Текст ошибки (Exception)" />
       </Properties>
@@ -102,25 +114,7 @@
     <RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
   </FilterButtons>
   <Analitycs>
-    <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;">
-      <RadzenFormField Text="Текущий уровень логов" Style="width:100%" Variant="Variant.Text">
-        <RadzenDropDown TValue="ApplicationLogLevel"
-                        Disabled="@(!settingsLoaded || settingsSaving)"
-                        Data="@(Enum.GetValues<ApplicationLogLevel>())"
-                        @bind-Value="@selectedLogLevel" />
-      </RadzenFormField>
-      <RadzenFormField Text="Макс. подключений (сессий)" Variant="Variant.Text" Style="width:100%">
-        <ChildContent>
-          <RadzenNumeric TValue="int" Disabled="@(!settingsLoaded || settingsSaving)" @bind-Value="@maxSessions" Min="1" Max="10000" Style="width: 180px;" />
-        </ChildContent>
-        <Helper>
-          <RadzenText TextStyle="TextStyle.Caption">Влияет на размер пачки (Batch Size) в PostgreSQL</RadzenText>
-        </Helper>
-      </RadzenFormField>
-    </RadzenStack>
+    <TechnicalLoggingPanel />
   </Analitycs>
-  <AnalitycsButtons>
-    <RadzenButton Icon="save" Disabled="@(!settingsLoaded || settingsSaving || Access?.Has(Guard.Core.Identity.Permissions.Logs.Configure) != true)" Click="SaveLoggerSettings" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
-  </AnalitycsButtons>
   
 </TableWrapperWithFilterAndAnalytics>

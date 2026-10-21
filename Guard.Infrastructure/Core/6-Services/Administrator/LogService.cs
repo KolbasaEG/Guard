@@ -24,11 +24,13 @@ public class LogService : ILogSearchService
     var actor = await SearchAccess.RequireAsync(_permissions, Permissions.Logs.Read, ct);
     if (request.Skip < 0 || request.Take is < 1 or > 100) throw new ArgumentException("Недопустимые параметры страницы.");
     LogSearchQuery.ValidateFilter(request.Filter);
+    using var quiet = Serilog.Context.LogContext.PushProperty("TechnicalLogInternal", true);
     await using var context = await _logsFactory.CreateDbContextAsync(ct);
     var query = LogSearchQuery.Filter(context.Logs.AsNoTracking(), request.Filter);
     var count = await query.CountAsync(ct);
     var items = await LogSearchQuery.Sort(query, request.OrderBy).Skip(request.Skip).Take(request.Take)
-      .Select(e => new LogEntryDto(e.Timestamp, e.Level, e.Layer, e.Message, e.Exception, e.UserId, e.ClientIp, e.Id, e.Properties, e.MessageTemplate)).ToListAsync(ct);
+      .Select(e => new LogEntryDto(e.Timestamp, e.Level, e.Layer, e.Message, e.Exception, e.UserId, e.ClientIp, e.Id, e.Properties, e.MessageTemplate,
+        e.CorrelationId, e.SourceContext, e.DiagnosticSessionId, e.RunId, e.Fingerprint, e.ApplicationVersion, e.InstanceId)).ToListAsync(ct);
     await SearchAccess.RecheckAsync(_permissions, Permissions.Logs.Read, actor, ct);
     return new LogSearchResult(items, count);
   }

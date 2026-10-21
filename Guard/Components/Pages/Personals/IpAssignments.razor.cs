@@ -83,7 +83,7 @@ public partial class IpAssignments : IDisposable
   private void ShowError(Exception ex)
   {
     if (disposed) return;
-    Logger.LogWarning(ex, "Назначение IP сотруднику {PersonalId}", PersonalId);
+    Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Назначение IP сотруднику {PersonalId}", PersonalId);
     error = UserOperationErrors.Message(ex);
     Notifications.Notify(new NotificationMessage
     {

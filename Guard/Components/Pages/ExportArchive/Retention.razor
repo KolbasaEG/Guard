@@ -41,6 +41,6 @@
     catch (Exception ex) { if (!disposed) Error(ex); }
     finally { saving = false; }
   }
-  private void Error(Exception ex) { Logger.LogWarning(ex, "Настройка хранения"); error = UserOperationErrors.Message(ex); }
+  private void Error(Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Настройка хранения"); error = UserOperationErrors.Message(ex); }
   public void Dispose() { if (disposed) return; disposed = true; lifetime.Cancel(); lifetime.Dispose(); }
 }

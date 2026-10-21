@@ -1,0 +1,40 @@
+@using Guard.Core.Services.DTOs
+@if (State != null) {
+  <RadzenStack Gap="5px">
+    <RadzenAlert AlertStyle="@(State.Health.Status == "Ready" ? AlertStyle.Success : State.Health.Status == "Degraded" ? AlertStyle.Warning : AlertStyle.Danger)" AllowClose="false" ShowIcon="true">
+      @StatusText(State.Health.Status). Работа системы продолжается; обязательный аудит действует по своим правилам.
+    </RadzenAlert>
+    @if (State.Health.LostEvents > 0) {
+      <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false">Зафиксировано потерь: @State.Health.LostEvents. Это накопительный счётчик; он сохраняется после восстановления. Проверьте обстоятельства потери событий.</RadzenAlert>
+    }
+    @if (State.Health.ErrorStorm) {
+      <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false">Рост числа ошибок: @State.Health.ErrorsInWindow за @State.Settings.ErrorWindowMinutes мин. Root может включить временную диагностику.</RadzenAlert>
+    }
+    <dl class="technical-metrics">
+      <dt>Экземпляр / состояние на UTC</dt><dd>@State.InstanceId / @Stamp(State.Health.ObservedAtUtc)</dd>
+      <dt>Текущие причины</dt><dd>@(State.Health.Problems?.Count > 0 ? string.Join("; ", State.Health.Problems.Select(ProblemText)) : "нет")</dd>
+      <dt>Неисправность замечена / восстановление (UTC)</dt><dd>@Stamp(State.Health.FailureSinceUtc) / @Stamp(State.Health.LastRecoveryUtc)</dd>
+      <dt>Буфер</dt><dd>@State.Health.PendingCount событий / @State.Health.PendingBytes байт; старейшее: @Stamp(State.Health.OldestPendingUtc)</dd>
+      <dt>Локальная запись / отправка в БД (UTC)</dt><dd>@Stamp(State.Health.LastLocalWriteUtc) / @Stamp(State.Health.LastDatabaseWriteUtc)</dd>
+      <dt>Проверка локальной записи (UTC)</dt><dd>@Stamp(State.Health.LastLocalProbeUtc)</dd>
+      <dt>Проверка INSERT в БД / цикл worker (UTC)</dt><dd>@Stamp(State.Health.LastDatabaseProbeUtc) / @Stamp(State.Health.LastWorkerUtc)</dd>
+      <dt>Потеряно событий / свободно на диске</dt><dd>@State.Health.LostEvents / @(State.Health.FreeDiskBytes?.ToString() ?? "не проверено") байт</dd>
+      <dt>Карантин повреждённых файлов</dt><dd>@State.Health.QuarantinedCount / @State.Health.QuarantinedBytes байт. @(State.Health.QuarantinedCount > 0 ? "Требуется обслуживание сервера; исправные события продолжают доставляться." : "Повреждённых файлов нет.")</dd>
+      <dt>Ошибки буфера / БД</dt><dd>@(State.Health.BufferError ?? "нет") / @(State.Health.DatabaseError ?? "нет")</dd>
+      <dt>Очистка (UTC) / ошибка</dt><dd>@Stamp(State.Health.LastCleanupUtc) / @(State.Health.CleanupError ?? "нет")</dd>
+      <dt>Ошибка настроек</dt><dd>@(State.Health.ConfigurationError ?? "нет")</dd>
+      <dt>Режим</dt><dd>@(State.Session == null ? "Штатный" : $"Диагностика {State.Session.Level}, категория: {(State.Session.Category.Length == 0 ? "все" : State.Session.Category)}, до {Stamp(State.Session.ExpiresAtUtc)} UTC")</dd>
+    </dl>
+    <RadzenText TextStyle="TextStyle.Caption">Показатели относятся к этому экземпляру. Время обнаружения и восстановления, а также окно числа ошибок начинаются заново при перезапуске. Считаются события Error/Fatal, включая повторения одной ошибки. При полном отказе диска счётчик потерь может не сохраниться. Проверки устаревают через 30 сек. для локальной записи и worker, через 60 сек. для INSERT.</RadzenText>
+  </RadzenStack>
+}
+@code {
+  [Parameter] public TechnicalLogState? State { get; set; }
+  private static string Stamp(DateTime? value) => value?.ToString("dd.MM.yyyy HH:mm:ss") ?? "не проверено";
+  private static string StatusText(string value) => value switch { "Ready" => "Техническое логирование исправно", "Degraded" => "Техническое логирование требует внимания", _ => "Аварийное состояние технического логирования" };
+  private static string ProblemText(string value) => value switch {
+    "WorkerStale" => "Нет свежего цикла доставки", "LocalProbeStale" => "Нет свежей проверки локальной записи",
+    "DatabaseProbeStale" => "Нет свежей проверки INSERT", "Quarantine" => "Есть повреждённые файлы",
+    "Configuration" => "Неисправность настроек", _ => value.Replace("LocalWrite:", "Локальная запись: ").Replace("Database:", "БД: ").Replace("Cleanup:", "Очистка: ")
+  };
+}

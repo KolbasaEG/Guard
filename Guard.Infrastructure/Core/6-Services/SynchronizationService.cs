@@ -302,6 +302,10 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
     }
     catch (Exception ex) when (run != null && !committed)
     {
+      var cancelled = ex is OperationCanceledException && (ct.IsCancellationRequested || fetchCancellation?.IsCancellationRequested == true);
+      // Исходный сбой регистрируется до попытки записать результат в потенциально недоступную БД.
+      if (cancelled) logger.LogInformation("Синхронизация {RunId} отменена на этапе {SyncPhase}", run.Id, phase);
+      else logger.LogError(ex, "Ошибка синхронизации {RunId} на этапе {SyncPhase}", run.Id, phase);
       db.ChangeTracker.Clear();
       run = await db.SynchronizationRuns.SingleAsync(r => r.Id == run.Id, CancellationToken.None);
       run.Status = ex is OperationCanceledException && (ct.IsCancellationRequested || fetchCancellation?.IsCancellationRequested == true)
@@ -315,7 +319,6 @@ public sealed class ApiSynchronizationRunner(IDbContextFactory<ApplicationDbCont
       logger.LogWarning("Синхронизация {RunId}: завершение с ошибкой, этап {SyncPhase}, статус {SyncStatus}, причина {CancellationReason}, токен инициатора {CallerTokenCancelled}, токен загрузки {FetchTokenCancelled}, остановка приложения {ApplicationStopping}, длительность {SyncElapsedMs} мс", run.Id, phase, run.Status,
         Volatile.Read(ref settingsChanged) != 0 ? "SettingsChanged" : ct.IsCancellationRequested ? "CallerToken" : ex is OperationCanceledException ? "HttpTimeoutOrTransportCancellation" : "Failure",
         ct.IsCancellationRequested, fetchCancellation?.IsCancellationRequested, applicationLifetime?.ApplicationStopping.IsCancellationRequested, elapsed.Elapsed.TotalMilliseconds);
-      logger.LogError(ex, "Ошибка синхронизации {RunId}", run.Id);
       return run;
     }
     finally

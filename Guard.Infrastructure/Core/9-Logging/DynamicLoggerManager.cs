@@ -15,6 +15,8 @@ public sealed class DynamicLoggerManager : IDisposable
   private Logger? current;
   private bool disposed;
   private int maxSessions = 100;
+  private readonly TechnicalLogRuntime? technical;
+  private readonly TechnicalLogBuffer? buffer;
   public Logger Logger { get; }
 
   public (int MaxSessions, LogEventLevel MinimumLevel) GetConfiguration()
@@ -25,12 +27,16 @@ public sealed class DynamicLoggerManager : IDisposable
     }
   }
 
-  public DynamicLoggerManager(string connectionString, LoggingLevelSwitch levelSwitch)
+  public DynamicLoggerManager(string connectionString, LoggingLevelSwitch levelSwitch, TechnicalLogRuntime? technical = null, TechnicalLogBuffer? buffer = null)
   {
     _connectionString = connectionString;
     _levelSwitch = levelSwitch;
+    this.technical = technical; this.buffer = buffer;
     create = (sessions, level) => BuildLogger(sessions, level);
-    Logger = new LoggerConfiguration().MinimumLevel.ControlledBy(levelSwitch)
+    var configuration = new LoggerConfiguration();
+    if (technical == null) configuration.MinimumLevel.ControlledBy(levelSwitch);
+    else configuration.MinimumLevel.Verbose().Filter.ByIncludingOnly(technical.Accept);
+    Logger = configuration
       .WriteTo.Sink(new ForwardingSink(this)).CreateLogger();
   }
 
@@ -65,6 +71,9 @@ public sealed class DynamicLoggerManager : IDisposable
 
   private Logger BuildLogger(int maxSessions, LogEventLevel level)
   {
+    if (technical != null && buffer != null) return new LoggerConfiguration().MinimumLevel.Verbose()
+      .Enrich.FromLogContext().Enrich.With<LayerEnricher>()
+      .WriteTo.Sink(new BufferForwarder(buffer)).CreateLogger();
     var (batchSize, period) = PostgresSerilogConfigurator.Calculate(maxSessions, level);
 
     return new LoggerConfiguration()
@@ -99,6 +108,9 @@ public sealed class DynamicLoggerManager : IDisposable
   {
     public void Emit(LogEvent logEvent) { lock (owner.gate) { if (!owner.disposed) owner.current?.Write(logEvent); } }
   }
+  // Буфер принадлежит host, а не сменяемому поколению Serilog.
+  private sealed class BufferForwarder(TechnicalLogBuffer target) : ILogEventSink
+  { public void Emit(LogEvent entry) => target.Emit(entry); }
   public void Dispose()
   {
     lock (gate) { if (disposed) return; disposed = true; current?.Dispose(); current = null; }

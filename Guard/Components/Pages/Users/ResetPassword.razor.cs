@@ -36,7 +36,7 @@ public partial class ResetPassword : IDisposable
     catch (ArgumentException ex) { error = ex.Message; }
     catch (UnauthorizedAccessException) { error = "Недостаточно прав для сброса пароля этого пользователя."; }
     catch (UserSecurityException ex) { error = ex.Message; }
-    catch (Exception ex) { Logger.LogError(ex, "Сброс пароля"); error = "Не удалось сбросить пароль. Обновите данные и повторите попытку."; }
+    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Сброс пароля"); error = "Не удалось сбросить пароль. Обновите данные и повторите попытку."; }
     finally { busy = false; model.Password = ""; confirmation = ""; }
   }
   public void Dispose() { if (disposed) return; disposed = true; model.Password = ""; confirmation = ""; stop.Cancel(); stop.Dispose(); }

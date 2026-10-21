@@ -30,7 +30,7 @@ public partial class Edit : IDisposable
   }
   private void ShowError(Exception ex)
   {
-    Logger.LogError(ex, "Ошибка сохранения роли");
+    Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка сохранения роли");
     Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Роль не сохранена", Detail =
         ex is ArgumentException or InvalidOperationException or UnauthorizedAccessException ? ex.Message : "Не удалось выполнить операцию.", Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" });
   }

@@ -1,0 +1,35 @@
+@implements IAsyncDisposable
+@inject IPermissionService Permissions
+@inject ITechnicalLogService Service
+@if (visible && text != null) {
+  <a href="/Logs" class="technical-alert" title="Состояние технического логирования">@text</a>
+}
+@code {
+  private readonly CancellationTokenSource stopping = new();
+  private Task? polling;
+  private bool visible, disposed;
+  private string? text;
+  protected override Task OnAfterRenderAsync(bool firstRender) { if (firstRender) polling = Poll(); return Task.CompletedTask; }
+  private async Task Poll()
+  {
+    using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+    try { do {
+      await InvokeAsync(async () => {
+        try {
+          var actor = await Permissions.GetCurrentAsync(stopping.Token);
+          if (disposed) return;
+          visible = actor.IsRoot;
+          if (visible) {
+            var state = await Service.GetAsync(stopping.Token);
+            if (!disposed) text = state.Health.Status != "Ready" ? "Технические логи: требуется внимание" :
+              state.Health.ErrorStorm ? "Рост числа ошибок" : state.Health.LostEvents > 0 ? "Технические логи: были потери событий" : state.Session != null ? "Включена диагностика" : null;
+          } else text = null;
+        } catch (OperationCanceledException) when (stopping.IsCancellationRequested) { }
+        catch { if (!disposed && visible) text = "Состояние технических логов недоступно"; }
+        if (!disposed) StateHasChanged();
+      });
+    } while (await timer.WaitForNextTickAsync(stopping.Token)); }
+    catch (OperationCanceledException) when (stopping.IsCancellationRequested) { }
+  }
+  public async ValueTask DisposeAsync() { if (disposed) return; disposed = true; stopping.Cancel(); if (polling != null) await polling; stopping.Dispose(); }
+}

@@ -75,7 +75,9 @@ public static class LogSearchFilter
 {
   internal static readonly FrozenDictionary<string, Type> Types = new Dictionary<string, Type>(StringComparer.Ordinal) {
     ["Id"] = typeof(Guid), ["Timestamp"] = typeof(DateTime), ["Level"] = typeof(string), ["Layer"] = typeof(string),
-    ["UserId"] = typeof(string), ["ClientIp"] = typeof(string), ["Message"] = typeof(string), ["Exception"] = typeof(string)
+    ["UserId"] = typeof(string), ["ClientIp"] = typeof(string), ["Message"] = typeof(string), ["Exception"] = typeof(string),
+    ["CorrelationId"] = typeof(string), ["SourceContext"] = typeof(string), ["DiagnosticSessionId"] = typeof(Guid?),
+    ["RunId"] = typeof(string), ["Fingerprint"] = typeof(string)
   }.ToFrozenDictionary(StringComparer.Ordinal);
   public static readonly FrozenSet<string> Fields = Types.Keys.ToFrozenSet(StringComparer.Ordinal);
   public static void Validate(ExportFilter? filter) => SearchFilterValidation.Validate(filter, Types);

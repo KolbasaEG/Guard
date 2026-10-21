@@ -1,0 +1,26 @@
+<form method="post" action="/technical-logs/export">
+  <AntiforgeryToken />
+  <RadzenStack Gap="8px">
+    <RadzenText>Выгрузка JSONL: до 10 000 событий и 8 МБ за период не более 7 дней. Время указывается в UTC. Объём и факт передачи регистрируются в аудите.</RadzenText>
+    <RadzenFormField Text="Источник"><RadzenDropDown TValue="string" @bind-Value="source" Data="sources" TextProperty="Text" ValueProperty="Value" /></RadzenFormField>
+    <RadzenFormField Text="С UTC (включительно)"><RadzenDatePicker TValue="DateTime" @bind-Value="from" ShowTime="true" DateFormat="dd.MM.yyyy HH:mm:ss" /></RadzenFormField>
+    <RadzenFormField Text="До UTC (исключительно)"><RadzenDatePicker TValue="DateTime" @bind-Value="to" ShowTime="true" DateFormat="dd.MM.yyyy HH:mm:ss" /></RadzenFormField>
+    <RadzenFormField Text="Корреляция (необязательно)"><RadzenTextBox @bind-Value="correlation" MaxLength="200" /></RadzenFormField>
+    <RadzenFormField Text="ID диагностической сессии (необязательно)"><RadzenTextBox @bind-Value="session" MaxLength="36" /></RadzenFormField>
+    <RadzenFormField Text="Уровень (необязательно)"><RadzenDropDown TValue="string" @bind-Value="level" Data="levels" AllowClear="true" /></RadzenFormField>
+    @if (source == "LocalBuffer") { <RadzenFormField Text="Продолжить после NextCursor (необязательно)"><RadzenTextBox @bind-Value="afterCursor" MaxLength="52" /></RadzenFormField> }
+    <input type="hidden" name="fromUtc" value="@DateTime.SpecifyKind(from, DateTimeKind.Utc).ToString("O")" />
+    <input type="hidden" name="toUtc" value="@DateTime.SpecifyKind(to, DateTimeKind.Utc).ToString("O")" />
+    <input type="hidden" name="correlationId" value="@correlation" />
+    <input type="hidden" name="sessionId" value="@session" />
+    <input type="hidden" name="source" value="@source" />
+    <input type="hidden" name="level" value="@level" />
+    <input type="hidden" name="afterCursor" value="@(source == "LocalBuffer" ? afterCursor : "")" />
+    <RadzenButton Text="Скачать технические логи" Icon="download" ButtonType="ButtonType.Submit" />
+    <RadzenText TextStyle="TextStyle.Caption">Локальный буфер содержит только ещё не подтверждённые БД события. Чтение ограничено 1 000 файлами и 8 МБ за пакет. Для продолжения перенесите NextCursor из описания пакета в поле выше. Параллельная доставка может удалить уже доставленные записи; отсутствие записи в буфере не означает её потерю. Scanned/Unreadable и Truncated указаны в описании файла.</RadzenText>
+    <RadzenButton Text="Посмотреть локальный буфер" Icon="preview" ButtonType="ButtonType.Button" Click="Preview" Disabled="busy" />
+    @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false">@error</RadzenAlert> }
+    @if (preview != null) { <RadzenText>Первые 20 строк пакета, до 64 КБ. Формирование пакета зарегистрировано в аудите.</RadzenText><pre style="max-height:300px;overflow:auto;white-space:pre-wrap;word-break:break-word;">@preview</pre> }
+    <RadzenText TextStyle="TextStyle.Caption">Первая строка файла — описание выгрузки с Count и Truncated. Если Truncated=true, уменьшите период для полного набора. Перед передачей за пределы организации проверьте содержание исторических сообщений.</RadzenText>
+  </RadzenStack>
+</form>

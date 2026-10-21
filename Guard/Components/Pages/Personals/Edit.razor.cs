@@ -136,7 +136,7 @@ public partial class Edit : IDisposable
   private void ShowError(Exception ex, string operation)
   {
     if (disposed) return;
-    Logger.LogWarning(ex, "{Operation}", operation);
+    Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "{Operation}", operation);
     error = UserOperationErrors.Message(ex);
     Notifications.Notify(new NotificationMessage
     {

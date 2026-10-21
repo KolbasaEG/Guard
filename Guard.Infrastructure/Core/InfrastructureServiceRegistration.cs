@@ -9,6 +9,7 @@ using Guard.Core.Services.Exports;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Guard.Infrastructure;
 
@@ -75,6 +76,11 @@ public static class InfrastructureServiceRegistration
     // =====================================================
     services.AddScoped<ILogSearchService, LogService>();
     services.AddSingleton<InternalLogWriter>();
+    services.TryAddSingleton<TechnicalLogRuntime>();
+    services.TryAddSingleton<TechnicalLogBuffer>();
+    services.AddSingleton(sp => new TechnicalLogDelivery(configuration.GetConnectionString("LogsConnection")
+      ?? throw new InvalidOperationException("Не настроена БД технических логов.")));
+    services.AddHostedService<TechnicalLogWorker>();
     services.AddSingleton<AuditHealth>();
     services.AddSingleton(sp => new AuditJournal(configuration.GetConnectionString("DefaultConnection")
       ?? throw new InvalidOperationException("Не настроена основная БД аудита."),

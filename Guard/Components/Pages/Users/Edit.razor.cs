@@ -50,7 +50,7 @@ public partial class Edit : IDisposable
   private void HandleError(Exception ex, string fallback)
   {
     if (disposed || stop.IsCancellationRequested) return;
-    Logger.LogWarning(ex, "Редактирование пользователя {UserId}", UserId);
+    Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Редактирование пользователя {UserId}", UserId);
     error = ex switch {
       UnauthorizedAccessException => "Редактирование недоступно: проверьте права и подразделение сотрудника.",
       ArgumentException or InvalidOperationException or KeyNotFoundException or UserSecurityException => ex.Message,

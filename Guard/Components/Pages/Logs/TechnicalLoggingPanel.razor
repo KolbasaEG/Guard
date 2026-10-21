@@ -1,0 +1,31 @@
+@using Guard.Core.Services.DTOs
+<div class="technical-log-panel">
+<RadzenStack Gap="5px">
+  <RadzenButton Text="Обновить состояние и настройки" Icon="refresh" Variant="Variant.Text" Click="Reload" Disabled="busy" />
+  @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false">@error</RadzenAlert> }
+  @if (state != null) {
+    <RadzenTabs>
+      <Tabs>
+        <RadzenTabsItem Text="Состояние" Icon="monitor_heart"><TechnicalLogStatus State="state" /></RadzenTabsItem>
+        <RadzenTabsItem Text="Настройки" Icon="settings"><TechnicalLogSettingsForm Settings="editor" Busy="busy" OnSave="Save" /></RadzenTabsItem>
+        <RadzenTabsItem Text="Диагностика" Icon="bug_report"><TechnicalDiagnosticForm State="state" Busy="busy" OnStart="Start" OnStop="Stop" /></RadzenTabsItem>
+        <RadzenTabsItem Text="Ошибки" Icon="error">
+          <RadzenButton Text="Загрузить группы ошибок" Click="LoadErrors" Disabled="busy" />
+          @if (groups != null) {
+            <RadzenDataGrid TItem="TechnicalErrorGroup" Data="groups" AllowPaging="false" AllowSorting="false" EmptyText="Ошибок в текущем окне не найдено">
+              <Columns>
+                <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="Category" Title="Категория" />
+                <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="Count" Title="Количество" />
+                <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="FirstUtc" Title="Первая, UTC" FormatString="{0:dd.MM HH:mm:ss}" />
+                <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="LastUtc" Title="Последняя, UTC" FormatString="{0:dd.MM HH:mm:ss}" />
+                <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="Fingerprint" Title="Отпечаток (фильтр журнала)" />
+              </Columns>
+            </RadzenDataGrid>
+          }
+        </RadzenTabsItem>
+        <RadzenTabsItem Text="Выгрузка" Icon="download"><TechnicalLogExportForm /></RadzenTabsItem>
+      </Tabs>
+    </RadzenTabs>
+  }
+</RadzenStack>
+</div>

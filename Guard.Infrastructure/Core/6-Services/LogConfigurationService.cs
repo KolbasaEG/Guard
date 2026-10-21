@@ -7,7 +7,7 @@ using Serilog.Events;
 namespace Guard.Core.Services;
 
 public sealed class LogConfigurationService(IPermissionService permissions, DynamicLoggerManager manager,
-    ILogger<LogConfigurationService> logger, IAuditService audit) : ILogConfigurationService
+    ILogger<LogConfigurationService> logger, IAuditService audit, ITechnicalLogService? technical = null) : ILogConfigurationService
 {
   private static readonly SemaphoreSlim configurationGate = new(1, 1);
   public async Task<LogConfigurationDto> GetAsync(CancellationToken ct = default)
@@ -15,6 +15,7 @@ public sealed class LogConfigurationService(IPermissionService permissions, Dyna
     await permissions.RequireAsync(Permissions.Logs.Read, ct);
     ct.ThrowIfCancellationRequested();
     var state = manager.GetConfiguration();
+    if (technical != null) return new(state.MaxSessions, (await technical.GetAsync(ct)).Settings.NormalLevel);
     return new(state.MaxSessions, FromSerilog(state.MinimumLevel));
   }
 
@@ -28,6 +29,13 @@ public sealed class LogConfigurationService(IPermissionService permissions, Dyna
       throw new ArgumentException("Укажите число сессий от 1 до 10000.");
     var level = ToSerilog(settings.MinimumLevel);
     ct.ThrowIfCancellationRequested();
+    if (technical != null) {
+      if (settings.MaxSessions != manager.GetConfiguration().MaxSessions)
+        throw new ArgumentException("Параметр сессий больше не используется. Измените объём буфера в настройках технического логирования.");
+      var current = await technical.GetAsync(ct);
+      var saved = await technical.SaveAsync(current.Version, current.Settings with { NormalLevel = settings.MinimumLevel }, ct);
+      return new(settings.MaxSessions, saved.Settings.NormalLevel);
+    }
     await configurationGate.WaitAsync(ct);
     try {
       var previous = manager.GetConfiguration();

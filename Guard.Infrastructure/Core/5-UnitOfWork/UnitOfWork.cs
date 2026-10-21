@@ -64,6 +64,7 @@ public class UnitOfWork : IUnitOfWork
   // ==================== SaveChanges ====================
   public async Task<int> SaveChangesAsync(CancellationToken ct = default)
   {
+    var elapsed = System.Diagnostics.Stopwatch.StartNew();
     _logger.LogDebug("Асинхронное сохранение изменений в БД...");
     try
     {
@@ -71,9 +72,10 @@ public class UnitOfWork : IUnitOfWork
       var result = await _context.SaveChangesAsync(ct);
       CompleteAudit(captured);
       if (_currentTransaction == null) await PublishAuditAsync();
-      _logger.LogDebug("Успешно сохранено сущностей в БД: {Count}", result);
+      _logger.LogDebug(new EventId(5202, "SaveCompleted"), "Успешно сохранено сущностей в БД: {Count}, длительность {DurationMs} мс", result, elapsed.Elapsed.TotalMilliseconds);
       return result;
     }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested) { _logger.LogDebug("Сохранение отменено после {DurationMs} мс", elapsed.Elapsed.TotalMilliseconds); throw; }
     catch (DbUpdateConcurrencyException) { throw new EntityConflictException(); }
     catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
     { throw new ArgumentException("Запись с такими ключевыми значениями уже существует.", ex); }
@@ -81,7 +83,7 @@ public class UnitOfWork : IUnitOfWork
     { throw new ArgumentException("Связанная запись недоступна или используется другими записями. Обновите данные.", ex); }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Ошибка при асинхронном сохранении изменений в БД");
+      _logger.LogOperationFailure(ex, "Ошибка при асинхронном сохранении изменений в БД");
       throw;
     }
   }
@@ -100,7 +102,7 @@ public class UnitOfWork : IUnitOfWork
     catch (DbUpdateConcurrencyException) { throw new EntityConflictException(); }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Ошибка при синхронном сохранении изменений в БД");
+      _logger.LogOperationFailure(ex, "Ошибка при синхронном сохранении изменений в БД");
       throw;
     }
   }
@@ -145,9 +147,14 @@ public class UnitOfWork : IUnitOfWork
       await PublishAuditAsync();
       await AuditTransaction.CommitAsync(_currentTransaction, ct);
     }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+    {
+      _logger.LogDebug("Фиксация транзакции отменена");
+      await RollbackTransactionAsync(CancellationToken.None); throw;
+    }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Ошибка при фиксации асинхронной транзакции. Запуск отката...");
+      _logger.LogOperationFailure(ex, "Ошибка при фиксации асинхронной транзакции. Запуск отката...");
       await RollbackTransactionAsync(CancellationToken.None);
       throw;
     }
@@ -169,7 +176,7 @@ public class UnitOfWork : IUnitOfWork
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Ошибка при выполнении отката асинхронной транзакции");
+      _logger.LogOperationFailure(ex, "Ошибка при выполнении отката асинхронной транзакции");
     }
     finally
     {
@@ -209,7 +216,7 @@ public class UnitOfWork : IUnitOfWork
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Ошибка при фиксации синхронной транзакции. Запуск отката...");
+      _logger.LogOperationFailure(ex, "Ошибка при фиксации синхронной транзакции. Запуск отката...");
       RollbackTransaction();
       throw;
     }
@@ -232,7 +239,7 @@ public class UnitOfWork : IUnitOfWork
     }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Ошибка при выполнении отката синхронной транзакции");
+      _logger.LogOperationFailure(ex, "Ошибка при выполнении отката синхронной транзакции");
     }
     finally
     {
@@ -251,9 +258,14 @@ public class UnitOfWork : IUnitOfWork
       await action();
       await CommitTransactionAsync(ct);
     }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+    {
+      _logger.LogDebug("Операция в транзакции отменена");
+      await RollbackTransactionAsync(CancellationToken.None); throw;
+    }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Сбой при выполнении действия в транзакции ExecuteInTransactionAsync");
+      _logger.LogOperationFailure(ex, "Сбой при выполнении действия в транзакции ExecuteInTransactionAsync");
       await RollbackTransactionAsync(CancellationToken.None);
       throw;
     }
@@ -271,9 +283,14 @@ public class UnitOfWork : IUnitOfWork
       await CommitTransactionAsync(ct);
       return result;
     }
+    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+    {
+      _logger.LogDebug("Операция с результатом в транзакции отменена");
+      await RollbackTransactionAsync(CancellationToken.None); throw;
+    }
     catch (Exception ex)
     {
-      _logger.LogError(ex, "Сбой при выполнении действия с результатом в транзакции ExecuteInTransactionAsync");
+      _logger.LogOperationFailure(ex, "Сбой при выполнении действия с результатом в транзакции ExecuteInTransactionAsync");
       await RollbackTransactionAsync(CancellationToken.None);
       throw;
     }

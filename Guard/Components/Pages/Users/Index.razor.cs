@@ -31,7 +31,7 @@ namespace Guard.Components.Pages.Users
     private bool disposed;
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-      if (firstRender) { try { await Time.InitializeAsync(); await grid.Reload(); StateHasChanged(); } catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс пользователей"); ShowErrorNotification("Не удалось определить часовой пояс браузера."); } }
+      if (firstRender) { try { await Time.InitializeAsync(); await grid.Reload(); StateHasChanged(); } catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Часовой пояс пользователей"); ShowErrorNotification("Не удалось определить часовой пояс браузера."); } }
     }
 
     int count;
@@ -49,7 +49,7 @@ namespace Guard.Components.Pages.Users
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при инициализации страницы пользователей");
+        Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка при инициализации страницы пользователей");
         ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
@@ -82,7 +82,7 @@ namespace Guard.Components.Pages.Users
       {
         if (disposed || !ReferenceEquals(_loadDataCts, request)) return;
         filteredData = []; count = 0;
-        Logger.LogError(ex, "Ошибка загрузки данных пользователей");
+        Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка загрузки данных пользователей");
         ShowErrorNotification("Не удалось загрузить данные");
       }
       finally
@@ -121,7 +121,7 @@ namespace Guard.Components.Pages.Users
         await Security.SetUserLockoutAsync(item.Id, !item.IsLockedOut, _cts.Token);
         ShowSuccessNotification(item.IsLockedOut ? "Пользователь разблокирован." : "Пользователь заблокирован.");
         await grid.Reload();
-      } catch (Exception ex) { Logger.LogWarning(ex, "Блокировка пользователя"); ShowErrorNotification("Изменение блокировки недоступно."); }
+      } catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Блокировка пользователя"); ShowErrorNotification("Изменение блокировки недоступно."); }
     }
     protected async Task ResetPasswordAsync(UserDto item)
     {

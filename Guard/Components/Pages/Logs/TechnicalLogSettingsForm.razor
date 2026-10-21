@@ -1,0 +1,25 @@
+@using Guard.Core.Services.DTOs
+<EditEntity TItem="TechnicalSettingsModel" Data="model" Name="НАСТРОЙКИ ТЕХНИЧЕСКОГО ЛОГИРОВАНИЯ" Icon="settings"
+            ShowCancelButton="false" IsSaving="Busy" Submit="Save">
+  <RadzenStack Gap="8px">
+    <RadzenFormField Text="Штатный уровень"><RadzenDropDown TValue="ApplicationLogLevel" Data="levels" @bind-Value="model.NormalLevel" /></RadzenFormField>
+    <RadzenFormField Text="Хранение в БД, дней (1–3650)"><RadzenNumeric TValue="int" Min="1" Max="3650" @bind-Value="model.RetentionDays" /></RadzenFormField>
+    <RadzenFormField Text="Объём локального буфера, МБ (16–10240)"><RadzenNumeric TValue="int" Min="16" Max="10240" @bind-Value="model.BufferMegabytes" /></RadzenFormField>
+    <RadzenFormField Text="Резерв свободного диска, МБ"><RadzenNumeric TValue="int" Min="128" Max="1048576" @bind-Value="model.MinimumFreeMegabytes" /></RadzenFormField>
+    <RadzenFormField Text="Диагностика по умолчанию, мин"><RadzenNumeric TValue="int" Min="1" Max="1440" @bind-Value="model.DefaultDiagnosticMinutes" /></RadzenFormField>
+    <RadzenFormField Text="Предельная длительность диагностики, мин"><RadzenNumeric TValue="int" Min="1" Max="1440" @bind-Value="model.MaximumDiagnosticMinutes" /></RadzenFormField>
+    <RadzenFormField Text="Порог количества ошибок"><RadzenNumeric TValue="int" Min="1" Max="100000" @bind-Value="model.ErrorThreshold" /></RadzenFormField>
+    <RadzenFormField Text="Окно подсчёта ошибок, мин"><RadzenNumeric TValue="int" Min="1" Max="60" @bind-Value="model.ErrorWindowMinutes" /></RadzenFormField>
+    <RadzenText TextStyle="TextStyle.Caption">Настройки относятся к этому экземпляру и не меняют аудит. Уменьшение буфера не удаляет ожидающие события: новые записи могут теряться до освобождения места. Срок хранения применяется к БД после доставки.</RadzenText>
+  </RadzenStack>
+</EditEntity>
+@code {
+  [Parameter] public TechnicalLogSettings Settings { get; set; } = new();
+  [Parameter] public bool Busy { get; set; }
+  [Parameter] public EventCallback<TechnicalLogSettings> OnSave { get; set; }
+  private TechnicalSettingsModel model = new();
+  private TechnicalLogSettings? loaded;
+  private readonly ApplicationLogLevel[] levels = [ApplicationLogLevel.Information, ApplicationLogLevel.Warning, ApplicationLogLevel.Error];
+  protected override void OnParametersSet() { if (ReferenceEquals(loaded, Settings)) return; loaded = Settings; model = TechnicalSettingsModel.From(Settings); }
+  private Task Save() => OnSave.InvokeAsync(model.ToSettings());
+}

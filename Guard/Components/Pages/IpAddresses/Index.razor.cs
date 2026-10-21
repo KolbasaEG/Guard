@@ -122,7 +122,7 @@ namespace Guard.Components.Pages.IpAddresses
       {
         if (!disposed && ReferenceEquals(_loadDataCts, request)) {
           filteredData = []; count = 0;
-          Logger.LogError(ex, "Ошибка загрузки IP-адресов");
+          Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка загрузки IP-адресов");
           ShowErrorNotification("Не удалось загрузить IP-адреса. Проверьте доступ и повторите попытку.");
         }
       }
@@ -188,7 +188,7 @@ namespace Guard.Components.Pages.IpAddresses
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Ошибка при архивировании IP-адреса ID: {IpAddressId}", item.Id);
+          Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка при архивировании IP-адреса ID: {IpAddressId}", item.Id);
           ShowErrorNotification("Не удалось выполнить операцию. Проверьте данные и права доступа.");
         }
       }
@@ -209,7 +209,7 @@ namespace Guard.Components.Pages.IpAddresses
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Ошибка при извлечении из архива IP-адреса ID: {IpAddressId}", item.Id);
+          Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка при извлечении из архива IP-адреса ID: {IpAddressId}", item.Id);
           ShowErrorNotification("Не удалось выполнить операцию. Проверьте данные и права доступа.");
         }
       }
@@ -230,7 +230,7 @@ namespace Guard.Components.Pages.IpAddresses
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-          Logger.LogError(ex, "Ошибка при удалении IP-адреса ID: {IpAddressId}", item.Id);
+          Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка при удалении IP-адреса ID: {IpAddressId}", item.Id);
           ShowErrorNotification("Не удалось выполнить операцию. Проверьте данные и права доступа.");
         }
       }
@@ -243,7 +243,7 @@ namespace Guard.Components.Pages.IpAddresses
         appliedFilter = candidate; exportFilter = candidate;
         await ResetPageAsync();
       } catch (ArgumentException ex) {
-        Logger.LogWarning(ex, "Некорректные условия фильтра IP");
+        Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Некорректные условия фильтра IP");
         ShowErrorNotification("Проверьте условия фильтра.");
       }
     }

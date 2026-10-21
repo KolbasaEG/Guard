@@ -33,6 +33,10 @@
         <Tabs>
           <RadzenTabsItem Text="Структурированные данные" Icon="data_object">
             <p>Идентификатор: @Log.Id</p>
+            <p>Корреляция: @Log.CorrelationId; категория: @Log.SourceContext</p>
+            <p>Диагностическая сессия: @Log.DiagnosticSessionId; запуск: @Log.RunId</p>
+            <p>Отпечаток ошибки: @Log.Fingerprint</p>
+            <p>Версия приложения: @Log.ApplicationVersion; экземпляр: @Log.InstanceId</p>
             <p>Шаблон: @Log.MessageTemplate</p>
             <pre style="white-space:pre-wrap;word-break:break-word;">@Log.Properties</pre>
           </RadzenTabsItem>
@@ -102,7 +106,7 @@
   {
     if (!firstRender) return;
     try { await Time.InitializeAsync(); StateHasChanged(); }
-    catch (Exception ex) { Logger.LogWarning(ex, "Часовой пояс события журнала"); }
+    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Часовой пояс события журнала"); }
   }
   [Parameter] public LogEntryDto Log { get; set; } = default!;
 

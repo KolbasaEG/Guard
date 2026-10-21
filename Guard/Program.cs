@@ -17,14 +17,18 @@ using System.Threading.RateLimiting;
 if (await Guard.Web.Maintenance.IpCatalogMaintenanceCommand.TryRunAsync(args)) return;
 
 var diagnostics = new InternalLogWriter();
+var technicalRuntime = new TechnicalLogRuntime();
+var technicalFormatter = new TechnicalLogFormatter(technicalRuntime);
 Serilog.Debugging.SelfLog.Enable(diagnostics.Write);
 using var bootstrap = new LoggerConfiguration().MinimumLevel.Information()
-  .WriteTo.Console()
-  .WriteTo.File(new Serilog.Formatting.Json.JsonFormatter(), "logs/startup-.json", rollingInterval: RollingInterval.Day,
-    fileSizeLimitBytes: 10 * 1024 * 1024, rollOnFileSizeLimit: true, retainedFileCountLimit: null,
-    retainedFileTimeLimit: null).CreateLogger();
+  .Enrich.FromLogContext()
+  .WriteTo.Console(technicalFormatter)
+  .WriteTo.File(technicalFormatter, "logs/startup-.json", rollingInterval: RollingInterval.Day,
+    fileSizeLimitBytes: 10 * 1024 * 1024, rollOnFileSizeLimit: true, retainedFileCountLimit: 4,
+    retainedFileTimeLimit: TimeSpan.FromDays(30)).CreateLogger();
 Log.Logger = bootstrap;
 DynamicLoggerManager? loggerManager = null;
+TechnicalLogBuffer? technicalBuffer = null;
 Logger? auditLogger = null;
 try {
   var builder = WebApplication.CreateBuilder(args);
@@ -62,7 +66,10 @@ try {
   builder.Services.AddSingleton(levelSwitch);
 
   // 3. Создаем и регистрируем динамический менеджер логгера
-  loggerManager = new DynamicLoggerManager(logsConnectionString, levelSwitch);
+  technicalBuffer = new TechnicalLogBuffer(technicalRuntime);
+  builder.Services.AddSingleton(technicalRuntime);
+  builder.Services.AddSingleton(technicalBuffer);
+  loggerManager = new DynamicLoggerManager(logsConnectionString, levelSwitch, technicalRuntime, technicalBuffer);
   builder.Services.AddSingleton(loggerManager);
 
   loggerManager.ApplyConfiguration(maxSessions: savedState.MaxSessions, newLevel: savedState.MinimumLevel);
@@ -153,6 +160,7 @@ try {
       .AddInteractiveServerRenderMode();
   app.MapAdditionalIdentityEndpoints();
   app.MapExportEndpoints();
+  Guard.Web.Logging.TechnicalLogEndpoints.MapTechnicalLogEndpoints(app);
 
   // === SEEDING ===
   if (app.Environment.IsDevelopment())
@@ -179,7 +187,7 @@ catch (Exception error) {
 finally {
   try { auditLogger?.Dispose(); }
   finally {
-    try { loggerManager?.Dispose(); }
+    try { loggerManager?.Dispose(); technicalBuffer?.Dispose(); }
     finally { Log.CloseAndFlush(); Serilog.Debugging.SelfLog.Disable(); }
   }
 }

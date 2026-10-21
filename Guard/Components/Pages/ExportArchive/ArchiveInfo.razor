@@ -18,6 +18,6 @@
   private ExportArchiveDetails? details; private string? error;
   protected override async Task OnInitializedAsync() {
     try { details = await Service.GetArchiveDetailsAsync(Id); }
-    catch (Exception ex) { Logger.LogWarning(ex, "Сведения архива {ExportId}", Id); error = UserOperationErrors.Message(ex); }
+    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Сведения архива {ExportId}", Id); error = UserOperationErrors.Message(ex); }
   }
 }

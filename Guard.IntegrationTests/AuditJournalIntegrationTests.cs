@@ -21,7 +21,7 @@ internal static class AuditJournalIntegrationTests
     await using var db = await factory.CreateDbContextAsync();
     if (!db.Database.GetDbConnection().Database.StartsWith("guard_ip_test_", StringComparison.Ordinal))
       throw new InvalidOperationException("Audit checks require the runner's isolated database.");
-    var upgrade = await File.ReadAllTextAsync("scripts/Upgrade-Logs.sql");
+    var upgrade = await File.ReadAllTextAsync("scripts/Upgrade-Logs.sql") + "\n" + await File.ReadAllTextAsync("scripts/Upgrade-TechnicalLogs.sql");
     var originalDirectory = Environment.CurrentDirectory;
     var root = Path.Combine(Path.GetTempPath(), "guard-audit-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
@@ -206,22 +206,28 @@ internal static class AuditJournalIntegrationTests
         var retentionFiles = Path.Combine(root, "retention"); Directory.CreateDirectory(retentionFiles);
         var oldFile = Path.Combine(retentionFiles, "app-fallback-old.txt"); await File.WriteAllTextAsync(oldFile, "old"); File.SetLastWriteTimeUtc(oldFile, old);
         var unrelated = Path.Combine(retentionFiles, "keep.txt"); await File.WriteAllTextAsync(unrelated, "keep"); File.SetLastWriteTimeUtc(unrelated, old);
-        await new LogRetention(factory, logFactory, retentionFiles).CleanAsync(default);
+        await new LogRetention(factory, retentionFiles).CleanAsync(default);
         check(await db.AuditEvents.CountAsync() == 2 && await db.AuditEvents.AnyAsync(e => e.Actor == "old-pending") &&
           await db.AuditEvents.AnyAsync(e => e.Actor == "recent-sent"), "annual retention removes delivered old audit and preserves pending beyond one year");
-        check(await logs.Logs.CountAsync() == 1 && (await logs.Logs.SingleAsync()).Message == "recent" && !File.Exists(oldFile) && File.Exists(unrelated),
-          "annual retention cleans old technical rows and owned log files without deleting unrelated files");
+        check(await logs.Logs.CountAsync() == 2 && File.Exists(oldFile) && File.Exists(unrelated),
+          "annual audit retention does not modify technical rows or technical files");
+        await new TechnicalLogDelivery(db.Database.GetConnectionString()!).CleanupAsync(DateTime.UtcNow.AddDays(-30), default);
+        TechnicalLogWorker.CleanFiles(retentionFiles, DateTime.UtcNow.AddDays(-30));
+        check(await logs.Logs.CountAsync() == 0 && !File.Exists(oldFile) && File.Exists(unrelated),
+          "independent 30-day technical retention cleans rows and owned files while audit keeps its annual policy");
         await File.WriteAllTextAsync(oldFile, "old-again"); File.SetLastWriteTimeUtc(oldFile, old);
         await db.Database.ExecuteSqlRawAsync("ALTER TABLE logs RENAME TO logs_offline");
         try {
           using var cleanupHealth = new AuditHealth();
-          await new LogRetention(factory, logFactory, retentionFiles, health: cleanupHealth).CleanAsync(default);
-          check(!File.Exists(oldFile) && cleanupHealth.CleanupError?.Contains("Technical:") == true,
-            "technical storage failure is visible and does not prevent independent cleanup of old files");
+          await new LogRetention(factory, retentionFiles, health: cleanupHealth).CleanAsync(default);
+          check(File.Exists(oldFile) && cleanupHealth.CleanupError == null,
+            "technical storage outage does not become an audit retention failure");
+          TechnicalLogWorker.CleanFiles(retentionFiles, DateTime.UtcNow.AddDays(-30));
+          check(!File.Exists(oldFile), "technical file cleanup is independent of database availability");
         } finally { await db.Database.ExecuteSqlRawAsync("ALTER TABLE logs_offline RENAME TO logs"); }
         await db.AuditSettings.ExecuteUpdateAsync(s => s.SetProperty(e => e.Mode, AuditMode.Local));
         await audit.RecordAsync(AuditEventData.Create(AuditEventType.LoginSuccess, "old-local") with { OccurredAtUtc = old });
-        await new LogRetention(factory, logFactory, retentionFiles).CleanAsync(default);
+        await new LogRetention(factory, retentionFiles).CleanAsync(default);
         check(!await db.AuditEvents.AnyAsync(e => e.Actor == "old-local") && await db.AuditEvents.AnyAsync(e => e.Actor == "old-pending"),
           "Local retention removes old local events while retaining the paused mandatory SIEM queue");
       }

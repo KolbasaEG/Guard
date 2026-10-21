@@ -66,7 +66,7 @@ public partial class Edit : IDisposable
   private void ShowError(Exception ex)
   {
     if (disposed || _cts.IsCancellationRequested) return;
-    Logger.LogError(ex, "Операция с классификатором {ClassifierId}", item.Id);
+    Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Операция с классификатором {ClassifierId}", item.Id);
     NotificationService.Notify(new NotificationMessage {
       Severity = NotificationSeverity.Error, Summary = "Классификатор",
       Detail = UserOperationErrors.Message(ex),

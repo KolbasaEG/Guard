@@ -54,7 +54,7 @@
       model = AccountPolicyForm.From(result); version = result.Version; loaded = true; message = null;
     }
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    catch (Exception ex) { if (!disposed) { loaded = false; Logger.LogWarning(ex, "Чтение политики"); success = false; message = "Не удалось получить настройки или недостаточно прав. Обновите настройки перед сохранением."; } }
+    catch (Exception ex) { if (!disposed) { loaded = false; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Чтение политики"); success = false; message = "Не удалось получить настройки или недостаточно прав. Обновите настройки перед сохранением."; } }
     finally { loading = false; }
   }
   private async Task SaveAsync()
@@ -71,7 +71,7 @@
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     catch (ArgumentException ex) { if (!disposed) message = ex.Message; }
     catch (AccountPolicyConflictException ex) { if (!disposed) { loaded = false; message = ex.Message; } }
-    catch (Exception ex) { if (!disposed) { Logger.LogError(ex, "Сохранение политики"); message = "Не удалось сохранить настройки или недостаточно прав."; } }
+    catch (Exception ex) { if (!disposed) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Сохранение политики"); message = "Не удалось сохранить настройки или недостаточно прав."; } }
     finally { saving = false; }
   }
   public void Dispose() { if (disposed) return; disposed = true; stop.Cancel(); stop.Dispose(); }

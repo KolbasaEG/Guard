@@ -44,7 +44,7 @@ public partial class Details : IDisposable
     {
       if (!disposed && ReferenceEquals(loading, request))
       {
-        Logger.LogWarning(ex, "Загрузка карточки сотрудника");
+        Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка карточки сотрудника");
         error = UserOperationErrors.Message(ex);
         Notifications.Notify(new NotificationMessage
         {

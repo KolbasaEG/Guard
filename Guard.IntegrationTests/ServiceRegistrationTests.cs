@@ -43,6 +43,8 @@ internal static class ServiceRegistrationTests
         ["ReverseProxy:KnownProxies:0"] = "127.0.0.2"
       });
       var services = builder.Services;
+      using var technical = new LoggingStorage();
+      services.AddSingleton(technical.Runtime); services.AddSingleton(technical.Buffer);
       services.AddLogging();
       using var manager = new DynamicLoggerManager(new LoggingLevelSwitch(), (_, _) => new LoggerConfiguration().CreateLogger());
       using var auditLogger = new LoggerConfiguration().CreateLogger();
@@ -60,7 +62,7 @@ internal static class ServiceRegistrationTests
       infrastructure.AddGuardInfrastructure(builder.Configuration, development);
       check(!infrastructure.Any(d => d.ImplementationType == typeof(AccountPolicyWorker)),
         "Infrastructure leaves the account policy timer to the host");
-      foreach (var worker in new[] { typeof(AccountPolicyWorker), typeof(ApiSynchronizationWorker), typeof(ExportWorker) })
+      foreach (var worker in new[] { typeof(AccountPolicyWorker), typeof(ApiSynchronizationWorker), typeof(ExportWorker), typeof(TechnicalLogWorker) })
         check(services.Count(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == worker) == 1 &&
           services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == worker).Lifetime == ServiceLifetime.Singleton,
           $"Composition registers exactly one singleton hosted worker {worker.Name}");
@@ -183,6 +185,7 @@ internal static class ServiceRegistrationTests
           (typeof(ISubdivisionManagementService), typeof(SubdivisionService)),
           (typeof(IIpAddressManagementService), typeof(IpAddressService)),
           (typeof(IUserAdministrationService), typeof(SecurityService)),
+          (typeof(ITechnicalLogService), typeof(TechnicalLogService)),
           (typeof(IUserListService), typeof(SecurityService)) }) {
         check(services.Count(d => d.ServiceType == contract) == 1 &&
           services.Single(d => d.ServiceType == contract).ImplementationType == implementation &&
@@ -205,5 +208,13 @@ internal static class ServiceRegistrationTests
         a.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value.KnownProxies.Contains(System.Net.IPAddress.Parse("127.0.0.2")),
         "directory, export and trusted proxy configuration reach extracted registrations");
     }
+  }
+  private sealed class LoggingStorage : IDisposable
+  {
+    private readonly string directory = Path.Combine(Path.GetTempPath(), "guard-di-logging-" + Guid.NewGuid().ToString("N"));
+    public TechnicalLogRuntime Runtime { get; }
+    public TechnicalLogBuffer Buffer { get; }
+    public LoggingStorage() { Directory.CreateDirectory(directory); Runtime = new(Path.Combine(directory, "settings.json")); Buffer = new(Runtime, Path.Combine(directory, "buffer")); }
+    public void Dispose() { Buffer.Dispose(); Directory.Delete(directory, true); }
   }
 }

@@ -52,6 +52,6 @@ public partial class Archive : IDisposable
   protected Task ViewAsync(Guid id) => Dialogs.OpenAsync<Preview>("", new Dictionary<string, object?> { ["Id"] = id }, new DialogOptions { Width = "1200px", ShowTitle = false, ContentCssClass = "rz-p-1" });
   protected string FormatTime(DateTimeOffset value) => Time.Zone == null ? "…" : TimeZoneInfo.ConvertTime(value, Time.Zone).ToString("dd.MM.yyyy HH:mm");
   private const string NotificationStyle = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;";
-  private void Error(Exception ex) { Logger.LogWarning(ex, "Архив выгрузок"); Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Архив выгрузок", Detail = UserOperationErrors.Message(ex), Style = NotificationStyle }); }
+  private void Error(Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Архив выгрузок"); Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Архив выгрузок", Detail = UserOperationErrors.Message(ex), Style = NotificationStyle }); }
   public void Dispose() { disposed = true; loading?.Cancel(); }
 }

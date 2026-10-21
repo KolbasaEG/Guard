@@ -30,6 +30,13 @@ public class LogsDbContext : DbContext
       entity.Property(e => e.Exception).HasColumnName("exception");
       entity.Property(e => e.UserId).HasColumnName("user_id");
       entity.Property(e => e.ClientIp).HasColumnName("ip_address");
+      entity.Property(e => e.CorrelationId).HasColumnName("correlation_id");
+      entity.Property(e => e.SourceContext).HasColumnName("source_context");
+      entity.Property(e => e.DiagnosticSessionId).HasColumnName("diagnostic_session_id");
+      entity.Property(e => e.RunId).HasColumnName("run_id");
+      entity.Property(e => e.Fingerprint).HasColumnName("fingerprint");
+      entity.Property(e => e.ApplicationVersion).HasColumnName("application_version");
+      entity.Property(e => e.InstanceId).HasColumnName("instance_id");
     });
   }
 }

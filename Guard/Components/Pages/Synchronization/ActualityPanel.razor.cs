@@ -68,7 +68,7 @@ public partial class ActualityPanel : IAsyncDisposable
     catch (Exception ex)
     {
       actuality = null; error = "Не удалось проверить актуальность данных.";
-      Logger.LogError(ex, "Получение общей актуальности справочников");
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Получение общей актуальности справочников");
       if (lastMode != true) { lastMode = true; await ApiModeChanged.InvokeAsync(true); }
     }
     finally { refresh.Release(); }

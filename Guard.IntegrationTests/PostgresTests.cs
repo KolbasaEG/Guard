@@ -14,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 internal static class PostgresTests
 {
-  public static async Task RunAsync(string settingsPath, Action<bool, string> check, bool browser = false, bool benchmark = false)
+  public static async Task RunAsync(string settingsPath, Action<bool, string> check, bool browser = false, bool benchmark = false, bool technicalBenchmark = false)
   {
     using var json = JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath));
     var cs = new NpgsqlConnectionStringBuilder(json.RootElement.GetProperty("ConnectionStrings").GetProperty("DefaultConnection").GetString());
@@ -31,12 +31,17 @@ internal static class PostgresTests
     {
       await using var db = factory.CreateDbContext();
       await db.Database.EnsureCreatedAsync();
+      if (technicalBenchmark) {
+        await TechnicalLoggingBenchmark.RunAsync(factory, check);
+        return;
+      }
       if (benchmark) {
         await ArchitectureBenchmark.RunAsync(factory, check);
         return;
       }
       await AccountPolicyMigrationTests.RunAsync(db, check);
       await AuditJournalIntegrationTests.RunAsync(factory, check);
+      await TechnicalLoggingPostgresTests.RunAsync(factory, check);
       await PersonalPaginationIndexTests.RunAsync(factory, check);
       await PersonalIdentityBoundaryTests.RunAsync(factory, check);
       var own = new Subdivision { Name = "Own", Path = "/1/", CreatedBy = "test" };

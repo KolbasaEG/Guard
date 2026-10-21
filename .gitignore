@@ -364,3 +364,4 @@ MigrationBackup/
 FodyWeavers.xsd
 # Server-only export archive and temporary files
 Guard/App_Data/Exports/
+technical-logsettings.json

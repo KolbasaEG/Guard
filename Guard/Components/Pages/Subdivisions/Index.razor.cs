@@ -42,7 +42,7 @@ namespace Guard.Components.Pages.Subdivisions
     protected override async Task OnAfterRenderAsync(bool firstRender) {
       if (disposed || !reloadPending) return; reloadPending = false;
       try { await Time.InitializeAsync(); await grid.Reload(); }
-      catch (Exception ex) { Logger.LogWarning(ex, "Загрузка часового пояса"); ShowErrorNotification("Не удалось определить часовой пояс браузера. Обновите страницу."); }
+      catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка часового пояса"); ShowErrorNotification("Не удалось определить часовой пояс браузера. Обновите страницу."); }
       if (!disposed) StateHasChanged();
     }
     private async Task ToggleHierarchyAsync() { hierarchyMode = hierarchyMode == SubdivisionHierarchyMode.CurrentOnly ? SubdivisionHierarchyMode.IncludeChildren : SubdivisionHierarchyMode.CurrentOnly; await ResetPageAsync(); }
@@ -85,7 +85,7 @@ namespace Guard.Components.Pages.Subdivisions
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при инициализации страницы подразделений");
+        Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка при инициализации страницы подразделений");
         ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
       }
       finally
@@ -115,7 +115,7 @@ namespace Guard.Components.Pages.Subdivisions
       catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
       catch (Exception ex) {
         if (!disposed && ReferenceEquals(request, _loadDataCts)) {
-          filteredData = []; count = 0; Logger.LogError(ex, "Загрузка списка");
+          filteredData = []; count = 0; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка списка");
           ShowErrorNotification("Не удалось загрузить данные. Проверьте доступ и повторите попытку.");
         }
       }
@@ -161,6 +161,7 @@ namespace Guard.Components.Pages.Subdivisions
         catch (Exception ex)
         {
           ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
+          Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Изменение статуса подразделения");
         }
       }
     }
@@ -174,7 +175,7 @@ namespace Guard.Components.Pages.Subdivisions
         else await SubdivisionService.BlockAsync(item.Id, _cts.Token, item.Version);
         ShowSuccessNotification("Статус записи изменён."); await grid.Reload();
       }
-      catch (Exception ex) { Logger.LogWarning(ex, "Блокировка подразделения"); ShowErrorNotification(UserOperationErrors.Message(ex)); }
+      catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Блокировка подразделения"); ShowErrorNotification(UserOperationErrors.Message(ex)); }
     }
     protected async Task GridUnarchiveButtonClick(MouseEventArgs args, SubdivisionListDto item)
     {
@@ -189,6 +190,7 @@ namespace Guard.Components.Pages.Subdivisions
         catch (Exception ex)
         {
           ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
+          Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Изменение статуса подразделения");
         }
       }
     }
@@ -205,6 +207,7 @@ namespace Guard.Components.Pages.Subdivisions
         catch (Exception ex)
         {
           ShowErrorNotification(Guard.Core.Services.UserOperationErrors.Message(ex));
+          Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Изменение статуса подразделения");
         }
       }
     }
@@ -230,7 +233,7 @@ namespace Guard.Components.Pages.Subdivisions
       }
       catch (Exception ex)
       {
-        Logger.LogError(ex, "Ошибка при выполнении пересчета иерархии и путей подразделений.");
+        Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ошибка при выполнении пересчета иерархии и путей подразделений.");
         ShowErrorNotification("Не удалось перестроить иерархию подразделений.");
       }
       finally
@@ -243,7 +246,7 @@ namespace Guard.Components.Pages.Subdivisions
     async Task ApplyFilter()
     {
       try { appliedFilter = SubdivisionListQuery.Capture(dataFilter, Time); await ResetPageAsync(); }
-      catch (Exception ex) { Logger.LogWarning(ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); }
+      catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Фильтр списка"); ShowErrorNotification(ex is ArgumentException ? ex.Message : "Не удалось применить фильтр."); }
     }
     private void ShowSuccessNotification(string detail)
     {

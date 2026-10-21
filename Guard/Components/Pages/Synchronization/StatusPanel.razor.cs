@@ -108,7 +108,7 @@ public partial class StatusPanel : IAsyncDisposable
     catch (Exception ex)
     {
       overview = null; error = "Не удалось проверить актуальность данных.";
-      Logger.LogError(ex, "Получение состояния синхронизации");
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Получение состояния синхронизации");
       if (lastMode != true) { lastMode = true; await ApiModeChanged.InvokeAsync(true); }
     }
     finally { refresh.Release(); }
@@ -142,7 +142,7 @@ public partial class StatusPanel : IAsyncDisposable
     catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Ручной запуск синхронизации"); operationError = UserOperationErrors.Message(ex);
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ручной запуск синхронизации"); operationError = UserOperationErrors.Message(ex);
       Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Синхронизация", Detail = operationError,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" });
     }

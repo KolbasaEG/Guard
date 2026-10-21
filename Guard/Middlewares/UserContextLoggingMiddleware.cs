@@ -14,6 +14,7 @@ public class UserContextLoggingMiddleware
 
   public async Task InvokeAsync(HttpContext context)
   {
+    context.Response.OnStarting(() => { context.Response.Headers["X-Correlation-ID"] = context.TraceIdentifier; return Task.CompletedTask; });
     // 1. Получаем IP-адрес клиента (с учетом работы за прокси Nginx / IIS)
     var ipAddress = Guard.Core.Identity.ClientIpAddress.Get(context) ?? "unknown";
 

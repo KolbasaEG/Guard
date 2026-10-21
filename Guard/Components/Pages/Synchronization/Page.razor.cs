@@ -78,7 +78,7 @@ public partial class Page : IDisposable
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { return false; }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Загрузка настроек синхронизации");
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка настроек синхронизации");
       settingsNeedReload = true;
       settingsError = savedSettingsNeedReload
         ? "Настройки сохранены, но не удалось обновить форму. Повторите загрузку настроек перед следующим сохранением."
@@ -137,7 +137,7 @@ public partial class Page : IDisposable
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     catch (Exception ex)
     {
-      Logger.LogError(ex, "Загрузка запусков синхронизации");
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Загрузка запусков синхронизации");
       last = null; history = [];
       runsLoaded = false;
       runsError = "Не удалось загрузить запуски. Повторите загрузку или дождитесь автоматического обновления.";
@@ -177,7 +177,7 @@ public partial class Page : IDisposable
       await ReloadRunsAsync();
     }
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    catch (Exception ex) { Logger.LogError(ex, "Сохранение настроек синхронизации"); error = UserOperationErrors.Message(ex); }
+    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Сохранение настроек синхронизации"); error = UserOperationErrors.Message(ex); }
     finally { busy = false; }
   }
   private async Task CheckConnectionAsync()
@@ -187,7 +187,7 @@ public partial class Page : IDisposable
     busy = true; connectionResult = null; error = null;
     try { await Service.CheckConnectionAsync(ct); if (!disposed) connectionResult = "Подключение и Basic auth подтверждены (ping HTTP 200)."; }
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    catch (Exception ex) { Logger.LogWarning("Ошибка проверки API, тип {ExceptionType}", ex.GetType().Name); error = "Не удалось проверить подключение. Проверьте сохранённый адрес, Basic auth и технический журнал."; }
+    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Проверка соединения API {Operation}", "ApiConnectionProbe"); error = "Не удалось проверить подключение. Проверьте сохранённый адрес, Basic auth и технический журнал."; }
     finally { busy = false; }
   }
 
