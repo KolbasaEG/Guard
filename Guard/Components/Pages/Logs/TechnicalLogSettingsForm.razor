@@ -1,15 +1,17 @@
 @using Guard.Core.Services.DTOs
 <EditEntity TItem="TechnicalSettingsModel" Data="model" Name="НАСТРОЙКИ ТЕХНИЧЕСКОГО ЛОГИРОВАНИЯ" Icon="settings"
             ShowCancelButton="false" IsSaving="Busy" Submit="Save">
-  <RadzenStack Gap="8px">
-    <RadzenFormField Text="Штатный уровень"><RadzenDropDown TValue="ApplicationLogLevel" Data="levels" @bind-Value="model.NormalLevel" /></RadzenFormField>
-    <RadzenFormField Text="Хранение в БД, дней (1–3650)"><RadzenNumeric TValue="int" Min="1" Max="3650" @bind-Value="model.RetentionDays" /></RadzenFormField>
-    <RadzenFormField Text="Объём локального буфера, МБ (16–10240)"><RadzenNumeric TValue="int" Min="16" Max="10240" @bind-Value="model.BufferMegabytes" /></RadzenFormField>
-    <RadzenFormField Text="Резерв свободного диска, МБ"><RadzenNumeric TValue="int" Min="128" Max="1048576" @bind-Value="model.MinimumFreeMegabytes" /></RadzenFormField>
-    <RadzenFormField Text="Диагностика по умолчанию, мин"><RadzenNumeric TValue="int" Min="1" Max="1440" @bind-Value="model.DefaultDiagnosticMinutes" /></RadzenFormField>
-    <RadzenFormField Text="Предельная длительность диагностики, мин"><RadzenNumeric TValue="int" Min="1" Max="1440" @bind-Value="model.MaximumDiagnosticMinutes" /></RadzenFormField>
-    <RadzenFormField Text="Порог количества ошибок"><RadzenNumeric TValue="int" Min="1" Max="100000" @bind-Value="model.ErrorThreshold" /></RadzenFormField>
-    <RadzenFormField Text="Окно подсчёта ошибок, мин"><RadzenNumeric TValue="int" Min="1" Max="60" @bind-Value="model.ErrorWindowMinutes" /></RadzenFormField>
+  <RadzenStack Class="guard-compact-content" Gap="5px">
+    <div class="technical-fields">
+    <RadzenFormField Text="Штатный уровень" Variant="Variant.Text"><RadzenDropDown TValue="ApplicationLogLevel" Data="levels" @bind-Value="model.NormalLevel" /></RadzenFormField>
+    <RadzenFormField Text="Хранение в БД, дней (1–3650)" Variant="Variant.Text"><RadzenNumeric TValue="int" Min="1" Max="3650" @bind-Value="model.RetentionDays" /></RadzenFormField>
+    <RadzenFormField Text="Объём локального буфера, МБ (16–10240)" Variant="Variant.Text"><RadzenNumeric TValue="int" Min="16" Max="10240" @bind-Value="model.BufferMegabytes" /></RadzenFormField>
+    <RadzenFormField Text="Резерв свободного диска, МБ" Variant="Variant.Text"><RadzenNumeric TValue="int" Min="128" Max="1048576" @bind-Value="model.MinimumFreeMegabytes" /></RadzenFormField>
+    <RadzenFormField Text="Диагностика по умолчанию, мин" Variant="Variant.Text"><RadzenNumeric TValue="int" Min="1" Max="1440" @bind-Value="model.DefaultDiagnosticMinutes" /></RadzenFormField>
+    <RadzenFormField Text="Предельная длительность диагностики, мин" Variant="Variant.Text"><RadzenNumeric TValue="int" Min="1" Max="1440" @bind-Value="model.MaximumDiagnosticMinutes" /></RadzenFormField>
+    <RadzenFormField Text="Порог количества ошибок" Variant="Variant.Text"><RadzenNumeric TValue="int" Min="1" Max="100000" @bind-Value="model.ErrorThreshold" /></RadzenFormField>
+    <RadzenFormField Text="Окно подсчёта ошибок, мин" Variant="Variant.Text"><RadzenNumeric TValue="int" Min="1" Max="60" @bind-Value="model.ErrorWindowMinutes" /></RadzenFormField>
+    </div>
     <RadzenText TextStyle="TextStyle.Caption">Настройки относятся к этому экземпляру и не меняют аудит. Уменьшение буфера не удаляет ожидающие события: новые записи могут теряться до освобождения места. Срок хранения применяется к БД после доставки.</RadzenText>
   </RadzenStack>
 </EditEntity>

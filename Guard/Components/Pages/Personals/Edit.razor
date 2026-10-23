@@ -2,15 +2,17 @@
 @using Guard.Core.Services.DTOs
 @attribute [Authorize]
 <EditEntity TItem="PersonalEditorDto" Data="@item" Name="Редактирование сотрудника" Submit="@FormSubmit" ShowSaveButton="@loaded" ReadOnly="@(!loaded)" IsLoading="@isLoading" OnCancelButtonClick="HandleCancelButtonClick">
+  <RadzenStack Gap="5px" Style="width:100%;min-width:0;">
   @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
   <Guard.Components.Pages.Personals.Components.PersonalFields Item="@item" Subdivisions="@subdivisions" />
   @if (Access?.Has(Guard.Core.Identity.Permissions.IpAddresses.Manage) == true)
   {
-    <RadzenStack Gap="8px" Style="margin-top:12px;">
+    <RadzenStack Gap="2px" Style="min-width:0;">
       <RadzenButton Text="Назначить IP-адреса" Icon="lan" ButtonType="ButtonType.Button"
                     Click="OpenIpAssignmentsAsync" Disabled="@isLoading" />
-      <RadzenText Text="IP-адреса сохраняются отдельно от данных сотрудника." />
+      <RadzenText Text="IP-адреса сохраняются отдельно от данных сотрудника." Style="margin:0;" />
     </RadzenStack>
   }
+  </RadzenStack>
 </EditEntity>
 </Guard.Components.Layout.Components.AccessDialog>

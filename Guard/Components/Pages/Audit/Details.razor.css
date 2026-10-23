@@ -1,1 +1,1 @@
-.audit-payload { white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto; }
+.audit-payload { margin:0; padding:5px; border:var(--rz-grid-cell-border); background:var(--rz-base-background-color); white-space:pre-wrap; overflow-wrap:anywhere; overflow-x:hidden; }

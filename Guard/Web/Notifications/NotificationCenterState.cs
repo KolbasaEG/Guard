@@ -16,6 +16,7 @@ public sealed class NotificationCenterState(IUserNotificationService service, IP
   private Task? polling;
   private IDisposable? subscription;
   private string? userId;
+  private bool? isRoot;
   private long? watermark;
   private bool disposed;
 
@@ -39,13 +40,16 @@ public sealed class NotificationCenterState(IUserNotificationService service, IP
   {
     var ct = stopping.Token;
     await refresh.WaitAsync(ct);
+    var changed = false;
     try {
       if (disposed) return;
       var actor = await permissions.GetCurrentAsync(ct);
+      changed = userId != actor.UserId || isRoot != actor.IsRoot;
       if (userId != actor.UserId) {
         subscription?.Dispose(); userId = actor.UserId; watermark = null;
         subscription = signals.Subscribe(actor.UserId, Invalidate);
       }
+      isRoot = actor.IsRoot;
       var result = await service.GetSummaryAsync(ct);
       var arrivals = new List<UserNotificationDto>();
       if (watermark.HasValue && result.Watermark > watermark.Value) {
@@ -57,16 +61,21 @@ public sealed class NotificationCenterState(IUserNotificationService service, IP
         } while (page.Items.Count > 0 && skip < page.Count);
       }
       if (disposed) return;
+      changed |= Error != null || !SameSummary(Summary, result);
       Summary = result; Error = null;
       // До callbacks: повторная перерисовка или сигнал не воспроизводят ту же версию.
       watermark = Math.Max(watermark ?? 0, result.Watermark);
       foreach (var item in arrivals.OrderBy(n => n.Revision)) Arrived?.Invoke(item);
     } catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     catch (Exception ex) {
+      changed |= Summary != null || Error == null;
       Summary = null; Error = "Уведомления временно недоступны.";
       logger.LogWarning(ex, "Загрузка центра уведомлений");
-    } finally { refresh.Release(); if (!disposed) Changed?.Invoke(); }
+    } finally { refresh.Release(); if (!disposed && changed) Changed?.Invoke(); }
   }
+  private static bool SameSummary(NotificationSummary? previous, NotificationSummary current) =>
+    previous != null && previous.UnreadCount == current.UnreadCount && previous.Watermark == current.Watermark &&
+    previous.TotalCount == current.TotalCount && previous.Latest.SequenceEqual(current.Latest);
   public async Task MarkAllReadAsync()
   {
     if (Summary is { } snapshot) await service.MarkAllReadAsync(snapshot.Watermark, stopping.Token);

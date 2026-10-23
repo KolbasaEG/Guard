@@ -33,11 +33,12 @@ public sealed class UserNotificationService(IDbContextFactory<ApplicationDbConte
     await using var db = await factory.CreateDbContextAsync(ct);
     await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, ct);
     var query = Own(db, actor).AsNoTracking();
+    var total = await query.CountAsync(ct);
     var count = await query.CountAsync(n => n.ReadRevision < n.Revision, ct);
     var watermark = await query.MaxAsync(n => (long?)n.Revision, ct) ?? 0;
     var latest = await query.OrderByDescending(n => n.UpdatedAtUtc).ThenByDescending(n => n.Id).Take(10).Select(Projection).ToListAsync(ct);
     await RecheckAsync(actor, ct); await tx.CommitAsync(ct);
-    return new(count, watermark, latest.AsReadOnly());
+    return new(count, watermark, latest.AsReadOnly(), total);
   }
 
   public async Task<NotificationPage> SearchAsync(NotificationSearch query, CancellationToken ct = default)

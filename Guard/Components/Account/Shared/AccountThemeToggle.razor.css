@@ -1,0 +1,2 @@
+.account-theme-toggle { display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; padding: 8px; border: 1px solid var(--account-border); border-radius: 50%; background: var(--account-surface); color: var(--account-text); cursor: pointer; }
+.account-theme-toggle:focus-visible { outline: 2px solid #598087; outline-offset: 3px; }

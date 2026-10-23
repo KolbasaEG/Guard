@@ -64,7 +64,7 @@ public partial class Details : IDisposable
   {
     if (disposed || item == null) return Task.CompletedTask;
     return Dialogs.OpenAsync<DetailsInfo>("", new Dictionary<string, object?> { ["Item"] = item },
-      new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
   }
 
   protected void Close()

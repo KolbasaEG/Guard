@@ -98,7 +98,7 @@ namespace Guard.Components.Pages.Roles
 
     protected async Task AddClick(MouseEventArgs args)
     {
-      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
       if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result))
       {
         ShowSuccessNotification("Добавлена новая запись!");
@@ -108,7 +108,7 @@ namespace Guard.Components.Pages.Roles
 
     protected async Task EditRow(RoleListDto item)
     {
-      var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "800px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
 
       if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result))
       {

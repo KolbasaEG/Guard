@@ -1,4 +1,10 @@
 var checks = 0;
+if (args.Length == 2 && args[0] == "--uipreview") {
+  await using var preview = await UiStandardPreviewHost.StartAsync();
+  Console.WriteLine("Synthetic UI preview: http://127.0.0.1:5080/ui-standard-preview ; press Enter to stop. No database is used.");
+  await Console.In.ReadLineAsync();
+  return;
+}
 if (args.Length == 2 && args[0] == "--technical-crash-probe") {
   await TechnicalLoggingReadinessTests.CrashChildAsync(args[1]); return;
 }
@@ -40,6 +46,7 @@ await UserDialogLifecycleTests.RunAsync(Check);
 await RefactorTests.RunAsync(Check);
 await ServiceRegistrationTests.RunAsync(Check);
 await NotificationTests.RunAsync(Check);
+await NotificationInitialLoadTests.RunAsync(Check);
 await WorkerLifecycleTests.RunAsync(Check);
 await LogConfigurationTests.RunAsync(Check);
 await LoggingReliabilityTests.RunAsync(Check);
@@ -59,6 +66,7 @@ await ApiDependencyHttpTests.RunAsync(Check);
 ApiHeadSubdivisionTests.Run(Check);
 await ApiDiagnosticTests.CheckAccessAsync(Check);
 await SynchronizationUiTests.RunAsync(Check);
+await SynchronizationFeedbackTests.RunAsync(Check);
 await SynchronizationRecoveryTests.RunAsync(Check);
 await SynchronizationListLoadTests.RunAsync(Check);
 await PersonalPagesTests.RunAsync(Check);

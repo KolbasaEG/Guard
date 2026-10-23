@@ -5,37 +5,40 @@
 
 <PageTitle>АИС "Охрана" - Классификаторы</PageTitle>
 
+<div class="classifiers-list">
 <TableWrapperWithFilterAndAnalytics>
   <Table>
 
     <RadzenDataGrid @ref="grid" IsLoading="@isLoading" LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@filteredData" TItem="ClassifierListDto" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions="@(new int[] { 10, 20, 30, 50, 100 })" PageSize="20"
                     AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
-                    DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
-                    LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NotEqualsText="Не равно" OrOperatorText="Или"
-                    PageAriaLabelFormat="К странице {0}" PageSizeText="записей на странице" PrevPageTitle="Предыдущая страница" ShowMultiColumnSortingIndex="true"
+                    DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" IsNullText="Не задано" IsNotNullText="Задано"
+                    LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NextPageAriaLabel="К следующей странице" NotEqualsText="Не равно" OrOperatorText="Или"
+                    PageAriaLabelFormat="К странице {0}" PageSizeText="записей на странице" PrevPageTitle="Предыдущая страница" PrevPageAriaLabel="К предыдущей странице" ShowMultiColumnSortingIndex="true"
                     EmptyText="Записи не найдены" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" StartsWithText="Начинается c" LessThanText="Меньше" LessThanOrEqualsText="Меньше или равно"
                     PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" ShowPagingSummary="true" PagingSummaryFormat="@pagingSummaryFormat"
                     Style="height:100%;">
       <HeaderTemplate>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
-            <RadzenMenu>
-              <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
-              </RadzenMenuItem>
-            </RadzenMenu>
-          </RadzenStack>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="0px" Class="classifier-list-toolbar" Style="width:100%;min-width:0;">
+          <RadzenMenu>
+            <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
+            </RadzenMenuItem>
+          </RadzenMenu>
 
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
-            <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
-            <RadzenButton Icon="add_circle_outline" Visible="@isEditor" Click="@AddClick" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Class="classifier-list-actions" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
+            <RadzenButton Icon="refresh" Click="@(grid.Reload)" title="Обновить" aria-label="Обновить список классификаторов" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+            <RadzenButton Icon="add_circle_outline" Visible="@isEditor" Click="@AddClick" title="Добавить" aria-label="Добавить классификатор" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
           </RadzenStack>
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="ClassifierListDto" Property="ClassifierName" SortProperty="ClassifierName" Title="Наименование справочника" Width="250px" Frozen="true" />
+        <RadzenDataGridColumn TItem="ClassifierListDto" Property="ClassifierName" SortProperty="ClassifierName" Title="Наименование справочника" Width="250px" Frozen="true">
+          <Template Context="item"><span class="guard-cell-text" tabindex="0">@item.ClassifierName</span></Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ClassifierListDto" Property="Type" SortProperty="Type" Title="Тип" Width="100px" TextAlign="TextAlign.Center" />
         <RadzenDataGridColumn TItem="ClassifierListDto" Property="Code" SortProperty="Code" Title="Код" Width="100px" TextAlign="TextAlign.Center" />
-        <RadzenDataGridColumn TItem="ClassifierListDto" Property="Value" SortProperty="Value" Title="Отображаемое значение" Width="100%" />
+        <RadzenDataGridColumn TItem="ClassifierListDto" Property="Value" SortProperty="Value" Title="Отображаемое значение" Width="100%" MinWidth="250px">
+          <Template Context="item"><span class="guard-cell-text" tabindex="0">@item.Value</span></Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ClassifierListDto" Property="IsActive" SortProperty="IsActive" Title="Статус" Width="120px" TextAlign="TextAlign.Center">
           <Template Context="item">
             @if (item.IsActive)
@@ -49,18 +52,18 @@
           </Template>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="ClassifierListDto" Property="UpdatedAt" SortProperty="UpdatedAt" Title="Дата обновления" Width="160px" FormatString="{0:dd.MM.yyyy HH:mm}" TextAlign="TextAlign.Center" ><Template Context="item">@Time.Format(item.UpdatedAt)</Template></RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ClassifierListDto" Filterable="false" Sortable="false" Width="90px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
+        <RadzenDataGridColumn TItem="ClassifierListDto" Title="Действия" Filterable="false" Sortable="false" Width="90px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
-            <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
+            <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
               <RadzenButton Icon="@(item.IsActive ? "toggle_on" : "toggle_off")"
                             ButtonStyle="@(item.IsActive ? ButtonStyle.Warning : ButtonStyle.Success)"
                             Size="Radzen.ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
                             Click="@(args => ToggleActiveStatusClick(args, item))" @onclick:stopPropagation="true"
-                            ToolTip="@(item.IsActive ? "Деактивировать" : "Активировать")" />
+                            title="@(item.IsActive ? "Деактивировать" : "Активировать")" aria-label="@(item.IsActive ? "Деактивировать классификатор" : "Активировать классификатор")" />
               <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="Radzen.ButtonSize.ExtraSmall"
                             Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
                             Click="@(args => GridDeleteButtonClick(args, item))" @onclick:stopPropagation="true"
-                            ToolTip="Удалить" />
+                            title="Удалить" aria-label="Удалить классификатор" />
             </RadzenStack>
           </Template>
         </RadzenDataGridColumn>
@@ -70,7 +73,7 @@
   <Filter>
     <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto="false" Data="@data" TItem="Classifier"
                       AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
-                      DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
+                      DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" IsNullText="Не задано" IsNotNullText="Задано" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
                       AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
       <Properties>
         <RadzenDataFilterProperty TItem="Classifier" Property="ClassifierName" Title="Наименование справочника" />
@@ -85,9 +88,12 @@
     <RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
   </FilterButtons>
   <Analitycs>
-    <Guard.Components.Pages.Synchronization.ActualityPanel ReadPermission="@Permissions.Classifiers.Read" ApiModeChanged="@((bool value) => apiManaged = value)" ReloadData="ReloadForSynchronizationAsync" />
+    <RadzenStack Class="classifier-analytics" Gap="2px" Style="min-width:0;">
+      <Guard.Components.Pages.Synchronization.ActualityPanel ReadPermission="@Permissions.Classifiers.Read" ApiModeChanged="@((bool value) => apiManaged = value)" ReloadData="ReloadForSynchronizationAsync" />
+    </RadzenStack>
   </Analitycs>
   <AnalitycsButtons>
     <RadzenButton Icon="autorenew" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
   </AnalitycsButtons>
 </TableWrapperWithFilterAndAnalytics>
+</div>

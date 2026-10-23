@@ -1,31 +1,49 @@
 @using Guard.Core.Services.DTOs
 <div class="technical-log-panel">
-<RadzenStack Gap="5px">
-  <RadzenButton Text="Обновить состояние и настройки" Icon="refresh" Variant="Variant.Text" Click="Reload" Disabled="busy" />
   @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false">@error</RadzenAlert> }
   @if (state != null) {
-    <RadzenTabs>
+    <RadzenTabs TabPosition="TabPosition.Left" Class="technical-tabs">
       <Tabs>
-        <RadzenTabsItem Text="Состояние" Icon="monitor_heart"><TechnicalLogStatus State="state" /></RadzenTabsItem>
-        <RadzenTabsItem Text="Настройки" Icon="settings"><TechnicalLogSettingsForm Settings="editor" Busy="busy" OnSave="Save" /></RadzenTabsItem>
-        <RadzenTabsItem Text="Диагностика" Icon="bug_report"><TechnicalDiagnosticForm State="state" Busy="busy" OnStart="Start" OnStop="Stop" /></RadzenTabsItem>
-        <RadzenTabsItem Text="Ошибки" Icon="error">
-          <RadzenButton Text="Загрузить группы ошибок" Click="LoadErrors" Disabled="busy" />
+        <RadzenTabsItem Text="Состояние" Template="TabIcon">
+          <RadzenCard Variant="Variant.Outlined" Class="technical-tab-content"><TechnicalLogStatus State="state" /></RadzenCard>
+        </RadzenTabsItem>
+        <RadzenTabsItem Text="Настройки" Template="TabIcon">
+          <RadzenCard Variant="Variant.Outlined" Class="technical-tab-content"><TechnicalLogSettingsForm Settings="editor" Busy="busy" OnSave="Save" /></RadzenCard>
+        </RadzenTabsItem>
+        <RadzenTabsItem Text="Диагностика" Template="TabIcon">
+          <RadzenCard Variant="Variant.Outlined" Class="technical-tab-content"><TechnicalDiagnosticForm State="state" Busy="busy" OnStart="Start" OnStop="Stop" /></RadzenCard>
+        </RadzenTabsItem>
+        <RadzenTabsItem Text="Ошибки" Template="TabIcon">
+          <RadzenCard Variant="Variant.Outlined" Class="technical-tab-content">
+          <RadzenButton Size="ButtonSize.Small" Text="Загрузить группы ошибок" Click="LoadErrors" Disabled="busy" />
           @if (groups != null) {
-            <RadzenDataGrid TItem="TechnicalErrorGroup" Data="groups" AllowPaging="false" AllowSorting="false" EmptyText="Ошибок в текущем окне не найдено">
+            <RadzenDataGrid TItem="TechnicalErrorGroup" Data="groups" AllowPaging="false" AllowSorting="false" Density="Density.Compact" EmptyText="Ошибок в текущем окне не найдено">
               <Columns>
-                <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="Category" Title="Категория" />
+                <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="Category" Title="Категория"><Template Context="group"><span class="guard-cell-text" tabindex="0">@group.Category</span></Template></RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="Count" Title="Количество" />
                 <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="FirstUtc" Title="Первая, UTC" FormatString="{0:dd.MM HH:mm:ss}" />
                 <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="LastUtc" Title="Последняя, UTC" FormatString="{0:dd.MM HH:mm:ss}" />
-                <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="Fingerprint" Title="Отпечаток (фильтр журнала)" />
+                <RadzenDataGridColumn TItem="TechnicalErrorGroup" Property="Fingerprint" Title="Отпечаток (фильтр журнала)"><Template Context="group"><span class="guard-cell-text" tabindex="0">@group.Fingerprint</span></Template></RadzenDataGridColumn>
               </Columns>
             </RadzenDataGrid>
           }
+          </RadzenCard>
         </RadzenTabsItem>
-        <RadzenTabsItem Text="Выгрузка" Icon="download"><TechnicalLogExportForm /></RadzenTabsItem>
+        <RadzenTabsItem Text="Выгрузка" Template="TabIcon">
+          <RadzenCard Variant="Variant.Outlined" Class="technical-tab-content"><TechnicalLogExportForm /></RadzenCard>
+        </RadzenTabsItem>
       </Tabs>
     </RadzenTabs>
   }
-</RadzenStack>
 </div>
+
+@code {
+  private RenderFragment<RadzenTabsItem> TabIcon => tab => @<span class="technical-tab-icon" title="@tab.Text">
+    <RadzenIcon Icon="@TabIconName(tab.Text)" />
+    <span class="technical-tab-name">@tab.Text</span>
+  </span>;
+  private static string TabIconName(string? text) => text switch {
+    "Состояние" => "monitor_heart", "Настройки" => "settings", "Диагностика" => "bug_report",
+    "Ошибки" => "error", "Выгрузка" => "download", _ => "help_outline"
+  };
+}

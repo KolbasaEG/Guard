@@ -4,74 +4,128 @@
 @inject IAccountPolicyAdministrationService Policies
 @inject NavigationManager Navigation
 @inject ILogger<AccountPolicySettings> Logger
+@inject NotificationService Notifications
 @implements IDisposable
 <PageTitle>Политика паролей и аккаунтов</PageTitle>
 @if (Access?.IsRoot == true) {
+  <div class="account-policy-page">
+  <CardPageWrapper>
   <EditEntity TItem="AccountPolicyForm" Data="@model" Name="Политика паролей и аккаунтов" IsLoading="loading" IsSaving="saving" ShowSaveButton="loaded" Submit="SaveAsync" OnCancelButtonClick="Cancel">
-    <RadzenStack Gap="12px">
-      @if (message != null) { <RadzenAlert AlertStyle="@(success ? AlertStyle.Success : AlertStyle.Danger)">@message</RadzenAlert> }
-      <RadzenLabel Text="Неверных попыток входа до блокировки Z (1–100)" />
-      <RadzenNumeric TValue="int" @bind-Value="model.MaxFailedLoginAttempts" Min="1" Max="100" />
-      <RadzenLabel Text="Временная блокировка входа, минут (1–10080)" />
-      <RadzenNumeric TValue="int" @bind-Value="model.LoginLockoutMinutes" Min="1" Max="10080" />
-      <RadzenText Text="По умолчанию: 5 неверных попыток, блокировка на 15 минут. Успешный вход сбрасывает счётчик. Новая настройка применяется при следующей неверной попытке и не меняет срок уже начавшейся блокировки. Ручная блокировка и блокировка за неактивность не снимаются автоматически." />
-      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.PasswordExpirationEnabled" /><RadzenLabel Text="Обязательная смена пароля" /></RadzenStack>
-      <RadzenLabel Text="Срок действия пароля N, дней (1–3650)" />
-      <RadzenNumeric TValue="int" @bind-Value="model.PasswordDays" Min="1" Max="3650" />
-      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.InactivityEnabled" /><RadzenLabel Text="Блокировка за неактивность (кроме Root)" /></RadzenStack>
-      <RadzenLabel Text="Период неактивности M, дней (1–3650)" />
-      <RadzenNumeric TValue="int" @bind-Value="model.InactivityDays" Min="1" Max="3650" />
-      <RadzenLabel Text="Минимальная длина пароля (6–100)" />
-      <RadzenNumeric TValue="int" @bind-Value="model.MinimumLength" Min="6" Max="100" />
-      <RadzenLabel Text="Минимальное число различных символов" />
-      <RadzenNumeric TValue="int" @bind-Value="model.UniqueCharacters" Min="1" Max="@model.MinimumLength" />
-      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.RequireDigit" /><RadzenLabel Text="Цифры" /></RadzenStack>
-      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.RequireLowercase" /><RadzenLabel Text="Строчные латинские буквы" /></RadzenStack>
-      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.RequireUppercase" /><RadzenLabel Text="Прописные латинские буквы" /></RadzenStack>
-      <RadzenStack Orientation="Orientation.Horizontal"><RadzenCheckBox @bind-Value="model.RequireSymbol" /><RadzenLabel Text="Специальные символы" /></RadzenStack>
-      <RadzenText Text="Сложность применяется при задании нового пароля. Сокращение N или M может немедленно ограничить доступ. При первом включении пользователям без истории предоставляется полный период. Повторное включение начинает новый период неактивности. Root подчиняется правилам пароля, но не блокируется за неактивность." />
-      <RadzenButton Text="Обновить настройки" Icon="refresh" Click="LoadAsync" Disabled="@(loading || saving)" />
+    <RadzenStack Class="guard-compact-content" Gap="5px" Style="min-width:0;">
+      <InfoBlock Compact="true" Title="Вход в систему" Icon="login" Style="min-width:0;">
+          <div class="policy-fields">
+            <RadzenFormField Text="Попыток входа до блокировки Z" Variant="Variant.Text">
+              <ChildContent><RadzenNumeric Name="MaxFailedLoginAttempts" AriaLabel="Попыток входа до блокировки Z" TValue="int" @bind-Value="model.MaxFailedLoginAttempts" Min="1" Max="100" Style="width:100%;" /></ChildContent>
+              <Helper>От 1 до 100 неверных попыток</Helper>
+            </RadzenFormField>
+            <RadzenFormField Text="Блокировка входа, минут" Variant="Variant.Text">
+              <ChildContent><RadzenNumeric Name="LoginLockoutMinutes" AriaLabel="Блокировка входа, минут" TValue="int" @bind-Value="model.LoginLockoutMinutes" Min="1" Max="10080" Style="width:100%;" /></ChildContent>
+              <Helper>От 1 до 10080 минут</Helper>
+            </RadzenFormField>
+          </div>
+          <RadzenText Text="По умолчанию: 5 неверных попыток, блокировка на 15 минут. Успешный вход сбрасывает счётчик. Новая настройка применяется при следующей неверной попытке и не меняет срок уже начавшейся блокировки. Ручная блокировка и блокировка за неактивность не снимаются автоматически." />
+      </InfoBlock>
+      <InfoBlock Compact="true" Title="Сроки пароля и активности" Icon="schedule" Style="min-width:0;">
+          <div class="policy-fields">
+            <RadzenStack Gap="2px" Style="min-width:0;">
+              <div class="policy-option"><RadzenCheckBox Name="PasswordExpirationEnabled" AriaLabel="Обязательная смена пароля" @bind-Value="model.PasswordExpirationEnabled" /><RadzenLabel Component="PasswordExpirationEnabled" Text="Обязательная смена пароля" /></div>
+              <RadzenFormField Text="Срок действия пароля N, дней" Variant="Variant.Text">
+                <ChildContent><RadzenNumeric Name="PasswordDays" AriaLabel="Срок действия пароля N, дней" TValue="int" @bind-Value="model.PasswordDays" Min="1" Max="3650" Style="width:100%;" /></ChildContent>
+                <Helper>От 1 до 3650 дней</Helper>
+              </RadzenFormField>
+            </RadzenStack>
+            <RadzenStack Gap="2px" Style="min-width:0;">
+              <div class="policy-option"><RadzenCheckBox Name="InactivityEnabled" AriaLabel="Блокировка за неактивность (кроме Root)" @bind-Value="model.InactivityEnabled" /><RadzenLabel Component="InactivityEnabled" Text="Блокировка за неактивность (кроме Root)" /></div>
+              <RadzenFormField Text="Период неактивности M, дней" Variant="Variant.Text">
+                <ChildContent><RadzenNumeric Name="InactivityDays" AriaLabel="Период неактивности M, дней" TValue="int" @bind-Value="model.InactivityDays" Min="1" Max="3650" Style="width:100%;" /></ChildContent>
+                <Helper>От 1 до 3650 дней</Helper>
+              </RadzenFormField>
+            </RadzenStack>
+          </div>
+      </InfoBlock>
+      <InfoBlock Compact="true" Title="Требования к паролю" Icon="password" Style="min-width:0;">
+          <div class="policy-fields">
+            <RadzenFormField Text="Минимальная длина пароля" Variant="Variant.Text">
+              <ChildContent><RadzenNumeric Name="MinimumLength" AriaLabel="Минимальная длина пароля" TValue="int" @bind-Value="model.MinimumLength" Min="6" Max="100" Style="width:100%;" /></ChildContent>
+              <Helper>От 6 до 100 символов</Helper>
+            </RadzenFormField>
+            <RadzenFormField Text="Минимум различных символов" Variant="Variant.Text">
+              <ChildContent><RadzenNumeric Name="UniqueCharacters" AriaLabel="Минимум различных символов" TValue="int" @bind-Value="model.UniqueCharacters" Min="1" Max="@model.MinimumLength" Style="width:100%;" /></ChildContent>
+              <Helper>От 1 до минимальной длины пароля</Helper>
+            </RadzenFormField>
+          </div>
+          <div class="policy-options">
+            <div class="policy-option"><RadzenCheckBox Name="RequireDigit" AriaLabel="Цифры" @bind-Value="model.RequireDigit" /><RadzenLabel Component="RequireDigit" Text="Цифры" /></div>
+            <div class="policy-option"><RadzenCheckBox Name="RequireLowercase" AriaLabel="Строчные латинские буквы" @bind-Value="model.RequireLowercase" /><RadzenLabel Component="RequireLowercase" Text="Строчные латинские буквы" /></div>
+            <div class="policy-option"><RadzenCheckBox Name="RequireUppercase" AriaLabel="Прописные латинские буквы" @bind-Value="model.RequireUppercase" /><RadzenLabel Component="RequireUppercase" Text="Прописные латинские буквы" /></div>
+            <div class="policy-option"><RadzenCheckBox Name="RequireSymbol" AriaLabel="Специальные символы" @bind-Value="model.RequireSymbol" /><RadzenLabel Component="RequireSymbol" Text="Специальные символы" /></div>
+          </div>
+          <RadzenText Text="Сложность применяется при задании нового пароля. Сокращение N или M может немедленно ограничить доступ. При первом включении пользователям без истории предоставляется полный период. Повторное включение начинает новый период неактивности. Root подчиняется правилам пароля, но не блокируется за неактивность." />
+      </InfoBlock>
+      <RadzenStack Orientation="Orientation.Horizontal" Gap="0px">
+        <RadzenButton Text="Обновить настройки" Icon="refresh" Click="LoadAsync" Disabled="@(loading || saving)" Size="ButtonSize.Small" />
+      </RadzenStack>
     </RadzenStack>
   </EditEntity>
+  </CardPageWrapper>
+  </div>
 } else { <AccessDenied /> }
 @code {
   [CascadingParameter] public UserAccessSnapshot? Access { get; set; }
   private AccountPolicyForm model = new();
   private Guid version;
   private readonly CancellationTokenSource stop = new();
-  private bool loading, saving, loaded, disposed, success;
-  private string? message;
+  private bool loading, saving, loaded, disposed;
+  private NotificationMessage? pendingNotification;
   protected override Task OnInitializedAsync() => LoadAsync();
+  protected override void OnAfterRender(bool firstRender)
+  {
+    if (disposed || pendingNotification == null) return;
+    var notification = pendingNotification;
+    pendingNotification = null;
+    Notifications.Notify(notification);
+  }
+  private void Notify(NotificationSeverity severity, string detail)
+  {
+    if (disposed) return;
+    pendingNotification = new NotificationMessage {
+      Severity = severity,
+      Summary = severity == NotificationSeverity.Success ? "Информационное" : "Внимание!",
+      Detail = detail,
+      Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+    };
+  }
   private void Cancel() => Navigation.NavigateTo("/users");
   private async Task LoadAsync()
   {
     if (disposed || loading || saving) return;
-    loading = true;
+    loading = true; pendingNotification = null;
     var ct = stop.Token;
     try {
       var result = await Policies.GetSettingsAsync(ct);
       if (disposed) return;
-      model = AccountPolicyForm.From(result); version = result.Version; loaded = true; message = null;
+      model = AccountPolicyForm.From(result); version = result.Version; loaded = true;
     }
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    catch (Exception ex) { if (!disposed) { loaded = false; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Чтение политики"); success = false; message = "Не удалось получить настройки или недостаточно прав. Обновите настройки перед сохранением."; } }
+    catch (Exception ex) { if (!disposed) { loaded = false; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Чтение политики"); Notify(NotificationSeverity.Error, "Не удалось получить настройки или недостаточно прав. Обновите настройки перед сохранением."); } }
     finally { loading = false; }
   }
   private async Task SaveAsync()
   {
     if (disposed || loading || saving || !loaded) return;
-    saving = true; success = false;
+    saving = true; pendingNotification = null;
     var ct = stop.Token;
     var command = model.ToCommand(version);
     try {
       var saved = await Policies.SaveAsync(command, ct);
       if (disposed) return;
-      model = AccountPolicyForm.From(saved); version = saved.Version; success = true; message = "Настройки сохранены.";
+      model = AccountPolicyForm.From(saved); version = saved.Version;
+      Notify(NotificationSeverity.Success, "Настройки сохранены.");
     }
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    catch (ArgumentException ex) { if (!disposed) message = ex.Message; }
-    catch (AccountPolicyConflictException ex) { if (!disposed) { loaded = false; message = ex.Message; } }
-    catch (Exception ex) { if (!disposed) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Сохранение политики"); message = "Не удалось сохранить настройки или недостаточно прав."; } }
+    catch (ArgumentException ex) { Notify(NotificationSeverity.Error, ex.Message); }
+    catch (AccountPolicyConflictException ex) { if (!disposed) { loaded = false; Notify(NotificationSeverity.Error, ex.Message); } }
+    catch (Exception ex) { if (!disposed) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Сохранение политики"); Notify(NotificationSeverity.Error, "Не удалось сохранить настройки или недостаточно прав."); } }
     finally { saving = false; }
   }
   public void Dispose() { if (disposed) return; disposed = true; stop.Cancel(); stop.Dispose(); }

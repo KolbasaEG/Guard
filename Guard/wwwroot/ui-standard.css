@@ -1,0 +1,163 @@
+@font-face {
+  font-family: "Guard Source Sans 3";
+  src: url("_content/Radzen.Blazor/fonts/SourceSans3VF-Upright.ttf.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Guard Source Sans 3";
+  src: url("_content/Radzen.Blazor/fonts/SourceSans3VF-Italic.ttf.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+}
+
+/* Общие размеры Guard. AccountLayout не входит в область стандарта. */
+.app-shell {
+  --guard-block-gap: 5px;
+  --guard-content-gap: 2px;
+  --guard-header-actions-gap: 0px;
+  --rz-card-border-radius: 0px;
+  --rz-card-shadow: none;
+  --rz-grid-shadow: none;
+  --rz-dialog-border-radius: 0px;
+  --rz-text-font-family: "Guard Source Sans 3", sans-serif;
+  font-family: var(--rz-text-font-family);
+}
+
+.app-shell .rz-card {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-shell .rz-dialog {
+  border-radius: 0;
+  color: var(--rz-text-color);
+  max-width: calc(100vw - 10px);
+  max-height: calc(100dvh - 10px);
+}
+
+.app-shell .rz-dialog-wrapper {
+  box-sizing: border-box;
+  padding: 5px;
+}
+
+/* Встроенные Confirm/Alert не используют CardHeader и оболочки Library. */
+.app-shell .rz-dialog-titlebar {
+  box-sizing: border-box;
+  height: 46px;
+  min-height: 46px;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 5px;
+  background-color: var(--rz-grid-header-background-color);
+  border-block-end: var(--rz-grid-cell-border);
+}
+
+.app-shell .rz-dialog-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--rz-text-body1-font-size, var(--rz-body-font-size));
+  font-weight: 700;
+  color: var(--rz-menu-top-item-color);
+}
+
+.app-shell .rz-dialog-titlebar-close {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.app-shell .rz-dialog-titlebar-close .rzi-times {
+  color: var(--rz-menu-top-item-color);
+}
+
+.app-shell .rz-dialog-confirm,
+.app-shell .rz-dialog-alert {
+  min-height: 0;
+  margin: 0;
+  border: var(--rz-grid-cell-border);
+}
+
+.app-shell .rz-dialog-confirm .rz-dialog-content,
+.app-shell .rz-dialog-alert .rz-dialog-content {
+  padding: 5px;
+}
+
+.app-shell .rz-dialog-confirm-message,
+.app-shell .rz-dialog-alert-message {
+  margin: 0 0 5px;
+  overflow-wrap: anywhere;
+}
+
+.app-shell .rz-dialog-confirm-buttons,
+.app-shell .rz-dialog-alert-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.app-shell .rz-dialog-confirm-buttons .rz-button,
+.app-shell .rz-dialog-alert-buttons .rz-button {
+  border-radius: 0;
+}
+
+.app-shell .guard-entity-body {
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.app-shell .guard-entity-body fieldset {
+  min-width: 0;
+}
+
+.app-shell .guard-ip-dialog-content,
+.app-shell .guard-entity-dialog-content {
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-shell .guard-ip-dialog-content .rz-form,
+.app-shell .guard-entity-dialog-content .rz-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.app-shell .guard-ip-dialog-content .rz-form > .rz-stack,
+.app-shell .guard-entity-dialog-content .rz-form > .rz-stack {
+  flex: 1;
+}
+
+.app-shell .guard-info-block p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-shell .guard-compact-content p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-shell .guard-cell-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .guard-value-table .rz-cell-data {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  overflow: visible;
+  text-overflow: clip;
+}

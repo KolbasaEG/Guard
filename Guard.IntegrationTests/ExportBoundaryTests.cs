@@ -92,6 +92,7 @@ internal static class ExportBoundaryTests
     check(selectedDays.Select(r => r.Id).SequenceEqual(boundary.Skip(1).Take(2).Select(r => r.Id)),
       "archive day filter captures independent half-open UTC range in browser timezone");
     await CheckRetentionFormAsync(check);
+    await CheckArchiveDialogCancellationAsync(check);
   }
 
   private static async Task CheckRetentionFormAsync(Action<bool, string> check)
@@ -104,6 +105,8 @@ internal static class ExportBoundaryTests
     typeof(Retention).GetProperty("Service", Flags)!.SetValue(page, service);
     typeof(Retention).GetProperty("Dialogs", Flags)!.SetValue(page, dialogs);
     typeof(Retention).GetProperty("Logger", Flags)!.SetValue(page, NullLogger<Retention>.Instance);
+    var notifications = new NotificationService();
+    typeof(Retention).GetProperty("Notifications", Flags)!.SetValue(page, notifications);
     proxy.Handle = (_, _) => Task.FromException<ExportRetentionDto>(new IOException());
     await Call(page, "OnInitializedAsync");
     var calls = 0;
@@ -115,6 +118,12 @@ internal static class ExportBoundaryTests
     await Call(page, "LoadAsync");
     var form = (Retention.RetentionForm)typeof(Retention).GetField("form", Flags)!.GetValue(page)!;
     form.Years = 5;
+    proxy.Handle = (_, _) => Task.FromException(new InvalidOperationException("Срок хранения уже изменён. Обновите настройки."));
+    await Call(page, "SaveAsync");
+    check(closes == 0 && form.Years == 5 && notifications.Messages.Single().Severity == NotificationSeverity.Error,
+      "failed retention save keeps the form open with its value and shows an error notification");
+    check((string?)typeof(Retention).GetField("error", Flags)!.GetValue(page) == null,
+      "retention save error does not duplicate the notification in a persistent banner");
     var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     CancellationToken token = default; var validCommand = false;
     proxy.Handle = (_, args) => { calls++; validCommand = (int)args[0]! == 5 && (Guid)args[1]! == version; token = (CancellationToken)args[2]!; return completion.Task; };
@@ -122,6 +131,36 @@ internal static class ExportBoundaryTests
     check(calls == 1 && validCommand, "retention sends loaded version and current value once while saving");
     page.Dispose(); completion.SetResult(); await saving;
     check(token.IsCancellationRequested && closes == 0, "closing retention cancels save and ignores its late completion");
+  }
+
+  private static async Task CheckArchiveDialogCancellationAsync(Action<bool, string> check)
+  {
+    var service = DispatchProxy.Create<IDataExportService, IpAddressReferenceTests.ServiceProxy>();
+    var proxy = (IpAddressReferenceTests.ServiceProxy)(object)service;
+    var previewCompletion = new TaskCompletionSource<ExportPreview>(TaskCreationOptions.RunContinuationsAsynchronously);
+    CancellationToken previewToken = default;
+    proxy.Handle = (_, args) => { previewToken = (CancellationToken)args[3]!; return previewCompletion.Task; };
+    await using var preview = new Guard.Components.Pages.ExportArchive.Preview();
+    var previewType = preview.GetType();
+    previewType.GetProperty("Service", Flags)!.SetValue(preview, service);
+    var loading = Call(preview, "OnInitializedAsync");
+    await preview.DisposeAsync();
+    previewCompletion.SetResult(new ExportPreview(["Поле"], [new[] { "Поздний ответ" }], false));
+    await loading;
+    check(previewToken.IsCancellationRequested && previewType.GetField("preview", Flags)!.GetValue(preview) == null,
+      "closing archive preview cancels the request and ignores a late successful result");
+
+    var infoCompletion = new TaskCompletionSource<ExportArchiveDetails>(TaskCreationOptions.RunContinuationsAsynchronously);
+    CancellationToken infoToken = default;
+    proxy.Handle = (_, args) => { infoToken = (CancellationToken)args[1]!; return infoCompletion.Task; };
+    using var info = new ArchiveInfo();
+    typeof(ArchiveInfo).GetProperty("Service", Flags)!.SetValue(info, service);
+    loading = Call(info, "OnInitializedAsync");
+    info.Dispose();
+    infoCompletion.SetResult(new ExportArchiveDetails("Условия", null, null, null, null, null));
+    await loading;
+    check(infoToken.IsCancellationRequested && typeof(ArchiveInfo).GetField("details", Flags)!.GetValue(info) == null,
+      "closing archive information cancels the request and ignores a late successful result");
   }
   private const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
   private static Task Call(object page, string name) => (Task)page.GetType().GetMethod(name, Flags)!.Invoke(page, null)!;

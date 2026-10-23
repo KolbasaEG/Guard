@@ -1,0 +1,24 @@
+.compact-notice {
+  --notice-accent: var(--rz-info);
+  --notice-background: var(--rz-info-lighter);
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 5px;
+  border-inline-start: 4px solid var(--notice-accent);
+  background: var(--notice-background);
+  color: var(--rz-text-color);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.compact-notice-warning {
+  --notice-accent: var(--rz-warning);
+  --notice-background: var(--rz-warning-lighter);
+}
+.compact-notice-danger {
+  --notice-accent: var(--rz-danger);
+  --notice-background: var(--rz-danger-lighter);
+}
+.compact-notice-success {
+  --notice-accent: var(--rz-success);
+  --notice-background: var(--rz-success-lighter);
+}

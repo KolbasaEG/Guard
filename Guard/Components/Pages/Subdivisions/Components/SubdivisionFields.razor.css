@@ -1,9 +1,10 @@
 .subdivision-form {
   width: 100%;
   min-width: 0;
+  container-type: inline-size;
 }
 
-@media (max-width: 600px) {
+@container (max-width: 600px) {
   .subdivision-form ::deep .subdivision-form-row {
     flex-direction: column !important;
     align-items: stretch !important;

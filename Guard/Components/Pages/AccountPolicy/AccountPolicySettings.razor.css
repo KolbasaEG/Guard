@@ -1,0 +1,41 @@
+.account-policy-page {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.account-policy-page ::deep .guard-entity-body,
+.account-policy-page ::deep .guard-info-block {
+  background-color: var(--rz-base-background-color);
+}
+
+.policy-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.policy-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.policy-option {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 2px;
+}
+
+.policy-option ::deep .rz-chkbox {
+  flex-shrink: 0;
+}
+
+.policy-option ::deep label {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+  .policy-fields { grid-template-columns: minmax(0, 1fr); }
+}

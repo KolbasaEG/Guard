@@ -7,7 +7,7 @@ public sealed record UserNotificationDto(Guid Id, UserNotificationKind Kind, Use
   bool IsIncident, DateTime CreatedAtUtc, DateTime UpdatedAtUtc, long Revision, bool IsRead);
 public sealed record NotificationSearch(bool UnreadOnly = false, int Skip = 0, int Take = 20, long AfterRevision = 0, long ThroughRevision = long.MaxValue);
 public sealed record NotificationPage(IReadOnlyList<UserNotificationDto> Items, int Count);
-public sealed record NotificationSummary(int UnreadCount, long Watermark, IReadOnlyList<UserNotificationDto> Latest);
+public sealed record NotificationSummary(int UnreadCount, long Watermark, IReadOnlyList<UserNotificationDto> Latest, int TotalCount = 0);
 
 public interface IUserNotificationService
 {

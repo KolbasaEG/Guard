@@ -11,7 +11,7 @@ public partial class Details
 {
   [Parameter] public Guid Id { get; set; }
   private UserNotificationDto? item;
-  private bool loading = true, disposed;
+  private bool loading = true, disposed, opening;
   private string? error;
   private readonly CancellationTokenSource stopping = new();
   protected override async Task OnInitializedAsync()
@@ -24,10 +24,12 @@ public partial class Details
       else await Service.MarkReadAsync(item.Id, item.Revision, stopping.Token);
     } catch (OperationCanceledException) when (stopping.IsCancellationRequested) { }
     catch (Exception ex) { if (!disposed) { item = null; error = "Не удалось открыть уведомление."; } Logger.LogWarning(ex, "Открытие уведомления"); }
-    finally { loading = false; }
+    finally { if (!disposed) loading = false; }
   }
   private async Task OpenTargetAsync()
   {
+    if (disposed || opening) return;
+    opening = true;
     try {
       var current = await Service.GetAccessibleTargetAsync(Id, stopping.Token);
       if (current.Target == NotificationTarget.Export && current.TargetId is Guid exportId) {
@@ -43,7 +45,15 @@ public partial class Details
         Navigation.NavigateTo(current.Target == NotificationTarget.TechnicalLogs ? "/Logs" : "/synchronization");
       }
     } catch (OperationCanceledException) when (stopping.IsCancellationRequested) { }
-    catch (Exception ex) { error = "Связанное событие недоступно. Возможно, изменились права или истёк срок хранения."; Logger.LogWarning(ex, "Переход из уведомления"); }
+    catch (Exception ex) {
+      if (!disposed) Notifications.Notify(new NotificationMessage {
+        Severity = NotificationSeverity.Error, Summary = "Уведомление",
+        Detail = "Связанное событие недоступно. Возможно, изменились права или истёк срок хранения.",
+        Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;"
+      });
+      Logger.LogWarning(ex, "Переход из уведомления");
+    }
+    finally { opening = false; }
   }
-  public void Dispose() { disposed = true; stopping.Cancel(); stopping.Dispose(); }
+  public void Dispose() { if (disposed) return; disposed = true; stopping.Cancel(); stopping.Dispose(); }
 }

@@ -5,18 +5,27 @@
 @inject IDataExportService Exports
 @inject NavigationManager Navigation
 @inject DialogService Dialogs
+@inject NotificationService Notifications
 @inject ILogger<Details> Logger
 
 <ViewEntity TItem="UserNotificationDto" Data="item" Name="УВЕДОМЛЕНИЕ" Icon="notifications" IsLoading="loading" OnCancelButtonClick="@(() => Dialogs.Close(null))">
-  <RadzenStack Gap="12px">
-    @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@error</RadzenAlert> }
+  <div class="notification-details">
+  <RadzenStack Class="guard-compact-content" Gap="5px" Style="min-width:0;">
+    @if (error != null) { <CompactNotice Severity="AlertStyle.Danger">@error</CompactNotice> }
     @if (item != null) {
-      <strong>@item.Title</strong>
-      <RadzenText>@item.Message</RadzenText>
-      <RadzenText>Получено: @item.CreatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</RadzenText>
-      <RadzenText>Обновлено: @item.UpdatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</RadzenText>
-      @if (item.IsIncident) { <RadzenText>@(item.IncidentActive ? "Требует внимания" : "Восстановлено")</RadzenText> }
-      <RadzenButton Text="Перейти к событию" Icon="open_in_new" Click="OpenTargetAsync" />
+      <InfoBlock Compact="true" Title="Сообщение" Icon="chat" Style="min-width:0;flex-shrink:0;">
+        <p><strong>@item.Title</strong></p>
+        <p class="notification-message">@item.Message</p>
+      </InfoBlock>
+      <InfoBlock Compact="true" Title="Сведения" Icon="info" Style="min-width:0;flex-shrink:0;">
+        <p>Получено: @item.CreatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</p>
+        <p>Обновлено: @item.UpdatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</p>
+        @if (item.IsIncident) { <p>@(item.IncidentActive ? "Требует внимания" : "Восстановлено")</p> }
+      </InfoBlock>
+      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px">
+        <RadzenButton Text="Перейти к событию" Icon="open_in_new" Click="OpenTargetAsync" Disabled="opening" Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" Style="border-radius:0px;color:var(--rz-text-color);" />
+      </RadzenStack>
     }
   </RadzenStack>
+  </div>
 </ViewEntity>

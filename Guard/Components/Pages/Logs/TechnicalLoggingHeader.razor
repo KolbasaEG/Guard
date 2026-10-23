@@ -1,0 +1,27 @@
+<span class="technical-health-indicator" role="img" aria-label="@Description" title="@Description" tabindex="0">
+  <RadzenIcon Icon="@StatusIcon" IconColor="@StatusColor" />
+</span>
+<RadzenButton Icon="refresh" Click="OnRefresh" Disabled="State.Busy" ButtonStyle="ButtonStyle.Light"
+              Variant="Variant.Text" Size="ButtonSize.Medium" Style="border-radius:0;"
+              title="Обновить состояние и настройки" aria-label="Обновить состояние и настройки" />
+
+@code {
+  [Parameter] public TechnicalLoggingHeaderState State { get; set; } = new();
+  [Parameter] public EventCallback OnRefresh { get; set; }
+  private string Status => State.Health?.Status ?? (State.Error == null ? "Unknown" : "Unavailable");
+  private string StatusIcon => Status switch {
+    "Ready" => "check_circle", "Degraded" => "warning_amber",
+    "Emergency" or "Unavailable" => "error", _ => "help_outline"
+  };
+  private string StatusColor => Status switch {
+    "Ready" => "var(--rz-success)", "Degraded" => "var(--rz-warning)",
+    "Emergency" or "Unavailable" => "var(--rz-danger)", _ => "var(--rz-text-secondary-color)"
+  };
+  private string Description => Status switch {
+    "Ready" => "Техническое логирование исправно. Работа системы продолжается; обязательный аудит действует по своим правилам.",
+    "Degraded" => "Техническое логирование требует внимания. Подробности — во вкладке «Состояние». Обязательный аудит действует по своим правилам.",
+    "Emergency" => "Аварийное состояние технического логирования. Подробности — во вкладке «Состояние». Обязательный аудит действует по своим правилам.",
+    "Unavailable" => State.Error!,
+    _ => "Состояние технического логирования ещё не получено."
+  };
+}

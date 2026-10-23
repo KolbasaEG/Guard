@@ -70,7 +70,7 @@ public partial class Move : IDisposable
     infoOpen = true;
     try {
       await DialogService.OpenAsync<DialogInfo>("", new Dictionary<string, object?> { { "SubdivisionDetails", item }, { "Compact", true } },
-        new DialogOptions { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+        new DialogOptions { Width = "800px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
     }
     finally { infoOpen = false; }
   }

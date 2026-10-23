@@ -53,6 +53,8 @@ internal static class NotificationPostgresTests
     await Task.WhenAll(dispatcher.DeliverAsync(), dispatcher.DeliverAsync());
     var ownSummary = await owner.GetSummaryAsync(); var ownRow = ownSummary.Latest.Single();
     check(notifiedAfterCommit && ownSummary.UnreadCount == 1, "concurrent delivery publishes exactly once and signals only after commit");
+    check(ownSummary.TotalCount == 1 && (await other.GetSummaryAsync()).TotalCount == 0,
+      "notification summary total counts only records visible to its recipient");
     check(await other.GetAsync(ownRow.Id) == null && await root.GetAsync(ownRow.Id) == null, "even Root cannot read another user's notification by forged ID");
     await PostgresTests.ThrowsAsync<UnauthorizedAccessException>(() => owner.GetAccessibleTargetAsync(ownRow.Id), check,
       "notification target rechecks revoked export permission before opening operation metadata");

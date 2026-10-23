@@ -8,13 +8,13 @@
 <EntityInfo >
   @if (Compact)
   {
-    <RadzenTable Style="width:100%;table-layout:fixed;" aria-label="Служебные сведения">
+    <RadzenTable Class="guard-value-table" Style="width:100%;table-layout:fixed;" aria-label="Служебные сведения">
       <RadzenTableBody>
         @foreach (var row in CompactRows)
         {
           <RadzenTableRow>
             <RadzenTableCell Style="padding:2px;width:40%;overflow-wrap:anywhere;background:var(--rz-grid-header-background-color);vertical-align:top;">
-              <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start">
+              <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start">
                 <RadzenIcon Icon="@row.Icon" Style="font-size:16px;flex-shrink:0;" aria-hidden="true" />
                 <span>@row.Label</span>
               </RadzenStack>

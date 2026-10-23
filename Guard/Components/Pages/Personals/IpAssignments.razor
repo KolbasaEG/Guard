@@ -3,15 +3,19 @@
 @using Guard.Core.Services.DTOs
 
 <EditEntity TItem="Guid" Data="@PersonalId" Name="Разрешённые IP" Submit="SaveAsync" ShowSaveButton="@loaded" IsLoading="@loading" OnCancelButtonClick="Close">
-<RadzenStack Gap="12px">
-  <RadzenText Text="Разрешённые IP-адреса сотрудника" TextStyle="TextStyle.H6" />
-  <RadzenText Text="Пустой список запрещает вход. Изменения применяются при следующем входе или новом соединении. Root освобождён от проверки IP." />
+<RadzenStack Gap="5px" Style="min-width:0;">
+  <RadzenStack Gap="2px" Style="min-width:0;">
+    <RadzenText Text="Разрешённые IP-адреса сотрудника" TextStyle="TextStyle.H6" Style="margin:0;" />
+    <RadzenText Text="Пустой список запрещает вход. Изменения применяются при следующем входе или новом соединении. Root освобождён от проверки IP." Style="margin:0;" />
+    <RadzenText Text="Выбираются только активные IP подразделения сотрудника, без дочерних подразделений." Style="margin:0;" />
+  </RadzenStack>
   @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
-  <RadzenText Text="Выбираются только активные IP подразделения сотрудника, без дочерних подразделений." />
   @if (hiddenAssignmentCount > 0) { <RadzenAlert AlertStyle="AlertStyle.Warning">Есть ранее назначенные IP вне подразделения сотрудника (@hiddenAssignmentCount). Они не показаны и сохраняются отдельно. Очистка видимого списка не удаляет эти назначения.</RadzenAlert> }
-  <RadzenDropDown TValue="IEnumerable<Guid>" Data="@available" TextProperty="Address" ValueProperty="Id"
+  <RadzenFormField Text="IP-адреса и подсети" Variant="Variant.Text" Style="width:100%;min-width:0;">
+    <RadzenDropDown TValue="IEnumerable<Guid>" Data="@available" TextProperty="Address" ValueProperty="Id"
                   @bind-Value="selected" Multiple="true" AllowClear="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                  Disabled="@loading" Style="width:100%" Placeholder="Выберите IP-адреса или подсети" />
+                  Disabled="@loading" Style="width:100%" Name="AssignedIpAddresses" aria-label="IP-адреса и подсети" Placeholder="Выберите IP-адреса или подсети" />
+  </RadzenFormField>
 
 </RadzenStack>
 </EditEntity>

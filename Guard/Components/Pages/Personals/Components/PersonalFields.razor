@@ -1,5 +1,5 @@
 @using Guard.Core.Services.DTOs
-  <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width: 100%;">
+  <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;min-width:0;">
     <RadzenStack Orientation="Orientation.Horizontal" Style="width:100%;" Gap="0px">
       <RadzenFormField Text="Подразделение" Variant="Variant.Text" Style="width:100%;">
         <ChildContent>
@@ -8,9 +8,9 @@
         </ChildContent>
       </RadzenFormField>
     </RadzenStack>
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="5px" Wrap="FlexWrap.Wrap" Style="width: 100%;">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="2px" Wrap="FlexWrap.Wrap" Style="width: 100%;">
       <!-- Фамилия -->
-      <RadzenFormField Text="Фамилия *" Variant="Variant.Text" Style="flex:1;min-width:180px;">
+      <RadzenFormField Text="Фамилия *" Variant="Variant.Text" Style="flex:1;min-width:min(180px, 100%);">
         <ChildContent>
           <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@Item.LastName" Name="LastName" MaxLength="100" />
         </ChildContent>
@@ -20,7 +20,7 @@
       </RadzenFormField>
 
       <!-- Имя -->
-      <RadzenFormField Text="Имя *" Variant="Variant.Text" Style="flex:1;min-width:180px;">
+      <RadzenFormField Text="Имя *" Variant="Variant.Text" Style="flex:1;min-width:min(180px, 100%);">
         <ChildContent>
           <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@Item.FirstName" Name="FirstName" MaxLength="100" />
         </ChildContent>
@@ -30,51 +30,51 @@
       </RadzenFormField>
 
       <!-- Отчество -->
-      <RadzenFormField Text="Отчество" Variant="Variant.Text" Style="flex:1;min-width:180px;">
+      <RadzenFormField Text="Отчество" Variant="Variant.Text" Style="flex:1;min-width:min(180px, 100%);">
         <ChildContent>
           <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@Item.MiddleName" Name="MiddleName" MaxLength="100" />
         </ChildContent>
       </RadzenFormField>
     </RadzenStack>
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="5px" Wrap="FlexWrap.Wrap" Style="width: 100%;">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="2px" Wrap="FlexWrap.Wrap" Style="width: 100%;">
       <!-- Фамилия (род. падеж) -->
-      <RadzenFormField Text="Фамилия (род. падеж)" Variant="Variant.Text" Style="flex:1;min-width:180px;">
+      <RadzenFormField Text="Фамилия (род. падеж)" Variant="Variant.Text" Style="flex:1;min-width:min(180px, 100%);">
         <ChildContent>
           <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@Item.LastNameGen" Name="LastNameGen" MaxLength="100" />
         </ChildContent>
       </RadzenFormField>
 
       <!-- Имя (род. падеж) -->
-      <RadzenFormField Text="Имя (род. падеж)" Variant="Variant.Text" Style="flex:1;min-width:180px;">
+      <RadzenFormField Text="Имя (род. падеж)" Variant="Variant.Text" Style="flex:1;min-width:min(180px, 100%);">
         <ChildContent>
           <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@Item.FirstNameGen" Name="FirstNameGen" MaxLength="100" />
         </ChildContent>
       </RadzenFormField>
 
       <!-- Отчество (род. падеж) -->
-      <RadzenFormField Text="Отчество (род. падеж)" Variant="Variant.Text" Style="flex:1;min-width:180px;">
+      <RadzenFormField Text="Отчество (род. падеж)" Variant="Variant.Text" Style="flex:1;min-width:min(180px, 100%);">
         <ChildContent>
           <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@Item.MiddleNameGen" Name="MiddleNameGen" MaxLength="100" />
         </ChildContent>
       </RadzenFormField>
     </RadzenStack>
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="5px" Wrap="FlexWrap.Wrap" Style="width: 100%;">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="2px" Wrap="FlexWrap.Wrap" Style="width: 100%;">
       <!-- Фамилия и инициалы -->
-      <RadzenFormField Text="Фамилия и инициалы (ФИО)" Variant="Variant.Text" Style="flex: 2; min-width: 280px;">
+      <RadzenFormField Text="Фамилия и инициалы (ФИО)" Variant="Variant.Text" Style="flex: 2; min-width:min(280px, 100%);">
         <ChildContent>
           <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@Item.FullName" Name="FullName" MaxLength="250" />
         </ChildContent>
       </RadzenFormField>
 
       <!-- Личный номер -->
-      <RadzenFormField Text="Личный номер" Variant="Variant.Text" Style="flex: 1; min-width: 180px;">
+      <RadzenFormField Text="Личный номер" Variant="Variant.Text" Style="flex: 1; min-width:min(180px, 100%);">
         <ChildContent>
           <RadzenTextBox Style="display: block; width: 100%" @bind-Value="@Item.PersonalNumber" Name="PersonalNumber" MaxLength="50" />
         </ChildContent>
       </RadzenFormField>
 
       <!-- Год принятия на службу -->
-      <RadzenFormField Text="Год принятия на службу" Variant="Variant.Text" Style="flex: 1; min-width: 180px;">
+      <RadzenFormField Text="Год принятия на службу" Variant="Variant.Text" Style="flex: 1; min-width:min(180px, 100%);">
         <ChildContent>
           <RadzenNumeric Style="display: block; width: 100%"
                          @bind-Value="@Item.EnlistmentYear"

@@ -1,17 +1,20 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
-<div class="table-template">
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+<div class="table-template" @ref="element">
   <RadzenSplitter Orientation="Orientation.Vertical" style="height: 100%; background-color: var(--rz-tabs-background-color);">
-    <RadzenSplitterPane Size="@TopPaneSize">
-      @if (ShowAnalitycs)
+    <RadzenSplitterPane Size="@TopPaneSize" Min="@(stacked && ShowAnalitycs && Analitycs != null ? "170px" : "100px")">
+      @if (ShowAnalitycs && Analitycs != null)
       {
-      <RadzenSplitter>
-        <RadzenSplitterPane Min="30%" Max="70%">
-          <AnalitycsWrapper Title="@AnalitycsTitle" Icon="@AnalitycsIcon" Buttons="@AnalitycsButtons">
+      <RadzenSplitter Orientation="@(stacked ? Orientation.Vertical : Orientation.Horizontal)" Class="analysis-splitter">
+        <RadzenSplitterPane Size="@(stacked ? "50%" : "320px")" Min="@(stacked ? "80px" : "320px")">
+          <AnalitycsWrapper Title="@AnalitycsTitle" Icon="@AnalitycsIcon" Buttons="@AnalitycsButtons" FillContent="@AnalitycsFillContent">
             @Analitycs
           </AnalitycsWrapper>
         </RadzenSplitterPane>
-        <RadzenSplitterPane>
+        <RadzenSplitterPane Min="@(stacked ? "80px" : "420px")">
           <AnalitycsWrapper Title="Фильтрация данных" Icon="feature_search" Buttons="@FilterButtons">
             @Filter
           </AnalitycsWrapper>
@@ -25,8 +28,8 @@
         </AnalitycsWrapper>
       }
     </RadzenSplitterPane>
-    <RadzenSplitterPane>
-      <RadzenCard Variant="Variant.Outlined" Style="height:100%; padding:5px;">
+    <RadzenSplitterPane Min="100px">
+      <RadzenCard Variant="Variant.Outlined" Style="height:100%; padding:5px;min-height:0;min-width:0;">
         @Table
       </RadzenCard>
     </RadzenSplitterPane>
@@ -34,11 +37,41 @@
 </div>
 
 @code {
+  private ElementReference element;
+  private bool stacked;
+  private bool disposed;
+  private TableLayoutInterop? interop;
+  private DotNetObjectReference<TableWrapperWithFilterAndAnalytics>? callback;
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender) return;
+    callback = DotNetObjectReference.Create(this);
+    interop = new(JS);
+    await interop.InitializeAsync(element, callback);
+    if (disposed) await interop.DisposeAsync();
+  }
+
+  [JSInvokable]
+  public Task OnLayoutChanged(bool value) => InvokeAsync(() => {
+    if (disposed || stacked == value) return;
+    stacked = value;
+    StateHasChanged();
+  });
+
+  public async ValueTask DisposeAsync()
+  {
+    disposed = true;
+    if (interop != null) await interop.DisposeAsync();
+    callback?.Dispose();
+  }
+
   [Parameter] public RenderFragment? Table { get; set; }
   [Parameter] public RenderFragment? Filter { get; set; }
   [Parameter] public RenderFragment? FilterButtons { get; set; }
   [Parameter] public RenderFragment? Analitycs { get; set; }
   [Parameter] public RenderFragment? AnalitycsButtons { get; set; }
+  [Parameter] public bool AnalitycsFillContent { get; set; }
   [Parameter] public string AnalitycsTitle { get; set; } = "Аналитическая информация";
   [Parameter] public string AnalitycsIcon { get; set; } = "analytics";
   [Parameter] public bool ShowAnalitycs { get; set; } = true;

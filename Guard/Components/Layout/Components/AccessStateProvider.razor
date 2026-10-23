@@ -86,7 +86,10 @@
           var passwordRequired = account.PasswordExpired && !account.Blocked;
           var path = new Uri(Navigation.Uri).AbsolutePath;
           var passwordPage = path.Equals("/Account/Manage/ChangePassword", StringComparison.OrdinalIgnoreCase);
-          if (!passwordRequired || !passwordPage)
+          // Подтверждение выхода не требует рабочих прав и должно быть доступно
+          // также при обязательной смене пароля или отзыве доступа.
+          var logoutPage = path.Equals("/Account/Logout", StringComparison.OrdinalIgnoreCase);
+          if (!logoutPage && (!passwordRequired || !passwordPage))
             Navigation.NavigateTo(passwordRequired ? "/Account/Manage/ChangePassword" : "/Account/Login", forceLoad: true);
         }
       }

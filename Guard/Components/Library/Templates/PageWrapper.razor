@@ -1,11 +1,32 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
-<RadzenCard Variant="Variant.Flat" Style="width:100%;height:100%; padding:5px; border-radius:0px;">
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+<div @ref="element" style="width:100%;height:100%;min-width:0;min-height:0;">
   <RadzenCard Variant="Variant.Outlined" Style="width:100%;height:100%; padding:5px; background-color:var(--rz-grid-background-color);">
     @Content
   </RadzenCard>
-</RadzenCard>
+</div>
 
 @code {
+  [Parameter] public bool EnableCellTooltips { get; set; }
   [Parameter] public RenderFragment Content { get; set; }
+
+  private ElementReference element;
+  private TableLayoutInterop? interop;
+  private bool disposed;
+
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender || !EnableCellTooltips) return;
+    interop = new(JS);
+    await interop.InitializeAsync(element);
+    if (disposed) await interop.DisposeAsync();
+  }
+
+  public async ValueTask DisposeAsync()
+  {
+    disposed = true;
+    if (interop != null) await interop.DisposeAsync();
+  }
 }

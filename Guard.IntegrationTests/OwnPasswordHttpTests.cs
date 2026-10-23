@@ -30,6 +30,14 @@ internal static class OwnPasswordHttpTests
     token = Token(page);
     Check(token.Length > 0, "authenticated antiforgery token available");
     Check(!page.Contains("Manage your account"), "mandatory page uses AccountLayout");
+    page = await client.GetStringAsync("/Account/Manage/ChangePassword?ReturnUrl=%2FLogs%3Fview%3Derrors");
+    Check(page.Contains("href=\"/Logs?view=errors\"") && !WebUtility.HtmlDecode(page).Contains("Обязательная смена пароля"),
+      "ordinary password page returns to local source including query");
+    page = await client.GetStringAsync("/Account/Manage/ChangePassword?ReturnUrl=https%3A%2F%2Fexample.test");
+    Check(page.Contains("href=\"/\""), "ordinary password cancellation rejects external ReturnUrl");
+    using (var denied = await client.PostAsync("/Account/Manage/ChangePassword", new FormUrlEncodedContent(new Dictionary<string, string> {
+      ["_handler"] = "change-password", ["Input.OldPassword"] = "BrowserRoot123!", ["Input.NewPassword"] = "BrowserRoot456!", ["Input.ConfirmPassword"] = "BrowserRoot456!"
+    }))) Check(denied.StatusCode == HttpStatusCode.BadRequest, "SSR password form rejects missing antiforgery");
     var oldCookies = cookies.GetCookieHeader(client.BaseAddress!);
     async Task<HttpResponseMessage> Change(string old, string password, string confirmation, bool csrf = true) {
       var values = new Dictionary<string, string> {
@@ -63,20 +71,20 @@ internal static class OwnPasswordHttpTests
     token = Token(page);
     using (var restored = await Change("BrowserRoot456!", "BrowserRoot123!", "BrowserRoot123!"))
       Check(restored.IsSuccessStatusCode, "browser fixture password restored");
-    async Task<HttpResponseMessage> ChangeFromPage(string password, string confirmation) {
+    async Task<HttpResponseMessage> ChangeFromPage(string password, string confirmation, string returnUrl = "/", string old = "BrowserRoot123!") {
       var html = await client.GetStringAsync("/Account/Manage/ChangePassword");
-      return await client.PostAsync("/Account/Manage/ChangePassword", new FormUrlEncodedContent(new Dictionary<string, string> {
+      return await client.PostAsync("/Account/Manage/ChangePassword?ReturnUrl=" + Uri.EscapeDataString(returnUrl), new FormUrlEncodedContent(new Dictionary<string, string> {
         ["__RequestVerificationToken"] = Token(html), ["_handler"] = "change-password",
-        ["Input.OldPassword"] = "BrowserRoot123!", ["Input.NewPassword"] = password,
+        ["Input.OldPassword"] = old, ["Input.NewPassword"] = password,
         ["Input.ConfirmPassword"] = confirmation
       }));
     }
     using (var invalid = await ChangeFromPage("BrowserRoot789!", "different"))
       Check(invalid.StatusCode == HttpStatusCode.OK && WebUtility.HtmlDecode(await invalid.Content.ReadAsStringAsync()).Contains("Пароли не совпадают"),
         "SSR form displays confirmation error without redirecting to success");
-    using (var changed = await ChangeFromPage("BrowserRoot789!", "BrowserRoot789!"))
+    using (var changed = await ChangeFromPage("BrowserRoot789!", "BrowserRoot789!", "/Logs?view=errors"))
       Check(changed.StatusCode == HttpStatusCode.Redirect && changed.Headers.Location != null &&
-        new Uri(client.BaseAddress!, changed.Headers.Location).AbsolutePath == "/",
+        new Uri(client.BaseAddress!, changed.Headers.Location).PathAndQuery == "/Logs?view=errors",
         $"SSR form changes own password through shared adapter (status {changed.StatusCode}, redirect {changed.Headers.Location})");
     page = await client.GetStringAsync("/Account/Manage/ChangePassword");
     token = Token(page);
@@ -84,9 +92,23 @@ internal static class OwnPasswordHttpTests
       Check(restored.IsSuccessStatusCode, "SSR success refreshes cookie and persisted password works through HTTP endpoint");
     await using (var db = await factory.CreateDbContextAsync()) {
       await db.Users.Where(u => u.Id == "root").ExecuteUpdateAsync(s => s.SetProperty(u => u.MustChangePassword, true));
-      page = await client.GetStringAsync("/Account/Manage/ChangePassword");
-      Check(page.Contains("action=\"Account/Logout\"") && WebUtility.HtmlDecode(page).Contains("Сохранить пароль"),
-        "mandatory page exposes separate logout POST and explicit save button");
+      using (var changed = await ChangeFromPage("BrowserRootMandatory123!", "BrowserRootMandatory123!", "/Logs"))
+        Check(changed.StatusCode == HttpStatusCode.Redirect && new Uri(client.BaseAddress!, changed.Headers.Location!).AbsolutePath == "/",
+          "mandatory password success ignores source and opens home");
+      Check(!await db.Users.Where(u => u.Id == "root").Select(u => u.MustChangePassword).SingleAsync(), "mandatory save clears server restriction");
+      page = await client.GetStringAsync("/Account/Manage/ChangePassword"); token = Token(page);
+      using (var restored = await Change("BrowserRootMandatory123!", "BrowserRoot123!", "BrowserRoot123!"))
+        Check(restored.IsSuccessStatusCode, "mandatory change refreshes session and fixture password can be restored");
+      await db.Users.Where(u => u.Id == "root").ExecuteUpdateAsync(s => s.SetProperty(u => u.MustChangePassword, true));
+      page = await client.GetStringAsync("/Account/Manage/ChangePassword?mandatory=false&ReturnUrl=%2FLogs");
+      Check(page.Contains("/Account/Logout?ReturnUrl=") && WebUtility.HtmlDecode(page).Contains("Обязательная смена пароля") &&
+        !WebUtility.HtmlDecode(page).Contains(">Отмена</a>"), "mandatory page exposes logout confirmation without cancel");
+      using (var restricted = await client.GetAsync("/"))
+        Check(restricted.StatusCode == HttpStatusCode.Redirect && restricted.Headers.Location?.ToString() == "/Account/Manage/ChangePassword",
+          "mandatory policy still restricts other pages");
+      page = await client.GetStringAsync("/Account/Logout?ReturnUrl=%2FAccount%2FManage%2FChangePassword");
+      Check(page.Contains("action=\"Account/Logout\"") && page.Contains("href=\"/Account/Manage/ChangePassword\""),
+        "mandatory logout GET has protected POST and safe cancellation link");
       using var logout = await client.PostAsync("/Account/Logout", new FormUrlEncodedContent(new Dictionary<string, string> {
         ["__RequestVerificationToken"] = Token(page), ["returnUrl"] = "/Account/Login"
       }));

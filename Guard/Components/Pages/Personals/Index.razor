@@ -18,7 +18,7 @@
   GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
   PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" ShowPagingSummary="true" PagingSummaryFormat="@PagingSummaryFormat">
   <HeaderTemplate>
-    <RadzenStack Class="personal-list-toolbar" Orientation="Orientation.Horizontal" Gap="8px" AlignItems="AlignItems.Center" Style="width:100%;position:relative;min-height:36px;">
+    <RadzenStack Class="personal-list-toolbar" Orientation="Orientation.Horizontal" Gap="0px" AlignItems="AlignItems.Center" Style="width:100%;position:relative;min-height:36px;">
           @if (Access?.Has(Permissions.Personals.Export) == true) {
             <RadzenMenu>
               <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
@@ -27,38 +27,48 @@
             </RadzenMenu>
           }
 
-      <RadzenStack Class="personal-list-status" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="position:absolute;left:50%;transform:translateX(-50%);">
+      <RadzenStack Class="personal-list-status" Orientation="Orientation.Horizontal" Gap="0px" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="position:absolute;left:50%;transform:translateX(-50%);">
       <RadzenSelectBar Size="ButtonSize.Medium" Style="background-color:var(--rz-menu-top-item-background-color);border-radius:0px;" TValue="DataViewMode" @bind-Value="mode" Change="@(() => ResetPageAsync())">
         <Items>
-          <RadzenSelectBarItem Value="@DataViewMode.Active" Text="Активные" Style="border-radius:0px;width:105px;text-align:center;" />
           @if (Access?.Has(Permissions.Personals.ReadArchive) == true) { <RadzenSelectBarItem Value="@DataViewMode.Archived" Text="Архив" Style="border-radius:0px;width:105px;text-align:center;" /> }
+          <RadzenSelectBarItem Value="@DataViewMode.Active" Text="Активные" Style="border-radius:0px;width:105px;text-align:center;" />
           @if (Access?.IsRoot == true) { <RadzenSelectBarItem Value="@DataViewMode.Deleted" Text="Удалённые" Style="border-radius:0px;width:105px;text-align:center;" /> }
         </Items>
       </RadzenSelectBar>
       </RadzenStack>
-      <RadzenStack Class="personal-list-actions" Orientation="Orientation.Horizontal" Gap="0" Style="margin-left:auto;background-color:var(--rz-menu-top-item-background-color);border:var(--rz-selectbar-border);">
+      <RadzenStack Class="personal-list-actions" Orientation="Orientation.Horizontal" Gap="0px" AlignItems="AlignItems.Center" Style="margin-left:auto;background-color:var(--rz-menu-top-item-background-color);border:var(--rz-selectbar-border);">
       @if (Access?.IsRoot == true)
       {
-        <RadzenToggleButton Text="Весь персонал" Value="ShowAll" Change="OnAllRecordsChanged" Icon="groups" Variant="Variant.Text" Size="ButtonSize.Medium" Style="border-radius:0px;" />
+        <RadzenToggleButton Text="Все доступные" Value="ShowAll" Change="OnAllRecordsChanged" Icon="groups" Variant="Variant.Text" Size="ButtonSize.Medium" Style="border-radius:0px;" />
       }
+      <RadzenButton Icon="refresh" title="Обновить" aria-label="Обновить список сотрудников" Click="ReloadAsync" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" />
       <RadzenToggleButton Value="@(hierarchy == SubdivisionHierarchyMode.IncludeChildren)" Change="OnHierarchyModeChanged"
         Disabled="ShowAll"
         ButtonStyle="ButtonStyle.Warning" ToggleButtonStyle="ButtonStyle.Primary" Variant="Variant.Text" Style="border-radius:0px;"
         Size="ButtonSize.Medium" Icon="account_tree" ToggleIcon="domain" Shade="Shade.Light" ToggleShade="Shade.Dark"
         title="@(hierarchy == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")"
         InputAttributes="@(new Dictionary<string, object> { ["aria-label"] = "Переключение режима отображения иерархии" })" />
-      <RadzenButton Icon="refresh" title="Обновить" Click="ReloadAsync" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" />
-      <RadzenButton Icon="add_circle_outline" title="Добавить" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" Visible="@(!apiManaged && Access?.Has(Permissions.Personals.Write) == true)" Click="AddAsync" />
+      <RadzenButton Icon="add_circle_outline" title="Добавить" aria-label="Добавить сотрудника" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" Disabled="@ActionsDisabled" Visible="@(!apiManaged && Access?.Has(Permissions.Personals.Write) == true)" Click="AddAsync" />
       </RadzenStack>
     </RadzenStack>
 
   </HeaderTemplate>
   <Columns>
-    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="SubdivisionName" SortProperty="Subdivision.Name" Title="Подразделение" />
-    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="FullName" SortProperty="FullName" Title="Фамилия и инициалы" />
-    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="LastName" SortProperty="LastName" Title="Фамилия" />
-    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="FirstName" SortProperty="FirstName" Title="Имя" />
-    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="MiddleName" SortProperty="MiddleName" Title="Отчество" />
+    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="SubdivisionName" SortProperty="Subdivision.Name" Title="Подразделение">
+      <Template Context="row"><span class="guard-cell-text" tabindex="0">@row.SubdivisionName</span></Template>
+    </RadzenDataGridColumn>
+    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="FullName" SortProperty="FullName" Title="Фамилия и инициалы">
+      <Template Context="row"><span class="guard-cell-text" tabindex="0">@row.FullName</span></Template>
+    </RadzenDataGridColumn>
+    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="LastName" SortProperty="LastName" Title="Фамилия">
+      <Template Context="row"><span class="guard-cell-text" tabindex="0">@row.LastName</span></Template>
+    </RadzenDataGridColumn>
+    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="FirstName" SortProperty="FirstName" Title="Имя">
+      <Template Context="row"><span class="guard-cell-text" tabindex="0">@row.FirstName</span></Template>
+    </RadzenDataGridColumn>
+    <RadzenDataGridColumn TItem="PersonalListItemDto" Property="MiddleName" SortProperty="MiddleName" Title="Отчество">
+      <Template Context="row"><span class="guard-cell-text" tabindex="0">@row.MiddleName</span></Template>
+    </RadzenDataGridColumn>
     <RadzenDataGridColumn TItem="PersonalListItemDto" Filterable="false" Sortable="false" Title="Действия" Width="180px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" TextAlign="TextAlign.Center">
       <Template Context="row">
         <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
@@ -89,9 +99,11 @@
 </Filter>
 <FilterButtons><RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" /></FilterButtons>
 <Analitycs>
+  <RadzenStack Class="personal-analytics" Gap="2px" Style="min-width:0;">
   <Guard.Components.Pages.Synchronization.ActualityPanel ReadPermission="@Permissions.Personals.Read" ApiModeChanged="@((bool value) => apiManaged = value)" ReloadData="ReloadForSynchronizationAsync" />
   <RadzenText>Найдено сотрудников: @count</RadzenText>
   <RadzenText>Режим отображения: @(ShowAll ? "Весь персонал" : hierarchy == SubdivisionHierarchyMode.CurrentOnly ? "Только свои" : "Свои и подчинённые")</RadzenText>
+  </RadzenStack>
 </Analitycs>
 </TableWrapperWithFilterAndAnalytics>
 </div>

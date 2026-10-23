@@ -97,7 +97,7 @@ public partial class Edit : IDisposable
     {
       await Permissions.RequireAsync(Guard.Core.Identity.Permissions.IpAddresses.Manage, cts.Token);
       var result = await Dialogs.OpenAsync<IpAssignments>("", new Dictionary<string, object?> { ["PersonalId"] = item.Id },
-        new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+        new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
       if (!disposed && Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result))
       {
         Notifications.Notify(new NotificationMessage

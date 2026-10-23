@@ -2,8 +2,8 @@
 @using Guard.Core.Services.DTOs
 @attribute [Authorize]
 
-<EditEntity ReadOnly="@item.IsSystem" TItem="RoleEditDto" Data="@item" ShowSaveButton="@(!item.IsSystem)" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" ShowInfoButton="false" IsLoading="isLoading">
-  <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
+<EditEntity Name="@(item.IsSystem ? "Просмотр системной роли" : "Редактирование роли")" ReadOnly="@item.IsSystem" TItem="RoleEditDto" Data="@item" ShowSaveButton="@(!item.IsSystem)" Submit="@FormSubmit" OnCancelButtonClick="HandleCancelButtonClick" ShowInfoButton="false" IsLoading="isLoading">
+  <RadzenStack Class="guard-compact-content" Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;min-width:0;">
     <RadzenFormField Text="Наименование роли" Variant="Variant.Text" Style="width:100%;">
       <ChildContent>
         <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.Name" Name="RoleName" Placeholder="Введите наименование роли" />

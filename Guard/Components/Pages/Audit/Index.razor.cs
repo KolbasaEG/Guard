@@ -75,7 +75,7 @@ public partial class Index : IAsyncDisposable
   protected async Task ResetPage() { if (grid.CurrentPage == 0) await grid.Reload(); else await grid.FirstPage(true); }
   protected async Task ViewRow(AuditEntryDto entry) => await Dialogs.OpenAsync<Details>("",
     new Dictionary<string, object?> { [nameof(Details.EventId)] = entry.EventId },
-    new DialogOptions { Width = "1000px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+    new DialogOptions { Width = "1000px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
   private void Failed(Exception error)
   {
     Logger.LogError(error, "Загрузка журнала аудита");

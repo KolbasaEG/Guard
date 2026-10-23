@@ -1,20 +1,29 @@
 @using Guard.Core.Identity
-<RadzenStack Gap="12px">
-  <RadzenTextBox @bind-Value="search" Placeholder="Поиск разрешений" Style="width:100%" />
+<div class="permission-selector">
+<RadzenStack Gap="5px" Style="width:100%;min-width:0;">
+  <RadzenFormField Text="Поиск разрешений" Variant="Variant.Text" Style="width:100%;">
+    <RadzenTextBox @bind-Value="search" Placeholder="Поиск разрешений" Style="width:100%" />
+  </RadzenFormField>
   @foreach (var group in Definitions.Where(p => !p.RootOnly &&
       (string.IsNullOrWhiteSpace(search) || (p.Name + p.Group + p.Description).Contains(search, StringComparison.OrdinalIgnoreCase))).GroupBy(p => p.Group))
   {
-    <RadzenCard>
-      <RadzenText Text="@group.Key" TextStyle="TextStyle.H6" />
-      <RadzenButton Text="Выбрать группу" Size="ButtonSize.Small" Disabled="@Disabled" Click="@(() => SelectGroup(group))" />
+    <RadzenCard Variant="Variant.Outlined" Style="padding:5px;min-width:0;">
+      <RadzenStack Gap="5px" Style="min-width:0;">
+      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="0px" Class="permission-group-header">
+        <RadzenText Text="@group.Key" TextStyle="TextStyle.H6" Style="margin:0;overflow-wrap:anywhere;" />
+        <RadzenButton Text="Выбрать группу" Size="ButtonSize.Small" Disabled="@Disabled" Click="@(() => SelectGroup(group))" />
+      </RadzenStack>
+      <RadzenStack Gap="2px" Style="min-width:0;">
       @foreach (var definition in group)
       {
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px">
-          <RadzenCheckBox TValue="bool" Value="@Selected.Contains(definition.Code)" Disabled="@Disabled"
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="2px" Style="min-width:0;">
+          <RadzenCheckBox TValue="bool" Value="@Selected.Contains(definition.Code)" Disabled="@Disabled" AriaLabel="@($"{group.Key}: {definition.Name}")"
                           Change="@(value => Toggle(definition.Code, value))" />
-          <span title="@definition.Description">@definition.Name</span>
+          <span class="permission-name" title="@definition.Description">@definition.Name</span>
         </RadzenStack>
       }
+      </RadzenStack>
+      </RadzenStack>
     </RadzenCard>
   }
   @foreach (var unsupported in Selected.Where(code => !Definitions.Any(p => p.Code == code && !p.RootOnly)).ToArray())
@@ -25,6 +34,7 @@
     </RadzenAlert>
   }
 </RadzenStack>
+</div>
 @code {
   [Parameter, EditorRequired] public IReadOnlyList<PermissionDefinition> Definitions { get; set; } = [];
   [Parameter] public HashSet<string> Selected { get; set; } = [];

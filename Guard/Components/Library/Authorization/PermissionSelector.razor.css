@@ -1,0 +1,17 @@
+.permission-selector {
+  width: 100%;
+  min-width: 0;
+}
+
+.permission-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.permission-selector ::deep .permission-group-header {
+  row-gap: 5px !important;
+}
+
+.permission-selector ::deep .rz-chkbox {
+  flex-shrink: 0;
+}

@@ -1,6 +1,6 @@
 @using Guard.Core.Services.DTOs
 
-<RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;min-width:0;">
+<div class="ip-address-fields">
   <RadzenFormField Text="Подразделение" Variant="Variant.Text" Style="width:100%;">
     <ChildContent>
       <RadzenDropDown Data="Subdivisions" TextProperty="Name" ValueProperty="Id" TValue="Guid?"
@@ -21,10 +21,10 @@
       <RadzenCustomValidator Component="IpAddress" Validator="@(() => string.IsNullOrEmpty(Item.Address) || IpAddressRule.TryParse(Item.Address, out _))" Text="Введите IPv4, IPv6 или CIDR-подсеть." />
     </Helper>
   </RadzenFormField>
-  <RadzenFormField Text="Описание / назначение" Variant="Variant.Text" Style="width:100%;">
+  <RadzenFormField Class="ip-description" Text="Описание / назначение" Variant="Variant.Text" Style="width:100%;">
     <RadzenTextBox @bind-Value="Item.Description" Name="Description" aria-label="Описание / назначение" MaxLength="1000" Style="width:100%;" />
   </RadzenFormField>
-</RadzenStack>
+</div>
 
 @code {
   [Parameter, EditorRequired] public IpAddressFieldsDto Item { get; set; } = default!;

@@ -45,6 +45,18 @@ internal static class StaticAssetsTests
       using var css = await client.GetAsync(styles);
       check(css.StatusCode == HttpStatusCode.OK && (await css.Content.ReadAsStringAsync()).Contains(".app-shell"),
         "fingerprinted stylesheet contains the current isolated layout styles");
+      // Холодные HTTP-запросы: шрифт и значки должны поставляться самим приложением.
+      foreach (var font in new[] { "SourceSans3VF-Upright.ttf.woff2", "SourceSans3VF-Italic.ttf.woff2", "MaterialSymbolsOutlined.woff2" })
+      {
+        using var response = await client.GetAsync("_content/Radzen.Blazor/fonts/" + font);
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        check(response.StatusCode == HttpStatusCode.OK && bytes.Length > 4 &&
+          bytes.Take(4).SequenceEqual("wOF2"u8.ToArray()),
+          $"offline font is served as WOFF2 from the local host: {font}");
+      }
+      using var layoutModule = await client.GetAsync("Components/Library/Templates/TableWrapperWithFilterAndAnalytics.razor.js");
+      check(layoutModule.StatusCode == HttpStatusCode.OK && layoutModule.Content.Headers.ContentType?.MediaType?.Contains("javascript") == true,
+        "table layout module is served locally with a JavaScript content type");
       foreach (var background in new[] { "images/home-light.png", "images/home-dark.png" })
       {
         using var response = await client.GetAsync(background);
@@ -58,5 +70,6 @@ internal static class StaticAssetsTests
         "static resource short circuit does not bypass middleware for pages and Blazor connections");
     }
     finally { await app.StopAsync(); }
+    await ServicePagesTests.RunAsync(check);
   }
 }

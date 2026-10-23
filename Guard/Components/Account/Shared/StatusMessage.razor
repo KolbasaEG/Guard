@@ -1,8 +1,9 @@
 ﻿@if (!string.IsNullOrEmpty(DisplayMessage))
 {
-    var statusMessageClass = DisplayMessage.StartsWith("Error", StringComparison.OrdinalIgnoreCase) ||
+    var inferredError = DisplayMessage.StartsWith("Error", StringComparison.OrdinalIgnoreCase) ||
         DisplayMessage.StartsWith("Ошибка", StringComparison.OrdinalIgnoreCase) ? "danger" : "success";
-    <div class="alert alert-@statusMessageClass" role="alert">
+    var statusMessageClass = Severity?.ToString().ToLowerInvariant() ?? inferredError;
+    <div class="@(Compact ? $"account-status account-status-{statusMessageClass}" : $"alert alert-{statusMessageClass}")" role="@(Compact && statusMessageClass != "danger" ? "status" : "alert")">
         @DisplayMessage
     </div>
 }
@@ -12,6 +13,8 @@
 
     [Parameter]
     public string? Message { get; set; }
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public AlertStyle? Severity { get; set; }
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;

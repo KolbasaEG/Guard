@@ -1,0 +1,5 @@
+.account-status { margin-bottom: 16px; padding: 8px 10px; border-left: 3px solid; border-radius: 4px; font-size: 14px; overflow-wrap: anywhere; }
+.account-status-danger { border-color: #c33e49; background: color-mix(in srgb, #c33e49 12%, var(--account-surface)); color: var(--account-text); }
+.account-status-success { border-color: #3a9b60; background: color-mix(in srgb, #3a9b60 12%, var(--account-surface)); }
+.account-status-warning { border-color: #b78a3e; background: color-mix(in srgb, #b78a3e 12%, var(--account-surface)); }
+.account-status-info { border-color: #598087; background: color-mix(in srgb, #598087 12%, var(--account-surface)); }

@@ -8,6 +8,7 @@
     
   <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
   <link rel="stylesheet" href="@Assets["app.css"]" />
+  <link rel="stylesheet" href="@Assets["ui-standard.css"]" />
   <link rel="stylesheet" href="@Assets["Guard.styles.css"]" />
   <link rel="icon" type="image/png" href="favicon.png" />
     
@@ -22,6 +23,7 @@
   <!-- Blazor Web App: единый загрузчик для Static SSR и Interactive Server. -->
   <script src="@Assets["_framework/blazor.web.js"]"></script>
   <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
+  <script type="module" src="@Assets["Components/Account/Shared/AccountThemeToggle.razor.js"]"></script>
 </body>
 </html>
 

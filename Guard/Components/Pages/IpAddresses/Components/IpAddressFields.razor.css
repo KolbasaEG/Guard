@@ -1,0 +1,8 @@
+.ip-address-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+.ip-address-fields ::deep .ip-description { grid-column: 1 / -1; }

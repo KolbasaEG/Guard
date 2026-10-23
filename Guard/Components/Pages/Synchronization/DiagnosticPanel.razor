@@ -3,9 +3,9 @@
 @if (Access?.IsRoot == true)
 {
   <div class="sync-diagnostic">
-  <InfoBlock Title="Диагностика API без применения данных" Icon="troubleshoot">
+  <InfoBlock Title="Диагностика API без применения данных" Icon="troubleshoot" Compact="true">
     <EditEntity TItem="DiagnosticForm" Data="form" Name="Диагностика" ContentOnly="true" ReadOnly="busy" Submit="RunAsync">
-      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="10px">
+      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="2px">
         <RadzenFormField Text="Дата изменений" Style="width:240px;max-width:100%;" Variant="Variant.Text">
           <RadzenDatePicker TValue="DateTime?" @bind-Value="form.UpdatedAt" DateFormat="yyyy-MM-dd" Disabled="busy" />
         </RadzenFormField>
@@ -28,12 +28,18 @@
       <RadzenText>Все страницы получены: @(result.FetchComplete ? "да" : "нет"). Анализ завершён: @(result.AnalysisComplete ? "да" : "нет").</RadzenText>
       <RadzenText>Классификаторов: @result.Classifiers; подразделений: @result.Subdivisions; сотрудников: @result.Personnel; нарушений: @result.Issues.</RadzenText>
       <RadzenText>Событий выхода сотрудников: @result.ExitEvents.</RadzenText>
+      @if (!string.IsNullOrWhiteSpace(result.Error))
+      {
+        <details class="diagnostic-help">
+          <summary>Причина незавершённой диагностики</summary>
+          <p>@result.Error</p>
+        </details>
+      }
       @if (result.AnalysisComplete)
       {
         <RadzenText>Протокол записан. Отсутствующие в ответе ссылки, найденные локально, отмечены отдельно. Завершение чтения страниц не подтверждает полноту выдачи API.</RadzenText>
       }
     }
-    @if (!string.IsNullOrEmpty(error)) { <RadzenAlert AlertStyle="AlertStyle.Warning">@error</RadzenAlert> }
   </InfoBlock>
   </div>
 }

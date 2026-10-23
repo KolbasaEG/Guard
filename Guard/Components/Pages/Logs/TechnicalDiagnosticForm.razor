@@ -1,14 +1,16 @@
 @using Guard.Core.Services.DTOs
-<RadzenStack Gap="8px">
+<RadzenStack Class="guard-compact-content" Gap="5px">
   @if (State?.Session is { } active) {
     <RadzenText>Сессия @active.Id, Root: @active.ActorId, окончание UTC: @active.ExpiresAtUtc.ToString("dd.MM.yyyy HH:mm:ss"). Основание: @active.Reason</RadzenText>
   }
-  <RadzenFormField Text="Уровень диагностики"><RadzenDropDown TValue="ApplicationLogLevel" Data="levels" @bind-Value="level" Disabled="Busy" /></RadzenFormField>
-  <RadzenFormField Text="Длительность, мин"><RadzenNumeric TValue="int" Min="1" Max="@(State?.Settings.MaximumDiagnosticMinutes ?? 60)" @bind-Value="minutes" Disabled="Busy" /></RadzenFormField>
-  <RadzenFormField Text="Категория (префикс; пусто — все)"><RadzenTextBox @bind-Value="category" MaxLength="200" Disabled="Busy" /></RadzenFormField>
-  <RadzenFormField Text="Основание, без секретов и персональных данных"><RadzenTextArea @bind-Value="reason" Immediate="true" MaxLength="500" Disabled="Busy" /></RadzenFormField>
+  <div class="technical-fields">
+  <RadzenFormField Text="Уровень диагностики" Variant="Variant.Text"><RadzenDropDown TValue="ApplicationLogLevel" Data="levels" @bind-Value="level" Disabled="Busy" /></RadzenFormField>
+  <RadzenFormField Text="Длительность, мин" Variant="Variant.Text"><RadzenNumeric TValue="int" Min="1" Max="@(State?.Settings.MaximumDiagnosticMinutes ?? 60)" @bind-Value="minutes" Disabled="Busy" /></RadzenFormField>
+  </div>
+  <RadzenFormField Text="Категория (префикс; пусто — все)" Variant="Variant.Text"><RadzenTextBox @bind-Value="category" MaxLength="200" Disabled="Busy" /></RadzenFormField>
+  <RadzenFormField Text="Основание, без секретов и персональных данных" Variant="Variant.Text"><RadzenTextArea @bind-Value="reason" Immediate="true" MaxLength="500" Disabled="Busy" /></RadzenFormField>
   <RadzenText TextStyle="TextStyle.Caption">Например: Guard.Core.Services или Microsoft.EntityFrameworkCore. Подробность действует для категории и вложенных категорий. Продление создаёт новую сессию с новым сроком. Автоматического включения нет.</RadzenText>
-  <RadzenStack Orientation="Orientation.Horizontal" Gap="5px">
+  <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" Gap="0px" Style="row-gap:5px;">
     <RadzenButton Text="@(State?.Session == null ? "Включить диагностику" : "Заменить / продлить")" Icon="bug_report" Click="Start" Disabled="@(Busy || string.IsNullOrWhiteSpace(reason))" />
     <RadzenButton Text="Завершить" Icon="stop" ButtonStyle="ButtonStyle.Secondary" Click="@(() => OnStop.InvokeAsync())" Disabled="@(Busy || State?.Session == null)" />
   </RadzenStack>

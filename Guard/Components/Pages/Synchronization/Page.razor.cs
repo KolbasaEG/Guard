@@ -35,14 +35,12 @@ public partial class Page : IDisposable
   private IReadOnlyList<SynchronizationRunDto> history = [];
   private bool busy, disposed;
   private int selectedTab;
-  private string? error;
   private string? settingsError;
   private string? runsError;
   private bool settingsLoading, runsLoading, settingsNeedReload, savedSettingsNeedReload;
   private bool runsLoaded;
   private Task? runsReload;
   private bool runsReloadRequested;
-  private string? connectionResult;
   private UserAccessSnapshot? loadedAccess;
   private bool ApiSourceChanged => settings != null &&
     SynchronizationSourceRules.SourceChanged(settings.ApiBaseUrl, settings.ApiUsername, form.ApiBaseUrl, form.ApiUsername);
@@ -158,7 +156,7 @@ public partial class Page : IDisposable
   {
     if (busy || settingsLoading || settingsNeedReload || settings == null || disposed) return;
     var ct = lifetime.Token;
-    busy = true; error = null;
+    busy = true;
     try
     {
       if (!TimeOnly.TryParseExact(form.Time, "HH:mm", out var time)) throw new ArgumentException("Укажите время в формате ЧЧ:ММ.");
@@ -167,28 +165,33 @@ public partial class Page : IDisposable
       if (disposed) return;
       form.ApiPassword = "";
       settingsNeedReload = savedSettingsNeedReload = true;
-      connectionResult = null;
-      Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Синхронизация", Detail = sourceChanged
+      Notify(NotificationSeverity.Success, sourceChanged
         ? "Настройки сохранены. Источник API изменён; подтвердите полноту выгрузки отдельно и сохраните настройки повторно."
-        : "Настройки сохранены.",
-        Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" });
+        : "Настройки сохранены.");
       await ReloadSettingsAsync();
       if (!disposed && statusPanel != null) await statusPanel.RefreshAsync();
       await ReloadRunsAsync();
     }
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Сохранение настроек синхронизации"); error = UserOperationErrors.Message(ex); }
+    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Сохранение настроек синхронизации"); Notify(NotificationSeverity.Error, UserOperationErrors.Message(ex)); }
     finally { busy = false; }
   }
   private async Task CheckConnectionAsync()
   {
     if (busy || settingsLoading || disposed) return;
     var ct = lifetime.Token;
-    busy = true; connectionResult = null; error = null;
-    try { await Service.CheckConnectionAsync(ct); if (!disposed) connectionResult = "Подключение и Basic auth подтверждены (ping HTTP 200)."; }
+    busy = true;
+    try { await Service.CheckConnectionAsync(ct); Notify(NotificationSeverity.Success, "Подключение и Basic auth подтверждены (ping HTTP 200)."); }
     catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Проверка соединения API {Operation}", "ApiConnectionProbe"); error = "Не удалось проверить подключение. Проверьте сохранённый адрес, Basic auth и технический журнал."; }
+    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Проверка соединения API {Operation}", "ApiConnectionProbe"); Notify(NotificationSeverity.Error, "Не удалось проверить подключение. Проверьте сохранённый адрес, Basic auth и технический журнал."); }
     finally { busy = false; }
+  }
+
+  private void Notify(NotificationSeverity severity, string detail)
+  {
+    if (disposed) return;
+    Notifications.Notify(new NotificationMessage { Severity = severity, Summary = "Синхронизация", Detail = detail,
+      Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" });
   }
 
   public void Dispose()

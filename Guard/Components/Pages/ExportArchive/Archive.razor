@@ -2,7 +2,8 @@
 @using Guard.Components.Exports
 @attribute [Authorize(Policy = Permissions.Exports.ReadArchive)]
 
-<TableWrapperWithFilterAndAnalytics>
+<div class="export-archive-list">
+<TableWrapperWithFilterAndAnalytics AnalitycsTitle="Сведения об архиве" AnalitycsIcon="inventory_2">
   <Table>
     <RadzenDataGrid TItem="ExportArchiveItem" @ref="grid" Data="filteredData" Count="count" IsLoading="isLoading" LoadData="LoadAsync"
       AllowPaging="true" AllowSorting="true" PageSize="20" PageSizeOptions="@(new int[] { 10, 20, 50, 100 })" Density="Density.Compact"
@@ -11,24 +12,26 @@
       NextPageTitle="Следующая страница" NextPageAriaLabel="К следующей странице" LastPageTitle="Последняя страница" LastPageAriaLabel="К последней странице" PageAriaLabelFormat="К странице {0}"
       PagingSummaryFormat="Страница {0} из {1} (всего {2} записей)" PageSizeText="записей на странице" PagerPosition="PagerPosition.Top" PagerHorizontalAlign="HorizontalAlign.Right">
       <HeaderTemplate>
-        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0px">
-          <RadzenButton Icon="refresh" Click="@(grid.Reload)" Variant="Variant.Text" Style="border-radius:0px;" />
-          <RadzenButton Icon="settings" Text="Срок хранения" Click="ConfigureAsync" Variant="Variant.Text" Style="border-radius:0px;" />
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="width:100%;min-height:36px;">
+          <RadzenStack Class="archive-actions" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0px" Style="background-color:var(--rz-menu-top-item-background-color);border:var(--rz-selectbar-border);">
+            <RadzenButton Icon="refresh" Click="@(grid.Reload)" title="Обновить" aria-label="Обновить архив выгрузок" Variant="Variant.Text" Style="border-radius:0px;" />
+            <RadzenButton Icon="settings" Text="Срок хранения" Click="ConfigureAsync" Variant="Variant.Text" Style="border-radius:0px;" />
+          </RadzenStack>
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Id" SortProperty="Id" Title="Номер выгрузки" Width="250px" />
-        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Author" SortProperty="AuthorName" Title="Автор" />
-        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="ClientIp" SortProperty="ClientIp" Title="IP" />
-        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Area" SortProperty="Area" Title="Область"><Template Context="item">@ExportSchema.Title(item.Area)</Template></RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Format" SortProperty="Format" Title="Формат"><Template Context="item">@(item.Format == ExportFormat.Excel ? "Excel" : "Word")</Template></RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="State" SortProperty="State" Title="Состояние"><Template Context="item">@ExportProgress.StateText(item.State)</Template></RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="CreatedAtUtc" SortProperty="CreatedAtUtc" Title="Создано"><Template Context="item">@FormatTime(item.CreatedAtUtc)</Template></RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="ExpiresAtUtc" SortProperty="ExpiresAtUtc" Title="Хранить до"><Template Context="item">@FormatTime(item.ExpiresAtUtc)</Template></RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="RowCount" SortProperty="RowCount" Title="Строк" />
-        <RadzenDataGridColumn TItem="ExportArchiveItem" Title="Просмотр" Sortable="false" Width="75px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right"><Template Context="item">
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Id" SortProperty="Id" Title="Номер выгрузки" Width="250px"><Template Context="item"><span class="guard-cell-text" tabindex="0">@item.Id</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Author" SortProperty="AuthorName" Title="Автор"><Template Context="item"><span class="guard-cell-text" tabindex="0">@item.Author</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="ClientIp" SortProperty="ClientIp" Title="IP"><Template Context="item"><span class="guard-cell-text" tabindex="0">@item.ClientIp</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Area" SortProperty="Area" Title="Область"><Template Context="item"><span class="guard-cell-text" tabindex="0">@ExportSchema.Title(item.Area)</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="Format" SortProperty="Format" Title="Формат"><Template Context="item"><span class="guard-cell-text" tabindex="0">@(item.Format == ExportFormat.Excel ? "Excel" : "Word")</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="State" SortProperty="State" Title="Состояние"><Template Context="item"><span class="guard-cell-text" tabindex="0">@ExportProgress.StateText(item.State)</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="CreatedAtUtc" SortProperty="CreatedAtUtc" Title="Создано"><Template Context="item"><span class="guard-cell-text" tabindex="0">@FormatTime(item.CreatedAtUtc)</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="ExpiresAtUtc" SortProperty="ExpiresAtUtc" Title="Хранить до"><Template Context="item"><span class="guard-cell-text" tabindex="0">@FormatTime(item.ExpiresAtUtc)</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Property="RowCount" SortProperty="RowCount" Title="Строк"><Template Context="item"><span class="guard-cell-text" tabindex="0">@item.RowCount</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="ExportArchiveItem" Title="Просмотр" TextAlign="TextAlign.Center" Sortable="false" Width="75px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right"><Template Context="item">
           <RadzenButton Icon="visibility" Size="ButtonSize.ExtraSmall" Shade="Shade.Lighter" Variant="Variant.Flat"
-            Disabled="@(item.Sha256 == null || item.State == ExportJobState.Expired)" Click="@(() => ViewAsync(item.Id))" />
+            title="Просмотр архивной копии" aria-label="Просмотр архивной копии" Disabled="@(item.Sha256 == null || item.State == ExportJobState.Expired)" Click="@(() => ViewAsync(item.Id))" />
         </Template></RadzenDataGridColumn>
       </Columns>
     </RadzenDataGrid>
@@ -38,7 +41,7 @@
       AddFilterText="Добавить условие" AddFilterGroupText="Добавить группу" FilterText="Фильтр" EqualsText="Равно" NotEqualsText="Не равно"
       ContainsText="Содержит" DoesNotContainText="Не содержит" StartsWithText="Начинается с" EndsWithText="Заканчивается на"
       GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" LessThanText="Меньше" LessThanOrEqualsText="Меньше или равно"
-      IsNullText="Пусто" IsNotNullText="Не пусто" ClearFilterText="Очистить" ApplyFilterText="Применить" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
+      IsNullText="Не задано" IsNotNullText="Задано" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" InText="В списке" NotInText="Не в списке" ClearFilterText="Очистить" ApplyFilterText="Применить" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
       <Properties>
         <RadzenDataFilterProperty TItem="ExportJob" Property="AuthorName" Title="Автор" />
         <RadzenDataFilterProperty TItem="ExportJob" Property="ClientIp" Title="IP" />
@@ -55,8 +58,9 @@
       </Properties>
     </RadzenDataFilter>
   </Filter>
-  <FilterButtons><RadzenButton Text="Применить" Icon="filter_alt" Click="ApplyAsync" Variant="Variant.Text" /></FilterButtons>
+  <FilterButtons><RadzenButton Text="Применить" Icon="filter_alt" Click="ApplyAsync" Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" Style="border-radius:0px;color:var(--rz-text-color);" /></FilterButtons>
   <Analitycs>
     <RadzenText>Точные копии выгрузок для расследований. Скачивание из архива не предусмотрено.</RadzenText>
   </Analitycs>
 </TableWrapperWithFilterAndAnalytics>
+</div>

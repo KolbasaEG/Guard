@@ -5,9 +5,11 @@
 @attribute [Authorize]
 
 <PageTitle>АИС "Охрана" — Управление ролями</PageTitle>
+<div class="roles-page">
 <PermissionsTransitionPanel />
+<div class="roles-list">
 
-<TableWrapperWithFilterAndAnalytics>
+<TableWrapperWithFilterAndAnalytics ShowAnalitycs="false" TopPaneSize="180px">
   <Table>
     <RadzenDataGrid @ref="grid"
                     IsLoading="@isLoading"
@@ -34,15 +36,15 @@
                     FirstPageTitle="Первая страница"
                     FirstPageAriaLabel="К первой странице"
                     IsEmptyText="Пусто"
-                    IsNotEmptyText="Не пусто"
+                    IsNotEmptyText="Не пусто" IsNullText="Не задано" IsNotNullText="Задано"
                     LastPageAriaLabel="К последней странице"
                     LastPageTitle="Последняя страница"
-                    NextPageTitle="Следующая страница"
+                    NextPageTitle="Следующая страница" NextPageAriaLabel="К следующей странице"
                     NotEqualsText="Не равно"
                     OrOperatorText="Или"
                     PageAriaLabelFormat="К странице {0}"
                     PageSizeText="записей на странице"
-                    PrevPageTitle="Предыдущая страница"
+                    PrevPageTitle="Предыдущая страница" PrevPageAriaLabel="К предыдущей странице"
                     ShowMultiColumnSortingIndex="true"
                     EmptyText="Записи не найдены"
                     FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
@@ -57,20 +59,22 @@
                     PagingSummaryFormat="@pagingSummaryFormat"
                     Style="height:100%;">
       <HeaderTemplate>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Style="width:100%;">
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
-            <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
-            <RadzenButton Icon="add_circle_outline" Visible="@isEditor" Click="@AddClick" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Class="role-list-toolbar" Style="width:100%;min-width:0;">
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Class="role-list-actions" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
+            <RadzenButton Icon="refresh" Click="@(grid.Reload)" title="Обновить" aria-label="Обновить список ролей" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+            <RadzenButton Icon="add_circle_outline" Visible="@isEditor" Click="@AddClick" title="Добавить" aria-label="Добавить роль" ButtonStyle="Radzen.ButtonStyle.Success" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
           </RadzenStack>
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="RoleListDto" Property="Name" SortProperty="Name" Title="Наименование" Width="100%" />
+        <RadzenDataGridColumn TItem="RoleListDto" Property="Name" SortProperty="Name" Title="Наименование" Width="100%" MinWidth="200px">
+          <Template Context="item"><span class="guard-cell-text" tabindex="0">@item.Name</span></Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="RoleListDto" Filterable="false" Sortable="false" Width="60px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
-            <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
+            <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
               <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="Radzen.ButtonSize.ExtraSmall"
-                            Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor"
+                            Shade="Shade.Lighter" Variant="Variant.Flat" Visible="@isEditor" title="Удалить" aria-label="Удалить роль"
                             Click="@(args => GridDeleteButtonClick(args, item))" @onclick:stopPropagation="true" />
             </RadzenStack>
           </Template>
@@ -81,7 +85,7 @@
   <Filter>
     <RadzenDataFilter Style="width:100%;" @ref="dataFilter" Auto="false" Data="@data" TItem="RoleFilterFields"
                       AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
-                      DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
+                      DoesNotContainText="Не содержит" IsEmptyText="Пусто" IsNotEmptyText="Не пусто" IsNullText="Не задано" IsNotNullText="Задано" NotEqualsText="Не равно" OrOperatorText="Или" StartsWithText="Начинается c" LessThanText="Меньше"
                       AddFilterText="Добавить фильтр" AddFilterGroupText="Добавить группу фильтров" LessThanOrEqualsText="Меньше или равно" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive">
       <Properties>
         <RadzenDataFilterProperty TItem="RoleFilterFields" Property="Name" Title="Наименование" />
@@ -91,8 +95,6 @@
   <FilterButtons>
     <RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
   </FilterButtons>
-  <Analitycs />
-  <AnalitycsButtons>
-    <RadzenButton Icon="autorenew" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
-  </AnalitycsButtons>
 </TableWrapperWithFilterAndAnalytics>
+</div>
+</div>

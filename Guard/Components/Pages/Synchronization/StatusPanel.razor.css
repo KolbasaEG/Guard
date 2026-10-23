@@ -1,4 +1,4 @@
-.sync-status { padding: 2px 0; }
+.sync-status { min-width: 0; }
 .sync-status-summary {
   flex: 1 1 420px;
   min-width: 0;
@@ -6,8 +6,12 @@
 .sync-status-line {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: 2px;
   align-items: center;
 }
 .sync-status-summary ::deep p { margin: 0; }
-.sync-status-hint { margin: 6px 0 0; font-size: .85rem; }
+.sync-status-hint { margin: 2px 0 0; font-size: .85rem; overflow-wrap: anywhere; }
+.sync-status ::deep .sync-status-actions { min-width: 0; max-width: 100%; }
+.sync-status ::deep .rz-button { border-radius: 0; }
+.sync-status ::deep .rz-button.rz-light.rz-variant-text { color: var(--rz-menu-top-item-color); }
+.sync-status ::deep .rz-form-field-content > .rz-datepicker { width: 100%; }

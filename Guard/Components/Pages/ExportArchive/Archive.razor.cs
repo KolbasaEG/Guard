@@ -23,7 +23,7 @@ public partial class Archive : IDisposable
   private ExportFilter? applied; private CancellationTokenSource? loading; private bool disposed;
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    if (firstRender) { try { await Time.InitializeAsync(); await grid.Reload(); if (!disposed) StateHasChanged(); } catch (Exception ex) { Error(ex); } }
+    if (firstRender && !disposed) { try { await Time.InitializeAsync(); if (disposed) return; await grid.Reload(); if (!disposed) StateHasChanged(); } catch (Exception ex) { if (!disposed) Error(ex); } }
   }
   protected async Task LoadAsync(LoadDataArgs args)
   {
@@ -46,10 +46,10 @@ public partial class Archive : IDisposable
   }
   protected async Task ConfigureAsync()
   {
-    var result = await Dialogs.OpenAsync<Retention>("", null, new DialogOptions { Width = "500px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-    if (result is true) Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Хранение", Detail = "Новый срок применяется к новым выгрузкам.", Style = NotificationStyle });
+    var result = await Dialogs.OpenAsync<Retention>("", null, new DialogOptions { Width = "500px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
+    if (!disposed && result is true) Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Хранение", Detail = "Новый срок применяется к новым выгрузкам.", Style = NotificationStyle });
   }
-  protected Task ViewAsync(Guid id) => Dialogs.OpenAsync<Preview>("", new Dictionary<string, object?> { ["Id"] = id }, new DialogOptions { Width = "1200px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+  protected Task ViewAsync(Guid id) => Dialogs.OpenAsync<Preview>("", new Dictionary<string, object?> { ["Id"] = id }, new DialogOptions { Width = "1200px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
   protected string FormatTime(DateTimeOffset value) => Time.Zone == null ? "…" : TimeZoneInfo.ConvertTime(value, Time.Zone).ToString("dd.MM.yyyy HH:mm");
   private const string NotificationStyle = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;";
   private void Error(Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Архив выгрузок"); Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Архив выгрузок", Detail = UserOperationErrors.Message(ex), Style = NotificationStyle }); }

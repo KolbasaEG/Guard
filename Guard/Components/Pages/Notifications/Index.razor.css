@@ -1,7 +1,9 @@
-.notification-list { height: 100%; min-height: 0; min-width: 0; width: 100%; }
+.notification-list { height:100%; min-height:0; min-width:0; width:100%; padding:2px; box-sizing:border-box; container-type:inline-size; }
 .notification-list ::deep .rz-custom-header { flex: 1; min-width: 0; }
+.notification-list ::deep .notification-status { --rz-selectbar-border-radius:0px; }
 .notification-list ::deep .notification-status .rz-state-active { color: var(--rz-text-color); font-weight: 600; }
-@media (max-width: 950px) {
-  .notification-list ::deep .notification-toolbar { flex-wrap: wrap !important; gap: 5px; }
+@container (max-width: 950px) {
+  .notification-list ::deep .notification-toolbar { flex-wrap: wrap !important; row-gap:5px !important; }
   .notification-list ::deep .notification-status { position: static !important; transform: none !important; width: 100%; flex-basis: 100%; order: -1; text-align: center; }
+  .notification-list ::deep .notification-actions { flex-wrap:wrap !important; row-gap:5px !important; }
 }

@@ -1,23 +1,22 @@
-@inject IDataExportService Service
-@inject ILogger<ArchiveInfo> Logger
-
 <EntityInfo Name="СВЕДЕНИЯ О ВЫГРУЗКЕ">
-  @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
-  @if (details != null) {
-    <RadzenText>Номер: @Id</RadzenText>
-    <RadzenText>@details.Conditions</RadzenText>
-    <RadzenText>Размер: @details.Size байт</RadzenText>
-    <RadzenText Style="overflow-wrap:anywhere;">SHA-256: @details.Sha256</RadzenText>
-    <RadzenText>Начало передачи UTC: @details.DeliveryStartedAtUtc</RadzenText>
-    <RadzenText>Завершение передачи UTC: @details.DeliveryCompletedAtUtc</RadzenText>
-    <RadzenText>Результат: @(details.DeliverySucceeded == true ? "Файл передан сервером" : details.DeliverySucceeded == false ? "Передача не завершена" : details.DeliveryStartedAtUtc != null ? "Результат передачи неизвестен" : "Передача не начиналась")</RadzenText>
-  }
+  <LoadingContainer IsLoading="loading">
+    <RadzenStack Class="guard-compact-content" Gap="5px" Style="min-width:0;overflow-y:auto;">
+      @if (error != null) { <CompactNotice Severity="AlertStyle.Danger">@error</CompactNotice> }
+      @if (details != null) {
+        <InfoBlock Compact="true" Title="Выгрузка" Icon="description" Style="min-width:0;flex-shrink:0;">
+          <p>Номер: @Id</p>
+          <p>@details.Conditions</p>
+        </InfoBlock>
+        <InfoBlock Compact="true" Title="Архивная копия" Icon="inventory_2" Style="min-width:0;flex-shrink:0;">
+          <p>Размер: @(details.Size?.ToString() ?? "не задано") байт</p>
+          <p>SHA-256: @(details.Sha256 ?? "не задано")</p>
+        </InfoBlock>
+        <InfoBlock Compact="true" Title="Передача файла" Icon="file_download" Style="min-width:0;flex-shrink:0;">
+          <p>Начало передачи (UTC): @FormatTime(details.DeliveryStartedAtUtc)</p>
+          <p>Завершение передачи (UTC): @FormatTime(details.DeliveryCompletedAtUtc)</p>
+          <p>Результат: @(details.DeliverySucceeded == true ? "Файл передан сервером" : details.DeliverySucceeded == false ? "Передача не завершена" : details.DeliveryStartedAtUtc != null ? "Результат передачи неизвестен" : "Передача не начиналась")</p>
+        </InfoBlock>
+      }
+    </RadzenStack>
+  </LoadingContainer>
 </EntityInfo>
-@code {
-  [Parameter] public Guid Id { get; set; }
-  private ExportArchiveDetails? details; private string? error;
-  protected override async Task OnInitializedAsync() {
-    try { details = await Service.GetArchiveDetailsAsync(Id); }
-    catch (Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Сведения архива {ExportId}", Id); error = UserOperationErrors.Message(ex); }
-  }
-}

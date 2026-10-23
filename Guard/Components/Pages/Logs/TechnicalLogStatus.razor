@@ -1,9 +1,6 @@
 @using Guard.Core.Services.DTOs
 @if (State != null) {
-  <RadzenStack Gap="5px">
-    <RadzenAlert AlertStyle="@(State.Health.Status == "Ready" ? AlertStyle.Success : State.Health.Status == "Degraded" ? AlertStyle.Warning : AlertStyle.Danger)" AllowClose="false" ShowIcon="true">
-      @StatusText(State.Health.Status). Работа системы продолжается; обязательный аудит действует по своим правилам.
-    </RadzenAlert>
+  <RadzenStack Gap="5px" Style="container-type:inline-size;min-width:0;">
     @if (State.Health.LostEvents > 0) {
       <RadzenAlert AlertStyle="AlertStyle.Warning" AllowClose="false">Зафиксировано потерь: @State.Health.LostEvents. Это накопительный счётчик; он сохраняется после восстановления. Проверьте обстоятельства потери событий.</RadzenAlert>
     }
@@ -31,7 +28,6 @@
 @code {
   [Parameter] public TechnicalLogState? State { get; set; }
   private static string Stamp(DateTime? value) => value?.ToString("dd.MM.yyyy HH:mm:ss") ?? "не проверено";
-  private static string StatusText(string value) => value switch { "Ready" => "Техническое логирование исправно", "Degraded" => "Техническое логирование требует внимания", _ => "Аварийное состояние технического логирования" };
   private static string ProblemText(string value) => value switch {
     "WorkerStale" => "Нет свежего цикла доставки", "LocalProbeStale" => "Нет свежей проверки локальной записи",
     "DatabaseProbeStale" => "Нет свежей проверки INSERT", "Quarantine" => "Есть повреждённые файлы",

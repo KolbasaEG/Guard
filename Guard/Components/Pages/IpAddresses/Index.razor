@@ -25,7 +25,7 @@
           }
 
 
-          <RadzenStack Class="ip-list-status" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="5px" Style="position:absolute; left:50%; transform:translateX(-50%);">
+          <RadzenStack Class="ip-list-status" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Gap="0px" Style="position:absolute; left:50%; transform:translateX(-50%);">
             <RadzenSelectBar TValue="DataViewMode" Size="ButtonSize.Medium" @bind-Value="@currentMode" Change="() => ResetPageAsync()" Style="background-color: var(--rz-menu-top-item-background-color); border-radius: 0px;">
               <Items>
                 <RadzenSelectBarItem Value="@(DataViewMode.Archived)" Text="Архив" Style="border-radius:0px; width:105px; text-align:center;" />
@@ -49,12 +49,18 @@
         </RadzenStack>
       </HeaderTemplate>
       <Columns>
-        <RadzenDataGridColumn TItem="IpAddressDto" Property="SubdivisionName" SortProperty="Subdivision.Name" Title="Подразделения" Frozen="true" Width="200px" />
-        <RadzenDataGridColumn TItem="IpAddressDto" Property="Address" SortProperty="Address" Title="IP-адрес" Width="200px" />
-        <RadzenDataGridColumn TItem="IpAddressDto" Property="Description" SortProperty="Description" Title="Описание" Frozen="true" Width="100%" />
+        <RadzenDataGridColumn TItem="IpAddressDto" Property="SubdivisionName" SortProperty="Subdivision.Name" Title="Подразделения" Frozen="true" Width="200px">
+          <Template Context="item"><span class="guard-cell-text" tabindex="0">@item.SubdivisionName</span></Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="IpAddressDto" Property="Address" SortProperty="Address" Title="IP-адрес" Width="200px">
+          <Template Context="item"><span class="guard-cell-text" tabindex="0">@item.Address</span></Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="IpAddressDto" Property="Description" SortProperty="Description" Title="Описание" Width="100%">
+          <Template Context="item"><span class="guard-cell-text" tabindex="0">@item.Description</span></Template>
+        </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="IpAddressDto" Filterable="false" Sortable="false" Width="120px" Frozen="true" TextAlign="TextAlign.Center" FrozenPosition="FrozenColumnPosition.Right">
           <Template Context="item">
-            <RadzenStack Gap="2px;" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
+            <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Style="width:100%;">
               @if ((Status)item.Status is Status.Inserted or Status.Modified)
               {
                 <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="edit" Size="Radzen.ButtonSize.ExtraSmall"

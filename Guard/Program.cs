@@ -142,6 +142,7 @@ try {
   // =====================================================
   app.UseForwardedHeaders();
   app.UseStaticFiles();
+  Guard.Web.ServicePages.ServicePageApplicationBuilderExtensions.UseGuardNotFoundPage(app);
   app.UseRouting();
   // Скомпилированные публичные ресурсы, включая версионированный загрузчик Blazor.
   app.MapStaticAssets().ShortCircuit();

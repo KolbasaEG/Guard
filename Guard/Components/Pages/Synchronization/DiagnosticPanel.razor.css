@@ -1,5 +1,10 @@
-.diagnostic-hint { margin: 8px 0 0; font-size: .85rem; }
+.sync-diagnostic { min-width: 0; }
+.diagnostic-hint { margin: 2px 0 0; font-size: .85rem; overflow-wrap: anywhere; }
 .sync-diagnostic ::deep form { height: auto !important; }
-.diagnostic-help { margin-top: 6px; font-size: .85rem; }
+.sync-diagnostic ::deep form fieldset { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sync-diagnostic ::deep .rz-form-field-content > .rz-datepicker { width: 100%; }
+.sync-diagnostic ::deep .rz-button { border-radius: 0; }
+.sync-diagnostic ::deep p { margin: 0; overflow-wrap: anywhere; }
+.diagnostic-help { margin-top: 2px; font-size: .85rem; }
 .diagnostic-help summary { cursor: pointer; }
-.diagnostic-help p { margin: 6px 0; }
+.diagnostic-help p { margin: 2px 0 0; }

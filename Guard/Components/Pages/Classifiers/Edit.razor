@@ -2,8 +2,8 @@
 @using Guard.Core.Services.DTOs
 @attribute [Authorize]
 
-<EditEntity ReadOnly="@(Access?.Has(Permissions.Classifiers.Manage) != true)" TItem="ClassifierDetailsDto" Data="@item" ShowSaveButton="@(Access?.Has(Permissions.Classifiers.Manage) == true)" Submit="@FormSubmit" ShowInfoButton="false" IsLoading="isLoading" IsSaving="isSaving" OnCancelButtonClick="HandleCancelButtonClick">
-  <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="width:100%;">
+<EditEntity Name="@(Access?.Has(Permissions.Classifiers.Manage) == true ? "Редактирование классификатора" : "Просмотр классификатора")" ReadOnly="@(Access?.Has(Permissions.Classifiers.Manage) != true)" TItem="ClassifierDetailsDto" Data="@item" ShowSaveButton="@(Access?.Has(Permissions.Classifiers.Manage) == true)" Submit="@FormSubmit" ShowInfoButton="false" IsLoading="isLoading" IsSaving="isSaving" OnCancelButtonClick="HandleCancelButtonClick">
+  <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;min-width:0;">
     <RadzenFormField Text="Наименование справочника" Variant="Variant.Text" Style="width:100%;">
       <ChildContent>
         <RadzenTextBox style="display: block; width: 100%" @bind-Value="@item.ClassifierName" Name="ClassifierName" Placeholder="например, Тип документа" />
@@ -13,23 +13,25 @@
       </Helper>
     </RadzenFormField>
 
-    <RadzenFormField Text="Тип справочника" Variant="Variant.Text" Style="width:100%;">
-      <ChildContent>
-        <RadzenNumeric style="display: block; width: 100%" @bind-Value="@item.Type" Name="Type" Min="1" />
-      </ChildContent>
-      <Helper>
-        <RadzenRequiredValidator Component="Type" Text="Обязательно для заполнения!" />
-      </Helper>
-    </RadzenFormField>
+    <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" Style="width:100%;min-width:0;">
+      <RadzenFormField Text="Тип справочника" Variant="Variant.Text" Style="flex:1;min-width:min(100%,200px);">
+        <ChildContent>
+          <RadzenNumeric style="display: block; width: 100%" @bind-Value="@item.Type" Name="Type" Min="1" />
+        </ChildContent>
+        <Helper>
+          <RadzenRequiredValidator Component="Type" Text="Обязательно для заполнения!" />
+        </Helper>
+      </RadzenFormField>
 
-    <RadzenFormField Text="Код значения" Variant="Variant.Text" Style="width:100%;">
-      <ChildContent>
-        <RadzenNumeric style="display: block; width: 100%" @bind-Value="@item.Code" Name="Code" Min="1" />
-      </ChildContent>
-      <Helper>
-        <RadzenRequiredValidator Component="Code" Text="Обязательно для заполнения!" />
-      </Helper>
-    </RadzenFormField>
+      <RadzenFormField Text="Код значения" Variant="Variant.Text" Style="flex:1;min-width:min(100%,200px);">
+        <ChildContent>
+          <RadzenNumeric style="display: block; width: 100%" @bind-Value="@item.Code" Name="Code" Min="1" />
+        </ChildContent>
+        <Helper>
+          <RadzenRequiredValidator Component="Code" Text="Обязательно для заполнения!" />
+        </Helper>
+      </RadzenFormField>
+    </RadzenStack>
 
     <RadzenFormField Text="Отображаемое значение" Variant="Variant.Text" Style="width:100%;">
       <ChildContent>
@@ -40,7 +42,7 @@
       </Helper>
     </RadzenFormField>
 
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="10px" Style="margin-top: 10px; margin-bottom: 5px;">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="2px">
       <RadzenSwitch @bind-Value="@item.IsActive" Name="IsActive" />
       <RadzenLabel Text="Активен" Component="IsActive" />
     </RadzenStack>

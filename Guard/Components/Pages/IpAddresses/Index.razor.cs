@@ -146,7 +146,7 @@ namespace Guard.Components.Pages.IpAddresses
     protected async Task AddClick(MouseEventArgs args)
     {
       if (!isEditor || disposed) return;
-      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "640px", Style = "max-width:calc(100vw - 24px);", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions() { Width = "640px", Style = "max-width:calc(100vw - 10px);max-height:calc(100dvh - 10px);", ShowTitle = false, ContentCssClass = "guard-ip-dialog-content" });
       if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result) && !disposed)
       {
         ShowSuccessNotification("Добавлена новая запись!");
@@ -158,13 +158,13 @@ namespace Guard.Components.Pages.IpAddresses
     {
       if (disposed || AccessSnapshot?.Has(Permissions.IpAddresses.Read) != true) return;
       await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id }, { "ReadOnly", true } },
-        new DialogOptions() { Width = "640px", Style = "max-width:calc(100vw - 24px);", ShowTitle = false, ContentCssClass = "rz-p-1" });
+        new DialogOptions() { Width = "640px", Style = "max-width:calc(100vw - 10px);max-height:calc(100dvh - 10px);", ShowTitle = false, ContentCssClass = "guard-ip-dialog-content" });
     }
 
     protected async Task EditRow(IpAddressDto item)
     {
       if (!isEditor || disposed || (Status)item.Status is not (Status.Inserted or Status.Modified)) return;
-      var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "640px", Style = "max-width:calc(100vw - 24px);", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object?> { { "Id", item.Id } }, new DialogOptions() { Width = "640px", Style = "max-width:calc(100vw - 10px);max-height:calc(100dvh - 10px);", ShowTitle = false, ContentCssClass = "guard-ip-dialog-content" });
 
       if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result) && !disposed)
       {

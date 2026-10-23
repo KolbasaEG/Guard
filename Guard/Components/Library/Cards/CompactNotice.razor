@@ -1,0 +1,8 @@
+<div class="compact-notice compact-notice-@Severity.ToString().ToLowerInvariant()" role="@(Severity == AlertStyle.Danger ? "alert" : "status")">
+  @ChildContent
+</div>
+
+@code {
+  [Parameter] public AlertStyle Severity { get; set; } = AlertStyle.Warning;
+  [Parameter] public RenderFragment? ChildContent { get; set; }
+}

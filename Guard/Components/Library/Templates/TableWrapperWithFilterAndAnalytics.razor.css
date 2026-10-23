@@ -1,6 +1,20 @@
 .table-template {
   height: 100%;
   min-height: 0;
+  min-width: 0;
+}
+
+.table-template ::deep .rz-splitter-pane { overflow: hidden; min-width: 0; min-height: 0; }
+.table-template ::deep .rz-splitter-horizontal > .rz-splitter-bar { width: 5px; }
+.table-template ::deep .rz-splitter-vertical > .rz-splitter-bar { height: 5px; }
+
+/* Min у Radzen ограничивает перетаскивание; CSS сохраняет минимум и при изменении окна. */
+.table-template ::deep .analysis-splitter.rz-splitter-horizontal > .rz-splitter-pane:not(.rz-splitter-pane-collapsed) {
+  flex-shrink: 1;
+  min-width: 320px;
+}
+.table-template ::deep .analysis-splitter.rz-splitter-horizontal > .rz-splitter-pane:last-child:not(.rz-splitter-pane-collapsed) {
+  min-width: 420px;
 }
 
 .table-template ::deep .rz-tabview-panels {

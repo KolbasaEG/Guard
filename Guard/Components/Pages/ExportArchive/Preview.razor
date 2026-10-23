@@ -1,37 +1,25 @@
-@inject IDataExportService Service
-@inject ILogger<Preview> Logger
-@implements IDisposable
-
+<div class="archive-preview" @ref="element">
 <ViewEntity TItem="ExportPreview" Data="preview" Name="ПРОСМОТР АРХИВНОЙ КОПИИ" IsLoading="loading" ShowInfoButton="true" OnInfoClick="InfoAsync" OnCancelButtonClick="@(() => Dialogs.Close(null))">
-  <RadzenStack Gap="8px" Style="overflow:auto;">
-    @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="8px">
-      <RadzenFormField Text="Часть"><RadzenNumeric TValue="int" @bind-Value="part" Min="1" /></RadzenFormField>
-      <RadzenButton Text="Открыть" Click="@(() => LoadAsync(0))" Disabled="loading" />
-      <RadzenButton Text="Предыдущие строки" Click="@(() => LoadAsync(Math.Max(0, skip - 100)))" Disabled="@(loading || skip == 0)" />
-      <RadzenButton Text="Следующие строки" Click="@(() => LoadAsync(skip + 100))" Disabled="@(loading || preview?.HasMore != true)" />
+  <div class="preview-layout">
+    @if (error != null) { <CompactNotice Severity="AlertStyle.Danger">@error</CompactNotice> }
+    <RadzenStack Class="preview-controls" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0px" Wrap="FlexWrap.Wrap">
+      <RadzenFormField Text="Часть" Variant="Variant.Text" Style="width:100px;margin-right:5px;"><RadzenNumeric TValue="int" @bind-Value="part" Min="1" Disabled="loading" Style="width:100%;" /></RadzenFormField>
+      <RadzenButton Text="Открыть" Icon="folder_open" Click="@(() => LoadAsync(0))" Disabled="loading" Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" Style="border-radius:0px;color:var(--rz-text-color);" />
+      <RadzenButton Text="Предыдущие строки" Icon="chevron_left" Click="@(() => LoadAsync(Math.Max(0, skip - 100)))" Disabled="@(loading || skip == 0)" Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" Style="border-radius:0px;color:var(--rz-text-color);" />
+      <RadzenButton Text="Следующие строки" Icon="chevron_right" Click="@(() => LoadAsync(skip + 100))" Disabled="@(loading || preview?.HasMore != true)" Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" Style="border-radius:0px;color:var(--rz-text-color);" />
     </RadzenStack>
     @if (preview != null) {
-      <table class="table"><thead><tr>@foreach (var name in preview.Headers) { <th>@name</th> }</tr></thead>
-        <tbody>@foreach (var row in preview.Rows) { <tr>@foreach (var cell in row) { <td>@cell</td> }</tr> }</tbody></table>
+      <RadzenDataGrid TItem="IReadOnlyList<string>" Data="preview.Rows" AllowPaging="false" AllowSorting="false" AllowColumnResize="true" Density="Density.Compact" ColumnWidth="200px" EmptyText="Записи не найдены" Style="flex:1;min-height:0;min-width:0;">
+        <Columns>
+          @for (var i = 0; i < preview.Headers.Count; i++) {
+            var columnIndex = i;
+            <RadzenDataGridColumn TItem="IReadOnlyList<string>" Title="@preview.Headers[i]">
+              <Template Context="row"><span class="guard-cell-text" tabindex="0">@(columnIndex < row.Count ? row[columnIndex] : "")</span></Template>
+            </RadzenDataGridColumn>
+          }
+        </Columns>
+      </RadzenDataGrid>
     }
-  </RadzenStack>
+  </div>
 </ViewEntity>
-@code {
-  [Parameter] public Guid Id { get; set; }
-  private ExportPreview? preview; private int part = 1, skip; private bool loading; private string? error;
-  private readonly CancellationTokenSource cts = new();
-  protected override Task OnInitializedAsync() => LoadAsync(0);
-  private async Task LoadAsync(int offset)
-  {
-    loading = true; error = null;
-    try { preview = await Service.PreviewAsync(Id, part, offset, cts.Token); skip = offset; }
-    catch (OperationCanceledException) when (cts.IsCancellationRequested) { }
-    catch (Exception ex) { preview = null; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Просмотр архивной копии {ExportId}", Id); error = UserOperationErrors.Message(ex); }
-    finally { loading = false; }
-  }
-  [Inject] public DialogService Dialogs { get; set; } = default!;
-  private Task InfoAsync() => Dialogs.OpenAsync<ArchiveInfo>("", new Dictionary<string, object?> { ["Id"] = Id },
-    new DialogOptions { Width = "800px", ShowTitle = false, ContentCssClass = "rz-p-1" });
-  public void Dispose() { cts.Cancel(); cts.Dispose(); }
-}
+</div>

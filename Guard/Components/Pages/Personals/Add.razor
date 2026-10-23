@@ -3,7 +3,9 @@
 @attribute [Authorize]
 
 <CreateEntity TItem="PersonalEditorDto" Data="@item" Name="Добавление сотрудника" Submit="@FormSubmit" ShowSaveButton="@loaded" OnCancelButtonClick="HandleCancelButtonClick" IsLoading="@isLoading">
+  <RadzenStack Gap="5px" Style="width:100%;min-width:0;">
   @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
   <Guard.Components.Pages.Personals.Components.PersonalFields Item="@item" Subdivisions="@subdivisions" />
+  </RadzenStack>
 </CreateEntity>
 </Guard.Components.Layout.Components.AccessDialog>

@@ -2,34 +2,29 @@
 @attribute [Authorize]
 @attribute [Authorize(Policy = Guard.Core.Identity.Permissions.Logs.Read)]
 
-<TableWrapperWithFilterAndAnalytics AnalitycsTitle="Техническое логирование" AnalitycsIcon="monitor_heart" TopPaneSize="420px">
+<div class="logs-list">
+<TableWrapperWithFilterAndAnalytics AnalitycsTitle="Техническое логирование" AnalitycsIcon="monitor_heart" AnalitycsFillContent="true" TopPaneSize="420px">
   <Table>
     <RadzenDataGrid @ref="grid" IsLoading=@isLoading LoadData="@LoadData" RowSelect="@EditRow" Count="@count" Data="@(filteredData)" TItem="LogEntryDto" ColumnWidth="200px" AllowPaging="true" AllowSorting="true" PageSizeOptions=@(new int[] { 10, 20, 30, 50, 100 }) PageSize="100"
                     AllowColumnResize="true" Density="Density.Compact" AndOperatorText="И" ApplyFilterText="Применить" ClearFilterText="Очистить" ContainsText="Содержит" FilterText="Фильтр" EndsWithText="Заканчивается на" EqualsText="Равно"
                     DoesNotContainText="Не содержит" FirstPageTitle="Первая страница" FirstPageAriaLabel="К первой странице" IsEmptyText="Пусто" IsNotEmptyText="Не пусто"
-                    LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NotEqualsText="Не равно" OrOperatorText="Или"
-                    PageAriaLabelFormat="К странице {0}" PageSizeText="записей на странице" PrevPageTitle="Предидущая страница" ShowMultiColumnSortingIndex="true"
+                    LastPageAriaLabel="К последней странице" LastPageTitle="Последняя страница" NextPageTitle="Следующая страница" NextPageAriaLabel="К следующей странице" PrevPageAriaLabel="К предыдущей странице" IsNullText="Не задано" IsNotNullText="Задано" NotEqualsText="Не равно" OrOperatorText="Или"
+                    PageAriaLabelFormat="К странице {0}" PageSizeText="записей на странице" PrevPageTitle="Предыдущая страница" ShowMultiColumnSortingIndex="true"
                     EmptyText="Записи не найдены" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" StartsWithText="Начинается c" LessThanText="Меньше" LessThanOrEqualsText="Меньше или равно"
                     PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.Top" GreaterThanText="Больше" GreaterThanOrEqualsText="Больше или равно" ShowPagingSummary="true" PagingSummaryFormat="@pagingSummaryFormat"
                     Style="height:100%;">
       <HeaderTemplate>
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
-            <RadzenMenu>
-              <RadzenMenuItem Text="Меню" Icon="menu" Style="border: var(--rz-selectbar-border); font-weight:600;">
-              </RadzenMenuItem>
-            </RadzenMenu>
-          </RadzenStack>
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="5px">
+        <RadzenStack Class="log-list-toolbar" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="width:100%;position:relative;min-height:36px;">
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Class="log-list-status" Gap="0px" Style="position:absolute;left:50%;transform:translateX(-50%);">
             <RadzenSelectBar TValue="bool" Value="@isRealtime" ValueChanged="@OnRealtimeModeChanged">
               <Items>
                 <RadzenSelectBarItem Text="По запросу" Value="false" Icon="touch_app" />
-                <RadzenSelectBarItem Text="Real-time (5 сек)" Value="true" Icon="sync" />
+                <RadzenSelectBarItem Text="Автообновление (5 сек)" Value="true" Icon="sync" />
               </Items>
             </RadzenSelectBar>
           </RadzenStack>
-          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Gap="0px" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
-            <RadzenButton Icon="refresh" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
+          <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End" Class="log-list-actions" Gap="0px" Style="background-color: var(--rz-menu-top-item-background-color); border: var(--rz-selectbar-border);">
+            <RadzenButton Icon="refresh" title="Обновить" aria-label="Обновить технический журнал" Click="@(grid.Reload)" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
           </RadzenStack>
         </RadzenStack>
       </HeaderTemplate>
@@ -45,22 +40,22 @@
             <RadzenBadge BadgeStyle="@GetLayerBadgeStyle(log.Layer)" Text="@(log.Layer ?? "System")" IsPill="true" />
           </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="LogEntryDto" Property="UserId" SortProperty="UserId" Title="Пользователь" Width="150px" />
-        <RadzenDataGridColumn TItem="LogEntryDto" Property="ClientIp" SortProperty="ClientIp" Title="IP-адрес" Width="130px" />
-        <RadzenDataGridColumn TItem="LogEntryDto" Property="CorrelationId" SortProperty="CorrelationId" Title="Корреляция" Width="200px" />
-        <RadzenDataGridColumn TItem="LogEntryDto" Property="SourceContext" SortProperty="SourceContext" Title="Категория" Width="240px" />
-        <RadzenDataGridColumn TItem="LogEntryDto" Property="DiagnosticSessionId" SortProperty="DiagnosticSessionId" Title="Сессия диагностики" Width="240px" />
-        <RadzenDataGridColumn TItem="LogEntryDto" Property="RunId" SortProperty="RunId" Title="Запуск" Width="180px" />
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="UserId" SortProperty="UserId" Title="Пользователь" Width="150px" ><Template Context="log"><span class="guard-cell-text" tabindex="0">@log.UserId</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="ClientIp" SortProperty="ClientIp" Title="IP-адрес" Width="130px" ><Template Context="log"><span class="guard-cell-text" tabindex="0">@log.ClientIp</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="CorrelationId" SortProperty="CorrelationId" Title="Корреляция" Width="200px" ><Template Context="log"><span class="guard-cell-text" tabindex="0">@log.CorrelationId</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="SourceContext" SortProperty="SourceContext" Title="Категория" Width="240px" ><Template Context="log"><span class="guard-cell-text" tabindex="0">@log.SourceContext</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="DiagnosticSessionId" SortProperty="DiagnosticSessionId" Title="Сессия диагностики" Width="240px" ><Template Context="log"><span class="guard-cell-text" tabindex="0">@log.DiagnosticSessionId</span></Template></RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="LogEntryDto" Property="RunId" SortProperty="RunId" Title="Запуск" Width="180px" ><Template Context="log"><span class="guard-cell-text" tabindex="0">@log.RunId</span></Template></RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="LogEntryDto" Property="Message" SortProperty="Message" Title="Сообщение" Width="400px">
           <Template Context="log">
-            <span style="white-space: pre-wrap; word-break: break-word;">@log.Message</span>
+            <span class="guard-cell-text" tabindex="0">@log.Message</span>
           </Template>
         </RadzenDataGridColumn>
         <RadzenDataGridColumn TItem="LogEntryDto" Property="Exception" SortProperty="Exception" Title="Исключение" Width="300px">
           <Template Context="log">
             @if (!string.IsNullOrEmpty(log.Exception))
             {
-              <span style="color: var(--rz-danger); font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; word-break: break-all;">
+              <span class="guard-cell-text" tabindex="0" style="color:var(--rz-danger);">
                 @log.Exception
               </span>
             }
@@ -114,7 +109,11 @@
     <RadzenButton Icon="filter_alt" Text="Применить" Click="ApplyFilter" ButtonStyle="Radzen.ButtonStyle.Light" Size="Radzen.ButtonSize.Medium" Variant="Variant.Text" Style="border-radius:0px;" />
   </FilterButtons>
   <Analitycs>
-    <TechnicalLoggingPanel />
+    <TechnicalLoggingPanel @ref="technicalPanel" HeaderChanged="OnTechnicalHeaderChanged" />
   </Analitycs>
+  <AnalitycsButtons>
+    <TechnicalLoggingHeader State="technicalHeader" OnRefresh="RefreshTechnicalPanel" />
+  </AnalitycsButtons>
   
 </TableWrapperWithFilterAndAnalytics>
+</div>

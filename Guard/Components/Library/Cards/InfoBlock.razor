@@ -1,15 +1,16 @@
-<RadzenCard Variant="Variant.Outlined" Style="@("padding:10px; border-radius:0px;" + Style)">
-  <RadzenStack Orientation="Orientation.Vertical" Gap="10px" Style="height:100%;width:100%;">
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Style="width:100%;padding:5px;padding-top:0px;border-bottom:var(--rz-input-focus-border);">
-      <RadzenIcon Icon="@Icon" />
-      <RadzenText TextStyle="TextStyle.Body1"> <strong>@(Title.ToUpper())</strong></RadzenText>
+<RadzenCard Class="@(Compact ? "guard-info-block" : null)" Variant="Variant.Outlined" Style="@($"padding:{(Compact ? 5 : 10)}px; border-radius:0px;" + Style)">
+  <RadzenStack Orientation="Orientation.Vertical" Gap="@(Compact ? "5px" : "10px")" Style="height:100%;width:100%;min-width:0;">
+    <RadzenStack Class="guard-info-block-header" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Gap="10px" Style="width:100%;min-width:0;padding:5px 0;border-bottom:var(--rz-input-focus-border);">
+      <RadzenIcon Icon="@Icon" Style="flex-shrink:0;" />
+      <RadzenText TextStyle="TextStyle.Body1" Style="margin:0;min-width:0;overflow-wrap:anywhere;"> <strong>@(Title.ToUpper())</strong></RadzenText>
     </RadzenStack>
-    <RadzenStack Orientation="Orientation.Vertical"  JustifyContent="JustifyContent.Start" Gap="0px;" Style="height:100%;width:100%;">
+    <RadzenStack Orientation="Orientation.Vertical" JustifyContent="JustifyContent.Start" Gap="@(Compact ? "2px" : "0px")" Style="height:100%;width:100%;min-width:0;">
       @ChildContent
     </RadzenStack>
   </RadzenStack>
 </RadzenCard>
 @code {
+  [Parameter] public bool Compact { get; set; }
   [Parameter] public RenderFragment? ChildContent { get; set; }
   [Parameter]
   public string Title { get; set; } = "";

@@ -2,7 +2,7 @@
 
 @if (CanEdit)
 {
-  <EditEntity TItem="SubdivisionDetailsDto" Data="Item" Name="РЕДАКТИРОВАНИЕ ПОДРАЗДЕЛЕНИЯ"
+  <EditEntity TItem="SubdivisionDetailsDto" Data="Item" Name="Редактирование подразделения"
               Submit="Submit" ShowInfoButton="true" OnInfoClick="OnInfoClick"
               IsLoading="IsLoading" IsSaving="IsSaving" OnCancelButtonClick="OnCancel">
     <SubdivisionFields Item="Item" OrganTypes="OrganTypes" StatusClassifiers="StatusClassifiers" />
@@ -10,7 +10,7 @@
 }
 else
 {
-  <ViewEntity TItem="SubdivisionDetailsDto" Data="Item" Name="ПРОСМОТР ПОДРАЗДЕЛЕНИЯ"
+  <ViewEntity TItem="SubdivisionDetailsDto" Data="Item" Name="Просмотр подразделения"
               ShowInfoButton="@(!IsLoading && !IsSaving)" OnInfoClick="OnInfoClick"
               IsLoading="IsLoading" OnCancelButtonClick="OnCancel">
     @if (!IsLoading)

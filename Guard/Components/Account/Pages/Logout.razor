@@ -1,67 +1,28 @@
 @page "/Account/Logout"
-
-@layout AccountLayout
+@layout AccountScreenLayout
 
 <PageTitle>Выход из системы — АИС «Охрана»</PageTitle>
-
-<AccountCard Title="Выход из системы" Icon="logout">
-    <RadzenText Text="Вы действительно хотите выйти из АИС «Охрана»?"
-                TextStyle="Radzen.Blazor.TextStyle.Body1"
-                class="rz-text-secondary" />
-
-    <!--
-            ВАЖНО: Используем <form method="post"> + endpoint /Account/Logout
-            Это единственный production-ready способ в Static SSR (render mode = null для /Account/*).
-            Интерактивные @onclick/Click не работают в Static SSR, т.к. нет Blazor circuit.
-            Endpoint выполняет SignOutAsync + безопасный LocalRedirect.
-        -->
-    <form method="post" action="Account/Logout" data-enhance="false" style="width: 100%;">
-      <AntiforgeryToken />
-      <input type="hidden" name="returnUrl" value="/Account/Login" />
-
-      <RadzenStack Orientation="Orientation.Horizontal"
-                   JustifyContent="JustifyContent.Center"
-                   Gap=".5rem" class="rz-mt-2 rz-flex-wrap">
-
-        <!-- Кнопка подтверждения выхода - type=submit отправляет форму на endpoint -->
-        <RadzenButton ButtonType="ButtonType.Submit"
-                      Text="Да, выйти"
-                      Icon="power_settings_new"
-                      ButtonStyle="Radzen.ButtonStyle.Danger"
-                      Size="Radzen.ButtonSize.Medium"
-                      Style="min-width: 120px; font-weight: 500;" />
-
-        <!-- Отмена: используем <a> вместо RadzenButton с Click,
-                     т.к. в Static SSR события не обрабатываются.
-                     Стилизуем под RadzenButton Secondary для consistency UI. -->
-        <a href="@CancelReturnUrl"
-           class="rz-button rz-button-secondary rz-button-md"
-           style="min-width: 120px; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; color: inherit;">
-          Отмена
-        </a>
-      </RadzenStack>
-    </form>
-
-    <RadzenText Text="При подтверждении вы будете перенаправлены на страницу авторизации."
-                TextStyle="Radzen.Blazor.TextStyle.Caption"
-                class="rz-text-disabled" />
+<AccountCard ScreenStyle="true">
+    <Heading>
+        <div class="account-centered">
+            <div class="account-emblem"><RadzenIcon Icon="logout" /></div>
+            <h1>Выход из системы</h1>
+            <p class="account-subtitle">Вы уверены, что хотите выйти?</p>
+        </div>
+    </Heading>
+    <ChildContent>
+        <form method="post" action="Account/Logout" data-enhance="false">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="/Account/Login" />
+            <div class="account-actions">
+                <button type="submit" class="account-button">Выйти</button>
+                <a href="@CancelReturnUrl" class="account-button account-button-secondary">Отмена</a>
+            </div>
+        </form>
+    </ChildContent>
 </AccountCard>
 
 @code {
-  /// <summary>
-  /// ReturnUrl из query string. После успешного выхода пользователь будет перенаправлен сюда.
-  /// Если не указан — на главную страницу.
-  /// </summary>
-  [SupplyParameterFromQuery]
-  private string? ReturnUrl { get; set; }
-
-  /// <summary>
-  /// URL для кнопки "Отмена". Вычисляется с sanitization для безопасности.
-  /// </summary>
-  private string CancelReturnUrl { get; set; } = "/";
-
-  protected override void OnInitialized()
-  {
-    CancelReturnUrl = AccountReturnUrl.Normalize(ReturnUrl);
-  }
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+    private string CancelReturnUrl => AccountReturnUrl.Normalize(ReturnUrl);
 }

@@ -30,9 +30,13 @@ internal static class LocalAccountHttpTests
     using (var denied = await Login("BrowserRoot123!", csrf: false))
       Check(denied.StatusCode == HttpStatusCode.BadRequest, "login requires antiforgery");
     using (var invalid = await Login("wrong"))
-      Check(invalid.StatusCode == HttpStatusCode.OK && WebUtility.HtmlDecode(await invalid.Content.ReadAsStringAsync()).Contains("Неверный email или пароль") &&
-        (await invalid.Content.ReadAsStringAsync()).Contains("alert-danger"),
+    {
+      var html = await invalid.Content.ReadAsStringAsync();
+      Check(invalid.StatusCode == HttpStatusCode.OK && WebUtility.HtmlDecode(html).Contains("Неверный email или пароль") &&
+        (await invalid.Content.ReadAsStringAsync()).Contains("role=\"alert\""),
         "wrong password displays generic error");
+      Check(html.Contains("value=\"ROOT@browser.test\"") && !html.Contains("value=\"wrong\""), "failed sign-in retains email and clears password");
+    }
     using (var login = await Login("BrowserRoot123!"))
       Check(login.StatusCode == HttpStatusCode.Redirect && new Uri(client.BaseAddress!, login.Headers.Location!).AbsolutePath == "/Logs",
         "login accepts email distinct from username and local ReturnUrl");
@@ -56,14 +60,35 @@ internal static class LocalAccountHttpTests
     Check(page.Contains("__RequestVerificationToken"), "logout GET renders confirmation");
     using (var stillSignedIn = await client.GetAsync("/Account/Manage/ChangePassword"))
       Check(stillSignedIn.IsSuccessStatusCode, "logout GET does not clear authentication");
+    page = await client.GetStringAsync("/Account/Logout?ReturnUrl=%2FLogs%3Fview%3Derrors");
+    Check(page.Contains("href=\"/Logs?view=errors\""), "logout cancellation preserves local source");
+    var unsafeCancel = await client.GetStringAsync("/Account/Logout?ReturnUrl=%2F%2Fevil.test");
+    Check(unsafeCancel.Contains("href=\"/\""), "logout cancellation rejects external source");
+    var deniedPage = WebUtility.HtmlDecode(await client.GetStringAsync("/Account/AccessDenied"));
+    Check(deniedPage.Contains(">Выйти</a>") && !deniedPage.Contains(">Войти</a>"), "authenticated access-denied page offers logout confirmation");
     using (var denied = await client.PostAsync("/Account/Logout", new FormUrlEncodedContent(new Dictionary<string, string> { ["returnUrl"] = "/" })))
       Check(denied.StatusCode == HttpStatusCode.BadRequest, "logout rejects missing antiforgery");
     using (var stillSignedIn = await client.GetAsync("/Account/Manage/ChangePassword"))
       Check(stillSignedIn.IsSuccessStatusCode, "failed logout leaves cookie usable");
+    await using (var blockedDb = await factory.CreateDbContextAsync()) {
+      var originalReason = await blockedDb.Users.Where(u => u.Id == "root").Select(u => u.AccountBlockReason).SingleAsync();
+      try {
+        await blockedDb.Users.Where(u => u.Id == "root").ExecuteUpdateAsync(s => s.SetProperty(u => u.AccountBlockReason, "Administrator"));
+        using var blockedLogout = await client.GetAsync("/Account/Logout");
+        var blockedHtml = await blockedLogout.Content.ReadAsStringAsync();
+        Check(blockedLogout.StatusCode == HttpStatusCode.OK && Token(blockedHtml).Length > 0,
+          "blocked account can open protected logout confirmation without working permissions");
+      }
+      finally {
+        await blockedDb.Users.Where(u => u.Id == "root").ExecuteUpdateAsync(s => s.SetProperty(u => u.AccountBlockReason, originalReason));
+      }
+    }
     using (var logout = await client.PostAsync("/Account/Logout", new FormUrlEncodedContent(new Dictionary<string, string> {
       ["__RequestVerificationToken"] = Token(page), ["returnUrl"] = "https://example.test"
     })))
       Check(logout.StatusCode == HttpStatusCode.Redirect && logout.Headers.Location?.ToString() == "/", "logout rejects external ReturnUrl");
+    deniedPage = WebUtility.HtmlDecode(await client.GetStringAsync("/Account/AccessDenied"));
+    Check(deniedPage.Contains(">Войти</a>") && !deniedPage.Contains(">Выйти</a>"), "anonymous access-denied page offers login");
     await using var db = await factory.CreateDbContextAsync();
     var originalHash = await db.Users.Where(u => u.Id == "root").Select(u => u.PasswordHash).SingleAsync();
     try {
@@ -79,8 +104,8 @@ internal static class LocalAccountHttpTests
         Check(login.StatusCode == HttpStatusCode.Redirect && new Uri(client.BaseAddress!, login.Headers.Location!).AbsolutePath == "/", "login rejects external ReturnUrl");
       await db.Users.Where(u => u.Id == "root").ExecuteUpdateAsync(s => s.SetProperty(u => u.PasswordHash, (string?)null));
       page = await client.GetStringAsync("/Account/Manage/ChangePassword");
-      Check(WebUtility.HtmlDecode(page).Contains("не установлен локальный пароль") && !page.Contains("change-password"),
-        "account without password sees administrator message rather than SetPassword form");
+      Check(WebUtility.HtmlDecode(page).Contains("не установлен локальный пароль") && !page.Contains("change-password") &&
+        page.Contains("/Account/Logout?ReturnUrl="), "account without password sees administrator message and exit rather than SetPassword form");
     }
     finally {
       await db.Users.Where(u => u.Id == "root").ExecuteUpdateAsync(s => s.SetProperty(u => u.TwoFactorEnabled, false).SetProperty(u => u.PasswordHash, originalHash));

@@ -32,7 +32,6 @@ public partial class StatusPanel : IAsyncDisposable
   private bool? lastMode;
   private bool skipNextReload;
   private string? error;
-  private string? operationError;
   private readonly CancellationTokenSource lifetime = new();
   private Task? polling;
   private Task? manualRefresh;
@@ -123,7 +122,6 @@ public partial class StatusPanel : IAsyncDisposable
   {
     if (busy || disposed) return;
     busy = true;
-    operationError = null;
     using var scope = Logger.BeginScope(new Dictionary<string, object> { ["SyncPanelId"] = panelId });
     Logger.LogInformation("Ручная синхронизация: нажат запуск в панели {SyncPanelId}", panelId);
     try
@@ -142,7 +140,9 @@ public partial class StatusPanel : IAsyncDisposable
     catch (OperationCanceledException) when (lifetime.IsCancellationRequested) { }
     catch (Exception ex)
     {
-      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ручной запуск синхронизации"); operationError = UserOperationErrors.Message(ex);
+      Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Ручной запуск синхронизации");
+      if (disposed) return;
+      var operationError = UserOperationErrors.Message(ex);
       Notifications.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Синхронизация", Detail = operationError,
         Style = "position: fixed; top: 3%; left: 50%; transform: translate(-50%, -50%); z-index: 1000;" });
     }

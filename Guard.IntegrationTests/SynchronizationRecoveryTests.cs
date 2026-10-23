@@ -89,9 +89,10 @@ internal static class SynchronizationRecoveryTests
       await Call(page, "SaveAsync");
       check(form.ApiPassword == "test-preserved-password" &&
         Field<SynchronizationSettingsDto>(page, "settings").Version == version &&
-        Field<NotificationService>(page, "Notifications", property: true).Messages.Count == messages &&
-        Field<string?>(page, "error") != null,
-        "rejected save preserves input and version and emits no success");
+        Field<NotificationService>(page, "Notifications", property: true).Messages.Count == messages + 1 &&
+        Field<NotificationService>(page, "Notifications", property: true).Messages.Last().Severity == NotificationSeverity.Error &&
+        Field<NotificationService>(page, "Notifications", property: true).Messages.Last().Detail.Contains("Сохранение отклонено"),
+        "rejected save preserves input and version and emits an error instead of success");
     }
 
     service = new Stub();

@@ -93,10 +93,17 @@ internal static class AccountPolicyBoundaryTests
     var service = DispatchProxy.Create<IAccountPolicyAdministrationService, IpAddressReferenceTests.ServiceProxy>();
     var proxy = (IpAddressReferenceTests.ServiceProxy)(object)service;
     using var page = new AccountPolicySettings();
+    var notifications = new Radzen.NotificationService();
+    typeof(AccountPolicySettings).GetProperty("Notifications", Flags)!.SetValue(page, notifications);
+    void Rendered() => typeof(AccountPolicySettings).GetMethod("OnAfterRender", Flags)!.Invoke(page, [false]);
     typeof(AccountPolicySettings).GetProperty("Policies", Flags)!.SetValue(page, service);
     typeof(AccountPolicySettings).GetProperty("Logger", Flags)!.SetValue(page, NullLogger<AccountPolicySettings>.Instance);
     proxy.Handle = (_, _) => Task.FromException<AccountPolicySettingsDto>(new IOException());
     await Call(page, "OnInitializedAsync");
+    Rendered(); Rendered();
+    check(notifications.Messages.Count == 1 && notifications.Messages[0].Severity == Radzen.NotificationSeverity.Error &&
+      notifications.Messages[0].Detail.Contains("Обновите настройки"),
+      "failed policy load notifies once after rendering and explains recovery");
     var calls = 0;
     proxy.Handle = (_, _) => { calls++; return Task.FromResult(new AccountPolicySettingsDto()); };
     await Call(page, "SaveAsync");
@@ -109,14 +116,24 @@ internal static class AccountPolicyBoundaryTests
     SaveAccountPolicyCommand? command = null; CancellationToken token = default;
     proxy.Handle = (_, args) => { calls++; command = (SaveAccountPolicyCommand)args[0]!; token = (CancellationToken)args[1]!; return completion.Task; };
     var saving = Call(page, "SaveAsync"); await Call(page, "SaveAsync"); form.MinimumLength = 15;
+    Rendered();
+    check(notifications.Messages.Count == 1, "policy save does not announce success before the service completes");
     check(calls == 1 && command?.MinimumLength == 14 && command.Version == version,
       "policy form submits one immutable command with the loaded version");
     var newVersion = Guid.NewGuid();
     completion.SetResult(new() { Version = newVersion, MinimumLength = 14 }); await saving;
+    Rendered(); Rendered();
+    check(notifications.Messages.Count == 2 && notifications.Messages[1].Severity == Radzen.NotificationSeverity.Success &&
+      notifications.Messages[1].Detail == "Настройки сохранены.",
+      "committed policy save emits one success notification across repeated renders");
     check(Get<AccountPolicyForm>(page, "model").MinimumLength == 14 && Get<Guid>(page, "version") == newVersion,
       "policy form adopts committed values and version from the save result");
     proxy.Handle = (_, _) => Task.FromException<AccountPolicySettingsDto>(new AccountPolicyConflictException());
     await Call(page, "SaveAsync");
+    Rendered();
+    check(notifications.Messages.Count == 3 && notifications.Messages[2].Severity == Radzen.NotificationSeverity.Error &&
+      notifications.Messages[2].Detail.Contains("другой сессии"),
+      "policy conflict emits an error notification instead of success");
     check(!Get<bool>(page, "loaded"), "policy conflict requires reload before another save");
     proxy.Handle = (_, _) => Task.FromResult(new AccountPolicySettingsDto { Version = newVersion });
     await Call(page, "LoadAsync");
@@ -124,6 +141,8 @@ internal static class AccountPolicyBoundaryTests
     proxy.Handle = (_, args) => { token = (CancellationToken)args[1]!; return completion.Task; };
     saving = Call(page, "SaveAsync"); page.Dispose();
     completion.SetResult(new() { Version = Guid.NewGuid(), MinimumLength = 25 }); await saving;
+    Rendered();
+    check(notifications.Messages.Count == 3, "late policy save result does not notify after leaving the page");
     check(token.IsCancellationRequested && Get<Guid>(page, "version") == newVersion,
       "leaving policy page cancels pending save and ignores its late result");
     var requirements = DispatchProxy.Create<IPasswordRequirementsService, IpAddressReferenceTests.ServiceProxy>();

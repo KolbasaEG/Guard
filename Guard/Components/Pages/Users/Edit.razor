@@ -4,23 +4,29 @@
 <Guard.Components.Layout.Components.AccessDialog ReadPermission="@Permissions.Users.Read" WritePermission="@Permissions.Users.Manage">
   <EditEntity TItem="EditUserDto" Data="model" Name="Редактирование пользователя" Submit="SaveAsync"
               IsLoading="@(busy && !loaded)" IsSaving="@(busy && loaded)" ShowSaveButton="loaded" OnCancelButtonClick="Cancel">
-    <RadzenStack Gap="12px">
+    <RadzenStack Class="guard-compact-content" Gap="5px" Style="width:100%;min-width:0;">
       @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
       @if (loaded) {
-        <RadzenFormField Text="Имя пользователя" Style="width:100%">
-          <RadzenTextBox Name="UserName" @bind-Value="model.UserName" MaxLength="256" Style="width:100%" autocomplete="off" />
+        <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" Gap="2px" Style="width:100%;min-width:0;">
+          <RadzenFormField Text="Имя пользователя" Variant="Variant.Text" Style="flex:1;min-width:min(100%,200px);">
+            <ChildContent><RadzenTextBox Name="UserName" @bind-Value="model.UserName" MaxLength="256" Style="width:100%" autocomplete="off" /></ChildContent>
+            <Helper><RadzenRequiredValidator Component="UserName" Text="Укажите имя пользователя" /></Helper>
+          </RadzenFormField>
+          <RadzenFormField Text="Email" Variant="Variant.Text" Style="flex:1;min-width:min(100%,200px);">
+            <ChildContent><RadzenTextBox Name="Email" @bind-Value="model.Email" MaxLength="256" Style="width:100%" autocomplete="off" /></ChildContent>
+            <Helper>
+              <RadzenRequiredValidator Component="Email" Text="Укажите email" />
+              <RadzenEmailValidator Component="Email" Text="Некорректный email" />
+            </Helper>
+          </RadzenFormField>
+        </RadzenStack>
+        <RadzenFormField Text="Сотрудник" Variant="Variant.Text" Style="width:100%">
+          <ChildContent>
+            <RadzenDropDown Name="Personal" TValue="Guid?" Data="personals" TextProperty="Name" ValueProperty="Id"
+                            @bind-Value="model.PersonalId" AllowFiltering="true" AllowClear="isRoot" Style="width:100%" />
+          </ChildContent>
+          <Helper><RadzenCustomValidator Component="Personal" Validator="@(() => isRoot || model.PersonalId.HasValue)" Text="Выберите сотрудника" /></Helper>
         </RadzenFormField>
-        <RadzenRequiredValidator Component="UserName" Text="Укажите имя пользователя" />
-        <RadzenFormField Text="Email" Style="width:100%">
-          <RadzenTextBox Name="Email" @bind-Value="model.Email" MaxLength="256" Style="width:100%" autocomplete="off" />
-        </RadzenFormField>
-        <RadzenRequiredValidator Component="Email" Text="Укажите email" />
-        <RadzenEmailValidator Component="Email" Text="Некорректный email" />
-        <RadzenFormField Text="Сотрудник" Style="width:100%">
-          <RadzenDropDown Name="Personal" TValue="Guid?" Data="personals" TextProperty="Name" ValueProperty="Id"
-                          @bind-Value="model.PersonalId" AllowFiltering="true" AllowClear="isRoot" Style="width:100%" />
-        </RadzenFormField>
-        <RadzenCustomValidator Component="Personal" Validator="@(() => isRoot || model.PersonalId.HasValue)" Text="Выберите сотрудника" />
         <RadzenText Text="После сохранения пользователю потребуется войти заново. Роли и пароль изменяются отдельными действиями." />
       }
     </RadzenStack>

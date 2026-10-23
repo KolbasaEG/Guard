@@ -10,6 +10,7 @@ public partial class TechnicalLoggingPanel : IAsyncDisposable
   [Inject] public ITechnicalLogService Service { get; set; } = default!;
   [Inject] public ILogger<TechnicalLoggingPanel> Logger { get; set; } = default!;
   [Inject] public NotificationService Notifications { get; set; } = default!;
+  [Parameter] public EventCallback<TechnicalLoggingHeaderState> HeaderChanged { get; set; }
   private TechnicalLogState? state;
   private TechnicalLogSettings editor = new();
   private Guid editorVersion;
@@ -20,7 +21,18 @@ public partial class TechnicalLoggingPanel : IAsyncDisposable
   private readonly CancellationTokenSource stopping = new();
   private Task? polling;
   protected override async Task OnInitializedAsync() => await Reload();
-  protected override Task OnAfterRenderAsync(bool firstRender) { if (firstRender) polling = Poll(); return Task.CompletedTask; }
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (!firstRender || disposed) return;
+    polling = Poll();
+    await PublishHeader();
+  }
+  private Task PublishHeader() => disposed ? Task.CompletedTask : HeaderChanged.InvokeAsync(new(state?.Health, busy, error));
+  public async Task ReloadAsync()
+  {
+    await Reload();
+    if (!disposed) await InvokeAsync(StateHasChanged);
+  }
   private async Task Poll()
   {
     using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
@@ -28,9 +40,9 @@ public partial class TechnicalLoggingPanel : IAsyncDisposable
       while (await timer.WaitForNextTickAsync(stopping.Token)) await InvokeAsync(async () => {
         if (disposed || busy) return;
         var revision = generation;
-        try { var next = await Service.GetAsync(stopping.Token); if (!disposed && revision == generation) { state = next; error = null; StateHasChanged(); } }
+        try { var next = await Service.GetAsync(stopping.Token); if (!disposed && revision == generation) { state = next; error = null; await PublishHeader(); StateHasChanged(); } }
         catch (OperationCanceledException) when (stopping.IsCancellationRequested) { }
-        catch (Exception ex) { if (!disposed && revision == generation) { state = null; error = "Состояние недоступно. Проверьте доступ и аудит, затем обновите страницу."; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Чтение состояния технического логирования"); StateHasChanged(); } }
+        catch (Exception ex) { if (!disposed && revision == generation) { state = null; error = "Состояние недоступно. Проверьте доступ и аудит, затем обновите страницу."; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Чтение состояния технического логирования"); await PublishHeader(); StateHasChanged(); } }
       });
     } catch (OperationCanceledException) when (stopping.IsCancellationRequested) { }
   }
@@ -46,10 +58,10 @@ public partial class TechnicalLoggingPanel : IAsyncDisposable
   {
     if (disposed || busy) return;
     busy = true; error = null; generation++;
-    try { await action(); }
+    try { await PublishHeader(); await action(); }
     catch (OperationCanceledException) when (stopping.IsCancellationRequested) { }
     catch (Exception ex) { if (!disposed) { error = UserOperationErrors.Message(ex); groups = null; Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Управление техническим логированием"); } }
-    finally { busy = false; }
+    finally { busy = false; await PublishHeader(); }
   }
   public async ValueTask DisposeAsync() { if (disposed) return; disposed = true; stopping.Cancel(); if (polling != null) await polling; stopping.Dispose(); }
 }

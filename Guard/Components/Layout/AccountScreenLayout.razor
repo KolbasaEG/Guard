@@ -1,0 +1,10 @@
+@inherits LayoutComponentBase
+@inject ThemeService ThemeService
+
+<div class="account-screen" data-enhance-nav="false" data-account-theme="@(ThemeService.Theme == "software-dark" ? "dark" : "light")">
+    <div class="account-theme-control">
+        <AccountThemeToggle InitialDark="@(ThemeService.Theme == "software-dark")" />
+    </div>
+    <main class="account-screen-content" id="account-content">@Body</main>
+    <footer class="account-screen-footer"><span>АИС Охрана</span><span>v3.5.0</span></footer>
+</div>

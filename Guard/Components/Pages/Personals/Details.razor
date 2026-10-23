@@ -5,8 +5,8 @@
   @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
   @if (item != null)
   {
-    <RadzenStack Gap="10px" Style="overflow:auto;">
-      <InfoBlock Title="Основные данные" Icon="person" Style="flex-shrink:0;">
+    <RadzenStack Gap="5px" Style="min-width:0;flex-shrink:0;">
+      <InfoBlock Compact="true" Title="Основные данные" Icon="person" Style="flex-shrink:0;">
         <RadzenText><strong>Фамилия:</strong> @Display(item.LastName)</RadzenText>
         <RadzenText><strong>Имя:</strong> @Display(item.FirstName)</RadzenText>
         <RadzenText><strong>Отчество:</strong> @Display(item.MiddleName)</RadzenText>
@@ -14,7 +14,7 @@
         <RadzenText><strong>ФИО в родительном падеже:</strong> @Display(string.Join(" ", new[] { item.LastNameGen, item.FirstNameGen, item.MiddleNameGen }.Where(v => !string.IsNullOrWhiteSpace(v))))</RadzenText>
         <RadzenText><strong>Состояние:</strong> @StatusName(item.Status)</RadzenText>
       </InfoBlock>
-      <InfoBlock Title="Служба и подразделение" Icon="badge" Style="flex-shrink:0;">
+      <InfoBlock Compact="true" Title="Служба и подразделение" Icon="badge" Style="flex-shrink:0;">
         <RadzenText><strong>Подразделение:</strong> @Display(item.SubdivisionName)</RadzenText>
         <RadzenText><strong>Личный номер:</strong> @Display(item.PersonalNumber)</RadzenText>
         <RadzenText><strong>Год принятия на службу:</strong> @Display(item.EnlistmentYear)</RadzenText>
@@ -24,7 +24,7 @@
         <RadzenText><strong>Категория работника:</strong> @Display(item.WorkerCategoryName)</RadzenText>
         <RadzenText><strong>Статус во внешней системе:</strong> @Display(item.StatusClassifierName)</RadzenText>
       </InfoBlock>
-      <InfoBlock Title="Учётная запись и IP" Icon="lan" Style="flex-shrink:0;">
+      <InfoBlock Compact="true" Title="Учётная запись и IP" Icon="lan" Style="flex-shrink:0;">
         <RadzenText><strong>Имя пользователя:</strong> @Display(item.UserName)</RadzenText>
         <RadzenText><strong>Назначенные IP:</strong> @Display(string.Join(", ", item.IpAddresses))</RadzenText>
       </InfoBlock>

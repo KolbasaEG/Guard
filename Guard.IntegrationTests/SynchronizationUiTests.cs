@@ -35,6 +35,10 @@ internal static class SynchronizationUiTests
       check(html.Contains("02:00") && html.Contains("Часовой пояс сервера") && html.Contains("Последние 20 запусков", StringComparison.OrdinalIgnoreCase),
         "settings UI shows server time and run history");
       check(html.Contains("ID головного подразделения") && html.Contains("внешний ID"), "Root can set API head subdivision with an explanation of the external ID");
+      check(html.IndexOf("Пропущен период обновления", StringComparison.Ordinal) >= 0 &&
+        html.IndexOf("Пропущен период обновления", StringComparison.Ordinal) < html.IndexOf("Управление из API", StringComparison.Ordinal) &&
+        services.GetRequiredService<NotificationService>().Messages.Count == 0,
+        "persistent recovery warning appears above status content without an initial notification");
       var admin = await renderer.RenderComponentAsync<Host>(ParameterView.FromDictionary(new Dictionary<string, object?> { [nameof(Host.Root)] = false }));
       var adminHtml = WebUtility.HtmlDecode(admin.ToHtmlString());
       check(!adminHtml.Contains("Синхронизировать") && !adminHtml.Contains("Сохранить настройки") && !adminHtml.Contains("Последние 20 запусков"), "administrator cannot access Root synchronization page even with legacy permission");
@@ -102,10 +106,16 @@ internal static class SynchronizationUiTests
       PanelProbe? panel = null;
       var failure = await renderer.RenderComponentAsync<Host>(ParameterView.FromDictionary(new Dictionary<string, object?> {
         [nameof(Host.Root)] = true, [nameof(Host.CapturePanel)] = (Action<PanelProbe>)(value => panel = value) }));
+      var notifications = services.GetRequiredService<NotificationService>();
+      notifications.Messages.Clear();
       await panel!.ClickAsync();
-      check(WebUtility.HtmlDecode(failure.ToHtmlString()).Contains("Диагностическая ошибка запуска"), "rejected synchronization displays service error in panel");
+      check(notifications.Messages.Count == 1 && notifications.Messages[0].Severity == NotificationSeverity.Error &&
+        notifications.Messages[0].Detail.Contains("Диагностическая ошибка запуска") &&
+        !WebUtility.HtmlDecode(failure.ToHtmlString()).Contains("Диагностическая ошибка запуска"),
+        "rejected synchronization emits one error notification without a duplicate banner");
       await panel.RefreshForTestAsync();
-      check(WebUtility.HtmlDecode(failure.ToHtmlString()).Contains("Диагностическая ошибка запуска"), "status refresh preserves synchronization start error");
+      check(notifications.Messages.Count == 1 && !WebUtility.HtmlDecode(failure.ToHtmlString()).Contains("Диагностическая ошибка запуска"),
+        "status refresh does not repeat the operation notification");
       var stub = (ServiceStub)services.GetRequiredService<ISynchronizationService>();
       stub.RejectRun = false;
       await panel.ClickAsync();
@@ -168,7 +178,7 @@ internal static class SynchronizationUiTests
     public Task CheckConnectionAsync(CancellationToken ct = default) => throw new NotSupportedException();
     private SynchronizationRunDto run = new() { StartedAt = new(2026, 10, 9, 0, 0, 0, DateTimeKind.Utc), Status = SynchronizationStatus.Succeeded };
     public Task<SynchronizationOverview> GetOverviewAsync(bool classifiers = false, bool includeChildren = true, CancellationToken ct = default, bool allSubdivisions = false) =>
-      Task.FromResult(new SynchronizationOverview(new() { Mode = DataManagementMode.Api }, null, run.StartedAt, run, true));
+      Task.FromResult(new SynchronizationOverview(new() { Mode = DataManagementMode.Api, RecoveryRequiredFrom = new DateOnly(2026, 10, 1) }, null, run.StartedAt, run, true));
     public Task<IReadOnlyList<SynchronizationRunDto>> GetHistoryAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<SynchronizationRunDto>>([run]);
     public Task SaveSettingsAsync(DataManagementMode mode, bool enabled, TimeOnly time, Guid version, CancellationToken ct = default, string? apiBaseUrl = null, int? apiPageSize = null, string? apiUsername = null, string? apiPassword = null, long? apiHeadSubdivisionId = null, bool? completeSnapshotGuaranteed = null) => throw new NotSupportedException();
     public Task<SynchronizationRunDto> RunAsync(CancellationToken ct = default, DateOnly? updatedSince = null, bool enqueue = false)

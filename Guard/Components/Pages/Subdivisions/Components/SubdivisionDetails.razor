@@ -1,13 +1,13 @@
 @using Guard.Core.Services.DTOs
 
 <div class="subdivision-details">
-  <RadzenTable Style="width:100%;table-layout:fixed;" aria-label="Сведения о подразделении">
+  <RadzenTable Class="guard-value-table" Style="width:100%;table-layout:fixed;" aria-label="Сведения о подразделении">
     <RadzenTableBody>
       @foreach (var row in Rows)
       {
         <RadzenTableRow>
           <RadzenTableCell Style="padding:2px;width:40%;background:var(--rz-grid-header-background-color);">
-            <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start">
+            <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start">
               <RadzenIcon Icon="@row.Icon" Style="font-size:16px;flex-shrink:0;" aria-hidden="true" />
               <span>@row.Label</span>
             </RadzenStack>

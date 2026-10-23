@@ -181,7 +181,7 @@ public partial class Index : IDisposable
     if (disposed || operationPending) return;
     var args = id.HasValue ? new Dictionary<string, object?> { ["Id"] = id.Value } : null;
     var result = await Dialogs.OpenAsync<T>("", args,
-      new DialogOptions { Width = "850px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      new DialogOptions { Width = "850px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
     await HandleResultAsync(result);
   }
 
@@ -206,7 +206,7 @@ public partial class Index : IDisposable
         row.Status is not (Status.Inserted or Status.Modified)) return;
     var result = await Dialogs.OpenAsync<IpAssignments>("",
       new Dictionary<string, object?> { ["PersonalId"] = row.Id },
-      new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
     await HandleResultAsync(result);
   }
 

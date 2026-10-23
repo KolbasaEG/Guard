@@ -1,8 +1,11 @@
 @using Guard.Core.Entities
+@if (error != null) { <CompactNotice Severity="AlertStyle.Warning">@error</CompactNotice> }
 @if (overview != null)
 {
+  @if (overview.LastAttempt?.Error != null) { <CompactNotice Severity="AlertStyle.Danger">@overview.LastAttempt.Error</CompactNotice> }
+  @if (NeedsRecovery(overview.Settings)) { <CompactNotice>Пропущен период обновления. Выполните ручную загрузку с более ранней датой или полную сверку без даты. @if (overview.Settings.RecoveryRequiredFrom.HasValue) { <span>Дата восстановления: @overview.Settings.RecoveryRequiredFrom.Value.ToString("dd.MM.yyyy").</span> }</CompactNotice> }
   <div class="sync-status">
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="8px">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="2px">
       <div class="sync-status-summary">
         <div class="sync-status-line">
           <RadzenText><strong>@(overview.Settings.Mode == DataManagementMode.Api ? "Управление из API" : "Локальное управление")</strong></RadzenText>
@@ -17,7 +20,7 @@
         }
         <RadzenText TextStyle="TextStyle.Caption">Полная сверка: @Format(overview.Settings.LastFullSynchronizedAt). Изменения: @Format(overview.Settings.LastChangesSynchronizedAt).</RadzenText>
       </div>
-      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="8px">
+      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="2px" Class="sync-status-actions">
         @if (overview.CanRun)
         {
           @if (Access?.IsRoot == true)
@@ -26,9 +29,9 @@
               <RadzenDatePicker TValue="DateTime?" @bind-Value="updatedSince" DateFormat="dd.MM.yyyy" AllowClear="true" Disabled="busy" />
             </RadzenFormField>
           }
-          <RadzenButton Icon="sync" Text="Синхронизировать" Click="RunAsync" Disabled="@(busy || overview.LastAttempt?.Status is SynchronizationStatus.Running or SynchronizationStatus.Queued)" Variant="Variant.Text" />
+          <RadzenButton Icon="sync" Text="Синхронизировать" Click="RunAsync" Disabled="@(busy || overview.LastAttempt?.Status is SynchronizationStatus.Running or SynchronizationStatus.Queued)" Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" />
         }
-        <RadzenButton Icon="refresh" title="Обновить состояние и запуски синхронизации" Click="RefreshManuallyAsync" Disabled="@busy" Variant="Variant.Text" />
+        <RadzenButton Icon="refresh" title="Обновить состояние и запуски синхронизации" aria-label="Обновить состояние и запуски синхронизации" Click="RefreshManuallyAsync" Disabled="@busy" Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" />
       </RadzenStack>
     </RadzenStack>
     @if (overview.CanRun && Access?.IsRoot == true)
@@ -36,8 +39,4 @@
       <p class="sync-status-hint">Без даты — полная загрузка. С датой — только изменения, без архивации по отсутствию.</p>
     }
   </div>
-  @if (overview.LastAttempt?.Error != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@overview.LastAttempt.Error</RadzenAlert> }
-  @if (NeedsRecovery(overview.Settings)) { <RadzenAlert AlertStyle="AlertStyle.Warning">Пропущен период обновления. Выполните ручную загрузку с более ранней датой или полную сверку без даты. @if (overview.Settings.RecoveryRequiredFrom.HasValue) { <span>Дата восстановления: @overview.Settings.RecoveryRequiredFrom.Value.ToString("dd.MM.yyyy").</span> }</RadzenAlert> }
 }
-@if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Warning">@error</RadzenAlert> }
-@if (operationError != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@operationError</RadzenAlert> }

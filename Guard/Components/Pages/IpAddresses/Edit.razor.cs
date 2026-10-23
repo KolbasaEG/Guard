@@ -106,7 +106,7 @@ public partial class Edit : IDisposable
     try
     {
       await DialogService.OpenAsync<DialogInfo>("", new Dictionary<string, object?> { { "IpAddressDetails", item }, { "Compact", true } },
-        new DialogOptions { Width = "640px", Style = "max-width:calc(100vw - 24px);", ShowTitle = false, ContentCssClass = "rz-p-1" });
+        new DialogOptions { Width = "640px", Style = "max-width:calc(100vw - 10px);max-height:calc(100dvh - 10px);", ShowTitle = false, ContentCssClass = "guard-ip-dialog-content" });
     }
     finally { infoOpen = false; }
   }

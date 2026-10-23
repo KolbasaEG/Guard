@@ -1,8 +1,27 @@
-﻿@page "/Account/AccessDenied"
+@page "/Account/AccessDenied"
+@layout AccountScreenLayout
 
-<PageTitle>Access denied</PageTitle>
+<PageTitle>Доступ запрещён — АИС «Охрана»</PageTitle>
+<AccountCard ScreenStyle="true">
+    <Heading>
+        <div class="account-centered">
+            <div class="account-emblem account-emblem-danger"><RadzenIcon Icon="admin_panel_settings" /></div>
+            <h1>Доступ запрещён</h1>
+            <p class="account-subtitle">У вас нет прав для просмотра этой страницы. Обратитесь к администратору.</p>
+        </div>
+    </Heading>
+    <ChildContent>
+        <div class="account-actions">
+            <a href="/" class="account-button">На главную</a>
+            @if (HttpContext.User.Identity?.IsAuthenticated == true) {
+                <a href="/Account/Logout?ReturnUrl=%2FAccount%2FAccessDenied" class="account-button account-button-secondary">Выйти</a>
+            } else {
+                <a href="/Account/Login" class="account-button account-button-secondary">Войти</a>
+            }
+        </div>
+    </ChildContent>
+</AccountCard>
 
-<header>
-    <h1 class="text-danger">Access denied</h1>
-    <p class="text-danger">You do not have access to this resource.</p>
-</header>
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+}

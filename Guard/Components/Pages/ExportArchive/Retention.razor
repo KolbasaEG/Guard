@@ -1,46 +1,11 @@
-@implements IDisposable
-@inject IDataExportService Service
-@inject DialogService Dialogs
-@inject ILogger<Retention> Logger
-
 <EditEntity TItem="RetentionForm" Data="form" Name="СРОК ХРАНЕНИЯ ВЫГРУЗОК" IsLoading="loading" IsSaving="saving" ShowSaveButton="loaded" Submit="SaveAsync" OnCancelButtonClick="@(() => Dialogs.Close(null))">
-  @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
-  @if (!loaded && !loading) { <RadzenButton Text="Повторить загрузку" Icon="refresh" Click="LoadAsync" /> }
-  <RadzenFormField Text="Срок хранения, лет"><RadzenNumeric TValue="int" @bind-Value="form.Years" Min="1" Max="30" Disabled="@(!loaded)" /></RadzenFormField>
-  <RadzenText>По умолчанию — 3 года. Изменение применяется только к новым выгрузкам.</RadzenText>
+  <RadzenStack Class="guard-compact-content" Gap="5px" Style="min-width:0;">
+    @if (error != null) { <CompactNotice Severity="AlertStyle.Danger">@error</CompactNotice> }
+    @if (!loaded && !loading) { <RadzenButton Text="Повторить загрузку" Icon="refresh" Click="LoadAsync" Variant="Variant.Text" ButtonStyle="ButtonStyle.Light" Style="border-radius:0px;color:var(--rz-text-color);" /> }
+    <InfoBlock Compact="true" Title="Правила хранения" Icon="schedule" Style="min-width:0;flex-shrink:0;">
+      <RadzenFormField Text="Срок хранения, лет" Variant="Variant.Text" Style="width:100%;"><RadzenNumeric TValue="int" @bind-Value="form.Years" Min="1" Max="30" Disabled="@(!loaded)" Style="width:100%;" /></RadzenFormField>
+      <p>От 1 до 30 лет. По умолчанию — 3 года.</p>
+      <p>Изменение применяется только к новым выгрузкам.</p>
+    </InfoBlock>
+  </RadzenStack>
 </EditEntity>
-@code {
-  public sealed class RetentionForm { public int Years { get; set; } = 3; }
-  private RetentionForm form = new();
-  private Guid version;
-  private readonly CancellationTokenSource lifetime = new();
-  private bool loading, saving, loaded, disposed;
-  private string? error;
-  protected override Task OnInitializedAsync() => LoadAsync();
-  private async Task LoadAsync()
-  {
-    if (disposed || loading || saving) return;
-    loading = true; error = null;
-    var ct = lifetime.Token;
-    try {
-      var setting = await Service.GetRetentionAsync(ct);
-      if (disposed) return;
-      form = new() { Years = setting.Years }; version = setting.Version; loaded = true;
-    }
-    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    catch (Exception ex) { if (!disposed) { loaded = false; Error(ex); } }
-    finally { loading = false; }
-  }
-  private async Task SaveAsync()
-  {
-    if (disposed || loading || saving || !loaded) return;
-    saving = true; error = null;
-    var ct = lifetime.Token;
-    try { await Service.SaveRetentionAsync(form.Years, version, ct); if (!disposed) Dialogs.Close(true); }
-    catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    catch (Exception ex) { if (!disposed) Error(ex); }
-    finally { saving = false; }
-  }
-  private void Error(Exception ex) { Guard.Core.Logging.OperationFailureLogging.LogOperationFailure(Logger, ex, "Настройка хранения"); error = UserOperationErrors.Message(ex); }
-  public void Dispose() { if (disposed) return; disposed = true; lifetime.Cancel(); lifetime.Dispose(); }
-}

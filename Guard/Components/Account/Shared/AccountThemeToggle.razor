@@ -1,0 +1,8 @@
+<button type="button" class="account-theme-toggle" data-account-theme-toggle aria-label="@(InitialDark ? "Включить светлую тему" : "Включить тёмную тему")" title="@(InitialDark ? "Светлая тема" : "Тёмная тема")">
+    <RadzenIcon Icon="@(InitialDark ? "light_mode" : "dark_mode")" />
+</button>
+
+@code {
+    // Локальная интерактивность в модуле: обязательная смена запрещает Blazor circuit.
+    [Parameter] public bool InitialDark { get; set; }
+}

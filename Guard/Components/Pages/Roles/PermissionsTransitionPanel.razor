@@ -1,19 +1,25 @@
 @using Guard.Core.Services.DTOs
 @inject IRoleAccessService Roles
-<RadzenCard>
-  <RadzenText Text="Переход на права через роли" TextStyle="TextStyle.H6" />
+<div class="permission-transition">
+<RadzenCard Variant="Variant.Outlined" Style="padding:5px;min-width:0;">
+  <RadzenStack Class="guard-compact-content" Gap="5px" Style="min-width:0;">
+  <RadzenText Text="Переход на права через роли" TextStyle="TextStyle.H6" Style="margin:0;" />
+  <RadzenStack Gap="2px" Style="min-width:0;">
   @if (report != null)
   {
     <p>Индивидуальных permission claims: @report.IndividualPermissionCount. Они сохранены в БД и не учитываются.</p>
     <p>Роли без настроенных разрешений: @string.Join(", ", report.UnconfiguredRoles)</p>
     @if (report.UnconfiguredRoles.Contains("Администратор"))
     {
-      <RadzenButton Text="Назначить начальные права администратору" Click="InitializeAsync" Disabled="@busy" />
+      <RadzenButton Text="Назначить начальные права администратору" Click="InitializeAsync" Disabled="@busy" Size="ButtonSize.Small" />
       <p>Будут добавлены все несистемные permissions. Уже настроенная роль не перезаписывается.</p>
     }
   }
   @if (message != null) { <RadzenAlert>@message</RadzenAlert> }
+  </RadzenStack>
+  </RadzenStack>
 </RadzenCard>
+</div>
 @code {
   private PermissionTransitionReport? report;
   private bool busy;

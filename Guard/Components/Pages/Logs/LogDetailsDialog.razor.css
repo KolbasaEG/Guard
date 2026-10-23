@@ -1,0 +1,10 @@
+.log-details { height:100%; min-width:0; min-height:0; }
+.log-details ::deep .rz-tabview-nav { flex-wrap:wrap; }
+.log-details ::deep .rz-tabview-panels { padding:5px; min-width:0; }
+.log-code { margin:0; padding:5px; min-width:0; border:var(--rz-grid-cell-border); background:var(--rz-base-background-color); color:var(--rz-text-color); font-family:ui-monospace,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+.log-code-scroll { max-height:300px; overflow-y:auto; overflow-x:hidden; }
+.log-exception-header { background:var(--rz-danger-lighter); color:var(--rz-danger-darker); border-left:4px solid var(--rz-danger); padding:5px; font-weight:600; overflow-wrap:anywhere; }
+
+.log-json { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+
+.log-details ::deep .rz-tabview-panel { padding:0; min-width:0; }

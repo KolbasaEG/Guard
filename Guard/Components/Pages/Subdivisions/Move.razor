@@ -3,8 +3,8 @@
 @using Guard.Core.Enums
 @attribute [Authorize]
 
-<EditEntity TItem="SubdivisionDetailsDto" Data="@item" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="true" OnInfoClick="InfoButtonClick" IsLoading="isLoading" IsSaving="isSaving" OnCancelButtonClick="HandleCancelButtonClick">
-  <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" Style="width: 100%;">
+<EditEntity TItem="SubdivisionDetailsDto" Data="@item" Name="Перемещение подразделения" Icon="drive_file_move" ShowSaveButton="true" Submit="@FormSubmit" ShowInfoButton="true" OnInfoClick="InfoButtonClick" IsLoading="isLoading" IsSaving="isSaving" OnCancelButtonClick="HandleCancelButtonClick">
+  <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;min-width:0;">
 
     <!-- Выбор нового родительского подразделения -->
     <RadzenFormField Text="Новое родительское подразделение" Variant="Variant.Text" Style="width:100%">
@@ -24,7 +24,7 @@
         </RadzenDropDownDataGrid>
       </ChildContent>
       <Helper>
-        <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary">
+        <RadzenText TextStyle="TextStyle.Caption" class="rz-color-secondary" Style="margin:0;overflow-wrap:anywhere;">
           Очистите поле для перевода подразделения на верхний уровень (в корневой узел).
         </RadzenText>
       </Helper>

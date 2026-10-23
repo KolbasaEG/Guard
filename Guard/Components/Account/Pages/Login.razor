@@ -6,39 +6,38 @@
 
 @inject ILocalAccountService Accounts
 @inject IdentityRedirectManager RedirectManager
-@layout AccountLayout
+@layout AccountScreenLayout
 
 <PageTitle>Вход в систему — АИС «Охрана»</PageTitle>
-<AccountCard Title="Вход в систему" Icon="login">
-    <StatusMessage Message="@errorMessage" />
-    <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
+<AccountCard ScreenStyle="true">
+  <Heading><h1>Вход в систему</h1><p class="account-subtitle">Введите свои учётные данные</p></Heading>
+  <ChildContent>
+    <StatusMessage Message="@errorMessage" Compact="true" Severity="AlertStyle.Danger" />
+    <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login" class="account-form account-login" Enhance="false">
       <DataAnnotationsValidator />
-      <RadzenText Text="Для входа в систему используйте локальную учетную запись." TextStyle="Radzen.Blazor.TextStyle.Subtitle1" />
-
-      <ValidationSummary class="text-danger" role="alert" />
-      <div class="form-floating mb-2">
-        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" style="height:48px; min-height:48px;" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-        <label for="Input.Email" class="form-label">Email</label>
-        <ValidationMessage For="() => Input.Email" class="text-danger" />
+      <div class="account-field">
+        <label for="Input.Email">Email</label>
+        <div class="account-input-shell"><RadzenIcon Icon="mail_outline" /><InputText @bind-Value="Input.Email" id="Input.Email" autocomplete="username" aria-required="true" placeholder="name@example.com" /></div>
+        <ValidationMessage For="() => Input.Email" />
       </div>
-      <div class="form-floating mb-2">
-        <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" style="height:48px; min-height:48px;" autocomplete="current-password" aria-required="true" placeholder="Пароль" />
-        <label for="Input.Password" class="form-label">Пароль</label>
-        <ValidationMessage For="() => Input.Password" class="text-danger" />
+      <div class="account-field">
+        <label for="Input.Password">Пароль</label>
+        <div class="account-input-shell"><RadzenIcon Icon="lock_outline" /><InputText type="password" @bind-Value="Input.Password" id="Input.Password" autocomplete="current-password" aria-required="true" placeholder="Пароль" />
+          <button class="account-eye" type="button" data-account-password="Input.Password" aria-label="Показать пароль" aria-pressed="false"><RadzenIcon Icon="visibility" /></button>
+        </div>
+        <ValidationMessage For="() => Input.Password" />
       </div>
 
-      <div class="checkbox mb-2">
-        <label class="form-label rz-text-subtitle1">
-          <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
+        <label class="account-remember">
+          <InputCheckbox @bind-Value="Input.RememberMe" />
           Запомнить меня
         </label>
-      </div>
-      <div>
-          <RadzenButton ButtonType="ButtonType.Submit" Text="Войти" ButtonStyle="ButtonStyle.Primary" class="w-100" Size="ButtonSize.Medium" />
-      </div>
+      <div class="account-help">Забыли пароль? Обратитесь к администратору.</div>
+      <button type="submit" class="account-button">Войти <RadzenIcon Icon="arrow_forward" /></button>
 
     </EditForm>
 
+  </ChildContent>
 </AccountCard>
 
 
@@ -62,6 +61,7 @@
 
   public async Task LoginUser()
   {
+    try {
     if (!editContext.Validate()) {
       try { await Accounts.RecordRejectedSignInAsync(Input.Email, HttpContext.RequestAborted); }
       catch (AuditUnavailableException) { errorMessage = "Обязательный аудит недоступен. Работа системы приостановлена."; }
@@ -94,6 +94,8 @@
         errorMessage = "Ошибка: Неверный email или пароль.";
         break;
     }
+    }
+    finally { Input.Password = ""; }
   }
 
   private sealed class InputModel

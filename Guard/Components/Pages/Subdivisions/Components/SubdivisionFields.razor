@@ -1,7 +1,7 @@
 @using Guard.Core.Services.DTOs
 
 <div class="subdivision-form">
-  <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;">
+  <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;min-width:0;">
     @if (ShowParentSelector)
     {
       <RadzenFormField Text="Вышестоящее подразделение" Variant="Variant.Text" Style="width:100%;">
@@ -25,7 +25,7 @@
       <ChildContent><RadzenTextBox @bind-Value="Item.PositionFormationName" Name="PositionFormationName" Style="width:100%;" /></ChildContent>
       <Helper><RadzenRequiredValidator Component="PositionFormationName" Text="Укажите наименование для должности." /></Helper>
     </RadzenFormField>
-    <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" Class="subdivision-form-row" Style="width:100%;">
+    <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" Class="subdivision-form-row" Style="width:100%;">
       <RadzenFormField Text="Тип органа" Variant="Variant.Text" Style="flex:1;min-width:0;">
         <RadzenDropDown Data="OrganTypes" TextProperty="Value" TValue="SubdivisionClassifierOptionDto"
                         Value="@(OrganTypes.FirstOrDefault(x => x.Type == Item.OrganTypeId && x.Code == Item.OrganTypeCode))"
@@ -41,16 +41,16 @@
                         Style="width:100%;" />
       </RadzenFormField>
     </RadzenStack>
-    <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Class="subdivision-form-row" Style="width:100%;">
+    <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Class="subdivision-form-row" Style="width:100%;">
       <RadzenFormField Text="Порядок на уровне" Variant="Variant.Text" Style="flex:1;min-width:0;">
         <RadzenNumeric @bind-Value="Item.LevelOrder" Name="LevelOrder" TValue="int" Min="0" Style="width:100%;" />
       </RadzenFormField>
-      <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Style="flex:1;min-width:0;">
+      <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Style="flex:1;min-width:0;">
         <RadzenCheckBox @bind-Value="Item.IsDepartment" Name="IsDepartment" TValue="bool" />
         <RadzenLabel Text="Является отделом" Component="IsDepartment" />
       </RadzenStack>
     </RadzenStack>
-    <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" Class="subdivision-form-row" Style="width:100%;">
+    <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" Class="subdivision-form-row" Style="width:100%;">
       <RadzenFormField Text="Индекс" Variant="Variant.Text" Style="flex:0.32;min-width:0;">
         <ChildContent><RadzenTextBox @bind-Value="Item.PostalCode" Name="PostalCode" Style="width:100%;" /></ChildContent>
         <Helper><RadzenRequiredValidator Component="PostalCode" Text="Укажите почтовый индекс." /></Helper>
@@ -60,7 +60,7 @@
         <Helper><RadzenRequiredValidator Component="Address" Text="Укажите адрес." /></Helper>
       </RadzenFormField>
     </RadzenStack>
-    <RadzenStack Gap="5px" Orientation="Orientation.Horizontal" Class="subdivision-form-row" Style="width:100%;">
+    <RadzenStack Gap="2px" Orientation="Orientation.Horizontal" Class="subdivision-form-row" Style="width:100%;">
       <RadzenFormField Text="Телефон" Variant="Variant.Text" Style="flex:1;min-width:0;">
         <ChildContent><RadzenTextBox @bind-Value="Item.Phone" Name="Phone" Style="width:100%;" /></ChildContent>
         <Helper><RadzenRequiredValidator Component="Phone" Text="Укажите телефон." /></Helper>

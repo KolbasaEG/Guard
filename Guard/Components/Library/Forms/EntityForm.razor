@@ -2,14 +2,14 @@
 @typeparam TItem
 @implements IDisposable
 
-<RadzenStack Style="width:100%;height:100%;" Gap="0px">
+<RadzenStack Style="width:100%;height:100%;min-height:0;" Gap="0px">
   @if (Data != null) {
     @if (StaticFormName != null) {
       <EditForm Model="@Data" FormName="@StaticFormName" OnValidSubmit="FormSubmit" method="post" Style="width:100%;">
         @FormContent
       </EditForm>
     } else {
-      <RadzenTemplateForm Submit="FormSubmit" TItem="TItem" Data="@Data" Style="width:100%;height:100%; padding:0px; margin:0px;">
+      <RadzenTemplateForm Submit="FormSubmit" TItem="TItem" Data="@Data" Style="width:100%;height:100%;min-height:0; padding:0px; margin:0px;">
         @FormContent
       </RadzenTemplateForm>
     }
@@ -17,7 +17,7 @@
 </RadzenStack>
 @code {
   [Parameter] public string? StaticFormName { get; set; }
-  private RenderFragment FormContent => @<RadzenStack Style="width:100%;height:100%;" Gap="0px">
+  private RenderFragment FormContent => @<RadzenStack Style="width:100%;height:100%;min-height:0;" Gap="5px">
       @if (ContentOnly) {
         <LoadingContainer IsLoading="IsLoading">
           @if (CanView) {
@@ -35,19 +35,13 @@
         OnInfoClick="InfoButtonClick"
         OnCancelButtonClick="CancelButtonClick" />
 
-      <RadzenStack Orientation="Orientation.Horizontal" Gap="5px;" Style="flex: 1; min-height: 0; width:100%; margin-top:5px;">
-        <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;min-height:0;">
           <LoadingContainer IsLoading="IsLoading">
-            <RadzenCard Variant="Variant.Outlined" Style="padding:5px; border-radius:0px;height:100%;display:flex; flex-direction:column;">
-              <RadzenStack Gap="0px" Orientation="Orientation.Vertical" Style="height:100%; width:100%;">
+            <RadzenCard Class="guard-entity-body" Variant="Variant.Outlined" Style="padding:5px; border-radius:0px;flex:1;display:flex; flex-direction:column;">
                 @if (CanView) {
                   <fieldset disabled="@EffectiveReadOnly" style="@FieldStyle">@ChildContent</fieldset>
                 }
-              </RadzenStack>
             </RadzenCard>
           </LoadingContainer>
-        </RadzenStack>
-      </RadzenStack>
       }
     </RadzenStack>;
   [Parameter] public bool ContentOnly { get; set; }

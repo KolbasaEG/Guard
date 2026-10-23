@@ -5,11 +5,12 @@
 @inject DialogService DialogService
 @inject Guard.Components.Library.BrowserTimeService Time
 @inject ILogger<LogDetailsDialog> Logger
-<ViewEntity TItem="LogEntryDto" Data="Log" OnCancelButtonClick="HandleCancelButtonClick">
-  <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Style="width:100%;height:100%;">
-    <InfoBlock Title="Основные метаданные контекста">
-      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="10px">
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="8px">
+<div class="log-details">
+<ViewEntity TItem="LogEntryDto" Data="Log" Name="Событие технического журнала" OnCancelButtonClick="HandleCancelButtonClick">
+  <RadzenStack Gap="5px" Orientation="Orientation.Vertical" Class="guard-compact-content" Style="width:100%;min-width:0;">
+    <InfoBlock Compact="true" Title="Основные метаданные контекста" Icon="info" Style="min-width:0;">
+      <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="5px">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="2px">
           <RadzenBadge BadgeStyle="@GetBadgeStyle(Log.Level)" Text="@Log.Level" IsPill="true"  />
           <RadzenBadge BadgeStyle="@GetLayerBadgeStyle(Log.Layer)" Text="@(Log.Layer ?? "System")" IsPill="true" />
         </RadzenStack>
@@ -19,16 +20,16 @@
           @Time.Format(Log.Timestamp, "dd.MM.yyyy HH:mm:ss.fff")
         </RadzenText>
       </RadzenStack>
-      <RadzenStack Orientation="Orientation.Horizontal" Gap="5px;" style="width:100%; margin-top:10px;">
-        <RadzenFormField Text="Пользователь (UserId)" Variant="Variant.Text" style="width:50%;">
-          <RadzenTextBox Value="@(string.IsNullOrEmpty(Log.UserId) ? "Не указан" : Log.UserId)" ReadOnly="true" />
+      <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" Gap="2px" Style="width:100%;min-width:0;">
+        <RadzenFormField Text="Пользователь (UserId)" Variant="Variant.Text" Style="flex:1;min-width:min(100%,200px);">
+          <RadzenTextBox Value="@(string.IsNullOrEmpty(Log.UserId) ? "Не указан" : Log.UserId)" ReadOnly="true" Style="width:100%;" />
         </RadzenFormField>
-        <RadzenFormField Text="IP-адрес клиента" Variant="Variant.Text" style="width:50%;">
-          <RadzenTextBox Value="@(string.IsNullOrEmpty(Log.ClientIp) ? "N/A" : Log.ClientIp)" ReadOnly="true" />
+        <RadzenFormField Text="IP-адрес клиента" Variant="Variant.Text" Style="flex:1;min-width:min(100%,200px);">
+          <RadzenTextBox Value="@(string.IsNullOrEmpty(Log.ClientIp) ? "N/A" : Log.ClientIp)" ReadOnly="true" Style="width:100%;" />
         </RadzenFormField>
       </RadzenStack>
     </InfoBlock>
-    <InfoBlock Title="Детальная информация">
+    <InfoBlock Compact="true" Title="Детальная информация" Icon="description" Style="min-width:0;">
       <RadzenTabs RenderMode="TabRenderMode.Client">
         <Tabs>
           <RadzenTabsItem Text="Структурированные данные" Icon="data_object">
@@ -38,60 +39,56 @@
             <p>Отпечаток ошибки: @Log.Fingerprint</p>
             <p>Версия приложения: @Log.ApplicationVersion; экземпляр: @Log.InstanceId</p>
             <p>Шаблон: @Log.MessageTemplate</p>
-            <pre style="white-space:pre-wrap;word-break:break-word;">@Log.Properties</pre>
+            <pre class="log-code">@Log.Properties</pre>
           </RadzenTabsItem>
           <RadzenTabsItem Text="Сообщение" Icon="chat" >
-            <RadzenCard Variant="Variant.Outlined" Style="padding:5px;margin:5px;border-radius:0px;">
-              <RadzenStack Gap="5px" Style="margin-top: 10px;">
-                <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-left:12px;">Исходное сообщение:</RadzenText>
-                <div style="background: var(--rz-content-background-color); border: 1px solid var(--rz-border-color); border-radius: 6px; padding: 12px; font-family: monospace; white-space: pre-wrap; word-break: break-word;">
+              <RadzenStack Gap="2px" Style="min-width:0;">
+                <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin:0;">Исходное сообщение:</RadzenText>
+                <div class="log-code">
                   @Log.Message
                 </div>
 
                 @if (parsedJsonMessage != null)
                 {
-                  <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin-top: 10px;">Распарсенный JSON из сообщения:</RadzenText>
-                  <div style="background: #1e1e1e; color: #d4d4d4; border-radius: 6px; padding: 12px; font-family: 'Consolas', monospace; font-size: 0.85rem; max-height: 250px; overflow-y: auto;">
-                    <pre style="margin: 0;">@parsedJsonMessage</pre>
+                  <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin:0;">Распарсенный JSON из сообщения:</RadzenText>
+                  <div class="log-code log-code-scroll">
+                    <pre class="log-json">@parsedJsonMessage</pre>
                   </div>
                 }
               </RadzenStack>
-            </RadzenCard>
           </RadzenTabsItem>
 
           <!-- Анализ и парсинг Исключения (Exception) -->
           @if (!string.IsNullOrEmpty(Log.Exception))
           {
             <RadzenTabsItem Text="Исключение (Exception)" Icon="bug_report">
-              <RadzenCard Variant="Variant.Outlined" Style="padding:5px;margin:5px;border-radius:0px;">
-                <RadzenStack Gap="5px" >
-                  <div style="background: var(--rz-danger-lighter); color: var(--rz-danger-darker); border-left: 4px solid var(--rz-danger); padding: 10px 14px; font-weight: 600; border-radius: 0px;">
+                  <RadzenStack Gap="2px">
+                  <div class="log-exception-header">
                     @exceptionHeader
                   </div>
-                  <div style="background: #1e1e1e; color: #ce9178; border-radius: 0px; padding: 12px; font-family: 'Consolas', monospace; font-size: 0.82rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">
+                  <div class="log-code log-code-scroll">
                     @foreach (var line in stackTraceLines)
                     {
-                      <div style="display: block; margin-bottom: 4px; word-break: break-word; line-height: 1.4;">
+                      <div style="display: block; margin-bottom: 2px; word-break: break-word; line-height: 1.4;">
                         @if (line.StartsWith("at "))
                         {
-                          <span style="color: #569cd6; font-weight: bold;">at&nbsp;</span>
-                          <span style="color: #ce9178;">@line.Substring(3)</span>
+                          <span style="color: var(--rz-primary); font-weight: bold;">at&nbsp;</span>
+                          <span style="color: var(--rz-text-color);">@line.Substring(3)</span>
                         }
                         else if (line.StartsWith("в "))
                         {
-                          <span style="color: #569cd6; font-weight: bold;">в&nbsp;</span>
-                          <span style="color: #ce9178;">@line.Substring(2)</span>
+                          <span style="color: var(--rz-primary); font-weight: bold;">в&nbsp;</span>
+                          <span style="color: var(--rz-text-color);">@line.Substring(2)</span>
                         }
                         else
                         {
-                          <span style="color: #dcdcaa;">@line</span>
+                          <span style="color: var(--rz-text-color);">@line</span>
                         }
                       </div>
                     }
                   </div>
                 </RadzenStack>
-              </RadzenCard>
-            </RadzenTabsItem>
+              </RadzenTabsItem>
           }
         </Tabs>
       </RadzenTabs>
@@ -99,6 +96,7 @@
     </InfoBlock>
   </RadzenStack>
 </ViewEntity>
+</div>
 
 
 @code {

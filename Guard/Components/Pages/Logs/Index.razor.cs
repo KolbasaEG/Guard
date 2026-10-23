@@ -12,6 +12,10 @@ namespace Guard.Components.Pages.Logs
 {
   public partial class Index : IAsyncDisposable
   {
+    private TechnicalLoggingPanel? technicalPanel;
+    private TechnicalLoggingHeaderState technicalHeader = new(Busy: true);
+    private void OnTechnicalHeaderChanged(TechnicalLoggingHeaderState value) => technicalHeader = value;
+    private Task RefreshTechnicalPanel() => technicalPanel?.ReloadAsync() ?? Task.CompletedTask;
     [Inject] protected BrowserTimeService Time { get; set; } = default!;
 
     private ExportFilter? appliedFilter;
@@ -216,7 +220,7 @@ namespace Guard.Components.Pages.Logs
 
     protected async Task EditRow(LogEntryDto item)
     {
-      var result = await DialogService.OpenAsync<LogDetailsDialog>("", new Dictionary<string, object> { { "Log", item } }, new DialogOptions() { Width = "1200px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      var result = await DialogService.OpenAsync<LogDetailsDialog>("", new Dictionary<string, object> { { "Log", item } }, new DialogOptions() { Width = "1200px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
     }
 
     /// <summary>

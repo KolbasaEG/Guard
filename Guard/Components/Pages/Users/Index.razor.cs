@@ -97,17 +97,17 @@ namespace Guard.Components.Pages.Users
     }
 
     protected Task EditRoles(UserDto item) => DialogService.OpenAsync<RoleAssignments>("Роли пользователя",
-      new Dictionary<string, object> { ["UserId"] = item.Id }, new DialogOptions { Width = "800px" });
+      new Dictionary<string, object> { ["UserId"] = item.Id }, new DialogOptions { Width = "800px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
     protected async Task AddUserAsync()
     {
-      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      var result = await DialogService.OpenAsync<Add>("", null, new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
       if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result)) await grid.Reload();
     }
     protected async Task EditUserAsync(UserDto item)
     {
       if (disposed || Access?.Has(Permissions.Users.Manage) != true || item.IsLockedOut) return;
       var result = await DialogService.OpenAsync<Edit>("", new Dictionary<string, object> { ["UserId"] = item.Id },
-        new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+        new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
       if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result) && !disposed) {
         ShowSuccessNotification("Данные пользователя обновлены.");
         await grid.Reload();
@@ -127,7 +127,7 @@ namespace Guard.Components.Pages.Users
     {
       var result = await DialogService.OpenAsync<ResetPassword>("",
         new Dictionary<string, object> { ["UserId"] = item.Id },
-        new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+        new DialogOptions { Width = "650px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
       if (Guard.Components.Library.Dialogs.EntityDialogResult.IsSuccess(result)) { ShowSuccessNotification("Пароль сброшен. При следующем входе потребуется его смена."); await grid.Reload(); }
     }
     async Task ApplyFilter()

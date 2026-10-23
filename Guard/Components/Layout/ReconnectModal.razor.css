@@ -2,156 +2,66 @@
 .components-reconnect-repeated-attempt-visible,
 .components-reconnect-failed-visible,
 .components-pause-visible,
-.components-resume-failed-visible,
-.components-rejoining-animation {
-    display: none;
-}
+.components-resume-failed-visible { display:none; }
 
-#components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible,
-#components-reconnect-modal.components-reconnect-show .components-rejoining-animation,
+#components-reconnect-modal.components-reconnect-show:not(.components-reconnect-retrying):not(.components-reconnect-failed):not(.components-reconnect-paused):not(.components-reconnect-resume-failed) .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-retrying:not(.components-reconnect-failed):not(.components-reconnect-paused):not(.components-reconnect-resume-failed) .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible,
 #components-reconnect-modal.components-reconnect-paused .components-pause-visible,
-#components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible,
-#components-reconnect-modal.components-reconnect-retrying,
-#components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible,
-#components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation,
-#components-reconnect-modal.components-reconnect-failed,
-#components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible {
-    display: block;
-}
-
+#components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible { display:block; }
 
 #components-reconnect-modal {
-    background-color: white;
-    width: 20rem;
-    margin: 20vh auto;
-    padding: 2rem;
-    border: 0;
-    border-radius: 0.5rem;
-    box-shadow: 0 3px 6px 2px rgba(0, 0, 0, 0.3);
-    opacity: 0;
-    transition: display 0.5s allow-discrete, overlay 0.5s allow-discrete;
-    animation: components-reconnect-modal-fadeOutOpacity 0.5s both;
-    &[open]
-
-{
-    animation: components-reconnect-modal-slideUp 1.5s cubic-bezier(.05, .89, .25, 1.02) 0.3s, components-reconnect-modal-fadeInOpacity 0.5s ease-in-out 0.3s;
-    animation-fill-mode: both;
+  --rz-text-font-family:"Guard Source Sans 3", sans-serif;
+  --reconnect-accent:var(--rz-info);
+  box-sizing:border-box;
+  width:420px;
+  max-width:calc(100vw - 10px);
+  max-height:calc(100dvh - 10px);
+  margin:auto;
+  padding:5px;
+  border:var(--rz-grid-cell-border, 1px solid #d9dfe2);
+  border-radius:0;
+  outline:0;
+  background:var(--rz-base-background-color, #fff);
+  color:var(--rz-text-color, #28363c);
+  font-family:var(--rz-text-font-family, sans-serif);
+  font-size:var(--rz-body-font-size, 14px);
+  overflow-y:auto;
+  overflow-x:hidden;
 }
-
+#components-reconnect-modal::backdrop { background:rgba(0,0,0,.4); }
+#components-reconnect-modal.components-reconnect-retrying,
+#components-reconnect-modal.components-reconnect-paused { --reconnect-accent:var(--rz-warning); }
+#components-reconnect-modal.components-reconnect-failed,
+#components-reconnect-modal.components-reconnect-resume-failed { --reconnect-accent:var(--rz-danger); }
+.components-reconnect-header {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:5px 0;
+  border-bottom:1px solid var(--reconnect-accent);
+  margin-bottom:5px;
 }
-
-#components-reconnect-modal::backdrop {
-    background-color: rgba(0, 0, 0, 0.4);
-    animation: components-reconnect-modal-fadeInOpacity 0.5s ease-in-out;
-    opacity: 1;
-}
-
-@keyframes components-reconnect-modal-slideUp {
-    0% {
-        transform: translateY(30px) scale(0.95);
-    }
-
-    100% {
-        transform: translateY(0);
-    }
-}
-
-@keyframes components-reconnect-modal-fadeInOpacity {
-    0% {
-        opacity: 0;
-    }
-
-    100% {
-        opacity: 1;
-    }
-}
-
-@keyframes components-reconnect-modal-fadeOutOpacity {
-    0% {
-        opacity: 1;
-    }
-
-    100% {
-        opacity: 0;
-    }
-}
-
-.components-reconnect-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-}
-
-#components-reconnect-modal p {
-    margin: 0;
-    text-align: center;
-}
-
+.components-reconnect-header strong { min-width:0; overflow-wrap:anywhere; }
+.components-reconnect-icon { flex-shrink:0; color:var(--reconnect-accent); }
+.components-reconnect-icon::before { content:"sync"; }
+.components-reconnect-retrying .components-reconnect-icon::before { content:"wifi_off"; }
+.components-reconnect-paused .components-reconnect-icon::before { content:"pause_circle"; }
+.components-reconnect-failed .components-reconnect-icon::before,
+.components-reconnect-resume-failed .components-reconnect-icon::before { content:"error_outline"; }
+.components-reconnect-container { display:flex; flex-direction:column; gap:2px; min-width:0; }
+#components-reconnect-modal p { margin:0; overflow-wrap:anywhere; }
+.components-reconnect-actions { display:flex; flex-wrap:wrap; gap:0; }
 #components-reconnect-modal button {
-    border: 0;
-    background-color: #6b9ed2;
-    color: white;
-    padding: 4px 24px;
-    border-radius: 4px;
+  margin-top:5px;
+  border:var(--rz-selectbar-border, 1px solid #d9dfe2);
+  border-radius:0;
+  background:var(--rz-menu-top-item-background-color, #f5f7f8);
+  color:var(--rz-text-color, #28363c);
+  font:inherit;
+  padding:5px 10px;
+  min-height:36px;
+  cursor:pointer;
 }
-
-    #components-reconnect-modal button:hover {
-        background-color: #3b6ea2;
-    }
-
-    #components-reconnect-modal button:active {
-        background-color: #6b9ed2;
-    }
-
-.components-rejoining-animation {
-    position: relative;
-    width: 80px;
-    height: 80px;
-}
-
-    .components-rejoining-animation div {
-        position: absolute;
-        border: 3px solid #0087ff;
-        opacity: 1;
-        border-radius: 50%;
-        animation: components-rejoining-animation 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
-    }
-
-        .components-rejoining-animation div:nth-child(2) {
-            animation-delay: -0.5s;
-        }
-
-@keyframes components-rejoining-animation {
-    0% {
-        top: 40px;
-        left: 40px;
-        width: 0;
-        height: 0;
-        opacity: 0;
-    }
-
-    4.9% {
-        top: 40px;
-        left: 40px;
-        width: 0;
-        height: 0;
-        opacity: 0;
-    }
-
-    5% {
-        top: 40px;
-        left: 40px;
-        width: 0;
-        height: 0;
-        opacity: 1;
-    }
-
-    100% {
-        top: 0px;
-        left: 0px;
-        width: 80px;
-        height: 80px;
-        opacity: 0;
-    }
-}
+#components-reconnect-modal button:hover { background:var(--rz-grid-row-hover-background-color, #e9edef); }
+#components-reconnect-modal button:focus-visible { outline:2px solid var(--rz-primary); outline-offset:1px; }

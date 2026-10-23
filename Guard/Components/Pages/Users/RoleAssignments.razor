@@ -4,15 +4,18 @@
 @inject DialogService Dialogs
 @inject IPermissionService Permissions
 <EditEntity TItem="string" Data="@UserId" Name="Роли пользователя" Submit="SaveAsync" IsLoading="@busy" ShowSaveButton="@(version != null)" OnCancelButtonClick="@(() => Dialogs.Close(null))">
-<RadzenStack Gap="12px">
-  <RadzenText Text="Роли пользователя" TextStyle="TextStyle.H6" />
+<RadzenStack Class="guard-compact-content" Gap="5px" Style="width:100%;min-width:0;">
   @if (error != null) { <RadzenAlert AlertStyle="AlertStyle.Danger">@error</RadzenAlert> }
-  <RadzenDropDown TValue="IEnumerable<string>" Data="@available" TextProperty="Name" ValueProperty="Id"
-                  Multiple="true" AllowClear="true" @bind-Value="selected" Style="width:100%" Disabled="@busy" />
+  <RadzenFormField Text="Назначенные роли" Variant="Variant.Text" Style="width:100%;">
+    <RadzenDropDown TValue="IEnumerable<string>" Data="@available" TextProperty="Name" ValueProperty="Id"
+                    Multiple="true" AllowClear="true" @bind-Value="selected" Style="width:100%" Disabled="@busy" />
+  </RadzenFormField>
   @if (effective != null)
   {
-    <RadzenText Text="Текущие итоговые права" TextStyle="TextStyle.H6" />
-    <Guard.Components.Pages.Roles.PermissionsSummary Values="@effective.Permissions" IsRoot="@effective.IsRoot" />
+    <RadzenStack Gap="2px" Style="min-width:0;">
+      <RadzenText Text="Текущие итоговые права" TextStyle="TextStyle.H6" />
+      <Guard.Components.Pages.Roles.PermissionsSummary Values="@effective.Permissions" IsRoot="@effective.IsRoot" />
+    </RadzenStack>
   }
 
 </RadzenStack>

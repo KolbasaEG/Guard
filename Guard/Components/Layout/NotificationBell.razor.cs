@@ -33,7 +33,7 @@ public partial class NotificationBell
   {
     expanded = false;
     await Dialogs.OpenAsync<Guard.Components.Pages.Notifications.Details>("", new Dictionary<string, object?> { ["Id"] = item.Id },
-      new DialogOptions { Width = "700px", ShowTitle = false, ContentCssClass = "rz-p-1" });
+      new DialogOptions { Width = "700px", ShowTitle = false, ContentCssClass = "guard-entity-dialog-content" });
   }
   public void Dispose() { disposed = true; Center.Changed -= Changed; Center.Arrived -= Arrived; }
 }
